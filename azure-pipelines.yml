@@ -1,19 +1,28 @@
-# Starter pipeline
-# Start with a minimal pipeline that you can customize to build and deploy your code.
-# Add steps that build, run tests, deploy, and more:
-# https://aka.ms/yaml
-
-trigger:
-- master
-
 pool:
-  vmImage: 'ubuntu-latest'
+  name: ADMU
+  demands: cmd
 
 steps:
-- script: echo Hello, world!
-  displayName: 'Run a one-line script'
+- task: PowerShell@2
+  displayName: 'TestSetup Script'
+  inputs:
+    targetType: filePath
+    filePath: ./powershell/Tests/TestSetup.ps1
+    arguments: '-TestOrgConnectKey:(''$(secretXConnectKey.Pester)'')'
+  timeoutInMinutes: 60
+  env:
+    system.debug: true
 
-- script: |
-    echo Add other tasks to build, test, and deploy your project.
-    echo See https://aka.ms/yaml
-  displayName: 'Run a multi-line script'
+- task: PowerShell@2
+  displayName: 'InvokePester Script'
+  inputs:
+    targetType: filePath
+    filePath: ./powershell/InvokePester.ps1
+    errorActionPreference: continue
+  condition: succeededOrFailed()
+
+- task: ToreGroneng.ToreGroneng-PSScriptAnalyzer-Task.PSScriptAnalyzer-Task.PowerShell Script Analyzer@1
+  displayName: 'InvokePsScriptAnalyzer '
+  inputs:
+    PsFolder: powershell/
+    ExcludeRules: 'PSAvoidUsingWMICmdlet,PSAvoidUsingPlainTextForPassword,PSAvoidUsingUsernameAndPasswordParams,PSAvoidUsingInvokeExpression'
