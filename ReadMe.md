@@ -71,7 +71,9 @@ If for example the .net4+ version is run on win7 system the user would see the f
  The ADMU tool requires the following to work:
 
  * gui_jcadmu requires the system to be currently Domain bound (The system does NOT have to be actively connected to the Domain Controller).
- * A domain based profile must exist on the system to be converted to a local profile (conversion of local profile or azure profile to local profile will not currently work).
+ * A domain based profile must exist on the system to be converted to a local profile.
+ * The domain bound system must have an active 'domain trust'. This means the system has checked into a DC in the last 90 days.
+ * The system does not have to be activly connected to the DC at the time of conversion.
 
 ## EULA & Legal Explanation
 
@@ -135,15 +137,15 @@ The ADMU leverages the USMT and settings to migrate user data from a domain acco
 
 ## Download Links
 GUI - gui_jcadmu.exe
-* [GUI - Windows 7 / .net 3 ](https://github.com/TheJumpCloud/support/raw/master/ADMU/exe/Windows%207/gui_jcadmu_win7.exe) 
-* [GUI - Windows 8.1-10 / .net 4 ](https://github.com/TheJumpCloud/support/raw/master/ADMU/exe/Windows%208-10/gui_jcadmu_win10.exe) 
+* [GUI - Windows 7 / .net 3 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/ADMU/exe/Windows%207/gui_jcadmu_win7.exe)
+* [GUI - Windows 8.1-10 / .net 4 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/ADMU/exe/Windows%208-10/gui_jcadmu_win10.exe)
 
 EXE - jcadmu.exe
-* [JCADMU.exe - Windows 7 / .net 3 ](https://github.com/TheJumpCloud/support/raw/master/ADMU/exe/Windows%207/jcadmu_win7.exe)
-* [JCADMU.exe - Windows 8.1-10 / .net 4 ](https://github.com/TheJumpCloud/support/raw/master/ADMU/exe/Windows%208-10/jcadmu_win10.exe)
+* [JCADMU.exe - Windows 7 / .net 3 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/ADMU/exe/Windows%207/jcadmu_win7.exe)
+* [JCADMU.exe - Windows 8.1-10 / .net 4 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/ADMU/exe/Windows%208-10/jcadmu_win10.exe)
 
 Powershell - Migration.ps1 & Functions.ps1
-* [Powershell](https://github.com/TheJumpCloud/support/tree/master/ADMU/powershell)
+* [Powershell](https://github.com/TheJumpCloud/jumpcloud-admu/tree/master/powershell)
 
 ## ADMU GUI
  This is a Powershell based GUI executable that utilizes WPF to collect input parameters to pass to the ADMU powershell code.
@@ -227,7 +229,7 @@ c:\jcadmu.exe -arguments -domainusername 'bob.lazar' -jumpcloudusername 'blazar'
 ```powershell
 $systems = @('10ent17091', '10ent18031', '10ent18091', '10pro17091', '10pro18031', '10pro18091', '81pro', '7pro1')
 
-Invoke-Command -ComputerName $systems { 
+Invoke-Command -ComputerName $systems {
 Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object {$_.Special -eq $false, $_.RoamingConfigured -eq $false} | `
 Select-Object Loaded, @{Name = "LastLogin"; EXPRESSION = {$_.ConvertToDateTime($_.lastusetime)}}, @{Name = "UserName"; EXPRESSION = {(New-Object System.Security.Principal.SecurityIdentifier($_.SID)).Translate([System.Security.Principal.NTAccount]).Value}; } |FT
 }
@@ -240,15 +242,6 @@ Invoke-Command -ComputerName $remotesystem {
 c:\ADMU\powershell\Migration.ps1 -DomainUserName 'tom.hanks' -JumpCloudUserName 'thanks' -TempPassword 'Temp123!' -JumpCloudConnectKey 'CONNECTKEY' -AcceptEULA $true -InstallJCAgent $true -LeaveDomain $true -ForceReboot $true
 }
 ```
-
- Possible future deployment scenarios:
- * ADMU file deployment script & commands
- * Logon script via GPO
- * Meraki deployment
- * PDQ deployment
- * Intune deployment
- * MTP & MSP deployment
-
 
 # Error Logging & Troubleshooting Errors
 
@@ -322,7 +315,7 @@ ERROR: Unable to leave domain, Jumpcloud agent will not start until resolved'
 
 ```
 WARNING: Removal Of Temp Files & Folders Failed
-``` 
+```
  The script attempts at various stages to clear and recursivly delete files to leave the system in a clean state. If any of the files in use are locked, this step will output a warning. This would indicate the files may still be on the system and should be manually cleared if required.
 
 # Usage Notes and Examples
@@ -368,8 +361,8 @@ WARNING: Removal Of Temp Files & Folders Failed
 
  * Checks if USMT is installed on the system and present in C:\adk\Assessment and Deployment Kit\User State Migration Tool\
  * If not present ‘windows ADK’ installer is downloaded. The ‘Accept EULA’ value is checked.
-  * True, the USMT will be installed silently with no user interaction required
-  * False, the USMT will be installed and require user interaction
+ * True, the USMT will be installed silently with no user interaction required
+ * False, the USMT will be installed and require user interaction
 
 
 
