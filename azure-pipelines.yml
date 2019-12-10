@@ -20,9 +20,3 @@ steps:
     filePath: ./powershell/InvokePester.ps1
     errorActionPreference: continue
   condition: succeededOrFailed()
-
-- task: ToreGroneng.ToreGroneng-PSScriptAnalyzer-Task.PSScriptAnalyzer-Task.PowerShell Script Analyzer@1
-  displayName: 'InvokePsScriptAnalyzer '
-  inputs:
-    PsFolder: powershell/
-    ExcludeRules: 'PSAvoidUsingWMICmdlet,PSAvoidUsingPlainTextForPassword,PSAvoidUsingUsernameAndPasswordParams,PSAvoidUsingInvokeExpression'
