@@ -17,7 +17,7 @@ Describe 'Functions' {
     }
 
     Context 'Write-Log Function'{
-	
+
         It 'Write-Log - ' {
 		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
                     remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
@@ -123,6 +123,7 @@ Describe 'Functions' {
              if (Check_Program_Installed -programName 'FileZilla' -eq $true){
              }else {
                 Start-Process $app $arg
+                start-sleep -Seconds 5
              }
              Check_Program_Installed -programName 'FileZilla' | Should Be $true
          }
