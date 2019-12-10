@@ -183,17 +183,17 @@ function Uninstall_Program($programName) {
       Get-ItemProperty |
           Where-Object {$_.DisplayName -match $programName } |
               Select-Object -Property DisplayName, UninstallString
-  
+
      ForEach ($ver in $Ver) {
         If ($ver.UninstallString -and $ver.DisplayName -match 'Jumpcloud') {
             $uninst = $ver.UninstallString
-            & cmd /C $uninst /Silent
-        } If ($ver.UninstallString -and $ver.DisplayName -match 'FileZilla Client 3.45.1') {
-            $uninst = $ver.UninstallString
-            & cmd /c $uninst /S
+            & cmd /C $uninst /Silent | Out-Null
+        } If ($ver.UninstallString -and $ver.DisplayName -match 'FileZilla Client 3.46.0') {
+            $uninst = $ver.UninstallString 
+            & cmd /c $uninst /S| Out-Null
         } else{
             $uninst = $ver.UninstallString
-            & cmd /c $uninst /q /norestart
+            & cmd /c $uninst /q /norestart | Out-Null
         }
     }
   }
@@ -260,14 +260,14 @@ Function DownloadAndInstallAgent(
     If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64")))
     {
         Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x64')
-        DownloadLink -Link:($msvc2013x64Link) -Path:($msvc2013Path + $msvc2013x64File)
+        (New-Object System.Net.WebClient).DownloadFile("${msvc2013x64Link}", ($jcAdmuTempPath + $msvc2013x64File))
         Invoke-Expression -Command:($msvc2013x64Install)
         Write-Log -Message:('JCAgent prereq installed')
     }
     If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86")))
     {
         Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x86')
-        DownloadLink -Link:($msvc2013x86Link) -Path:($msvc2013Path + $msvc2013x86File)
+        (New-Object System.Net.WebClient).DownloadFile("${msvc2013x86Link}", ($jcAdmuTempPath + $msvc2013x86File))
         Invoke-Expression -Command:($msvc2013x86Install)
         Write-Log -Message:('JCAgent prereq installed')
     }
