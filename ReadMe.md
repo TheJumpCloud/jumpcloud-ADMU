@@ -96,7 +96,7 @@ If for example the .net4+ version is run on win7 system the user would see the f
  2:40 start → loadstate (USMT installed on win10)
 
  1:00 loadstate → install agent (win10 & 7 missing prereq c++)
- 
+
  **Total Time Estimate: Between 2:30 → 5:00**
 
 
