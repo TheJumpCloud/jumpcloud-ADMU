@@ -41,7 +41,7 @@ Describe 'Functions' {
 		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
                    remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-              # Write-Log -Message:('Test Error Log Entry.') -Level:('Error') -ErrorAction 
+              # Write-Log -Message:('Test Error Log Entry.') -Level:('Error') -ErrorAction
                #$Log = Get-Content 'c:\windows\temp\jcAdmu.log'
                #$Log.Contains('ERROR: Test Error Log Entry.') | Should Be $true
                #    if ($error.Count -eq 1) {
@@ -156,7 +156,7 @@ Describe 'Functions' {
         It 'Start-NewProcess - Notepad' {
             Start-NewProcess -pfile:('c:\windows\system32\notepad.exe') -Timeout 1000
             (Get-Process -Name 'notepad') -ne $null | Should Be $true
-            Stop-Process -Name "notepad"  
+            Stop-Process -Name "notepad"
         }
 
         It 'Start-NewProcess & end after 2s timeout - Notepad ' {

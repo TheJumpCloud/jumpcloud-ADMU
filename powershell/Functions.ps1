@@ -13,7 +13,7 @@ Function VerifyAccount
     }
     Try
     {
-        $idrefUser = ([System.Security.Principal.NTAccount]($strUsername)).Translate([System.Security.Principal.SecurityIdentifier]) 
+        $idrefUser = ([System.Security.Principal.NTAccount]($strUsername)).Translate([System.Security.Principal.SecurityIdentifier])
     }
     Catch [System.Security.Principal.IdentityNotMappedException]
     {
@@ -112,7 +112,7 @@ Function Write-Log
     {
     }
 }
-Function Remove-ItemIfExists
+Function Remove-ItemIfExist
 {
     [CmdletBinding(SupportsShouldProcess = $true)]
     Param(
@@ -189,7 +189,7 @@ function Uninstall_Program($programName) {
             $uninst = $ver.UninstallString
             & cmd /C $uninst /Silent | Out-Null
         } If ($ver.UninstallString -and $ver.DisplayName -match 'FileZilla Client 3.46.0') {
-            $uninst = $ver.UninstallString 
+            $uninst = $ver.UninstallString
             & cmd /c $uninst /S| Out-Null
         } else{
             $uninst = $ver.UninstallString
@@ -235,7 +235,7 @@ Function Test-Is40chars ([System.String] $field)
         Return $false
     }
 }
-Function Test-HasNoSpaces ([System.String] $field)
+Function Test-HasNoSpace ([System.String] $field)
 {
     If ($field -like "* *")
     {
@@ -357,12 +357,12 @@ Function ForceRebootComputerWithDelay
     {
         If ([console]::KeyAvailable)
         {
-            Write-Host "Restart Canceled by key press"
+            Write-Output "Restart Canceled by key press"
             Exit;
         }
         Else
         {
-            Write-Host "Press any key to cancel... restarting in $TimeOut" -NoNewLine
+            Write-Output "Press any key to cancel... restarting in $TimeOut" -NoNewLine
             Start-Sleep -Seconds 1
             $TimeOut = $TimeOut - 1
             Clear-Host
@@ -375,7 +375,7 @@ Function ForceRebootComputerWithDelay
     }
     If ($Restart -eq $True)
     {
-        Write-Host "Restarting Computer..."
+        Write-Output "Restarting Computer..."
         Restart-Computer -ComputerName $env:COMPUTERNAME -Force
     }
 }
@@ -622,18 +622,18 @@ $usmtconfig = [xml] @"
               </changeGroup>
             </mappings>
           </localGroups>
-          
+
       -->
     <!--   Example (domain and user mapping):
 
           <domains>
             <domain from="Domain1" to="Domain2"/>
           </domains>
-          
+
           <users>
             <user from="Domain1\User1" to="Domain2\User2"/>
           </users>
-          
+
       -->
   </ProfileControl>
 </Configuration>
@@ -4968,8 +4968,8 @@ $usmtmiguser = [xml] @"
                 </merge>
             </rules>
         </role>
-    </component> 
-	
+    </component>
+
     <!-- This component migrates My Video files -->
     <component type="Documents" context="User">
         <displayName _locID="miguser.myvideo">My Video</displayName>
