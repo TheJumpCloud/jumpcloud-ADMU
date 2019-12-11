@@ -18,5 +18,4 @@ steps:
   inputs:
     targetType: filePath
     filePath: ./powershell/InvokePester.ps1
-    errorActionPreference: continue
   condition: succeededOrFailed()
