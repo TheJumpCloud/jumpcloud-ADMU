@@ -112,7 +112,7 @@ Function Write-Log
     {
     }
 }
-Function Remove-ItemIfExist
+Function Remove-ItemIfExists
 {
     [CmdletBinding(SupportsShouldProcess = $true)]
     Param(
@@ -235,7 +235,7 @@ Function Test-Is40chars ([System.String] $field)
         Return $false
     }
 }
-Function Test-HasNoSpace ([System.String] $field)
+Function Test-HasNoSpaces ([System.String] $field)
 {
     If ($field -like "* *")
     {
