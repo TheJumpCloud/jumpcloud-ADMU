@@ -39,5 +39,10 @@ if (Check_Program_Installed('Jumpcloud')){
 if(Check_Program_Installed('Microsoft Visual C\+\+ 2013 x64') -or (Check_Program_Installed('Microsoft Visual C\+\+ 2013 x86'))){
     Uninstall_Program -programName 'Microsoft Visual C'
 }
+#If JC directory still exists delete it
+if (Test-Path 'C:\Program Files\JumpCloud') {
+    Start-Sleep -Seconds 10
+    remove-item -path 'C:\Program Files\JumpCloud' -Force -Recurse
+}
 #install jcagent and prereq
     DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
