@@ -3,7 +3,7 @@ Param(
 )
 
 # Load functions
-. 'C:\agent\_work\1\s\ADMU\powershell\Functions.ps1'
+. 'C:\agent\_work\2\s\powershell\Functions.ps1'
 #USMT & VC Variables
 $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
 $msvc2013x64File = 'vc_redist.x64.exe'
