@@ -34,6 +34,7 @@ New-Item -ItemType Directory -Path 'C:\windows\Temp\JCADMU' -Force
 #Is agent installed? If so uninstall it
 if (Check_Program_Installed('Jumpcloud')){
 & cmd /C "C:\Program Files\JumpCloud\unins000.exe" /Silent
+} elseif (!(Check_Program_Installed('Jumpcloud'))) {
 Start-Sleep -Seconds 10
 remove-item -path 'C:\Program Files\JumpCloud' -Force -Recurse
 }
