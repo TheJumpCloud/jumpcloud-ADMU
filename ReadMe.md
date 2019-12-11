@@ -553,7 +553,7 @@ Refernce: [Microsoft Windows User Profiles](https://docs.microsoft.com/en-us/win
 
 
 ```diff
-- Microsoft accounts are not supported with JumpCloud takeover.
+- Microsoft accounts are not supported with JumpCloud takeover. 
 ```
 ### Azure AD Profile Scenarios
 
