@@ -8,7 +8,7 @@ steps:
   inputs:
     targetType: filePath
     filePath: ./powershell/Tests/TestSetup.ps1
-    arguments: '-TestOrgConnectKey:($(secretXConnectKey.Pester))'
+    arguments: '-TestOrgConnectKey:('$(secretXConnectKey.Pester)')'
   timeoutInMinutes: 60
   env:
     system.debug: true
