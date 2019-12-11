@@ -9,7 +9,7 @@ The current ADMU Change Log can be found [Here](https://github.com/TheJumpCloud/
 
 ![ADMU Workflow Diagram](https://github.com/TheJumpCloud/support/blob/master/ADMU/images/ADMU_workflow.png)
 
-**Table Of Contents** 
+**Table Of Contents**
 
 - [Providing Feedback](#providing-feedback)
 - [About the JumpCloud AD Migration Utility](#about-the-jumpcloud-ad-migration-utility)
