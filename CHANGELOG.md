@@ -1,3 +1,18 @@
+## 1.2.6
+
+#### RELEASE DATE
+
+December 31, 2019
+
+#### RELEASE NOTES
+
+- Fix $AzureADProfile string & boolean error
+- PSScriptAnalyzer fixes
+- Azure Pipelines & testsetup script for local build server
+- Changes for seperating repo from support
+- Add in additional exe, gpo tests
+- Fix flaky 'Add-LocalUser Function' test by swapping 'get-localgroupmember' with 'net localgroup users'
+
 ## 1.2.5
 
 #### RELEASE DATE
