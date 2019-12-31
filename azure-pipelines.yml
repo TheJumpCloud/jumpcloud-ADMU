@@ -7,7 +7,7 @@ steps:
   displayName: 'TestSetup Script'
   inputs:
     targetType: filePath
-    filePath: ./powershell/Tests/TestSetup.ps1
+    filePath: ./powershell/TestSetup.ps1
     arguments: '-TestOrgConnectKey:(''$(secretXConnectKey.Pester)'')'
   timeoutInMinutes: 60
   env:
