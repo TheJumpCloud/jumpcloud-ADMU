@@ -100,6 +100,8 @@
  $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
  If ($WmiComputerSystem.PartOfDomain)
  {
+    if (Test-ComputerSecureChannel){
+
      # Define misc static variables
      $DomainName = $WmiComputerSystem.Domain
      $FormResults = [PSCustomObject]@{}
@@ -158,6 +160,16 @@
 
         Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Done!' -Completed
     }
+
+            Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName)
+            Write-Log -Message:('The secure channel between the local computer and domain is in good condition')
+
+    } else {
+        Write-Log -Message:('System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.') -Level:('Error')
+        exit
+    }
+
+
  Else
  {
      #Disable UI Elements
