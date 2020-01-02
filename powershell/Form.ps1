@@ -157,6 +157,7 @@
 
     } else {
         Write-Log -Message:('System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.') -Level:('Error')
+        [system.windows.messagebox]::show("System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.", "JumpCloud ADMU",0,16)
         exit
     }
 
