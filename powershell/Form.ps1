@@ -159,10 +159,12 @@
         $Profiles = $win32UserProfiles | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, @{Name = "LastLogin"; EXPRESSION = {$_.ConvertToDateTime($_.lastusetime)}}, @{Name = "UserName"; EXPRESSION = {ConvertSID($_.SID)}}
 
         Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Done!' -Completed
+
+
+        Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName)
+        Write-Log -Message:('The secure channel between the local computer and domain is in good condition')
     }
 
-            Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName)
-            Write-Log -Message:('The secure channel between the local computer and domain is in good condition')
 
     } else {
         Write-Log -Message:('System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.') -Level:('Error')
