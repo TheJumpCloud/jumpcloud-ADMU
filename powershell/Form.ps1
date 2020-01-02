@@ -86,6 +86,16 @@
  #===========================================================================
  $xaml.SelectNodes("//*[@Name]") | ForEach-Object {Set-Variable -Name ($_.Name) -Value $Form.FindName($_.Name)}
 
+ # Check SecureChannel
+ If (Test-ComputerSecureChannel)
+ {
+    Write-Output 'CONNECTED'
+ }
+ Else
+ {
+    Write-Output 'NOT CONNECTED'
+ }
+
  # Check PartOfDomain & Disable Controls
  $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
  If ($WmiComputerSystem.PartOfDomain)
