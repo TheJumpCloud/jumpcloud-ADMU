@@ -156,12 +156,14 @@
 
 
     } else {
-        Write-Log -Message:('System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.') -Level:('Error')
-        [system.windows.messagebox]::show("System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.", "JumpCloud ADMU",0,16)
-        exit
+        Write-Log -Message:('System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.') -Level:('Error') > Out-Null
+        $output = [system.windows.messagebox]::show("The System is domain bound however the secure channel between the domain & system is broken, this must be repaired. `n`n Do you require further information about this error?", "JumpCloud ADMU",4,16)
+        if ($output -eq "Yes"){
+            Start-Process("https://github.com/TheJumpCloud/jumpcloud-ADMU/blob/master/ReadMe.md#computer-account-secure-channel")
+        }else{
+            exit
+        }
     }
-
-
 }
 Else
  {

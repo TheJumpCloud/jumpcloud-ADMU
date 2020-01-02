@@ -69,10 +69,36 @@ If for example the .net4+ version is run on win7 system the user would see the f
 ## Requirements
  The ADMU tool requires the following to work:
 
- * gui_jcadmu requires the system to be currently Domain bound (The system does NOT have to be actively connected to the Domain Controller).
+ * gui_jcadmu requires the system to be currently Domain bound.
  * A domain based profile must exist on the system to be converted to a local profile.
- * The domain bound system must have an active 'domain trust'. This means the system has checked into a DC in the last 90 days.
  * The system does not have to be activly connected to the DC at the time of conversion.
+ * The system however is required to have a 'secure channel' in a good condition between the system and domain.
+
+## Computer Account Secure Channel
+When a computer is bound to AD it forms a secure channel between the system and the domain controller. Once this has been established it renews automatically within compliance of various default and changeable settings. By default this secure channel is renegotiated every 30 days. Before that time it is renewed so Active Directory tasks,jobs and querys can occur. If it is not renewed the secure channel results in a broken state. In relation to the JumpCloud ADMU, querys about the domain accounts on a system can no longer resolve and the USMT will not work as expected.
+
+Because of this, we have added a check infront of both the GUI and CLI tools. This will check the status of the 'Secure Channel' and error out or continue depending on the result.
+
+How do I fix or repair the Secure Channel?
+If the systems secure channel is in a broken state, the system must be able to connect to a domain controller. Then a powershell command can be run to repair the secure channel.
+
+```powershell
+Test-ComputerSecureChannel -Repair -Credential (Get-Credential)
+```
+
+Once this is run on the system and domain admin credentials provided, the command should return True if successful.
+
+If the following powershell command is then run
+```powershell
+Test-ComputerSecureChannel -Verbose
+```
+It should now return "The secure channel between the local computer and the domain is in good condition."
+
+The JumpCloud ADMU tool can now be rerun and should continue without error.
+
+Further detailed information from Microsoft can be found [HERE](https://social.technet.microsoft.com/wiki/contents/articles/24644.detailed-concepts-secure-channel-explained.aspx
+).
+
 
 ## EULA & Legal Explanation
 
@@ -87,9 +113,9 @@ If for example the .net4+ version is run on win7 system the user would see the f
 
  **Approximate timings:**
 
- Timings are relative to the both the size and number of files present in the windows profile and the speed of the system and hardware.
+ Timings are direcly related to the both the size and number of files present in the windows profile and the speed of the system and its hardware.
 
- Some aproximations from VM i5-7260 2.2GHz, 512GB RAM
+ Some aproximations from VM i5-7260 2.2GHz, 512GB RAM, SSD
 
  :5 start → scanstate (USMT on win10)
  :40 start → scanstate (NO USMT on system)
@@ -97,7 +123,7 @@ If for example the .net4+ version is run on win7 system the user would see the f
  2:40 start → loadstate (USMT installed on win10)
 
  1:00 loadstate → install agent (win10 & 7 missing prereq c++)
- 
+
  **Total Time Estimate: Between 2:30 → 5:00**
 
 
@@ -106,7 +132,7 @@ If for example the .net4+ version is run on win7 system the user would see the f
 ## Limitations of User Account Conversion
 
  There are limitations to consider when using the USMT utility for user account conversion. Because of this it is recommended to follow a one, some, many approach for migration to understand what and how the tool can and can not do in your specific environment. This is where further investigation needs to be done on streamlining and improving/documenting common scenarios and workarounds.
- 
+
  [Follow this link to see what gets migrated using the default settings of the USMT.](https://docs.microsoft.com/en-us/windows/deployment/usmt/usmt-what-does-usmt-migrate#bkmk-3)
 
 
@@ -132,7 +158,7 @@ If for example the .net4+ version is run on win7 system the user would see the f
 
 Regardless of how you deploy the ADMU the utility will leave the selected domain account that is being migrated **untouched and fully intact**.
 The ADMU leverages the USMT and settings to migrate user data from a domain account to a net new local account.
-[Follow this link to see what gets migrated using the default settings of the USMT.](https://docs.microsoft.com/en-us/windows/deployment/usmt/usmt-what-does-usmt-migrate#bkmk-3)
+[Follow this link to see what is migrated using the default settings of the USMT.](https://docs.microsoft.com/en-us/windows/deployment/usmt/usmt-what-does-usmt-migrate#bkmk-3)
 
 ## Download Links
 GUI - gui_jcadmu.exe
