@@ -11,7 +11,7 @@
  <Window
      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-     Title="JumpCloud ADMU 1.2.6" Height="460.945" Width="980.016" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
+     Title="JumpCloud ADMU 1.2.7" Height="460.945" Width="980.016" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
      <Grid Margin="0,0,-0.2,0.168">
          <ListView Name="lvProfileList" HorizontalAlignment="Left" Height="141.629" Margin="9.9,149.476,0,0" VerticalAlignment="Top" Width="944.422">
              <ListView.View>
@@ -90,65 +90,78 @@
  $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
  If ($WmiComputerSystem.PartOfDomain)
  {
-     # Define misc static variables
-     $DomainName = $WmiComputerSystem.Domain
-     $FormResults = [PSCustomObject]@{}
+     If (Test-ComputerSecureChannel){
+         # Define misc static variables
+         $DomainName = $WmiComputerSystem.Domain
+         $FormResults = [PSCustomObject]@{}
 
-     Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Getting Installed Applications..' -PercentComplete 25
+         Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Getting Installed Applications..' -PercentComplete 25
 
-     $InstalledProducts = (Get-WmiObject -Class:('Win32_Product') | Select-Object Name)
-     $Disk = Get-WmiObject -Class Win32_logicaldisk -Filter "DeviceID = 'C:'"
-     $freespace = $Disk.FreeSpace
-     $freespace = [math]::Round($freespace/1MB,0)
+         $InstalledProducts = (Get-WmiObject -Class:('Win32_Product') | Select-Object Name)
+         $Disk = Get-WmiObject -Class Win32_logicaldisk -Filter "DeviceID = 'C:'"
+         $freespace = $Disk.FreeSpace
+         $freespace = [math]::Round($freespace/1MB,0)
 
-     Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Verifying Local Accounts & Group Membership..' -PercentComplete 50
+         Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Verifying Local Accounts & Group Membership..' -PercentComplete 50
 
-    # Get list of profiles from computer into listview
-    $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object {$_.Special -eq $false}
-    $win32UserProfiles | add-member -membertype NoteProperty -name IsLocalAdmin -value $null
-    $win32UserProfiles | add-member -membertype NoteProperty -name LocalProfileSize -value $null
+        # Get list of profiles from computer into listview
+        $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object {$_.Special -eq $false}
+        $win32UserProfiles | add-member -membertype NoteProperty -name IsLocalAdmin -value $null
+        $win32UserProfiles | add-member -membertype NoteProperty -name LocalProfileSize -value $null
 
-    $users =  $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
-    $userstrim = $users -creplace '^[^\\]*\\', ''
+        $users =  $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
+        $userstrim = $users -creplace '^[^\\]*\\', ''
 
-    $members = net localgroup administrators |
-    Where-Object {$_ -AND $_ -notmatch "command completed successfully"} |
-    Select-Object -Skip 4
+        $members = net localgroup administrators |
+        Where-Object {$_ -AND $_ -notmatch "command completed successfully"} |
+        Select-Object -Skip 4
 
-    $i = 0
-    ForEach ($user in $userstrim) {
-    If ($members -contains $user) {
-    $win32UserProfiles[$i].IsLocalAdmin = $true
-    $i++
-    } Else {
-    $win32UserProfiles[$i].IsLocalAdmin = $false
-    $i++
-    }}
-
-    Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Getting C:\ & Local Profile Data..' -PercentComplete 75
-
-    #local profile file size check
-    $LocalUserProfiles = $win32UserProfiles | Select-Object LocalPath
-    $LocalUserProfilesTrim =  ForEach ($LocalPath in $LocalUserProfiles){$LocalPath.LocalPath.substring(9)}
-
-    $i = 0
-    $profiles2 = Get-ChildItem C:\Users | Where-Object{Test-path C:\Users\$_\NTUSER.DAT} | Select-Object -ExpandProperty Name
-    foreach($userprofile in $LocalUserProfilesTrim)
-        {
-        $largeprofile = Get-ChildItem C:\Users\$userprofile -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Sum length | Select-Object -ExpandProperty Sum
-        $largeprofile =  [math]::Round($largeprofile/1MB,0)
-        $largeprofile =  $largeprofile
-        $win32UserProfiles[$i].LocalProfileSize = $largeprofile
+        $i = 0
+        ForEach ($user in $userstrim) {
+        If ($members -contains $user) {
+        $win32UserProfiles[$i].IsLocalAdmin = $true
         $i++
-        }
+        } Else {
+        $win32UserProfiles[$i].IsLocalAdmin = $false
+        $i++
+        }}
 
-    Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Building Profile Group Box Query..' -PercentComplete 95
+        Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Getting C:\ & Local Profile Data..' -PercentComplete 75
 
-        $Profiles = $win32UserProfiles | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, @{Name = "LastLogin"; EXPRESSION = {$_.ConvertToDateTime($_.lastusetime)}}, @{Name = "UserName"; EXPRESSION = {ConvertSID($_.SID)}}
+        #local profile file size check
+        $LocalUserProfiles = $win32UserProfiles | Select-Object LocalPath
+        $LocalUserProfilesTrim =  ForEach ($LocalPath in $LocalUserProfiles){$LocalPath.LocalPath.substring(9)}
+
+        $i = 0
+        $profiles2 = Get-ChildItem C:\Users | Where-Object{Test-path C:\Users\$_\NTUSER.DAT} | Select-Object -ExpandProperty Name
+        foreach($userprofile in $LocalUserProfilesTrim)
+            {
+            $largeprofile = Get-ChildItem C:\Users\$userprofile -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Sum length | Select-Object -ExpandProperty Sum
+            $largeprofile =  [math]::Round($largeprofile/1MB,0)
+            $largeprofile =  $largeprofile
+            $win32UserProfiles[$i].LocalProfileSize = $largeprofile
+            $i++
+            }
+
+        Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Building Profile Group Box Query..' -PercentComplete 95
+
+            $Profiles = $win32UserProfiles | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, @{Name = "LastLogin"; EXPRESSION = {$_.ConvertToDateTime($_.lastusetime)}}, @{Name = "UserName"; EXPRESSION = {ConvertSID($_.SID)}}
 
         Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Done!' -Completed
     }
- Else
+    Else {
+        Write-Log -Message:('System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.') -Level:('Error') >$null 2>&1
+        $output = [system.windows.messagebox]::show("The System is domain bound however the secure channel between the domain & system is broken, this must be repaired for the tool to work. `n`n Do you require further information about this error?", "JumpCloud ADMU",4,16)
+        if ($output -eq "Yes"){
+            Start-Process("https://github.com/TheJumpCloud/jumpcloud-ADMU#computer-account-secure-channel")
+            exit
+        }else{
+            exit
+        }
+        Write-Output ('Exiting ADMU process')
+    }
+}
+Else
  {
      #Disable UI Elements
      $DomainName = "Not Domain Joined"

@@ -1,3 +1,15 @@
+## 1.2.7
+
+#### RELEASE DATE
+
+January 3, 2020
+
+#### RELEASE NOTES
+
+- Test-ComputerSecureChannel check for GUI and CLI
+- Readme Computer Account Secure Channel explanation
+- Fix $true/$false values for parameter logic
+
 ## 1.2.6
 
 #### RELEASE DATE
