@@ -14,6 +14,7 @@ The current ADMU Change Log can be found [Here](https://github.com/TheJumpCloud/
 - [About the JumpCloud AD Migration Utility](#about-the-jumpcloud-ad-migration-utility)
   - [Supported Operating System Versions](#supported-operating-system-versions)
   - [Requirements](#requirements)
+  - [Computer Account Secure Channel](#computer-account-secure-channel)
   - [EULA & Legal Explanation](#eula--legal-explanation)
   - [Expected Performance](#expected-performance)
 - [Known Issues](#known-issues)
