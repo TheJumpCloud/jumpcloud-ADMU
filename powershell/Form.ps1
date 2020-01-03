@@ -90,22 +90,7 @@
  $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
  If ($WmiComputerSystem.PartOfDomain)
  {
-     #check test-computersecurechannel
      If (Test-ComputerSecureChannel){
-         #DO STUFF
-    }
-    Else {
-        Write-Log -Message:('System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.') -Level:('Error') >$null 2>&1
-        $output = [system.windows.messagebox]::show("The System is domain bound however the secure channel between the domain & system is broken, this must be repaired. `n`n Do you require further information about this error?", "JumpCloud ADMU",4,16)
-        if ($output -eq "Yes"){
-            Start-Process("https://github.com/TheJumpCloud/jumpcloud-ADMU#computer-account-secure-channel")
-            exit
-        }else{
-            exit
-        }
-        Write-Output ('Exiting ADMU process')
-    }
-
          # Define misc static variables
          $DomainName = $WmiComputerSystem.Domain
          $FormResults = [PSCustomObject]@{}
@@ -162,9 +147,19 @@
 
             $Profiles = $win32UserProfiles | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, @{Name = "LastLogin"; EXPRESSION = {$_.ConvertToDateTime($_.lastusetime)}}, @{Name = "UserName"; EXPRESSION = {ConvertSID($_.SID)}}
 
-            Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Done!' -Completed
-
-
+        Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Done!' -Completed
+    }
+    Else {
+        Write-Log -Message:('System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.') -Level:('Error') >$null 2>&1
+        $output = [system.windows.messagebox]::show("The System is domain bound however the secure channel between the domain & system is broken, this must be repaired for the tool to work. `n`n Do you require further information about this error?", "JumpCloud ADMU",4,16)
+        if ($output -eq "Yes"){
+            Start-Process("https://github.com/TheJumpCloud/jumpcloud-ADMU#computer-account-secure-channel")
+            exit
+        }else{
+            exit
+        }
+        Write-Output ('Exiting ADMU process')
+    }
 }
 Else
  {
