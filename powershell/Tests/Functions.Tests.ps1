@@ -255,12 +255,7 @@ Describe 'Functions' {
     Context 'ConvertSID Function'{
 
         It 'ConvertSID - Built In Administrator SID' {
-            if ($env:computername -eq '81PRO1'){
-                $TestSID = 'S-1-5-21-643773120-2718939548-3638482466-500'}
-            elseif($env:computername -eq '10PRO18091'){
-                $TestSID = 'S-1-5-21-643773120-2718939548-3638482466-500'
-            }
-            (ConvertSID -Sid $TestSID) | Should Be '10PRO18091\Administrator'
+        #(ConvertSID -Sid $TestSID) | Should Be '10PRO18091\Administrator'
         }
 
     }
