@@ -2,6 +2,9 @@ Param(
 [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateNotNullOrEmpty()][System.String]$TestOrgConnectKey
 )
 
+# Install Pester
+Install-Module -Name:('Pester') -Force -Scope:('CurrentUser') -SkipPublisherCheck
+
 # Load functions
 . ((Split-Path -Path:($MyInvocation.MyCommand.Path)) + '\Functions.ps1')
 
@@ -38,12 +41,12 @@ if (Check_Program_Installed('Jumpcloud')){
 & cmd /C "C:\Program Files\JumpCloud\unins000.exe" /Silent
 }
 #Is vcredistx86 & vcredistx64 installed? If so uninstall it
-if(Check_Program_Installed('Microsoft Visual C\+\+ 2013 x64') -or (Check_Program_Installed('Microsoft Visual C\+\+ 2013 x86'))){
+if(Check_Program_Installed('Microsoft Visual C\+\+ 2013 x64') -or (Check_Program_Installed([Regex]'(Microsoft Visual C\+\+ 2013 Redistributable \(x86\))(.*?)'))){
     Uninstall_Program -programName 'Microsoft Visual C'
 }
 #If JC directory still exists delete it
 if (Test-Path 'C:\Program Files\JumpCloud') {
-    Start-Sleep -Seconds 10
+    Start-Sleep -Seconds 5
     remove-item -path 'C:\Program Files\JumpCloud' -Force -Recurse
 }
 #install jcagent and prereq

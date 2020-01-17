@@ -166,10 +166,9 @@ Function Add-LocalUser
 }
 #Check if program is on system
 function Check_Program_Installed($programName) {
-    $installed = $null
     $installed = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -match $programName})
     $installed32 = (Get-ItemProperty HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -match $programName})
-    if (($null -ne $installed) -or ($null -ne $installed32)) {
+    if ((-not [System.String]::IsNullOrEmpty($installed)) -or (-not [System.String]::IsNullOrEmpty($installed32))) {
       return $true
     }
     else {
@@ -273,17 +272,17 @@ Function DownloadAndInstallAgent(
     }
     If (!(AgentIsOnFileSystem))
     {
-        Start-Sleep -s 20
         Write-Log -Message:('Downloading JCAgent Installer')
         #Download Installer
-        DownloadAgentInstaller
+        (New-Object System.Net.WebClient).DownloadFile("${AGENT_INSTALLER_URL}", ($AGENT_INSTALLER_PATH))
         Write-Log -Message:('JumpCloud Agent Download Complete')
         Write-Log -Message:('Running JCAgent Installer')
         #Run Installer
         InstallAgent
+        Start-Sleep -s 25
         Write-Log -Message:('JumpCloud Agent Installer Completed')
     }
-    If (Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64") -and Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86") -and AgentIsOnFileSystem)
+    If (Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64") -and Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86") -and Check_Program_Installed("jumpcloud"))
     {
         Return $true
     }
@@ -341,11 +340,8 @@ Function InstallAgent()
 {
     $params = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/VERYSILENT", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
     Invoke-Expression "$params"
-}
-Function DownloadAgentInstaller()
-{
-    (New-Object System.Net.WebClient).DownloadFile("${AGENT_INSTALLER_URL}", "${AGENT_INSTALLER_PATH}")
-}
+  }
+
 Function ForceRebootComputerWithDelay
 {
     Param(
