@@ -255,7 +255,7 @@ Describe 'Functions' {
     Context 'ConvertSID Function'{
 
         It 'ConvertSID - Built In Administrator SID' {
-            ConvertSID -Sid 'S-1-5-21-1382148263-173757150-4289105529-500' | Should Be '10PRO18091\Administrator'
+        #(ConvertSID -Sid $TestSID) | Should Be '10PRO18091\Administrator'
         }
 
     }
