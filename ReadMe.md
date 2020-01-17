@@ -53,19 +53,13 @@ The current ADMU Change Log can be found [Here](https://github.com/TheJumpCloud/
 
 ## Supported Operating System Versions
 
-- Windows 7 ships with .net 3.5.1 by default
 - Windows 8.1 ships with .net 4.5 and .net 3.5 not enabled by default
 - Windows 10 ships with .net 4.7 and .net 3.5 not enabled by default
 
  Currently both the GUI and EXE implementations require a specific .net version to load or run with no user interaction.
-
-To account for this we currently have 2 versions of `jcadmu.exe` & `gui_jcadmu.exe`. The Windows 7 folder builds are based on `.net 3.5` and Windows 8-10 on `.net 4`.
+ If the ADMU is ran on a windows 7 system it must have .net 4.5 + installed to work.
 
 [ADMU EXE Directory Link](https://github.com/TheJumpCloud/jumpcloud-admu/blob/master/exe)
-
-If for example the .net4+ version is run on win7 system the user would see the following.
-
-![image46](https://github.com/TheJumpCloud/jumpcloud-admu/blob/master/images/img_46.png)
 
 ## Requirements
  The ADMU tool requires the following to work:
@@ -123,7 +117,7 @@ Further detailed information from Microsoft can be found [HERE](https://social.t
 
  2:40 start → loadstate (USMT installed on win10)
 
- 1:00 loadstate → install agent (win10 & 7 missing prereq c++)
+ 1:00 loadstate → install agent (win10 missing prereq c++)
 
  **Total Time Estimate: Between 2:30 → 5:00**
 
@@ -163,12 +157,10 @@ The ADMU leverages the USMT and settings to migrate user data from a domain acco
 
 ## Download Links
 GUI - gui_jcadmu.exe
-* [GUI - Windows 7 / .net 3 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/exe/Windows%207/gui_jcadmu_win7.exe)
-* [GUI - Windows 8.1-10 / .net 4 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/exe/Windows%208-10/gui_jcadmu_win10.exe)
+* [GUI - Windows 8.1-10 / .net 4 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/exe/gui_jcadmu_.exe)
 
 EXE - jcadmu.exe
-* [JCADMU.exe - Windows 7 / .net 3 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/exe/Windows%207/jcadmu_win7.exe)
-* [JCADMU.exe - Windows 8.1-10 / .net 4 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/exe/Windows%208-10/jcadmu_win10.exe)
+* [JCADMU.exe - Windows 8.1-10 / .net 4 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/exe/jcadmu.exe)
 
 Powershell - Migration.ps1 & Functions.ps1
 * [Powershell](https://github.com/TheJumpCloud/jumpcloud-admu/tree/master/powershell)
@@ -253,7 +245,7 @@ c:\jcadmu.exe -arguments -domainusername 'bob.lazar' -jumpcloudusername 'blazar'
 
  Report local accounts example
 ```powershell
-$systems = @('10ent17091', '10ent18031', '10ent18091', '10pro17091', '10pro18031', '10pro18091', '81pro', '7pro1')
+$systems = @('10ent17091', '10ent18031', '10ent18091', '10pro17091', '10pro18031', '10pro18091', '81pro')
 
 Invoke-Command -ComputerName $systems {
 Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object {$_.Special -eq $false, $_.RoamingConfigured -eq $false} | `
@@ -398,17 +390,11 @@ WARNING: Removal Of Temp Files & Folders Failed
 
 ![image20](https://github.com/TheJumpCloud/jumpcloud-admu/blob/master/images/img_20.png)
 
- If the system already has ADK/USMT installed on the system but is not located in c:\adk the script will error and return:
+ If the system already has ADK/USMT installed on the system but is not located in the default install directory the script will error and return:
 
 ```powershell
 LOG: 'Microsoft Windows ADK  - User State Migration Tool not found in c:\adk. Make sure it is installed correctly and in the required location.'
 ```
-
-This will need to be corrected before the tool can move forward, so ADK/USMT should be uninstalled and reinstalled in the required location.
-
- On win7 base systems .net framework is required for the ADK/USMT installer to work. This will be installed in the background if not present.
-
-![image21](https://github.com/TheJumpCloud/jumpcloud-admu/blob/master/images/img_21.png)
 
 If ‘Accept EULA’ parameter is equal to $false or not present the end user will see:
 
