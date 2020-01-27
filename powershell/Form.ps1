@@ -1,7 +1,4 @@
-# Load functions
-. ((Split-Path -Path:($MyInvocation.MyCommand.Path)) + '\Functions.ps1')
-
-Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Loading ADMU GUI..' -PercentComplete 0
+Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
 
 #==============================================================================================
 # XAML Code - Imported from Visual Studio WPF Application
@@ -96,14 +93,14 @@ If ($WmiComputerSystem.PartOfDomain)
         $DomainName = $WmiComputerSystem.Domain
         $FormResults = [PSCustomObject]@{ }
 
-        Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Getting Installed Applications..' -PercentComplete 25
+        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Getting Installed Applications..'
 
         $InstalledProducts = (Get-WmiObject -Class:('Win32_Product') | Select-Object Name)
         $Disk = Get-WmiObject -Class Win32_logicaldisk -Filter "DeviceID = 'C:'"
         $freespace = $Disk.FreeSpace
         $freespace = [math]::Round($freespace / 1MB, 0)
 
-        Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Verifying Local Accounts & Group Membership..' -PercentComplete 50
+        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
 
         # Get list of profiles from computer into listview
         $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
@@ -132,7 +129,7 @@ If ($WmiComputerSystem.PartOfDomain)
             }
         }
 
-        Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Getting C:\ & Local Profile Data..' -PercentComplete 75
+        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
 
         #local profile file size check
         $LocalUserProfiles = $win32UserProfiles | Select-Object LocalPath
@@ -149,11 +146,11 @@ If ($WmiComputerSystem.PartOfDomain)
             $i++
         }
 
-        Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Building Profile Group Box Query..' -PercentComplete 95
+        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Building Profile Group Box Query..'
 
         $Profiles = $win32UserProfiles | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, @{Name = "LastLogin"; EXPRESSION = { $_.ConvertToDateTime($_.lastusetime) } }, @{Name = "UserName"; EXPRESSION = { ConvertSID($_.SID) } }
 
-        Write-Progress -Activity 'Loading Jumpcloud ADMU. Please Wait..' -Status 'Done!' -Completed
+        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Done!'
     }
     Else
     {
