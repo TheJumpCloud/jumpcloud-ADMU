@@ -2,31 +2,31 @@
 #Verify Domain Account Function
 Function VerifyAccount
 {
-    Param (
-        [Parameter(Mandatory = $true)][System.String]$userName, [System.String]$domain = $null
-    )
+  Param (
+    [Parameter(Mandatory = $true)][System.String]$userName, [System.String]$domain = $null
+  )
+  $idrefUser = $null
+  $strUsername = $userName
+  If ($domain)
+  {
+    $strUsername += [String]("@" + $domain)
+  }
+  Try
+  {
+    $idrefUser = ([System.Security.Principal.NTAccount]($strUsername)).Translate([System.Security.Principal.SecurityIdentifier])
+  }
+  Catch [System.Security.Principal.IdentityNotMappedException]
+  {
     $idrefUser = $null
-    $strUsername = $userName
-    If ($domain)
-    {
-        $strUsername += [String]("@" + $domain)
-    }
-    Try
-    {
-        $idrefUser = ([System.Security.Principal.NTAccount]($strUsername)).Translate([System.Security.Principal.SecurityIdentifier])
-    }
-    Catch [System.Security.Principal.IdentityNotMappedException]
-    {
-        $idrefUser = $null
-    }
-    If ($idrefUser)
-    {
-        Return $true
-    }
-    Else
-    {
-        Return $false
-    }
+  }
+  If ($idrefUser)
+  {
+    Return $true
+  }
+  Else
+  {
+    Return $false
+  }
 }
 #Logging function
 <#
@@ -60,236 +60,245 @@ Function VerifyAccount
   #>
 Function Write-Log
 {
-    [CmdletBinding()]
-    Param
-    (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
-        , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = 'C:\Windows\Temp\jcAdmu.log'
-        , [Parameter(Mandatory = $false)][ValidateSet("Error", "Warn", "Info")][string]$Level = "Info"
-    )
-    Begin
+  [CmdletBinding()]
+  Param
+  (
+    [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
+    , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = 'C:\Windows\Temp\jcAdmu.log'
+    , [Parameter(Mandatory = $false)][ValidateSet("Error", "Warn", "Info")][string]$Level = "Info"
+  )
+  Begin
+  {
+    # Set VerbosePreference to Continue so that verbose messages are displayed.
+    $VerbosePreference = 'Continue'
+  }
+  Process
+  {
+    # If attempting to write to a log file in a folder/path that doesn't exist create the file including the path.
+    If (!(Test-Path $Path))
     {
-        # Set VerbosePreference to Continue so that verbose messages are displayed.
-        $VerbosePreference = 'Continue'
+      Write-Verbose "Creating $Path."
+      $NewLogFile = New-Item $Path -Force -ItemType File
     }
-    Process
+    Else
     {
-        # If attempting to write to a log file in a folder/path that doesn't exist create the file including the path.
-        If (!(Test-Path $Path))
-        {
-            Write-Verbose "Creating $Path."
-            $NewLogFile = New-Item $Path -Force -ItemType File
-        }
-        Else
-        {
-            # Nothing to see here yet.
-        }
-        # Format Date for our Log File
-        $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        # Write message to error, warning, or verbose pipeline and specify $LevelText
-        Switch ($Level)
-        {
-            'Error'
-            {
-                Write-Error $Message
-                $LevelText = 'ERROR:'
-            }
-            'Warn'
-            {
-                Write-Warning $Message
-                $LevelText = 'WARNING:'
-            }
-            'Info'
-            {
-                Write-Verbose $Message
-                $LevelText = 'INFO:'
-            }
-        }
-        # Write log entry to $Path
-        "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
+      # Nothing to see here yet.
     }
-    End
+    # Format Date for our Log File
+    $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    # Write message to error, warning, or verbose pipeline and specify $LevelText
+    Switch ($Level)
     {
+      'Error'
+      {
+        Write-Error $Message
+        $LevelText = 'ERROR:'
+      }
+      'Warn'
+      {
+        Write-Warning $Message
+        $LevelText = 'WARNING:'
+      }
+      'Info'
+      {
+        Write-Verbose $Message
+        $LevelText = 'INFO:'
+      }
     }
+    # Write log entry to $Path
+    "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
+  }
+  End
+  {
+  }
 }
 Function Remove-ItemIfExists
 {
-    [CmdletBinding(SupportsShouldProcess = $true)]
-    Param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String[]]$Path
-        , [Switch]$Recurse
-    )
-    Process
+  [CmdletBinding(SupportsShouldProcess = $true)]
+  Param(
+    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String[]]$Path
+    , [Switch]$Recurse
+  )
+  Process
+  {
+    Try
     {
-        Try
-        {
-            If (Test-Path -Path:($Path))
-            {
-                Remove-Item -Path:($Path) -Recurse:($Recurse)
-            }
-        }
-        Catch
-        {
-            Write-Log -Message ('Removal Of Temp Files & Folders Failed') -Level Warn
-        }
+      If (Test-Path -Path:($Path))
+      {
+        Remove-Item -Path:($Path) -Recurse:($Recurse)
+      }
     }
+    Catch
+    {
+      Write-Log -Message ('Removal Of Temp Files & Folders Failed') -Level Warn
+    }
+  }
 }
 #Download $Link to $Path
 Function DownloadLink($Link, $Path)
 {
 
-    $WebClient = New-Object -TypeName:('System.Net.WebClient')
-    $Global:IsDownloaded = $false
-    $SplatArgs = @{ InputObject = $WebClient
-        EventName               = 'DownloadFileCompleted'
-        Action                  = {$Global:IsDownloaded = $true; }
-    }
-    $DownloadCompletedEventSubscriber = Register-ObjectEvent @SplatArgs
-    $WebClient.DownloadFileAsync("$Link", "$Path")
-    While (-not $Global:IsDownloaded)
-    {
-        Start-Sleep -Seconds 3
-    } # While
-    $DownloadCompletedEventSubscriber.Dispose()
-    $WebClient.Dispose()
+  $WebClient = New-Object -TypeName:('System.Net.WebClient')
+  $Global:IsDownloaded = $false
+  $SplatArgs = @{ InputObject = $WebClient
+    EventName                 = 'DownloadFileCompleted'
+    Action                    = { $Global:IsDownloaded = $true; }
+  }
+  $DownloadCompletedEventSubscriber = Register-ObjectEvent @SplatArgs
+  $WebClient.DownloadFileAsync("$Link", "$Path")
+  While (-not $Global:IsDownloaded)
+  {
+    Start-Sleep -Seconds 3
+  } # While
+  $DownloadCompletedEventSubscriber.Dispose()
+  $WebClient.Dispose()
 
 }
 # Add localuser to group
 Function Add-LocalUser
 {
-    Param(
-        [String[]]$computer
-        , [String[]]$group
-        , [String[]]$localusername
-    )
-    ([ADSI]"WinNT://$computer/$group,group").psbase.Invoke("Add", ([ADSI]"WinNT://$computer/$localusername").path)
+  Param(
+    [String[]]$computer
+    , [String[]]$group
+    , [String[]]$localusername
+  )
+  ([ADSI]"WinNT://$computer/$group,group").psbase.Invoke("Add", ([ADSI]"WinNT://$computer/$localusername").path)
 }
 #Check if program is on system
-function Check_Program_Installed($programName) {
-    $installed = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -match $programName})
-    $installed32 = (Get-ItemProperty HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -match $programName})
-    if ((-not [System.String]::IsNullOrEmpty($installed)) -or (-not [System.String]::IsNullOrEmpty($installed32))) {
-      return $true
-    }
-    else {
-      return $false
-    }
+function Check_Program_Installed($programName)
+{
+  $installed = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object { $_.DisplayName -match $programName })
+  $installed32 = (Get-ItemProperty HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object { $_.DisplayName -match $programName })
+  if ((-not [System.String]::IsNullOrEmpty($installed)) -or (-not [System.String]::IsNullOrEmpty($installed32)))
+  {
+    return $true
   }
+  else
+  {
+    return $false
+  }
+}
 #Check reg for program uninstallstring and silently uninstall
 
-function Uninstall_Program($programName) {
-  $Ver = Get-ChildItem -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall, HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall  |
-      Get-ItemProperty |
-          Where-Object {$_.DisplayName -match $programName } |
-              Select-Object -Property DisplayName, UninstallString
+function Uninstall_Program($programName)
+{
+  $Ver = Get-ChildItem -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall, HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall |
+  Get-ItemProperty |
+  Where-Object { $_.DisplayName -match $programName } |
+  Select-Object -Property DisplayName, UninstallString
 
-     ForEach ($ver in $Ver) {
-        If ($ver.UninstallString -and $ver.DisplayName -match 'Jumpcloud') {
-            $uninst = $ver.UninstallString
-            & cmd /C $uninst /Silent | Out-Null
-        } If ($ver.UninstallString -and $ver.DisplayName -match 'FileZilla Client 3.46.3') {
-            $uninst = $ver.UninstallString
-            & cmd /c $uninst /S| Out-Null
-        } else{
-            $uninst = $ver.UninstallString
-            & cmd /c $uninst /q /norestart | Out-Null
-        }
+  ForEach ($ver in $Ver)
+  {
+    If ($ver.UninstallString -and $ver.DisplayName -match 'Jumpcloud')
+    {
+      $uninst = $ver.UninstallString
+      & cmd /C $uninst /Silent | Out-Null
+    } If ($ver.UninstallString -and $ver.DisplayName -match 'FileZilla Client 3.46.3')
+    {
+      $uninst = $ver.UninstallString
+      & cmd /c $uninst /S | Out-Null
+    }
+    else
+    {
+      $uninst = $ver.UninstallString
+      & cmd /c $uninst /q /norestart | Out-Null
     }
   }
+}
 
 
 #Start process and wait then close after 5mins
 Function Start-NewProcess([string]$pfile, [string]$arguments, [int32]$Timeout = 300000)
 {
-    $p = New-Object System.Diagnostics.Process;
-    $p.StartInfo.FileName = $pfile;
-    $p.StartInfo.Arguments = $arguments
-    [void]$p.Start();
-    If (! $p.WaitForExit($Timeout))
-    {
-        Write-Log -Message "Windows ADK Setup did not complete after 5mins";
-        Get-Process | Where-Object {$_.Name -like "adksetup*"} | Stop-Process
-    }
+  $p = New-Object System.Diagnostics.Process;
+  $p.StartInfo.FileName = $pfile;
+  $p.StartInfo.Arguments = $arguments
+  [void]$p.Start();
+  If (! $p.WaitForExit($Timeout))
+  {
+    Write-Log -Message "Windows ADK Setup did not complete after 5mins";
+    Get-Process | Where-Object { $_.Name -like "adksetup*" } | Stop-Process
+  }
 }
 # Validation
 Function Test-IsNotEmpty ([System.String] $field)
 {
-    If (([System.String]::IsNullOrEmpty($field)))
-    {
-        Return $true
-    }
-    Else
-    {
-        Return $false
-    }
+  If (([System.String]::IsNullOrEmpty($field)))
+  {
+    Return $true
+  }
+  Else
+  {
+    Return $false
+  }
 }
 Function Test-Is40chars ([System.String] $field)
 {
-    If ($field.Length -eq 40)
-    {
-        Return $true
-    }
-    Else
-    {
-        Return $false
-    }
+  If ($field.Length -eq 40)
+  {
+    Return $true
+  }
+  Else
+  {
+    Return $false
+  }
 }
 Function Test-HasNoSpaces ([System.String] $field)
 {
-    If ($field -like "* *")
-    {
-        Return $false
-    }
-    Else
-    {
-        Return $true
-    }
+  If ($field -like "* *")
+  {
+    Return $false
+  }
+  Else
+  {
+    Return $true
+  }
 }
 
 Function DownloadAndInstallAgent(
-    [System.String]$msvc2013x64Link
-    , [System.String]$msvc2013Path
-    , [System.String]$msvc2013x64File
-    , [System.String]$msvc2013x64Install
-    , [System.String]$msvc2013x86Link
-    , [System.String]$msvc2013x86File
-    , [System.String]$msvc2013x86Install
+  [System.String]$msvc2013x64Link
+  , [System.String]$msvc2013Path
+  , [System.String]$msvc2013x64File
+  , [System.String]$msvc2013x64Install
+  , [System.String]$msvc2013x86Link
+  , [System.String]$msvc2013x86File
+  , [System.String]$msvc2013x86Install
 )
 {
-    If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64")))
-    {
-        Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x64')
-        (New-Object System.Net.WebClient).DownloadFile("${msvc2013x64Link}", ($jcAdmuTempPath + $msvc2013x64File))
-        Invoke-Expression -Command:($msvc2013x64Install)
-        Write-Log -Message:('JCAgent prereq installed')
-    }
-    If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86")))
-    {
-        Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x86')
-        (New-Object System.Net.WebClient).DownloadFile("${msvc2013x86Link}", ($jcAdmuTempPath + $msvc2013x86File))
-        Invoke-Expression -Command:($msvc2013x86Install)
-        Write-Log -Message:('JCAgent prereq installed')
-    }
-    If (!(AgentIsOnFileSystem))
-    {
-        Write-Log -Message:('Downloading JCAgent Installer')
-        #Download Installer
-        (New-Object System.Net.WebClient).DownloadFile("${AGENT_INSTALLER_URL}", ($AGENT_INSTALLER_PATH))
-        Write-Log -Message:('JumpCloud Agent Download Complete')
-        Write-Log -Message:('Running JCAgent Installer')
-        #Run Installer
-        InstallAgent
-        Start-Sleep -s 25
-        Write-Log -Message:('JumpCloud Agent Installer Completed')
-    }
-    If (Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64") -and Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86") -and Check_Program_Installed("jumpcloud"))
-    {
-        Return $true
-    }
-    Else
-    {
-        Return $false
-    }
+  If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64")))
+  {
+    Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x64')
+    (New-Object System.Net.WebClient).DownloadFile("${msvc2013x64Link}", ($jcAdmuTempPath + $msvc2013x64File))
+    Invoke-Expression -Command:($msvc2013x64Install)
+    Write-Log -Message:('JCAgent prereq installed')
+  }
+  If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86")))
+  {
+    Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x86')
+    (New-Object System.Net.WebClient).DownloadFile("${msvc2013x86Link}", ($jcAdmuTempPath + $msvc2013x86File))
+    Invoke-Expression -Command:($msvc2013x86Install)
+    Write-Log -Message:('JCAgent prereq installed')
+  }
+  If (!(AgentIsOnFileSystem))
+  {
+    Write-Log -Message:('Downloading JCAgent Installer')
+    #Download Installer
+    (New-Object System.Net.WebClient).DownloadFile("${AGENT_INSTALLER_URL}", ($AGENT_INSTALLER_PATH))
+    Write-Log -Message:('JumpCloud Agent Download Complete')
+    Write-Log -Message:('Running JCAgent Installer')
+    #Run Installer
+    InstallAgent
+    Start-Sleep -s 25
+    Write-Log -Message:('JumpCloud Agent Installer Completed')
+  }
+  If (Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64") -and Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86") -and Check_Program_Installed("jumpcloud"))
+  {
+    Return $true
+  }
+  Else
+  {
+    Return $false
+  }
 }
 
 Add-Type -MemberDefinition @"
@@ -302,7 +311,8 @@ public static extern int NetGetJoinInformation(
   out int BufferType);
 "@ -Namespace Win32Api -Name NetApi32
 
-function GetNetBiosName {
+function GetNetBiosName
+{
   $pNameBuffer = [IntPtr]::Zero
   $joinStatus = 0
   $apiResult = [Win32Api.NetApi32]::NetGetJoinInformation(
@@ -310,13 +320,15 @@ function GetNetBiosName {
     [Ref] $pNameBuffer, # lpNameBuffer
     [Ref] $joinStatus    # BufferType
   )
-  if ( $apiResult -eq 0 ) {
+  if ( $apiResult -eq 0 )
+  {
     [Runtime.InteropServices.Marshal]::PtrToStringAuto($pNameBuffer)
     [Void] [Win32Api.NetApi32]::NetApiBufferFree($pNameBuffer)
   }
 }
 
-function ConvertSID {
+function ConvertSID
+{
   [CmdletBinding()]
   param
   (
@@ -334,46 +346,46 @@ function ConvertSID {
 #region Agent Install Helper Functions
 Function AgentIsOnFileSystem()
 {
-    Test-Path -Path:(${AGENT_PATH} + '/' + ${AGENT_BINARY_NAME})
+  Test-Path -Path:(${AGENT_PATH} + '/' + ${AGENT_BINARY_NAME})
 }
 Function InstallAgent()
 {
-    $params = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/VERYSILENT", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
-    Invoke-Expression "$params"
-  }
+  $params = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/VERYSILENT", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
+  Invoke-Expression "$params"
+}
 
 Function ForceRebootComputerWithDelay
 {
-    Param(
-        [int]$TimeOut = 10
-    )
-    $continue = $true
+  Param(
+    [int]$TimeOut = 10
+  )
+  $continue = $true
 
-    while ($continue)
+  while ($continue)
+  {
+    If ([console]::KeyAvailable)
     {
-        If ([console]::KeyAvailable)
-        {
-            Write-Output "Restart Canceled by key press"
-            Exit;
-        }
-        Else
-        {
-            Write-Output "Press any key to cancel... restarting in $TimeOut" -NoNewLine
-            Start-Sleep -Seconds 1
-            $TimeOut = $TimeOut - 1
-            Clear-Host
-            If ($TimeOut -eq 0)
-            {
-                $continue = $false
-                $Restart = $true
-            }
-        }
+      Write-Output "Restart Canceled by key press"
+      Exit;
     }
-    If ($Restart -eq $True)
+    Else
     {
-        Write-Output "Restarting Computer..."
-        Restart-Computer -ComputerName $env:COMPUTERNAME -Force
+      Write-Output "Press any key to cancel... restarting in $TimeOut" -NoNewLine
+      Start-Sleep -Seconds 1
+      $TimeOut = $TimeOut - 1
+      Clear-Host
+      If ($TimeOut -eq 0)
+      {
+        $continue = $false
+        $Restart = $true
+      }
     }
+  }
+  If ($Restart -eq $True)
+  {
+    Write-Output "Restarting Computer..."
+    Restart-Computer -ComputerName $env:COMPUTERNAME -Force
+  }
 }
 #endregion Agent Install Helper Functions
 
