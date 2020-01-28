@@ -2,31 +2,31 @@
 #Verify Domain Account Function
 Function VerifyAccount
 {
-    Param (
-        [Parameter(Mandatory = $true)][System.String]$userName, [System.String]$domain = $null
-    )
+  Param (
+    [Parameter(Mandatory = $true)][System.String]$userName, [System.String]$domain = $null
+  )
+  $idrefUser = $null
+  $strUsername = $userName
+  If ($domain)
+  {
+    $strUsername += [String]("@" + $domain)
+  }
+  Try
+  {
+    $idrefUser = ([System.Security.Principal.NTAccount]($strUsername)).Translate([System.Security.Principal.SecurityIdentifier])
+  }
+  Catch [System.Security.Principal.IdentityNotMappedException]
+  {
     $idrefUser = $null
-    $strUsername = $userName
-    If ($domain)
-    {
-        $strUsername += [String]("@" + $domain)
-    }
-    Try
-    {
-        $idrefUser = ([System.Security.Principal.NTAccount]($strUsername)).Translate([System.Security.Principal.SecurityIdentifier])
-    }
-    Catch [System.Security.Principal.IdentityNotMappedException]
-    {
-        $idrefUser = $null
-    }
-    If ($idrefUser)
-    {
-        Return $true
-    }
-    Else
-    {
-        Return $false
-    }
+  }
+  If ($idrefUser)
+  {
+    Return $true
+  }
+  Else
+  {
+    Return $false
+  }
 }
 #Logging function
 <#
@@ -60,200 +60,209 @@ Function VerifyAccount
   #>
 Function Write-Log
 {
-    [CmdletBinding()]
-    Param
-    (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
-        , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = 'C:\Windows\Temp\jcAdmu.log'
-        , [Parameter(Mandatory = $false)][ValidateSet("Error", "Warn", "Info")][string]$Level = "Info"
-    )
-    Begin
+  [CmdletBinding()]
+  Param
+  (
+    [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
+    , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = 'C:\Windows\Temp\jcAdmu.log'
+    , [Parameter(Mandatory = $false)][ValidateSet("Error", "Warn", "Info")][string]$Level = "Info"
+  )
+  Begin
+  {
+    # Set VerbosePreference to Continue so that verbose messages are displayed.
+    $VerbosePreference = 'Continue'
+  }
+  Process
+  {
+    # If attempting to write to a log file in a folder/path that doesn't exist create the file including the path.
+    If (!(Test-Path $Path))
     {
-        # Set VerbosePreference to Continue so that verbose messages are displayed.
-        $VerbosePreference = 'Continue'
+      Write-Verbose "Creating $Path."
+      $NewLogFile = New-Item $Path -Force -ItemType File
     }
-    Process
+    Else
     {
-        # If attempting to write to a log file in a folder/path that doesn't exist create the file including the path.
-        If (!(Test-Path $Path))
-        {
-            Write-Verbose "Creating $Path."
-            $NewLogFile = New-Item $Path -Force -ItemType File
-        }
-        Else
-        {
-            # Nothing to see here yet.
-        }
-        # Format Date for our Log File
-        $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        # Write message to error, warning, or verbose pipeline and specify $LevelText
-        Switch ($Level)
-        {
-            'Error'
-            {
-                Write-Error $Message
-                $LevelText = 'ERROR:'
-            }
-            'Warn'
-            {
-                Write-Warning $Message
-                $LevelText = 'WARNING:'
-            }
-            'Info'
-            {
-                Write-Verbose $Message
-                $LevelText = 'INFO:'
-            }
-        }
-        # Write log entry to $Path
-        "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
+      # Nothing to see here yet.
     }
-    End
+    # Format Date for our Log File
+    $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    # Write message to error, warning, or verbose pipeline and specify $LevelText
+    Switch ($Level)
     {
+      'Error'
+      {
+        Write-Error $Message
+        $LevelText = 'ERROR:'
+      }
+      'Warn'
+      {
+        Write-Warning $Message
+        $LevelText = 'WARNING:'
+      }
+      'Info'
+      {
+        Write-Verbose $Message
+        $LevelText = 'INFO:'
+      }
     }
+    # Write log entry to $Path
+    "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
+  }
+  End
+  {
+  }
 }
 Function Remove-ItemIfExists
 {
-    [CmdletBinding(SupportsShouldProcess = $true)]
-    Param(
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String[]]$Path
-        , [Switch]$Recurse
-    )
-    Process
+  [CmdletBinding(SupportsShouldProcess = $true)]
+  Param(
+    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String[]]$Path
+    , [Switch]$Recurse
+  )
+  Process
+  {
+    Try
     {
-        Try
-        {
-            If (Test-Path -Path:($Path))
-            {
-                Remove-Item -Path:($Path) -Recurse:($Recurse)
-            }
-        }
-        Catch
-        {
-            Write-Log -Message ('Removal Of Temp Files & Folders Failed') -Level Warn
-        }
+      If (Test-Path -Path:($Path))
+      {
+        Remove-Item -Path:($Path) -Recurse:($Recurse)
+      }
     }
+    Catch
+    {
+      Write-Log -Message ('Removal Of Temp Files & Folders Failed') -Level Warn
+    }
+  }
 }
 #Download $Link to $Path
 Function DownloadLink($Link, $Path)
 {
 
-    $WebClient = New-Object -TypeName:('System.Net.WebClient')
-    $Global:IsDownloaded = $false
-    $SplatArgs = @{ InputObject = $WebClient
-        EventName               = 'DownloadFileCompleted'
-        Action                  = {$Global:IsDownloaded = $true; }
-    }
-    $DownloadCompletedEventSubscriber = Register-ObjectEvent @SplatArgs
-    $WebClient.DownloadFileAsync("$Link", "$Path")
-    While (-not $Global:IsDownloaded)
-    {
-        Start-Sleep -Seconds 3
-    } # While
-    $DownloadCompletedEventSubscriber.Dispose()
-    $WebClient.Dispose()
+  $WebClient = New-Object -TypeName:('System.Net.WebClient')
+  $Global:IsDownloaded = $false
+  $SplatArgs = @{ InputObject = $WebClient
+    EventName                 = 'DownloadFileCompleted'
+    Action                    = { $Global:IsDownloaded = $true; }
+  }
+  $DownloadCompletedEventSubscriber = Register-ObjectEvent @SplatArgs
+  $WebClient.DownloadFileAsync("$Link", "$Path")
+  While (-not $Global:IsDownloaded)
+  {
+    Start-Sleep -Seconds 3
+  } # While
+  $DownloadCompletedEventSubscriber.Dispose()
+  $WebClient.Dispose()
 
 }
 # Add localuser to group
 Function Add-LocalUser
 {
-    Param(
-        [String[]]$computer
-        , [String[]]$group
-        , [String[]]$localusername
-    )
-    ([ADSI]"WinNT://$computer/$group,group").psbase.Invoke("Add", ([ADSI]"WinNT://$computer/$localusername").path)
+  Param(
+    [String[]]$computer
+    , [String[]]$group
+    , [String[]]$localusername
+  )
+  ([ADSI]"WinNT://$computer/$group,group").psbase.Invoke("Add", ([ADSI]"WinNT://$computer/$localusername").path)
 }
 #Check if program is on system
-function Check_Program_Installed($programName) {
-    $installed = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -match $programName})
-    $installed32 = (Get-ItemProperty HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object {$_.DisplayName -match $programName})
-    if ((-not [System.String]::IsNullOrEmpty($installed)) -or (-not [System.String]::IsNullOrEmpty($installed32))) {
-      return $true
-    }
-    else {
-      return $false
-    }
+function Check_Program_Installed($programName)
+{
+  $installed = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object { $_.DisplayName -match $programName })
+  $installed32 = (Get-ItemProperty HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object { $_.DisplayName -match $programName })
+  if ((-not [System.String]::IsNullOrEmpty($installed)) -or (-not [System.String]::IsNullOrEmpty($installed32)))
+  {
+    return $true
   }
+  else
+  {
+    return $false
+  }
+}
 #Check reg for program uninstallstring and silently uninstall
 
-function Uninstall_Program($programName) {
-  $Ver = Get-ChildItem -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall, HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall  |
-      Get-ItemProperty |
-          Where-Object {$_.DisplayName -match $programName } |
-              Select-Object -Property DisplayName, UninstallString
+function Uninstall_Program($programName)
+{
+  $Ver = Get-ChildItem -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall, HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall |
+  Get-ItemProperty |
+  Where-Object { $_.DisplayName -match $programName } |
+  Select-Object -Property DisplayName, UninstallString
 
-     ForEach ($ver in $Ver) {
-        If ($ver.UninstallString -and $ver.DisplayName -match 'Jumpcloud') {
-            $uninst = $ver.UninstallString
-            & cmd /C $uninst /Silent | Out-Null
-        } If ($ver.UninstallString -and $ver.DisplayName -match 'FileZilla Client 3.46.3') {
-            $uninst = $ver.UninstallString
-            & cmd /c $uninst /S| Out-Null
-        } else{
-            $uninst = $ver.UninstallString
-            & cmd /c $uninst /q /norestart | Out-Null
-        }
+  ForEach ($ver in $Ver)
+  {
+    If ($ver.UninstallString -and $ver.DisplayName -match 'Jumpcloud')
+    {
+      $uninst = $ver.UninstallString
+      & cmd /C $uninst /Silent | Out-Null
+    } If ($ver.UninstallString -and $ver.DisplayName -match 'FileZilla Client 3.46.3')
+    {
+      $uninst = $ver.UninstallString
+      & cmd /c $uninst /S | Out-Null
+    }
+    else
+    {
+      $uninst = $ver.UninstallString
+      & cmd /c $uninst /q /norestart | Out-Null
     }
   }
+}
 
 
 #Start process and wait then close after 5mins
 Function Start-NewProcess([string]$pfile, [string]$arguments, [int32]$Timeout = 300000)
 {
-    $p = New-Object System.Diagnostics.Process;
-    $p.StartInfo.FileName = $pfile;
-    $p.StartInfo.Arguments = $arguments
-    [void]$p.Start();
-    If (! $p.WaitForExit($Timeout))
-    {
-        Write-Log -Message "Windows ADK Setup did not complete after 5mins";
-        Get-Process | Where-Object {$_.Name -like "adksetup*"} | Stop-Process
-    }
+  $p = New-Object System.Diagnostics.Process;
+  $p.StartInfo.FileName = $pfile;
+  $p.StartInfo.Arguments = $arguments
+  [void]$p.Start();
+  If (! $p.WaitForExit($Timeout))
+  {
+    Write-Log -Message "Windows ADK Setup did not complete after 5mins";
+    Get-Process | Where-Object { $_.Name -like "adksetup*" } | Stop-Process
+  }
 }
 # Validation
 Function Test-IsNotEmpty ([System.String] $field)
 {
-    If (([System.String]::IsNullOrEmpty($field)))
-    {
-        Return $true
-    }
-    Else
-    {
-        Return $false
-    }
+  If (([System.String]::IsNullOrEmpty($field)))
+  {
+    Return $true
+  }
+  Else
+  {
+    Return $false
+  }
 }
 Function Test-Is40chars ([System.String] $field)
 {
-    If ($field.Length -eq 40)
-    {
-        Return $true
-    }
-    Else
-    {
-        Return $false
-    }
+  If ($field.Length -eq 40)
+  {
+    Return $true
+  }
+  Else
+  {
+    Return $false
+  }
 }
 Function Test-HasNoSpaces ([System.String] $field)
 {
-    If ($field -like "* *")
-    {
-        Return $false
-    }
-    Else
-    {
-        Return $true
-    }
+  If ($field -like "* *")
+  {
+    Return $false
+  }
+  Else
+  {
+    Return $true
+  }
 }
 
 Function DownloadAndInstallAgent(
-    [System.String]$msvc2013x64Link
-    , [System.String]$msvc2013Path
-    , [System.String]$msvc2013x64File
-    , [System.String]$msvc2013x64Install
-    , [System.String]$msvc2013x86Link
-    , [System.String]$msvc2013x86File
-    , [System.String]$msvc2013x86Install
+  [System.String]$msvc2013x64Link
+  , [System.String]$msvc2013Path
+  , [System.String]$msvc2013x64File
+  , [System.String]$msvc2013x64Install
+  , [System.String]$msvc2013x86Link
+  , [System.String]$msvc2013x86File
+  , [System.String]$msvc2013x86Install
 )
 {
     If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64")))
@@ -303,7 +312,8 @@ public static extern int NetGetJoinInformation(
   out int BufferType);
 "@ -Namespace Win32Api -Name NetApi32
 
-function GetNetBiosName {
+function GetNetBiosName
+{
   $pNameBuffer = [IntPtr]::Zero
   $joinStatus = 0
   $apiResult = [Win32Api.NetApi32]::NetGetJoinInformation(
@@ -311,13 +321,15 @@ function GetNetBiosName {
     [Ref] $pNameBuffer, # lpNameBuffer
     [Ref] $joinStatus    # BufferType
   )
-  if ( $apiResult -eq 0 ) {
+  if ( $apiResult -eq 0 )
+  {
     [Runtime.InteropServices.Marshal]::PtrToStringAuto($pNameBuffer)
     [Void] [Win32Api.NetApi32]::NetApiBufferFree($pNameBuffer)
   }
 }
 
-function ConvertSID {
+function ConvertSID
+{
   [CmdletBinding()]
   param
   (
@@ -335,7 +347,7 @@ function ConvertSID {
 #region Agent Install Helper Functions
 Function AgentIsOnFileSystem()
 {
-    Test-Path -Path:(${AGENT_PATH} + '/' + ${AGENT_BINARY_NAME})
+  Test-Path -Path:(${AGENT_PATH} + '/' + ${AGENT_BINARY_NAME})
 }
 Function InstallAgent()
 {
@@ -345,36 +357,36 @@ Function InstallAgent()
 
 Function ForceRebootComputerWithDelay
 {
-    Param(
-        [int]$TimeOut = 10
-    )
-    $continue = $true
+  Param(
+    [int]$TimeOut = 10
+  )
+  $continue = $true
 
-    while ($continue)
+  while ($continue)
+  {
+    If ([console]::KeyAvailable)
     {
-        If ([console]::KeyAvailable)
-        {
-            Write-Output "Restart Canceled by key press"
-            Exit;
-        }
-        Else
-        {
-            Write-Output "Press any key to cancel... restarting in $TimeOut" -NoNewLine
-            Start-Sleep -Seconds 1
-            $TimeOut = $TimeOut - 1
-            Clear-Host
-            If ($TimeOut -eq 0)
-            {
-                $continue = $false
-                $Restart = $true
-            }
-        }
+      Write-Output "Restart Canceled by key press"
+      Exit;
     }
-    If ($Restart -eq $True)
+    Else
     {
-        Write-Output "Restarting Computer..."
-        Restart-Computer -ComputerName $env:COMPUTERNAME -Force
+      Write-Output "Press any key to cancel... restarting in $TimeOut" -NoNewLine
+      Start-Sleep -Seconds 1
+      $TimeOut = $TimeOut - 1
+      Clear-Host
+      If ($TimeOut -eq 0)
+      {
+        $continue = $false
+        $Restart = $true
+      }
     }
+  }
+  If ($Restart -eq $True)
+  {
+    Write-Output "Restarting Computer..."
+    Restart-Computer -ComputerName $env:COMPUTERNAME -Force
+  }
 }
 #endregion Agent Install Helper Functions
 
@@ -5200,3 +5212,298 @@ $usmtmiguser = [xml] @"
 "@
 
 #endregion miguser xml
+
+
+Function Start-Migration
+{
+  [CmdletBinding(DefaultParameterSetName = "cmd")]
+  Param (
+    [Parameter(ParameterSetName = "cmd", Mandatory = $true, Position = 0, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$DomainUserName ,
+    [Parameter(ParameterSetName = "cmd", Mandatory = $true, Position = 1, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$JumpCloudUserName ,
+    [Parameter(ParameterSetName = "cmd", Mandatory = $true, Position = 2, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$TempPassword ,
+    [Parameter(ParameterSetName = "cmd", Mandatory = $true, Position = 3, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][ValidateLength(40, 40)][string]$JumpCloudConnectKey ,
+    [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 4, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$AcceptEULA = $false ,
+    [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 5, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$InstallJCAgent = $false,
+    [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 6, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$LeaveDomain = $false ,
+    [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 7, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$ForceReboot = $false ,
+    [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 8, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$AzureADProfile = $false ,
+    #TODO ,[Parameter(ParameterSetName="cmd",Mandatory = $true, Position = 9, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][ValidateLength(40, 40)][string]$JumpCloudApiKey
+    [Parameter(ParameterSetName = "form")][Object]$inputObject
+  )
+  Begin
+  {
+    # Define misc static variables
+    $adkSetupLink = 'https://go.microsoft.com/fwlink/?linkid=2086042'
+    $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
+    $jcAdmuLogFile = 'C:\Windows\Temp\jcAdmu.log'
+    $UserStateMigrationToolx64Path = 'C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
+    $UserStateMigrationToolx86Path = 'C:\Program Files\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
+
+    $profileStorePath = $jcAdmuTempPath + 'store'
+    $adksetupfile = 'adksetup.exe'
+    $adkSetupPath = $jcAdmuTempPath + $adksetupfile
+    $adkSetupArguments = ' /features OptionId.UserStateMigrationTool'
+    $adkSetupArgumentsQuiet = '/quiet ' + $adkSetupArguments
+    $msvc2013x64File = 'vc_redist.x64.exe'
+    $msvc2013x86File = 'vc_redist.x86.exe'
+    $msvc2013x86Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x86.exe'
+    $msvc2013x64Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x64.exe'
+    $msvc2013x86Install = "$jcAdmuTempPath$msvc2013x86File /install /quiet /norestart"
+    $msvc2013x64Install = "$jcAdmuTempPath$msvc2013x64File /install /quiet /norestart"
+    $CommandScanStateTemplate = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
+    $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+
+    # JumpCloud Agent Installation Variables
+    $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
+    $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
+    $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
+    $AGENT_SERVICE_NAME = "JumpCloud-agent"
+    $AGENT_INSTALLER_URL = "https://s3.amazonaws.com/jumpcloud-windows-agent/production/JumpCloudInstaller.exe"
+    $AGENT_INSTALLER_PATH = "C:\windows\Temp\JCADMU\JumpCloudInstaller.exe"
+    $AGENT_UNINSTALLER_NAME = "unins000.exe"
+    $EVENT_LOGGER_KEY_NAME = "hklm:\SYSTEM\CurrentControlSet\services\eventlog\Application\JumpCloud-agent"
+    $INSTALLER_BINARY_NAMES = "JumpCloudInstaller.exe,JumpCloudInstaller.tmp"
+    # Start script
+    Write-Log -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
+    Write-Log -Message:('Gathering system & profile information')
+    $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+    $WmiProduct = Get-WmiObject -Class:('Win32_Product') | Where-Object -FilterScript { $_.Name -like "User State Migration Tool*" }
+    $WmiOperatingSystem = Get-WmiObject -Class:('Win32_OperatingSystem')
+    $localComputerName = $WmiComputerSystem.Name
+    $UserStateMigrationToolVersionPath = Switch ($WmiOperatingSystem.OSArchitecture)
+    {
+      '64-bit' { $UserStateMigrationToolx64Path }
+      '32-bit' { $UserStateMigrationToolx86Path }
+      Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
+    }
+
+  }
+  Process
+  {
+    # Conditional ParameterSet logic
+    If ($PSCmdlet.ParameterSetName -eq "form")
+    {
+      $DomainUserName = $inputObject.DomainUserName
+      $JumpCloudUserName = $inputObject.JumpCloudUserName
+      $TempPassword = $inputObject.TempPassword
+      $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
+      $AcceptEULA = $inputObject.AcceptEula
+      $InstallJCAgent = $inputObject.InstallJCAgent
+      $LeaveDomain = $InputObject.LeaveDomain
+      $ForceReboot = $InputObject.ForceReboot
+    }
+
+    #region Check Domain Join Status, Netbiosname, $AzureADProfile param & SecureChannel
+    If ($WmiComputerSystem.partOfDomain -eq $true)
+    {
+      if (Test-ComputerSecureChannel)
+      {
+        if ($AzureADProfile -eq $false)
+        {
+          $DomainName = $WmiComputerSystem.Domain
+          $netBiosName = GetNetBiosName
+          Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName)
+          Write-Log -Message:('The secure channel between the local computer and domain is in good condition')
+        }
+        elseif ($AzureADProfile -eq $true)
+        {
+          $DomainName = 'AzureAD'
+          $netBiosName = 'AzureAD'
+          Write-Log -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
+        }
+      }
+      else
+      {
+        Write-Log -Message:('System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.') -Level:('Error')
+        exit
+      }
+
+    }
+    elseif ($WmiComputerSystem.partOfDomain -eq $false)
+    {
+      if ($AzureADProfile -eq $false)
+      {
+        Write-Log -Message:('System is NOT joined to a domain and $AzureADProfile = $false.') -Level:('Error')
+        exit
+      }
+      elseif ($AzureADProfile -eq $true)
+      {
+        $DomainName = 'AzureAD'
+        $netBiosName = 'AzureAD'
+        Write-Log -Message:($localComputerName + ' is currently Not Domain joined and $AzureADProfile = $true')
+        exit
+      }
+    }
+
+    #endregion Check Domain Join Status & Netbiosname
+
+    # Start Of Console Output
+    Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" going to be duplicated and converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+
+    #region User State Migration Tool Install & EULA Check
+    If (-not $WmiProduct -and -not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64')))
+    {
+      # Remove existing jcAdmu folder
+      If (Test-Path -Path:($jcAdmuTempPath))
+      {
+        Write-Log -Message:('Removing Temp Files & Folders')
+        Remove-ItemIfExists -Path:($jcAdmuTempPath) -Recurse
+      }
+      # Create jcAdmu folder
+      If (!(Test-Path -Path:($jcAdmuTempPath)))
+      {
+        New-Item -Path:($jcAdmuTempPath) -ItemType:('Directory') | Out-Null
+      }
+      # Download WindowsADK
+      DownloadLink -Link:($adkSetupLink) -Path:($adkSetupPath)
+      # Test Path
+      If (Test-Path -Path:($adkSetupPath))
+      {
+        Write-Log -Message:('Download of Windows ADK Setup file completed successfully')
+      }
+      Else
+      {
+        Write-Log -Message:('Failed To Download Windows ADK Setup') -Level:('Error')
+        Exit;
+      }
+      # Not Installed & Not In Right Dir
+      If ($AcceptEULA -eq $false)
+      {
+        Write-Log -Message:('Installing Windows ADK, please complete GUI prompts & accept EULA within 5 mins or it will Exit.')
+        Start-NewProcess -pfile:($adkSetupPath) -arguments:($adkSetupArguments)
+      }
+      ElseIf ($AcceptEULA -eq $true)
+      {
+        Write-Log -Message:('Installing Windows ADK, silently. By using "$AcceptEULA = "true" you are accepting the "Microsoft Windows ADK EULA". This process could take up to 3 mins if .net is required to be installed, it will timeout if it takes longer than 5 mins.')
+        Start-NewProcess -pfile:($adkSetupPath) -arguments:($adkSetupArgumentsQuiet)
+      }
+    }
+    ElseIf ($WmiProduct -and (-not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64'))))
+    {
+      # Installed But Not In Right Dir
+      Write-Log -Message:('Microsoft Windows ADK is installed but User State Migration Tool cant be found - Please correct and Try again.') -Level:('Error')
+      Exit;
+    }
+    # Test User State Migration Tool install path & build config.xml
+    If (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64'))
+    {
+      Write-Log -Message:('Microsoft Windows ADK - User State Migration Tool ready to be used.')
+
+      if (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\config.xml')) -or (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\MigUser.xml')) -or (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\MigApp.xml')))))
+      {
+        try
+        {
+          $usmtconfig.save($UserStateMigrationToolVersionPath + '\config.xml')
+          $usmtmiguser.save($UserStateMigrationToolVersionPath + '\MigUser.xml')
+          $usmtmigapp.save($UserStateMigrationToolVersionPath + '\MigApp.xml')
+        }
+        catch
+        {
+          Write-Log -Message:('Unable to create custom USMT xml files') -Level:('Error')
+          Exit;
+        }
+      }
+
+    }
+    Else
+    {
+      Write-Log -Message:('Microsoft Windows ADK - User State Migration Tool not found. Make sure it is installed correctly and in the required location.') -Level:('Error')
+      Exit;
+    }
+
+    #endregion User State Migration Tool Install & EULA Check
+
+    #region ScanState Step
+    Try
+    {
+      $CommandScanState = $CommandScanStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
+      Write-Log -Message:('Starting ScanState tool on user "' + $netBiosName + '\' + $DomainUserName + '"')
+      Write-Log -Message:('ScanState tool is in progress. Command: ' + $CommandScanState)
+      Invoke-Expression -command:($CommandScanState)
+      Write-Log -Message:('ScanState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"')
+    }
+    Catch
+    {
+      Write-Log -Message:('ScanState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"') -Level:('Error')
+      Exit;
+    }
+    #endregion ScanState Step
+
+    #region LoadState Step
+    Try
+    {
+      $CommandLoadState = $CommandLoadStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+      Write-Log -Message:('Starting LoadState tool on user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+      Write-Log -Message:('LoadState tool is in progress. Command: ' + $CommandLoadState)
+      Invoke-Expression -Command:($CommandLoadState)
+      Write-Log -Message:('LoadState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+    }
+    Catch
+    {
+      Write-Log -Message:('LoadState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"') -Level:('Error')
+      Exit;
+    }
+    #endregion LoadState Step
+
+    #region Add To Local Users Group
+    Try
+    {
+      Write-Log -Message:('Adding new user "' + $JumpCloudUserName + '" to Users group')
+      Add-LocalUser -computer:($localComputerName) -group:('Users') -localusername:($JumpCloudUserName)
+    }
+    Catch
+    {
+      Write-Log -Message:('Failed To add new user "' + $JumpCloudUserName + '" to Users group') -Level:('Error')
+      Exit;
+    }
+    #endregion Add To Local Users Group
+
+    #region SilentAgentInstall
+    if ($InstallJCAgent -eq $true)
+    {
+      # Agent Installer Loop
+      [int]$InstallReTryCounter = 0
+      Do
+      {
+        $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
+        $InstallReTryCounter++
+        If ($InstallReTryCounter -eq 3)
+        {
+          Write-Log -Message:('JumpCloud agent installation failed') -Level:('Error')
+          Exit;
+        }
+      } While ($ConfirmInstall -ne $true -and $InstallReTryCounter -le 3)
+    }
+
+    if ($LeaveDomain -eq $true)
+    {
+      Write-Log -Message:('Leaving Domain')
+      Try
+      {
+        $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+      }
+      Catch
+      {
+        Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
+        Exit;
+      }
+    }
+
+    # Cleanup Folders Again Before Reboot
+    Write-Log -Message:('Removing Temp Files & Folders.')
+    Start-Sleep -s 10
+    Remove-ItemIfExists -Path:($jcAdmuTempPath) -Recurse
+
+    if ($ForceReboot -eq $true)
+    {
+      Write-Log -Message:('Forcing reboot of the PC now')
+      Restart-Computer -ComputerName $env:COMPUTERNAME -Force
+    }
+    #endregion SilentAgentInstall
+  }
+  End
+  {
+    Write-Log -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
+    Write-Log -Message:('Tool options chosen were : ' + 'Install JC Agent = ' + $InstallJCAgent + ', Leave Domain = ' + $LeaveDomain + ', Force Reboot = ' + $ForceReboot + ', AzureADProfile = ' + $AzureADProfile)
+  }
+}
