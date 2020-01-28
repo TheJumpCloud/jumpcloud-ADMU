@@ -202,11 +202,17 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
     {
         If (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpaces $tbJumpCloudUserName.Text) `
                 -and (Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpaces $tbJumpCloudConnectKey.Text) `
-                -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpaces $tbTempPassword.Text))
+                -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpaces $tbTempPassword.Text)`
+                -and !($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name))
         {
             $script:bDeleteProfile.Content = "Migrate Profile"
             $script:bDeleteProfile.IsEnabled = $true
             Return $true
+        }
+        Elseif(($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name)){
+            $script:bDeleteProfile.Content = "Select Domain Profile"
+            $script:bDeleteProfile.IsEnabled = $false
+            Return $false
         }
         Else
         {
