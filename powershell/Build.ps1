@@ -8,13 +8,14 @@ $StartJCADMU = (Get-Content -Path:($RootPath + '\Start-JCADMU.ps1') -Raw) -Repla
 $Functions = (Get-Content -Path:($RootPath + '\Functions.ps1') -Raw) -Replace ("`r", "")
 $Form = (Get-Content -Path:($RootPath + '\Form.ps1') -Raw) -Replace ("`r", "")
 # String manipulation
-$NewContent = $StartJCADMU.Trim()
+$NewContent = $StartJCADMU
 $NewContent = $NewContent.Replace('# Get script path' + "`n", '')
 $NewContent = $NewContent.Replace('$scriptPath = (Split-Path -Path:($MyInvocation.MyCommand.Path))' + "`n", '')
-$NewContent = $NewContent.Replace('& ($scriptPath + ''\Functions.ps1'')', $Functions.Trim())
-$NewContent = $NewContent.Replace('$formResults = Invoke-Expression -Command:(''& "'' + $scriptPath + ''\Form.ps1"'')' + "`n", $Form.Trim())
+$NewContent = $NewContent.Replace('& ($scriptPath + ''\Functions.ps1'')', $Functions)
+$NewContent = $NewContent.Replace('$formResults = Invoke-Expression -Command:(''& "'' + $scriptPath + ''\Form.ps1"'')' + "`n", $Form)
 $NewContent = $NewContent.Replace('Return $FormResults' + "`n" + '}', '')
 $NewContent = $NewContent + "`n" + '}'
+$NewContent = $NewContent -split "`n" | ForEach-Object { If ($_.Trim()) { $_ } }
 # Export combined file
 $NewContent | Out-File -FilePath:($Output)
 
