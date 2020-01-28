@@ -278,8 +278,9 @@ Function DownloadAndInstallAgent(
         Write-Log -Message:('JumpCloud Agent Download Complete')
         Write-Log -Message:('Running JCAgent Installer')
         #Run Installer
+        Start-Sleep -s 10
         InstallAgent
-        Start-Sleep -s 25
+        Start-Sleep -s 5
         Write-Log -Message:('JumpCloud Agent Installer Completed')
     }
     If (Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64") -and Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86") -and Check_Program_Installed("jumpcloud"))
