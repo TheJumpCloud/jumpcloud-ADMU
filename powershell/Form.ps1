@@ -27,7 +27,7 @@
                  </GridView>
              </ListView.View>
          </ListView>
-         <Button Name="bDeleteProfile" Content="Select Profile" HorizontalAlignment="Left" Margin="861.603,389.297,0,0" VerticalAlignment="Top" Width="92.719" Height="23" IsEnabled="False">
+         <Button Name="bDeleteProfile" Content="Select Profile" HorizontalAlignment="Left" Margin="830.603,389.297,0,0" VerticalAlignment="Top" Width="120.719" Height="23" IsEnabled="False">
              <Button.Effect>
                  <DropShadowEffect/>
              </Button.Effect>
@@ -195,11 +195,17 @@ Else
      {
          If(!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpaces $tbJumpCloudUserName.Text) `
          -and (Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpaces $tbJumpCloudConnectKey.Text) `
-         -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpaces $tbTempPassword.Text))
+         -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpaces $tbTempPassword.Text) `
+         -and !($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name))
          {
              $script:bDeleteProfile.Content = "Migrate Profile"
              $script:bDeleteProfile.IsEnabled = $true
              Return $true
+         }
+         Elseif(($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name)){
+             $script:bDeleteProfile.Content = "Select Domain Profile"
+             $script:bDeleteProfile.IsEnabled = $false
+             Return $false
          }
          Else
          {
