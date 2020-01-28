@@ -24,7 +24,7 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                  </GridView>
              </ListView.View>
          </ListView>
-         <Button Name="bDeleteProfile" Content="Select Profile" HorizontalAlignment="Left" Margin="861.603,389.297,0,0" VerticalAlignment="Top" Width="92.719" Height="23" IsEnabled="False">
+         <Button Name="bDeleteProfile" Content="Select Profile" HorizontalAlignment="Left" Margin="830.603,389.297,0,0" VerticalAlignment="Top" Width="120.719" Height="23" IsEnabled="False">
              <Button.Effect>
                  <DropShadowEffect/>
              </Button.Effect>
