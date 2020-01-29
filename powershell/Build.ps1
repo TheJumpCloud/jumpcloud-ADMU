@@ -1,7 +1,3 @@
-Param(
-[Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateNotNullOrEmpty()][System.String]$GitHubAccessToken
-)
-
 $RootPath = $PSScriptRoot
 $Output = $RootPath + '\ADMU.ps1'
 # Clear existing file
@@ -28,12 +24,3 @@ $guiversion = (select-string -InputObject (get-item 'C:\agent\_work\1\s\powershe
 $formversion = $guiversion.Substring(69,5)
 
 & "C:\tools\PS2EXE-GUI\ps2exe.ps1" -inputFile 'C:\agent\_work\1\s\powershell\ADMU.ps1' -outputFile 'C:\agent\_work\1\s\exe\gui_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright '(c) 2020' -version $formversion -company 'JumpCloud' -requireAdmin
-
-#$GitHubAccessToken = '' #Created in GitHub. Token must have the Scopes "repo Full control of private repositories" checked.
-$GitHubHeaders = @{
-    'Authorization' = 'token ' + $GitHubAccessToken
-    'Accept'        = 'application/vnd.github.v3.raw'
-}
-$LatestRelease = Invoke-RestMethod -Method:('GET') -Uri:('https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/releases') -Headers:($GitHubHeaders)
-# $LatestRelease = Invoke-RestMethod -Method:('GET') -Uri:('https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/releases/latest') -Headers:($GitHubHeaders)
-$LatestRelease
