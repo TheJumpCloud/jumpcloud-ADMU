@@ -26,8 +26,8 @@ function cleanupCertFiles {
 Write-Output "Signing binaries"
 
 #Decrypt certificate files
-secure-file\tools\secure-file -decrypt $certdir\$certPasswordFileName.enc -secret $cert_pw_key
-secure-file\tools\secure-file -decrypt $certdir\$certFileName.enc -secret $cert_pw_key
+#secure-file\tools\secure-file -decrypt $certdir\$certPasswordFileName.enc -secret $cert_pw_key
+#secure-file\tools\secure-file -decrypt $certdir\$certFileName.enc -secret $cert_pw_key
 
 New-Variable -Name MaxAttempts -Option Constant -Value 5
 
