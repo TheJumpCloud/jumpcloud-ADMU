@@ -1,3 +1,10 @@
+if (Get-Module -ListAvailable -Name ps2exe) {
+    Write-Host "ps2exe module installed"
+    } else {
+    Write-Host "Installing ps2exe"
+    Install-Module -Name:('ps2exe') -Force -Scope:('CurrentUser') -SkipPublisherCheck
+}
+
 $RootPath = $PSScriptRoot
 $Output = $RootPath + '\ADMU.ps1'
 # Clear existing file
@@ -23,7 +30,7 @@ If (-not [System.String]::IsNullOrEmpty($NewContent))
     #Build exe
     $guiversion = (Select-String -InputObject (Get-Item 'C:\agent\_work\1\s\powershell\Form.ps1') -Pattern "Title=").ToString()
     $formversion = $guiversion.Substring(69, 5)
-    & 'C:\tools\PS2EXE-GUI\ps2exe.ps1' -inputFile 'C:\agent\_work\1\s\powershell\ADMU.ps1' -outputFile 'C:\agent\_work\1\s\exe\gui_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright '(c) 2020' -version $formversion -company 'JumpCloud' -requireAdmin -iconfile 'C:\agent\_work\1\s\images\admu.ico'
+    & 'ps2exe' -inputFile 'C:\agent\_work\1\s\powershell\ADMU.ps1' -outputFile 'C:\agent\_work\1\s\exe\gui_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright '(c) 2020' -version $formversion -company 'JumpCloud' -requireAdmin -iconfile 'C:\agent\_work\1\s\images\admu.ico'
 }
 Else
 {

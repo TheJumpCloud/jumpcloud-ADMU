@@ -8,10 +8,6 @@ Describe 'Build Tests' {
             (Test-Path -Path 'C:\agent\_work\1\s\exe\gui_jcadmu.exe') | Should Be $true
         }
 
-        It 'ps2exe.ps1 exists' {
-            (Test-Path -Path 'C:\tools\PS2EXE-GUI\ps2exe.ps1') | Should Be $true
-        }
-
         It 'ADMU.ps1 writen to in last 2mins' {
             if((@(Get-ChildItem 'C:\agent\_work\1\s\powershell\ADMU.ps1'|Where-Object LastWriteTime -gt (Get-Date).AddMinutes(-2)).LastWriteTime).length -ge 1){$lessthan2 = $true}else{$lessthan2 = $false}
             $lessthan2| Should Be $true
