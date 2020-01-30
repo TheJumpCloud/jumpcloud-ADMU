@@ -53,11 +53,11 @@ The current ADMU Change Log can be found [Here](https://github.com/TheJumpCloud/
 
 ## Supported Operating System Versions
 
-- Windows 8.1 ships with .net 4.5 and .net 3.5 not enabled by default
-- Windows 10 ships with .net 4.7 and .net 3.5 not enabled by default
+- Windows 7 ships with .net 3.5 enabled by default
+- Windows 8.1 ships with .net 4.5 enabled by default
+- Windows 10 ships with .net 4.7 enabled by default
 
- Currently both the GUI and EXE implementations require a specific .net version to load or run with no user interaction.
- If the ADMU is ran on a windows 7 system it must have .net 4.5 + installed to work.
+ The GUI requires .net 4+ framework. Therefore if the GUI is ran on a windows 7 system it must have .net 4.5 + installed to work.
 
 [ADMU EXE Directory Link](https://github.com/TheJumpCloud/jumpcloud-admu/blob/master/exe)
 
@@ -97,7 +97,7 @@ Further detailed information from Microsoft can be found [HERE](https://social.t
 
 ## EULA & Legal Explanation
 
- The ADMU tool utilizes multiple Microsoft utilities and installers depending on the deployment scenario and system state. In order to provide a silent/zero touch option for conversion the $acceptEULA value can be used. If this is not provided the user will have to interactively accept the Microsoft EULA relating to the 'Microsoft Windows ADK'. All microsoft software/tooling is sourced and downloaded from microsoft and used in its complete form with no modification to they code. By using the acceptEULA = $true flag, the ADMU tool will also install .net framework if required & C++ runtimes ifrequired for the JC system agent install.
+ The ADMU tool utilizes multiple Microsoft utilities and installers depending on the deployment scenario and system state. In order to provide a silent/zero touch option for conversion the $acceptEULA value can be used. If this is not provided the user will have to interactively accept the Microsoft EULA relating to the 'Microsoft Windows ADK'. All microsoft software/tooling is sourced and downloaded from microsoft and used in its complete form with no modification to the code. By using the acceptEULA = $true flag, the ADMU tool will also install .net framework if required & C++ runtimes if required for the JC system agent install.
 
 ![image24](https://github.com/TheJumpCloud/jumpcloud-admu/blob/master/images/img_24.png)
 
@@ -128,9 +128,6 @@ Further detailed information from Microsoft can be found [HERE](https://social.t
 
  There are limitations to consider when using the USMT utility for user account conversion. Because of this it is recommended to follow a one, some, many approach for migration to understand what and how the tool can and can not do in your specific environment. This is where further investigation needs to be done on streamlining and improving/documenting common scenarios and workarounds.
 
- [Follow this link to see what gets migrated using the default settings of the USMT.](https://docs.microsoft.com/en-us/windows/deployment/usmt/usmt-what-does-usmt-migrate#bkmk-3)
-
-
  It would be possible to utilize the tool on a testing machine, convert a local account, keep the system bound to the domain and run both accounts in parallel. Investigate and be sure the newly converted ‘local account’ runs all applications and has all files as expected. Then switch over to that account and unbind from the domain. Providing this phased approach could help reduce friction and uncertainty in the process.
 
  Windows start menu layout will be lost & not migrated.
@@ -159,22 +156,19 @@ The ADMU leverages the USMT and settings to migrate user data from a domain acco
 GUI - gui_jcadmu.exe
 * [GUI - Windows 8.1-10 / .net 4 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/exe/gui_jcadmu_.exe)
 
-EXE - jcadmu.exe
-* [JCADMU.exe - Windows 8.1-10 / .net 4 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/exe/jcadmu.exe)
-
 Powershell - Migration.ps1 & Functions.ps1
 * [Powershell](https://github.com/TheJumpCloud/jumpcloud-admu/tree/master/powershell)
 
 ## ADMU GUI
  This is a Powershell based GUI executable that utilizes WPF to collect input parameters to pass to the ADMU powershell code.
 
- If the GUI is ran and the system is not domain joined the utility will not let the user continue with the process. The only option is to quit the application.
+ If the GUI is ran and a system that is not domain joined the utility will not let the user continue with the process. The only option is to quit the application.
 
 ![image7](https://github.com/TheJumpCloud/jumpcloud-admu/blob/master/images/img_7.png)
 
 ### Using the ADMU GUI
 
-To use the GUI run the relevant .exe file for your system as administrator from the Download Links above. It is also required to unblock the Security setting stating `This file came from another computer and might be blocked to help protect this computer`. It may also be flagged by antivirus software and need to be excluded. This will be addressed by code signing the file in a future release and this step no longer be required.
+To use the GUI run the .exe file on your system as administrator from the Download Links above. It is also required to unblock the Security setting stating `This file came from another computer and might be blocked to help protect this computer`. It may also be flagged by antivirus software and need to be excluded. This will be addressed by code signing the file in a future release and this step no longer be required.
 
 ![image48](https://github.com/TheJumpCloud/jumpcloud-admu/blob/master/images/img_48.png)
 
@@ -204,7 +198,7 @@ On the security tab check the box for "Unblock" click "Ok" and you will be able 
 ```
 
 
- If the paramaters -AcceptEULA -InstallJCAgent -LeaveDomain  or -ForceReboot is not added to the command it will default to $false.
+ If the paramaters -AcceptEULA -InstallJCAgent -LeaveDomain  or -ForceReboot are not added to the command they will default to $false.
 
 
  The Powershell script has validation on the main parameters and requires them to not to be empty as well as the -jumpcloudconnectkey must be 40chars or it will not move forward.
@@ -217,23 +211,6 @@ On the security tab check the box for "Unblock" click "Ok" and you will be able 
 ![image11](https://github.com/TheJumpCloud/jumpcloud-admu/blob/master/images/img_11.png)
 
 ![image12](https://github.com/TheJumpCloud/jumpcloud-admu/blob/master/images/img_12.png)
-
-## ADMU exe
-
-The Powershell code has also been packaged as an exe for various deployment scenarios.
-
-The .exe verison of the ADMU is really just a wrapper and runs the same powershell code discussed above.
-
-### Using the ADMU exe
-
- The exe can be run interactively and the parameters entered or via the command line using the -arguments option as seen below. If entered interactivly it will default -accepteula -installjcagent -leavedomain -forcereboot to $false.
-
-```powershell
-c:\jcadmu.exe -arguments -domainusername 'bob.lazar' -jumpcloudusername 'blazar' -temppassword 'Temp123!' -jumpcloudconnectkey 'CONNECTKEY' -accepteula $true -installjcagent $true -leavedomain $false -forcereboot $false
-```
-![image44](https://github.com/TheJumpCloud/jumpcloud-admu/blob/master/images/img_44.png)
-
-![image45](https://github.com/TheJumpCloud/jumpcloud-admu/blob/master/images/img_45.png)
 
 ## Advanced Deployment Scenarios
 
@@ -608,14 +585,10 @@ Reference: [https://docs.microsoft.com/en-us/azure/active-directory/devices/](ht
 - Hybrid Azure AD Join is not supported with JumpCloud takeover.
 ```
 
-# Future Development
+# Future Developments
 
- * Sign .exe
- * Combine and improve .exe to single file
- * Domain validation
  * Ability to convert multiple accounts
  * Custom USMT xml templates
  * Show local, domain & azure accounts
  * Show if account is in local admin group
  * Ability to change & edit username
- * etc.
