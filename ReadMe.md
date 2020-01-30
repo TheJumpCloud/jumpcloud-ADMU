@@ -586,6 +586,7 @@ Reference: [https://docs.microsoft.com/en-us/azure/active-directory/devices/](ht
 ```
 
 # Future Developments
+
  * Ability to convert multiple accounts
  * Custom USMT xml templates
  * Show local, domain & azure accounts
