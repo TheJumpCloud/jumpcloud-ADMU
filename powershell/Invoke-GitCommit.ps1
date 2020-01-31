@@ -32,3 +32,7 @@ If (-not $BranchName -match 'merge')
     Invoke-Git -Arguments:('commit -m ' + '"' + $CommitMessage + '";')
     Invoke-Git -Arguments:('push origin HEAD:' + $BranchName + ';')
 }
+Else
+{
+    Write-Warning  ('Skipping commit because branch matched "merge": ' + $BranchName)
+}
