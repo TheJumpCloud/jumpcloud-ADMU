@@ -3,8 +3,7 @@ param (
 )
 # Logging
 $MyName = $MyInvocation.MyCommand.Name
-$ParentScriptName = (Get-PSCallStack | Where-Object { $_.Command -notin ($MyName, $MyName.Replace('.ps1', '')) }).Command -join ','
-$CommitMessage = 'Push to ' + $BranchName + '; Called by:' + $ParentScriptName + ';[skip ci]'
+$CommitMessage = 'Push to ' + $BranchName + ';[skip ci]'
 $UserEmail = 'AzurePipelines@FakeEmail.com'
 $UserName = 'AzurePipelines'
 Function Invoke-Git
