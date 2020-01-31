@@ -585,7 +585,7 @@ Reference: [https://docs.microsoft.com/en-us/azure/active-directory/devices/](ht
 - Hybrid Azure AD Join is not supported with JumpCloud takeover.
 ```
 
-# Future Developments
+# Future Development
 
  * Ability to convert multiple accounts
  * Custom USMT xml templates
