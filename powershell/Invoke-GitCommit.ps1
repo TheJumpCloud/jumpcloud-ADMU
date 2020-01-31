@@ -1,7 +1,11 @@
 param (
     [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateNotNullOrEmpty()][string]$BranchName
 )
-If (-not $BranchName -match 'merge')
+If ($BranchName -like 'refs/*/merge')
+{
+    Write-Warning  ('Skipping commit because branch matched "merge": ' + $BranchName)
+}
+Else
 {
     # Logging
     $CommitMessage = 'Push to ' + $BranchName + ';[skip ci]'
@@ -31,8 +35,4 @@ If (-not $BranchName -match 'merge')
     Invoke-Git -Arguments:('status;')
     Invoke-Git -Arguments:('commit -m ' + '"' + $CommitMessage + '";')
     Invoke-Git -Arguments:('push origin HEAD:' + $BranchName + ';')
-}
-Else
-{
-    Write-Warning  ('Skipping commit because branch matched "merge": ' + $BranchName)
 }
