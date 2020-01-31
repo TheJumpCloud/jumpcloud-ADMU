@@ -1,3 +1,15 @@
+## 1.2.8
+
+#### RELEASE DATE
+
+January 31, 2020
+
+#### RELEASE NOTES
+
+- Added Azure pipeline exe builds & signing
+- Block local profile migrations in GUI
+- exe and XAML form version checks
+
 ## 1.2.7
 
 #### RELEASE DATE

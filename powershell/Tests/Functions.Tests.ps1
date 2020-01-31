@@ -7,11 +7,11 @@ Describe 'Functions' {
        }
 
        It 'VerifyAccount - Wrong account bobby.lazar@JCADB2.local' {
-           #VerifyAccount -username bobby.lazar -domain JCADB2.local | Should Be $false
+           VerifyAccount -username bobby.lazar -domain JCADB2.local | Should Be $false
        }
 
        It 'VerifyAccount - Real account with wrong domain bob.lazar@JCADB2.localw' {
-           #VerifyAccount -username bob.lazar -domain JCADB2.localw | Should Be $false
+           VerifyAccount -username bob.lazar -domain JCADB2.localw | Should Be $false
        }
 
     }
@@ -255,9 +255,9 @@ Describe 'Functions' {
     Context 'ConvertSID Function'{
 
         It 'ConvertSID - Built In Administrator SID' {
-        #(ConvertSID -Sid $TestSID) | Should Be '10PRO18091\Administrator'
+        $testusersid = (Get-WmiObject Win32_UserAccount -Filter "Name = 'testuser'").SID
+            (ConvertSID -Sid $testusersid) | Should -match 'testuser'
         }
 
     }
 }
-
