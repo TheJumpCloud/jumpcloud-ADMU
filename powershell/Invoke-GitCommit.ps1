@@ -7,7 +7,7 @@ If ($BranchName -like 'refs/*/merge')
 }
 Else
 {
-    # Logging
+    #Logging
     $CommitMessage = 'Push to ' + $BranchName + ';[skip ci]'
     $UserEmail = 'AzurePipelines@FakeEmail.com'
     $UserName = 'AzurePipelines'
