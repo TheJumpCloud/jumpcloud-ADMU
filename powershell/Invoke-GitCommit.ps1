@@ -1,7 +1,7 @@
 param (
     [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateNotNullOrEmpty()][string]$BranchName
 )
-# Logging
+#Logging
 $CommitMessage = 'Push to ' + $BranchName + ';[skip ci]'
 $UserEmail = 'AzurePipelines@FakeEmail.com'
 $UserName = 'AzurePipelines'
