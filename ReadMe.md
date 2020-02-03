@@ -154,7 +154,7 @@ The ADMU leverages the USMT and settings to migrate user data from a domain acco
 
 ## Download Links
 GUI - gui_jcadmu.exe
-* [GUI - Windows 8.1-10 / .net 4 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/exe/gui_jcadmu_.exe)
+* [GUI - Windows 8.1-10 / .net 4 ](https://github.com/TheJumpCloud/jumpcloud-admu/raw/master/exe/gui_jcadmu.exe)
 
 Powershell - Migration.ps1 & Functions.ps1
 * [Powershell](https://github.com/TheJumpCloud/jumpcloud-admu/tree/master/powershell)
