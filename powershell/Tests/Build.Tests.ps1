@@ -17,8 +17,7 @@ Describe 'Build Tests' {
     Context 'Check Versioning' {
 
         It 'XAML Form version' {
-           $RootPath = $PSScriptRoot
-           $FormPath = $RootPath + '\Form.ps1'
+           $FormPath = 'C:\agent\_work\1\s\powershell\Form.ps1'
            $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
 
            $formversion = Select-String -Path:($formpath) -Pattern:($VersionRegex)
@@ -39,7 +38,7 @@ Describe 'Build Tests' {
            $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
            $masterformversion = [version]$masterversion.Matches.value
 
-           $exeversion = (Get-Item 'C:\agent\_work\1\s\exe\gui_jcadmu.exe').VersionInfo.FileVersion
+           $exeversion = [version](Get-Item 'C:\agent\_work\1\s\exe\gui_jcadmu.exe').VersionInfo.FileVersion
 
            $exeversion | Should BeGreaterThan $masterformversion
         }
