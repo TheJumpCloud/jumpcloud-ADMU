@@ -17,18 +17,30 @@ Describe 'Build Tests' {
     Context 'Check Versioning' {
 
         It 'XAML Form version' {
-           $masterform = Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/powershell/Form.ps1
-           $masterformver = $masterform.Content.Substring(584,5)
-           $guiversion = (select-string -InputObject (get-item 'C:\agent\_work\1\s\powershell\Form.ps1') -Pattern "Title=").ToString()
-           $formversion = $guiversion.Substring(69,5)
-           $formversion | Should BeGreaterThan $masterformver
+           $FormPath = 'C:\agent\_work\1\s\powershell\Form.ps1'
+           $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
+
+           $formversion = Select-String -Path:($formpath) -Pattern:($VersionRegex)
+           $branchformversion = [version]$formversion.Matches.value
+
+           $masterform = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/powershell/Form.ps1).tostring()
+           $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
+           $masterformversion = [version]$masterversion.Matches.value
+
+           $branchformversion | Should BeGreaterThan $masterformversion
         }
 
         It 'gui_jcadmu.exe version' {
-            $masterform = Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/powershell/Form.ps1
-            $masterformver = $masterform.Content.Substring(584,5)
-            $exeversion = (Get-Item 'C:\agent\_work\1\s\exe\gui_jcadmu.exe').VersionInfo.FileVersion
-            $exeversion | Should BeGreaterThan $masterformver
+
+           $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
+
+           $masterform = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/powershell/Form.ps1).tostring()
+           $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
+           $masterformversion = [version]$masterversion.Matches.value
+
+           $exeversion = [version](Get-Item 'C:\agent\_work\1\s\exe\gui_jcadmu.exe').VersionInfo.FileVersion
+
+           $exeversion | Should BeGreaterThan $masterformversion
         }
 
     }
