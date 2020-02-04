@@ -84,4 +84,5 @@ foreach ($file in $filesToSign) {
     }
 }
 
+cleanupCertFiles
 Write-Output "Done signing binaries"
