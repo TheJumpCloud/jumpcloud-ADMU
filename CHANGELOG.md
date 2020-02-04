@@ -1,3 +1,37 @@
+## 1.2.11
+
+#### RELEASE DATE
+
+February 3, 2020
+
+#### RELEASE NOTES
+
+- Fix download link in readme
+- Regex for pipeline build number checks
+
+## 1.2.10
+
+#### RELEASE DATE
+
+February 2, 2020
+
+#### RELEASE NOTES
+
+- Fix build status badge
+- ps2exe module install check
+- Revert latest agent installer
+
+## 1.2.9
+
+#### RELEASE DATE
+
+January 31, 2020
+
+#### RELEASE NOTES
+
+- Readme changes
+- Add aditional tests
+
 ## 1.2.8
 
 #### RELEASE DATE
