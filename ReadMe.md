@@ -1,6 +1,6 @@
 # JumpCloud Active Directory Migration Utility - JCADMU
 
-![admu-landging-image](images/ADMU-landing.png)
+![admu-landging-image](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/images/ADMU-landing.png)
 
 ### Who should use it?
 
