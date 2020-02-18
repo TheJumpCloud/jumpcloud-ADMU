@@ -5315,6 +5315,7 @@ Function Start-Migration
       else
       {
         Write-Log -Message:('System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.') -Level:('Error')
+        Read-Host "Press any key to exit..."
         exit
       }
 
@@ -5324,6 +5325,7 @@ Function Start-Migration
       if ($AzureADProfile -eq $false)
       {
         Write-Log -Message:('System is NOT joined to a domain and $AzureADProfile = $false.') -Level:('Error')
+        Read-Host "Press any key to exit..."
         exit
       }
       elseif ($AzureADProfile -eq $true)
