@@ -7,21 +7,7 @@ $certPath = Join-Path $certDir $certFileName
 $passwordfile = $certdir + $certPasswordFileName
 $password = Get-Content $passwordfile -Raw
 
-
-
-# call this function when we exit the script in order to remove the decrypted certificate files:
-function cleanupCertFiles {
-    #Remove-Item $certdir\$certFileName
-    #Remove-Item $certdir\$certPasswordFileName
-}
-
-#signing Steps
-
 Write-Output "Signing binaries"
-
-#Decrypt certificate files
-#secure-file\tools\secure-file -decrypt $certdir\$certPasswordFileName.enc -secret $cert_pw_key
-#secure-file\tools\secure-file -decrypt $certdir\$certFileName.enc -secret $cert_pw_key
 
 New-Variable -Name MaxAttempts -Option Constant -Value 5
 
@@ -67,7 +53,6 @@ foreach ($file in $filesToSign) {
                 }
                 Else {
                     Write-Output "Failed to sign $file, error=$error"
-                    cleanupCertFiles
                     Exit 1
                 }
             }
@@ -78,5 +63,4 @@ foreach ($file in $filesToSign) {
     }
 }
 
-cleanupCertFiles
 Write-Output "Done signing binaries"
