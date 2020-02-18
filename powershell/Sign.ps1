@@ -1,14 +1,3 @@
-Param(
-[Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateNotNullOrEmpty()][System.String]$cert_pw_key
-)
-
-
-#test cert password
-#$passwordfile = 'C:\tools\cert\test_windows_signing_cert_password.txt'
-
-
-#vars
-#$certpath = 'c:\tools\cert\test2.pfx'
 $signpath = 'C:\tools\signtool.exe'
 $GUI_JCADMU = 'C:\agent\_work\1\s\exe\gui_jcadmu.exe'
 $certdir = 'C:\agent\_work\_temp\'
