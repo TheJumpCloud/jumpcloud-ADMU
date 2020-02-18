@@ -53,7 +53,7 @@ Describe 'Build Tests' {
         }
 
         It 'gui_jcadmu.exe signature valid' {
-            #(Get-AuthenticodeSignature 'C:\agent\_work\1\s\exe\gui_jcadmu.exe').Status  | Should Be 'Valid'
+            (Get-AuthenticodeSignature 'C:\agent\_work\1\s\exe\gui_jcadmu.exe').Status  | Should Be 'Valid'
          }
     }
 }
