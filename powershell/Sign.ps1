@@ -31,11 +31,9 @@ foreach ($file in $filesToSign) {
             /f $certpath `
             /fd SHA256 `
             /p $password `
+            /tr $($tsaServers[$tsaIndex]) `
+            /td SHA256 `
             $file
-
-            #move above $file for tsachecks
-            #/tr $($tsaServers[$tsaIndex]) `
-            #/td SHA256 `
 
         if ( -not $? ) {
             if ($attempts -le $MaxAttempts) {
