@@ -1,33 +1,13 @@
-Param(
-[Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateNotNullOrEmpty()][System.String]$cert_pw_key
-)
-
-#test cert password
-$passwordfile = 'C:\tools\cert\test_windows_signing_cert_password.txt'
-$password = Get-Content $passwordfile -Raw
-
-#vars
-$certpath = 'c:\tools\cert\test2.pfx'
 $signpath = 'C:\tools\signtool.exe'
 $GUI_JCADMU = 'C:\agent\_work\1\s\exe\gui_jcadmu.exe'
-$certdir = 'c:\tools\cert\'
+$certdir = 'C:\agent\_work\_temp\'
 $certFileName = "godaddy_windows_signing_cert.pfx"
 $certPasswordFileName = "godaddy_windows_signing_cert_password.txt"
-
-
-# call this function when we exit the script in order to remove the decrypted certificate files:
-function cleanupCertFiles {
-    Remove-Item $certdir\$certFileName
-    Remove-Item $certdir\$certPasswordFileName
-}
-
-#signing Steps
+$certPath = Join-Path $certDir $certFileName
+$passwordfile = $certdir + $certPasswordFileName
+$password = Get-Content $passwordfile -Raw
 
 Write-Output "Signing binaries"
-
-#Decrypt certificate files
-#secure-file\tools\secure-file -decrypt $certdir\$certPasswordFileName.enc -secret $cert_pw_key
-#secure-file\tools\secure-file -decrypt $certdir\$certFileName.enc -secret $cert_pw_key
 
 New-Variable -Name MaxAttempts -Option Constant -Value 5
 
@@ -73,7 +53,6 @@ foreach ($file in $filesToSign) {
                 }
                 Else {
                     Write-Output "Failed to sign $file, error=$error"
-                    cleanupCertFiles
                     Exit 1
                 }
             }
@@ -84,5 +63,4 @@ foreach ($file in $filesToSign) {
     }
 }
 
-cleanupCertFiles
 Write-Output "Done signing binaries"
