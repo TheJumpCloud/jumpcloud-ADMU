@@ -2,23 +2,28 @@ Param(
 [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateNotNullOrEmpty()][System.String]$cert_pw_key
 )
 
+
 #test cert password
-$passwordfile = 'C:\tools\cert\test_windows_signing_cert_password.txt'
-$password = Get-Content $passwordfile -Raw
+#$passwordfile = 'C:\tools\cert\test_windows_signing_cert_password.txt'
+
 
 #vars
-$certpath = 'c:\tools\cert\test2.pfx'
+#$certpath = 'c:\tools\cert\test2.pfx'
 $signpath = 'C:\tools\signtool.exe'
 $GUI_JCADMU = 'C:\agent\_work\1\s\exe\gui_jcadmu.exe'
-$certdir = 'c:\tools\cert\'
+$certdir = 'C:\agent\_work\_temp\'
 $certFileName = "godaddy_windows_signing_cert.pfx"
 $certPasswordFileName = "godaddy_windows_signing_cert_password.txt"
+$certPath = Join-Path $certDir $certFileName
+$passwordfile = $certdir + $certPasswordFileName
+$password = Get-Content $passwordfile -Raw
+
 
 
 # call this function when we exit the script in order to remove the decrypted certificate files:
 function cleanupCertFiles {
-    Remove-Item $certdir\$certFileName
-    Remove-Item $certdir\$certPasswordFileName
+    #Remove-Item $certdir\$certFileName
+    #Remove-Item $certdir\$certPasswordFileName
 }
 
 #signing Steps
