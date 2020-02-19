@@ -1,5 +1,3 @@
-[![Build status](https://dev.azure.com/JumpCloudPowershell/JumpCloud%20ADMU/_apis/build/status/JumpCloud%20ADMU-CI)](https://dev.azure.com/JumpCloudPowershell/JumpCloud%20ADMU/_build/latest?definitionId=24)
-
 # JumpCloud Active Directory Migration Utility - JCADMU
 
 ![admu-landging-image](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/images/ADMU-landing.png)
