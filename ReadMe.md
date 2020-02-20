@@ -20,6 +20,10 @@ Continue to [Getting Started](https://github.com/TheJumpCloud/jumpcloud-ADMU/wik
 
 Check out the [releases](https://github.com/TheJumpCloud/jumpcloud-ADMU/releases) page for the GUI and PowerShell tool downloads.
 
+### How do I use it?
+
+Check out the [Video](https://youtu.be/5YyeSLN_Nxk) showing how to use the tool.
+
 ### Have questions? feature request? issues?
 
 Please use the github issues tab, email [support@jumpcloud.com](support@jumpcloud.com) or the [feedback form](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/feedback-form).
