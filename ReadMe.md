@@ -18,7 +18,7 @@ Continue to [Getting Started](https://github.com/TheJumpCloud/jumpcloud-ADMU/wik
 
 ### How do I download it?
 
-Check out the [releases](https://github.com/TheJumpCloud/jumpcloud-ADMU/releases) page for the GUI and PowerShell tool downloads.
+Check out the [Releases](https://github.com/TheJumpCloud/jumpcloud-ADMU/releases) page for the GUI and PowerShell tool downloads.
 
 ### How do I use it?
 
