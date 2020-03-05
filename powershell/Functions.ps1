@@ -5449,7 +5449,7 @@ Function Start-Migration
     Try
     {
       Write-Log -Message:('Adding new user "' + $JumpCloudUserName + '" to Users group')
-      Add-LocalUser -computer:($localComputerName) -group:('Users') -localusername:($JumpCloudUserName)
+      Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUserName
     }
     Catch
     {
