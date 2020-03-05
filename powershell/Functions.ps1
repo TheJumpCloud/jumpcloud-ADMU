@@ -5268,7 +5268,6 @@ Function Start-Migration
     Write-Log -Message:('Gathering system & profile information')
     $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
     $WmiProduct = Get-WmiObject -Class:('Win32_Product') | Where-Object -FilterScript { $_.Name -like "User State Migration Tool*" }
-    $WmiOperatingSystem = Get-WmiObject -Class:('Win32_OperatingSystem')
     $localComputerName = $WmiComputerSystem.Name
     $UserStateMigrationToolVersionPath = Switch ([System.IntPtr]::Size)
     {
