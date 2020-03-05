@@ -5270,13 +5270,12 @@ Function Start-Migration
     $WmiProduct = Get-WmiObject -Class:('Win32_Product') | Where-Object -FilterScript { $_.Name -like "User State Migration Tool*" }
     $WmiOperatingSystem = Get-WmiObject -Class:('Win32_OperatingSystem')
     $localComputerName = $WmiComputerSystem.Name
-    $UserStateMigrationToolVersionPath = Switch ($WmiOperatingSystem.OSArchitecture)
+    $UserStateMigrationToolVersionPath = Switch ([System.IntPtr]::Size)
     {
-      '64-bit' { $UserStateMigrationToolx64Path }
-      '32-bit' { $UserStateMigrationToolx86Path }
+      8 { $UserStateMigrationToolx64Path }
+      4 { $UserStateMigrationToolx86Path }
       Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
     }
-
   }
   Process
   {
