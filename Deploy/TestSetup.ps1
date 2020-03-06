@@ -10,7 +10,7 @@ if (Get-Module -ListAvailable -Name pester) {
 }
 
 # Load functions
-. ((Split-Path -Path:($MyInvocation.MyCommand.Path)) + '\Functions.ps1')
+. (($Env:BUILD_SOURCESDIRECTORY) + '\jumpcloud-ADMU\Powershell\Functions.ps1')
 
 #USMT & VC Variables
 $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
