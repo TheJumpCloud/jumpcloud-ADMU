@@ -5,20 +5,20 @@ Describe 'Build Tests' {
     Context 'Check Files Exist' {
 
         It 'gui_jcadmu.exe exists' {
-            (Test-Path -Path $Env:BUILD_SOURCESDIRECTORY '\jumpcloud-ADMU\exe\gui_jcadmu.exe') | Should Be $true
+            (Test-Path -Path ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\exe\gui_jcadmu.exe')) | Should Be $true
         }
 
         It 'ADMU.ps1 writen to in last 2mins' {
-            if((@(Get-ChildItem $Env:BUILD_SOURCESDIRECTORY '\Deploy\ADMU.ps1'|Where-Object LastWriteTime -gt (Get-Date).AddMinutes(-2)).LastWriteTime).length -ge 1){$lessthan2 = $true}else{$lessthan2 = $false}
+            if((@(Get-ChildItem ($Env:BUILD_SOURCESDIRECTORY + '\Deploy\ADMU.ps1')|Where-Object LastWriteTime -gt (Get-Date).AddMinutes(-2)).LastWriteTime).length -ge 1){$lessthan2 = $true}else{$lessthan2 = $false}
             $lessthan2| Should Be $true
         }
 
         It 'gui_jcadmu.exe exists' {
-            (Test-Path -Path $Env:BUILD_SOURCESDIRECTORY '\jumpcloud-ADMU\Exe\gui_jcadmu.exe') | Should Be $true
+            (Test-Path -Path $Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\gui_jcadmu.exe') | Should Be $true
         }
 
         It 'gui_jcadmu.exe exists' {
-            (Test-Path -Path $Env:BUILD_SOURCESDIRECTORY '\jumpcloud-ADMU\Exe\gui_jcadmu.exe') | Should Be $true
+            (Test-Path -Path $Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\gui_jcadmu.exe') | Should Be $true
         }
     }
 
