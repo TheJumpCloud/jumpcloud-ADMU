@@ -1,3 +1,13 @@
+## 1.2.15
+
+#### RELEASE DATE
+Mrach 6, 2020
+
+#### RELEASE NOTES
+
+- Migration language fixes
+- Improve pipeline and release steps
+
 ## 1.2.11
 
 #### RELEASE DATE
