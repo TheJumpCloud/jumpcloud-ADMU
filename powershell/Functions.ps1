@@ -154,16 +154,6 @@ Function DownloadLink($Link, $Path)
   $WebClient.Dispose()
 
 }
-# Add localuser to group
-Function Add-LocalUser
-{
-  Param(
-    [String[]]$computer
-    , [String[]]$group
-    , [String[]]$localusername
-  )
-  ([ADSI]"WinNT://$computer/$group,group").psbase.Invoke("Add", ([ADSI]"WinNT://$computer/$localusername").path)
-}
 #Check if program is on system
 function Check_Program_Installed($programName)
 {
@@ -5268,15 +5258,13 @@ Function Start-Migration
     Write-Log -Message:('Gathering system & profile information')
     $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
     $WmiProduct = Get-WmiObject -Class:('Win32_Product') | Where-Object -FilterScript { $_.Name -like "User State Migration Tool*" }
-    $WmiOperatingSystem = Get-WmiObject -Class:('Win32_OperatingSystem')
     $localComputerName = $WmiComputerSystem.Name
-    $UserStateMigrationToolVersionPath = Switch ($WmiOperatingSystem.OSArchitecture)
+    $UserStateMigrationToolVersionPath = Switch ([System.IntPtr]::Size)
     {
-      '64-bit' { $UserStateMigrationToolx64Path }
-      '32-bit' { $UserStateMigrationToolx86Path }
+      8 { $UserStateMigrationToolx64Path }
+      4 { $UserStateMigrationToolx86Path }
       Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
     }
-
   }
   Process
   {
@@ -5451,7 +5439,7 @@ Function Start-Migration
     Try
     {
       Write-Log -Message:('Adding new user "' + $JumpCloudUserName + '" to Users group')
-      Add-LocalUser -computer:($localComputerName) -group:('Users') -localusername:($JumpCloudUserName)
+      Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUserName
     }
     Catch
     {

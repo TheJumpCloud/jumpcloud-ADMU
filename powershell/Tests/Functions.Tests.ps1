@@ -107,10 +107,8 @@ Describe 'Functions' {
             net user testuser /delete | Out-Null
             net user testuser Temp123! /add
             Remove-LocalGroupMember -Group "Users" -Member "testuser"
-            $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-            $localComputerName = $WmiComputerSystem.Name
-            Add-LocalUser -computer:($localComputerName) -group:('Users') -localusername:('testuser')
-            ((net localgroup Users) | Where-Object {$_ -match 'testuser'}) -ne $null | Should Be $true
+            Add-LocalGroupMember -SID S-1-5-32-545 -Member 'testuser'
+            ((Get-LocalGroupMember -SID S-1-5-32-545 | Select-Object Name).name -match 'testuser') -ne $null | Should Be $true
         }
 
     }
