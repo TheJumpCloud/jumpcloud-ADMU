@@ -7,17 +7,17 @@ else
     Write-Host "Installing ps2exe"
     Install-Module -Name:('ps2exe') -Force -Scope:('CurrentUser') -SkipPublisherCheck
 }
-$RootPath = $PSScriptRoot
-$Output = $RootPath + '\ADMU.ps1'
-$FormPath = $RootPath + '\Form.ps1'
+$RootPath = $Env:BUILD_SOURCESDIRECTORY
+$Output = $RootPath + '\Deploy\ADMU.ps1'
+$FormPath = $RootPath + '\jumpcloud-ADMU\Powershell\Form.ps1'
 $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
 # Clear existing file
 If (Test-Path -Path:($Output)) { Remove-Item -Path:($Output) }
 
 # Get file contents
-$StartJCADMU = (Get-Content -Path:($RootPath + '\Start-JCADMU.ps1') -Raw) -Replace ("`r", "")
-$Functions = (Get-Content -Path:($RootPath + '\Functions.ps1') -Raw) -Replace ("`r", "")
-$Form = (Get-Content -Path:($RootPath + '\Form.ps1') -Raw) -Replace ("`r", "")
+$StartJCADMU = (Get-Content -Path:($RootPath + '\jumpcloud-ADMU\Powershell\Start-JCADMU.ps1') -Raw) -Replace ("`r", "")
+$Functions = (Get-Content -Path:($RootPath + '\jumpcloud-ADMU\Powershell\Functions.ps1') -Raw) -Replace ("`r", "")
+$Form = (Get-Content -Path:($RootPath + '\jumpcloud-ADMU\Powershell\Form.ps1') -Raw) -Replace ("`r", "")
 # String manipulation
 $NewContent = $StartJCADMU
 $NewContent = $NewContent.Replace('# Get script path' + "`n", '')
@@ -35,7 +35,7 @@ If (-not [System.String]::IsNullOrEmpty($NewContent))
     $Version = Select-String -Path:($FormPath) -Pattern:($VersionRegex)
     If (-not [System.String]::IsNullOrEmpty($Version))
     {
-    & 'ps2exe' -inputFile 'C:\agent\_work\1\s\powershell\ADMU.ps1' -outputFile 'C:\agent\_work\1\s\exe\gui_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright '(c) 2020' -version $Version.Matches.Value -company 'JumpCloud' -requireAdmin -iconfile 'C:\agent\_work\1\s\images\admu.ico'
+    & 'ps2exe' -inputFile 'C:\agent\_work\1\s\jumpcloud-ADMU\powershell\ADMU.ps1' -outputFile 'C:\agent\_work\1\s\jumpcloud-ADMU\exe\gui_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright '(c) 2020' -version $Version.Matches.Value -company 'JumpCloud' -requireAdmin -iconfile 'C:\agent\_work\1\s\jumpcloud-ADMU\images\admu.ico'
     }
     Else
     {
