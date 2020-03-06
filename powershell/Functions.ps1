@@ -154,16 +154,6 @@ Function DownloadLink($Link, $Path)
   $WebClient.Dispose()
 
 }
-# Add localuser to group
-Function Add-LocalUser
-{
-  Param(
-    [String[]]$computer
-    , [String[]]$group
-    , [String[]]$localusername
-  )
-  ([ADSI]"WinNT://$computer/$group,group").psbase.Invoke("Add", ([ADSI]"WinNT://$computer/$localusername").path)
-}
 #Check if program is on system
 function Check_Program_Installed($programName)
 {
