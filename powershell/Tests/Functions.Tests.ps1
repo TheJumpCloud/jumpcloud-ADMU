@@ -108,7 +108,7 @@ Describe 'Functions' {
             net user testuser Temp123! /add
             Remove-LocalGroupMember -Group "Users" -Member "testuser"
             Add-LocalGroupMember -SID S-1-5-32-545 -Member 'testuser'
-            ((Get-LocalGroupMember -SID S-1-5-32-545 | Select-Object Name) -match $env:COMPUTERNAME + '\' + 'testuser') -ne $null | Should Be $true
+            ((Get-LocalGroupMember -SID S-1-5-32-545 | Select-Object Name).name -match 'testuser') -ne $null | Should Be $true
         }
 
     }
