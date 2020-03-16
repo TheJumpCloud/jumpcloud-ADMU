@@ -1,12 +1,13 @@
 ## 1.2.15
 
 #### RELEASE DATE
-Mrach 6, 2020
+March 16, 2020
 
 #### RELEASE NOTES
 
 - Migration language fixes
 - Improve pipeline and release steps
+- Move images into wiki
 
 ## 1.2.11
 
