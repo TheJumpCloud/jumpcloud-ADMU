@@ -1,5 +1,5 @@
 $signpath = 'C:\tools\signtool.exe'
-$GUI_JCADMU = 'C:\agent\_work\1\s\exe\gui_jcadmu.exe'
+$GUI_JCADMU = ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\gui_jcadmu.exe')
 $certdir = 'C:\agent\_work\_temp\'
 $certFileName = "godaddy_windows_signing_cert.pfx"
 $certPasswordFileName = "godaddy_windows_signing_cert_password.txt"
