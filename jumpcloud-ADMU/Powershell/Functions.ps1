@@ -5281,32 +5281,21 @@ Function Start-Migration
       $ForceReboot = $InputObject.ForceReboot
     }
 
-    #region Check Domain Join Status, Netbiosname, $AzureADProfile param & SecureChannel
+    #region Check Domain Join Status, Netbiosname, $AzureADProfile param
     If ($WmiComputerSystem.partOfDomain -eq $true)
     {
-      if (Test-ComputerSecureChannel)
+      if ($AzureADProfile -eq $false)
       {
-        if ($AzureADProfile -eq $false)
-        {
-          $DomainName = $WmiComputerSystem.Domain
-          $netBiosName = GetNetBiosName
-          Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName)
-          Write-Log -Message:('The secure channel between the local computer and domain is in good condition')
-        }
-        elseif ($AzureADProfile -eq $true)
-        {
-          $DomainName = 'AzureAD'
-          $netBiosName = 'AzureAD'
-          Write-Log -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
-        }
+        $DomainName = $WmiComputerSystem.Domain
+        $netBiosName = GetNetBiosName
+        Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + 'NetBiosName is ' + $netBiosName)
       }
-      else
+      elseif ($AzureADProfile -eq $true)
       {
-        Write-Log -Message:('System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.') -Level:('Error')
-        Read-Host "Press any key to exit..."
-        exit
+        $DomainName = 'AzureAD'
+        $netBiosName = 'AzureAD'
+        Write-Log -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
       }
-
     }
     elseif ($WmiComputerSystem.partOfDomain -eq $false)
     {
