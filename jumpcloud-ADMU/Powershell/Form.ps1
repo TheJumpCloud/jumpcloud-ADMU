@@ -87,13 +87,6 @@ Catch
 #===========================================================================
 $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) -Value $Form.FindName($_.Name) }
 
-# Check runningaslocaladmin
-If ($runningaslocaladmin -eq $false)
-{
-    Write-Log 'ADMU must be ran as a local administrator..please correct & try again'
-    Read-Host -Prompt "Press Enter to exit"
-    exit
-}
 # Check PartOfDomain & Disable Controls
 $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
 If ($WmiComputerSystem.PartOfDomain)
@@ -101,7 +94,6 @@ If ($WmiComputerSystem.PartOfDomain)
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking Domain Secure Channel Status..'
 
         $securechannelstatus = Test-ComputerSecureChannel
-        $runningaslocaladmin = [bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -match "S-1-5-32-544")
 
         # Define misc static variables
         $DomainName = $WmiComputerSystem.Domain
