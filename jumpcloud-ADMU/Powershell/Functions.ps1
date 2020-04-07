@@ -5288,7 +5288,7 @@ Function Start-Migration
       {
         $DomainName = $WmiComputerSystem.Domain
         $netBiosName = GetNetBiosName
-        Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + 'NetBiosName is ' + $netBiosName)
+        Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + ' NetBiosName is ' + $netBiosName)
       }
       elseif ($AzureADProfile -eq $true)
       {
