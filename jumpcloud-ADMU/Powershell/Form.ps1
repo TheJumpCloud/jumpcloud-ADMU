@@ -156,7 +156,7 @@ If ($WmiComputerSystem.PartOfDomain)
 
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Done!'
 }
-Elseif($WmiComputerSystem.PartOfDomain)
+Elseif($WmiComputerSystem.PartOfDomain -eq $false)
 {
     #Disable UI Elements
     $DomainName = "Not Domain Joined"
