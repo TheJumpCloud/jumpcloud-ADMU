@@ -8,7 +8,7 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
 <Window
      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-     Title="JumpCloud ADMU 1.2.15" Height="460.945" Width="980.016" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
+     Title="JumpCloud ADMU 1.2.16" Height="460.945" Width="980.016" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
     <Grid Margin="0,0,-0.2,0.168">
         <ListView Name="lvProfileList" HorizontalAlignment="Left" Height="118" Margin="10,173,0,0" VerticalAlignment="Top" Width="944">
             <ListView.View>
@@ -41,6 +41,8 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                 <Label Name="lbcfreespace" Content="" HorizontalAlignment="Left" Margin="143.9,89.725,0,0" VerticalAlignment="Top" Width="165.621" FontWeight="Normal"/>
                 <Label Content="Secure Channel:" HorizontalAlignment="Left" Margin="10,121,0,-26.35" VerticalAlignment="Top" FontWeight="Normal"/>
                 <Label Name="lbsecurechannel" Content="" HorizontalAlignment="Left" Margin="144,123,0,-28.35" VerticalAlignment="Top" Width="166" FontWeight="Normal"/>
+                <Label Content="Running As Local Admin:" HorizontalAlignment="Left" Margin="-587,105,0,-10.35" VerticalAlignment="Top" FontWeight="Normal"/>
+                <Label Name="lbrunningaslocaladmin" Content="" HorizontalAlignment="Left" Margin="-422,105,0,-10.35" VerticalAlignment="Top" Width="166" FontWeight="Normal"/>
             </Grid>
         </GroupBox>
         <GroupBox Header="Account Migration Information" HorizontalAlignment="Left" Height="92.562" Margin="483.007,291.735,0,0" VerticalAlignment="Top" Width="471.315" FontWeight="Bold">
@@ -62,7 +64,7 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                 <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="359.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
             </Grid>
         </GroupBox>
-        <GroupBox Header="Migration Steps" HorizontalAlignment="Left" Height="168" Margin="10,0,0,0" VerticalAlignment="Top" Width="581" FontWeight="Bold">
+        <GroupBox Header="Migration Steps" HorizontalAlignment="Left" Height="102" Margin="10,0,0,0" VerticalAlignment="Top" Width="581" FontWeight="Bold">
             <TextBlock HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Top" Height="69.564" Width="493.495" Margin="0,10,0,0" FontWeight="Normal"><Run Text="1. Select the domain account that you want to migrate to a local account from the list below."/><LineBreak/><Run Text="2. Enter a local account username and password to migrate the selected account to. "/><LineBreak/><Run Text="3. Enter your organizations JumpCloud system connect key."/><LineBreak/><Run Text="4. Click the "/><Run Text="Migrate Profile"/><Run Text=" button."/><LineBreak/><Run/></TextBlock>
         </GroupBox>
     </Grid>
@@ -92,6 +94,7 @@ If ($WmiComputerSystem.PartOfDomain)
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking Domain Secure Channel Status..'
 
         $securechannelstatus = Test-ComputerSecureChannel
+        $runningaslocaladmin = [bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -match "S-1-5-32-544")
 
         # Define misc static variables
         $DomainName = $WmiComputerSystem.Domain
@@ -180,6 +183,7 @@ $lbComputerName.Content = $WmiComputerSystem.Name
 $lbUSMTStatus.Content = (($InstalledProducts -match 'User State Migration Tool').Count -eq 1)
 $lbcfreespace.Content = $freespace
 $lbsecurechannel.Content = $securechannelstatus
+$lbrunningaslocaladmin.Content = $runningaslocaladmin
 Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKey, [object]$tbTempPassword, [object]$lvProfileList)
 {
     Write-Debug ('---------------------------------------------------------')
