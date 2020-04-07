@@ -87,9 +87,16 @@ Catch
 #===========================================================================
 $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) -Value $Form.FindName($_.Name) }
 
+# Check runningaslocaladmin
+If ($runningaslocaladmin -eq $false)
+{
+    Write-Log 'ADMU must be ran as a local administrator..please correct & try again'
+    Read-Host -Prompt "Press Enter to exit"
+    exit
+}
 # Check PartOfDomain & Disable Controls
 $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-If ($WmiComputerSystem.PartOfDomain -and $securechannelstatus -eq $true)
+If ($WmiComputerSystem.PartOfDomain)
 {
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking Domain Secure Channel Status..'
 
@@ -159,7 +166,7 @@ If ($WmiComputerSystem.PartOfDomain -and $securechannelstatus -eq $true)
 
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Done!'
 }
-Else
+Elseif($WmiComputerSystem.PartOfDomain)
 {
     #Disable UI Elements
     $DomainName = "Not Domain Joined"
@@ -175,9 +182,6 @@ Else
     $cb_forcereboot.IsEnabled = $false
     $lbDomainName.FontWeight = "Bold"
     $lbDomainName.Foreground = "Red"
-    $lbrunningaslocaladmin.Content = $securechannelstatus
-    $lbrunningaslocaladmin.Foreground = "Red"
-    $lbrunningaslocaladmin.FontWeight = "Bold"
 }
 
 #load UI Labels
