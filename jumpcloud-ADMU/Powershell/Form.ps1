@@ -89,7 +89,7 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
 
 # Check PartOfDomain & Disable Controls
 $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-If ($WmiComputerSystem.PartOfDomain)
+If ($WmiComputerSystem.PartOfDomain -and $securechannelstatus -eq $true)
 {
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking Domain Secure Channel Status..'
 
@@ -175,6 +175,9 @@ Else
     $cb_forcereboot.IsEnabled = $false
     $lbDomainName.FontWeight = "Bold"
     $lbDomainName.Foreground = "Red"
+    $lbrunningaslocaladmin.Content = $securechannelstatus
+    $lbrunningaslocaladmin.Foreground = "Red"
+    $lbrunningaslocaladmin.FontWeight = "Bold"
 }
 
 #load UI Labels
