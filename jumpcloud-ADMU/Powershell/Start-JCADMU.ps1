@@ -1,10 +1,3 @@
-# Check powershell version
-if ((Get-Host | Select-Object Version).version.major -ne 5)
-{
-    Write-Host 'ADMU must be ran on Windows Powershell version 5.1..please correct & try again'
-    Read-Host -Prompt "Press Enter to exit"
-    exit
-}
 # Check runningaslocaladmin
 if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -match "S-1-5-32-544")) -eq $false)
 {
