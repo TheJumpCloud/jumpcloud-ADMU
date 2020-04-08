@@ -129,7 +129,7 @@ If ($WmiComputerSystem.PartOfDomain)
         $userstrim = $users -creplace '^[^\\]*\\', ''
 
         try {
-            $Azureadusers = $win32UserProfiles | where-object {$_.SID -match “S-1-12”} | Select-object -expandedProperty “SID” | ConvertSID
+            $Azureadusers = $win32UserProfiles | where-object {$_.SID -match "S-1-12"} | Select-object -expandedProperty "SID" | ConvertSID
         }
         catch {
             $Azureadusers = $null
