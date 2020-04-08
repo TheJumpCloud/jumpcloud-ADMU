@@ -8,7 +8,7 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
 <Window
      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-     Title="JumpCloud ADMU 1.2.16" Height="647.081" Width="980.016" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
+     Title="JumpCloud ADMU 1.2.16" Height="460.945" Width="980.016" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
     <Grid Margin="0,0,-0.2,0.168">
         <ListView Name="lvProfileList" HorizontalAlignment="Left" Height="118" Margin="10,173,0,0" VerticalAlignment="Top" Width="944">
             <ListView.View>
@@ -24,7 +24,7 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                 </GridView>
             </ListView.View>
         </ListView>
-        <Button Name="bDeleteProfile" Content="Select Profile" HorizontalAlignment="Left" Margin="833,585,0,0" VerticalAlignment="Top" Width="121" Height="23" IsEnabled="False">
+        <Button Name="bDeleteProfile" Content="Select Profile" HorizontalAlignment="Left" Margin="830.603,389.297,0,0" VerticalAlignment="Top" Width="120.719" Height="23" IsEnabled="False">
             <Button.Effect>
                 <DropShadowEffect/>
             </Button.Effect>
@@ -43,7 +43,7 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                 <Label Name="lbsecurechannel" Content="" HorizontalAlignment="Left" Margin="144,123,0,-28.35" VerticalAlignment="Top" Width="166" FontWeight="Normal"/>
             </Grid>
         </GroupBox>
-        <GroupBox Header="Account Migration Information" HorizontalAlignment="Left" Height="93" Margin="483,487,0,0" VerticalAlignment="Top" Width="471" FontWeight="Bold">
+        <GroupBox Header="Account Migration Information" HorizontalAlignment="Left" Height="92.562" Margin="483.007,291.735,0,0" VerticalAlignment="Top" Width="471.315" FontWeight="Bold">
             <Grid HorizontalAlignment="Left" Height="66.859" Margin="1.212,2.564,0,0" VerticalAlignment="Top" Width="454.842">
                 <Label Content="Local Account Username :" HorizontalAlignment="Left" Margin="7.088,8.287,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
                 <Label Content="Local Account Password :" HorizontalAlignment="Left" Margin="7.088,36.287,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
@@ -51,7 +51,7 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                 <TextBox Name="tbTempPassword" HorizontalAlignment="Left" Height="23" Margin="151.11,39.287,0,0" TextWrapping="Wrap" Text="Temp123!" VerticalAlignment="Top" Width="301.026" FontWeight="Normal"/>
             </Grid>
         </GroupBox>
-        <GroupBox Header="System Migration Options" HorizontalAlignment="Left" Height="93" Margin="7,487,0,0" VerticalAlignment="Top" Width="471" FontWeight="Bold">
+        <GroupBox Header="System Migration Options" HorizontalAlignment="Left" Height="92.562" Margin="9.9,291.735,0,0" VerticalAlignment="Top" Width="471.477" FontWeight="Bold">
             <Grid HorizontalAlignment="Left" Height="62.124" Margin="1.888,2.564,0,0" VerticalAlignment="Top" Width="456.049">
                 <Label Name="lbMoreInfo" Content="More Info" HorizontalAlignment="Left" Margin="91.649,38,0,-0.876" VerticalAlignment="Top" Width="65.381" FontSize="11" FontWeight="Bold" FontStyle="Italic" Foreground="#FF005DFF"/>
                 <CheckBox Name="cb_accepteula" Content="Accept EULA" HorizontalAlignment="Left" Margin="3.649,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="True"/>
@@ -65,20 +65,6 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
         <GroupBox Header="Migration Steps" HorizontalAlignment="Left" Height="168" Margin="10,0,0,0" VerticalAlignment="Top" Width="581" FontWeight="Bold">
             <TextBlock HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Top" Height="69.564" Width="493.495" Margin="0,10,0,0" FontWeight="Normal"><Run Text="1. Select the domain account that you want to migrate to a local account from the list below."/><LineBreak/><Run Text="2. Enter a local account username and password to migrate the selected account to. "/><LineBreak/><Run Text="3. Enter your organizations JumpCloud system connect key."/><LineBreak/><Run Text="4. Click the "/><Run Text="Migrate Profile"/><Run Text=" button."/><LineBreak/><Run/></TextBlock>
         </GroupBox>
-        <ListView Name="lvAzureADProfileList" HorizontalAlignment="Left" Height="118" Margin="10,330,0,0" VerticalAlignment="Top" Width="944">
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="System Accounts" DisplayMemberBinding="{Binding AzureUserName}" Width="180"/>
-                    <GridViewColumn Header="Last Login" DisplayMemberBinding="{Binding LastLogin}" Width="135"/>
-                    <GridViewColumn Header="Currently Active" DisplayMemberBinding="{Binding Loaded}" Width="105" />
-                    <GridViewColumn Header="Domain Roaming" DisplayMemberBinding="{Binding RoamingConfigured}" Width="105"/>
-                    <GridViewColumn Header="Local Admin" DisplayMemberBinding="{Binding IsLocalAdmin}" Width="105"/>
-                    <GridViewColumn Header="Local Path" DisplayMemberBinding="{Binding LocalPath}" Width="140"/>
-                    <GridViewColumn Header="Local Profile Size" DisplayMemberBinding="{Binding LocalProfileSize}" Width="105"/>
-
-                </GridView>
-            </ListView.View>
-        </ListView>
     </Grid>
 </Window>
 '@
@@ -127,13 +113,6 @@ If ($WmiComputerSystem.PartOfDomain)
 
         $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
         $userstrim = $users -creplace '^[^\\]*\\', ''
-
-        try {
-            $Azureadusers = $win32UserProfiles | where-object {$_.SID -match "S-1-12"} | Select-object -expandedProperty "SID" | ConvertSID
-        }
-        catch {
-            $Azureadusers = $null
-        }
 
         $members = net localgroup administrators |
         Where-Object { $_ -AND $_ -notmatch "command completed successfully" } |
@@ -339,7 +318,6 @@ $bDeleteProfile.Add_Click( {
 
 # Put the list of profiles in the profile box
 $Profiles | ForEach-Object { $lvProfileList.Items.Add($_) | Out-Null }
-$Azureadusers | ForEach-Object { $lvAzureADProfileList.Items.Add($_) | Out-Null}
 #===========================================================================
 # Shows the form
 #===========================================================================
