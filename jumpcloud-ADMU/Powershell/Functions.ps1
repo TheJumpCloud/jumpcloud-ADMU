@@ -5281,40 +5281,19 @@ Function Start-Migration
       $ForceReboot = $InputObject.ForceReboot
     }
 
-    #region Check Domain Join Status, Netbiosname, $AzureADProfile param
-    If ($WmiComputerSystem.partOfDomain -eq $true)
-    {
-      if ($AzureADProfile -eq $false)
-      {
-        $DomainName = $WmiComputerSystem.Domain
-        $netBiosName = GetNetBiosName
-        Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + ' NetBiosName is ' + $netBiosName)
-      }
-      elseif ($AzureADProfile -eq $true)
-      {
-        $DomainName = 'AzureAD'
-        $netBiosName = 'AzureAD'
-        Write-Log -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
-      }
+    # Test checks
+    if ($AzureADProfile) {
+      $DomainName = 'AzureAD'
+      $netBiosName = 'AzureAD'
+      Write-Log -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
     }
-    elseif ($WmiComputerSystem.partOfDomain -eq $false)
-    {
-      if ($AzureADProfile -eq $false)
-      {
-        Write-Log -Message:('System is NOT joined to a domain and $AzureADProfile = $false.') -Level:('Error')
-        Read-Host "Press any key to exit..."
-        exit
-      }
-      elseif ($AzureADProfile -eq $true)
-      {
-        $DomainName = 'AzureAD'
-        $netBiosName = 'AzureAD'
-        Write-Log -Message:($localComputerName + ' is currently Not Domain joined and $AzureADProfile = $true')
-        exit
-      }
+    else {
+      $DomainName = $WmiComputerSystem.Domain
+      $netBiosName = GetNetBiosName
+      Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + ' NetBiosName is ' + $netBiosName)
     }
 
-    #endregion Check Domain Join Status & Netbiosname
+    #endregion Test checks
 
     # Start Of Console Output
     Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" going to be duplicated and converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
