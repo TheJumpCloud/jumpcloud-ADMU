@@ -6,17 +6,6 @@ if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -
     exit
 }
 
-Write-Host 'Loading Jumpcloud ADMU. Please Wait.. Checking Domain Join Status'
-$WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-
-# Check system is domain joined
-if (!($WmiComputerSystem.PartOfDomain))
-{
-    Write-Host 'ADMU must be ran on a domain joined system..please correct & try again'
-    Read-Host -Prompt "Press Enter to exit"
-    exit
-}
-
 # Get script path
 $scriptPath = (Split-Path -Path:($MyInvocation.MyCommand.Path))
 
