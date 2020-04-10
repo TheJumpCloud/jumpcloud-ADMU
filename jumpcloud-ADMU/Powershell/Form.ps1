@@ -84,11 +84,7 @@ Catch
 # Store Form Objects In PowerShell
 #===========================================================================
 $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) -Value $Form.FindName($_.Name) }
-
-# Check PartOfDomain & Disable Controls
 $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-If ($WmiComputerSystem.PartOfDomain)
-{
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking Domain Secure Channel Status..'
 
         $securechannelstatus = Test-ComputerSecureChannel
@@ -156,24 +152,7 @@ If ($WmiComputerSystem.PartOfDomain)
         $Profiles = $win32UserProfiles | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, @{Name = "LastLogin"; EXPRESSION = { $_.ConvertToDateTime($_.lastusetime) } }, @{Name = "UserName"; EXPRESSION = { ConvertSID($_.SID) } }
 
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Done!'
-}
-Elseif($WmiComputerSystem.PartOfDomain -eq $false)
-{
-    #Disable UI Elements
-    $DomainName = "Not Domain Joined"
-    $bDeleteProfile.Content = "No Domain"
-    $bDeleteProfile.IsEnabled = $false
-    $tbJumpCloudConnectKey.IsEnabled = $false
-    $tbJumpCloudUserName.IsEnabled = $false
-    $tbTempPassword.IsEnabled = $false
-    $lvProfileList.IsEnabled = $false
-    $cb_accepteula.IsEnabled = $false
-    $cb_installjcagent.IsEnabled = $false
-    $cb_leavedomain.IsEnabled = $false
-    $cb_forcereboot.IsEnabled = $false
-    $lbDomainName.FontWeight = "Bold"
-    $lbDomainName.Foreground = "Red"
-}
+
 
 #load UI Labels
 $lbDomainName.Content = $DomainName
