@@ -19,7 +19,7 @@
 Import-Module -Name Pester
 
 # Run Pester tests
-$testFolder = Join-Path $PSScriptRoot 'tests'
 $agentname = $Env:AGENT_NAME
+$testFolder = $ENV:Common_TestResultsDirectory
 Invoke-Pester -Script @{ Path = $PSScriptRoot + '/Tests/'; } -EnableExit -OutputFile (Join-Path $testFolder "$agentname-ADMU-TestResults.xml")
 Write-Host -ForegroundColor Green '-------------Done-------------'
