@@ -84,13 +84,22 @@ Catch
 # Store Form Objects In PowerShell
 #===========================================================================
 $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) -Value $Form.FindName($_.Name) }
-$WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+
+# Define misc static variables
+        $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking Domain Secure Channel Status..'
 
-        $securechannelstatus = Test-ComputerSecureChannel
+        if ($WmiComputerSystem.PartOfDomain) {
+            $securechannelstatus = Test-ComputerSecureChannel
+            $DomainName = $WmiComputerSystem.Domain
+        }
+        else {
+            $securechannelstatus = 'N/A'
+            $DomainName = 'N/A'
+        }
 
-        # Define misc static variables
-        $DomainName = $WmiComputerSystem.Domain
+
+
         $FormResults = [PSCustomObject]@{ }
 
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Getting Installed Applications..'
