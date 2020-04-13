@@ -68,7 +68,7 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                 <Label Content="Secure Channel Healthy:" HorizontalAlignment="Left" Margin="-3,54,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
                 <Label Name="lbsecurechannel" Content="" HorizontalAlignment="Left" Margin="131,56,0,0" VerticalAlignment="Top" Width="166" FontWeight="Normal"/>
                 <Label Content="NetBios Name:" HorizontalAlignment="Left" Margin="-3,26,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                <Label Name="lbDomainName_Copy" Content="" Margin="121,22,9,82" Foreground="Black" FontWeight="Normal"/>
+                <Label Name="lbNetBios" Content="" Margin="121,22,9,82" Foreground="Black" FontWeight="Normal"/>
             </Grid>
         </GroupBox>
         <GroupBox Header="AzureAD Information" HorizontalAlignment="Left" Height="116" Margin="682,103,0,0" VerticalAlignment="Top" Width="303" FontWeight="Bold">
@@ -103,11 +103,11 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
 
 # Define misc static variables
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-        $AzureADInfo = dsregcmd.exe /status
+        $AzureADInfo = Get-DSregcmdstatus
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
 
         if ($WmiComputerSystem.PartOfDomain) {
-            $WmiComputerDomain = Get-WmiObject -Class:('Win32_ComputerSystem')
+            $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
             $DomainName = $WmiComputerDomain.DnsForestName
             $NetBiosName = $WmiComputerDomain.DomainName
             $securechannelstatus = Test-ComputerSecureChannel
@@ -118,9 +118,9 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
             $securechannelstatus = 'N/A'
         }
 
-        if (($AzureADInfo[5] -match 'YES')) {
+        if (($AzureADInfo.Status[0] -eq 'YES')) {
             $AzureADStatus = $true
-            $Workplace_join = $AzureADInfo[51]
+            $Workplace_join = $AzureADInfo.status[2]
             $TenantName = $AzureADInfo[24]
         }
         else {

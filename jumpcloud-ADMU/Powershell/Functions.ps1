@@ -332,6 +332,14 @@ function ConvertSID
   }
 }
 
+function Get-DSregcmdstatus {
+  $status = dsregcmd /status
+  $status -replace ':', ' ' |
+      Select-Object -Index 5, 24, 51 |
+      ForEach-Object {$_.Trim() }  |
+      ConvertFrom-String -PropertyNames 'State', 'Status'
+}
+
 #endregion Functions
 
 #region Agent Install Helper Functions
