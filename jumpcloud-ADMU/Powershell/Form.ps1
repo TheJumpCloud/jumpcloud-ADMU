@@ -118,10 +118,10 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
             $securechannelstatus = 'N/A'
         }
 
-        if (($AzureADInfo.Status[5].trimstart('AzureADJoined : ') -eq 'YES')) {
-            $AzureADStatus = ($AzureADInfo.Status[5].trimstart('AzureADJoined : '))
-            $Workplace_join = ($AzureADInfo.Status[51].trimstart('WorkplaceJoined : '))
-            $TenantName = ($AzureADInfo.Status[24].trimstart('TenantName : '))
+        if (($AzureADInfo[5].trimstart('AzureADJoined : ') -eq 'YES')) {
+            $AzureADStatus = ($AzureADInfo[5].trimstart('AzureADJoined : '))
+            $Workplace_join = ($AzureADInfo[51].trimstart('WorkplaceJoined : '))
+            $TenantName = ($AzureADInfo[24].trimstart('TenantName : '))
         }
         else {
             $AzureADStatus = 'N/A'
