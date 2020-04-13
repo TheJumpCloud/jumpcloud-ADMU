@@ -198,7 +198,7 @@ $lbcfreespace.Content = $freespace
 
 #DomainInformation
 $lbDomainName.Content = $DomainName
-$lbNetBiosName.Content = $NetBiosName
+$lbNetBios.Content = $NetBiosName
 $lbsecurechannel.Content = $securechannelstatus
 
 #AzureADInformation
