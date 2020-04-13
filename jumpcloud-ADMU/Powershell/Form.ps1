@@ -103,7 +103,7 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
 
 # Define misc static variables
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-        $AzureADInfo = Get-DSregcmdstatus
+        $AzureADInfo = dsregcmd.exe /status
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
 
         if ($WmiComputerSystem.PartOfDomain) {
@@ -118,10 +118,10 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
             $securechannelstatus = 'N/A'
         }
 
-        if (($AzureADInfo.Status[0] -eq 'YES')) {
-            $AzureADStatus = $true
-            $Workplace_join = $AzureADInfo.status[2]
-            $TenantName = $AzureADInfo[24]
+        if (($AzureADInfo.Status[5].trimstart('AzureADJoined : ') -eq 'YES')) {
+            $AzureADStatus = ($AzureADInfo.Status[5].trimstart('AzureADJoined : '))
+            $Workplace_join = ($AzureADInfo.Status[51].trimstart('WorkplaceJoined : '))
+            $TenantName = ($AzureADInfo.Status[24].trimstart('TenantName : '))
         }
         else {
             $AzureADStatus = 'N/A'
