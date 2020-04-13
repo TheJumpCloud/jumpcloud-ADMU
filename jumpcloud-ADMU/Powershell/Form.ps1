@@ -103,7 +103,7 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
 
 # Define misc static variables
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-        $AzureADInfo = dsregcmd.exe /status
+        $AzureADInfo = dsregcmd.exe /status 2>$null
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
 
         if ($WmiComputerSystem.PartOfDomain) {
@@ -112,7 +112,7 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
             $NetBiosName = $WmiComputerDomain.DomainName
             $securechannelstatus = Test-ComputerSecureChannel
         }
-        else {
+        elseif ((Get-CimInstance Win32_OperatingSystem).Version -notmatch '10' -or ($WmiComputerSystem.PartOfDomain -eq $false)) {
             $DomainName = 'N/A'
             $NetBiosName = 'N/A'
             $securechannelstatus = 'N/A'
@@ -197,8 +197,8 @@ $lbUSMTStatus.Content = (($InstalledProducts -match 'User State Migration Tool')
 $lbcfreespace.Content = $freespace
 
 #DomainInformation
-$lbDomainName.Content = $DomainName
-$lbNetBios.Content = $NetBiosName
+$lbDomainName.Content = $DomainName[1]
+$lbNetBios.Content = $NetBiosName[1]
 $lbsecurechannel.Content = $securechannelstatus
 
 #AzureADInformation
