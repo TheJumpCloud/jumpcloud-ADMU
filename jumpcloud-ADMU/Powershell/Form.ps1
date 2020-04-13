@@ -201,9 +201,9 @@ $lbNetBiosName.Content = $NetBiosName
 $lbsecurechannel.Content = $securechannelstatus
 
 #AzureADInformation
-$lbAzureAD_Joined = $AzureADStatus
-$lbWorkplace_Joined = $Workplace_join
-$lbTenantName = $TenantName
+$lbAzureAD_Joined.Content = $AzureADStatus
+$lbWorkplace_Joined.Content = $Workplace_join
+$lbTenantName.Content = $TenantName
 
 Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKey, [object]$tbTempPassword, [object]$lvProfileList)
 {
