@@ -103,7 +103,7 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
 
 # Define misc static variables
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-        $AzureADInfo = dsregcmd.exe /status 2>$null
+        try{$AzureADInfo = dsregcmd.exe /status}Catch{}
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
 
         if ($WmiComputerSystem.PartOfDomain) {
@@ -112,22 +112,22 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
             $NetBiosName = $WmiComputerDomain.DomainName
             $securechannelstatus = Test-ComputerSecureChannel
         }
-        elseif ((Get-CimInstance Win32_OperatingSystem).Version -notmatch '10' -or ($WmiComputerSystem.PartOfDomain -eq $false)) {
+        elseif ($WmiComputerSystem.PartOfDomain -eq $false) {
             $DomainName = 'N/A'
             $NetBiosName = 'N/A'
             $securechannelstatus = 'N/A'
         }
-
-        if (($AzureADInfo[5].trimstart('AzureADJoined : ') -eq 'YES')) {
-            $AzureADStatus = ($AzureADInfo[5].trimstart('AzureADJoined : '))
-            $Workplace_join = ($AzureADInfo[51].trimstart('WorkplaceJoined : '))
-            $TenantName = ($AzureADInfo[24].trimstart('TenantName : '))
+        if ((Get-CimInstance Win32_OperatingSystem).Version -match '10' -and ($AzureADInfo[5].trimstart('AzureADJoined : ') -eq 'YES') ) {
+                $AzureADStatus = ($AzureADInfo[5].trimstart('AzureADJoined : '))
+                $Workplace_join = ($AzureADInfo[51].trimstart('WorkplaceJoined : '))
+                $TenantName = ($AzureADInfo[24].trimstart('TenantName : '))
         }
         else {
             $AzureADStatus = 'N/A'
             $Workplace_join = 'N/A'
             $TenantName = 'N/A'
         }
+
         $FormResults = [PSCustomObject]@{ }
 
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Getting Installed Applications..'
