@@ -9,8 +9,8 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
      Title="JumpCloud ADMU 1.2.16" Height="626.734" Width="1017.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
-    <Grid Margin="0,0,-0.2,0.168">
-        <ListView Name="lvProfileList" HorizontalAlignment="Left" Height="216" Margin="10,238,0,0" VerticalAlignment="Top" Width="993">
+    <Grid Margin="0,0,-0.2,0.168" RenderTransformOrigin="0.531,0.272">
+        <ListView Name="lvProfileList" HorizontalAlignment="Left" Height="226" Margin="10,228,0,0" VerticalAlignment="Top" Width="993">
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="System Accounts" DisplayMemberBinding="{Binding 'UserName'}" Width="180"/>
@@ -29,8 +29,8 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                 <DropShadowEffect/>
             </Button.Effect>
         </Button>
-        <GroupBox Header="System Information" HorizontalAlignment="Left" Height="130" Margin="10,103,0,0" VerticalAlignment="Top" Width="341" FontWeight="Bold">
-            <Grid HorizontalAlignment="Left" Height="90" VerticalAlignment="Top" Width="321" Margin="10,10,-2,0">
+        <GroupBox Header="System Information" HorizontalAlignment="Left" Height="120" Margin="10,103,0,0" VerticalAlignment="Top" Width="341" FontWeight="Bold">
+            <Grid HorizontalAlignment="Left" Height="90" VerticalAlignment="Top" Width="321" Margin="10,0,-2,0">
                 <Label Content="Local Computer Name:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
                 <Label Content="USMT Detected:" HorizontalAlignment="Left" Margin="10,31,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
                 <Label Name="lbComputerName" Content="" HorizontalAlignment="Left" Margin="191,10,0,0" VerticalAlignment="Top" Width="120" FontWeight="Normal"/>
@@ -61,24 +61,24 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
         <GroupBox Header="Migration Steps" HorizontalAlignment="Left" Height="98" Margin="10,0,0,0" VerticalAlignment="Top" Width="993" FontWeight="Bold">
             <TextBlock HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Top" Height="70" Width="561" Margin="0,10,0,-5" FontWeight="Normal"><Run Text="1. Select the domain or AzureAD account that you want to migrate to a local account from the list below."/><LineBreak/><Run Text="2. Enter a local account username and password to migrate the selected account to. "/><LineBreak/><Run Text="3. Enter your organizations JumpCloud system connect key."/><LineBreak/><Run Text="4. Click the "/><Run Text="Migrate Profile"/><Run Text=" button."/><LineBreak/><Run/></TextBlock>
         </GroupBox>
-        <GroupBox Header="Domain Information" HorizontalAlignment="Left" Height="130" Margin="356,103,0,0" VerticalAlignment="Top" Width="321" FontWeight="Bold">
-            <Grid HorizontalAlignment="Left" Height="90" Margin="10,10,0,0" VerticalAlignment="Top" Width="297">
+        <GroupBox Header="Domain Information" HorizontalAlignment="Left" Height="120" Margin="356,103,0,0" VerticalAlignment="Top" Width="321" FontWeight="Bold">
+            <Grid HorizontalAlignment="Left" Height="95" Margin="10,0,0,0" VerticalAlignment="Top" Width="297">
                 <Label Content="Domain Name:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                <Label Name="lbDomainName" Content="" Margin="167,11,10,106" Foreground="Black" FontWeight="Normal"/>
+                <Label Name="lbDomainName" Content="" Margin="167,11,10,59" Foreground="Black" FontWeight="Normal"/>
                 <Label Content="Secure Channel Healthy:" HorizontalAlignment="Left" Margin="10,62,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
                 <Label Name="lbsecurechannel" Content="" HorizontalAlignment="Left" Margin="167,62,0,0" VerticalAlignment="Top" Width="120" FontWeight="Normal"/>
                 <Label Content="NetBios Name:" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                <Label Name="lbNetBios" Content="" Margin="167,36,10,77" Foreground="Black" FontWeight="Normal"/>
+                <Label Name="lbNetBios" Content="" Margin="167,36,10,33" Foreground="Black" FontWeight="Normal"/>
             </Grid>
         </GroupBox>
-        <GroupBox Header="AzureAD Information" HorizontalAlignment="Left" Height="130" Margin="682,103,0,0" VerticalAlignment="Top" Width="321" FontWeight="Bold">
-            <Grid HorizontalAlignment="Left" Height="90" Margin="10,10,0,0" VerticalAlignment="Top" Width="297">
+        <GroupBox Header="AzureAD Information" HorizontalAlignment="Left" Height="120" Margin="682,103,0,0" VerticalAlignment="Top" Width="321" FontWeight="Bold">
+            <Grid HorizontalAlignment="Left" Height="90" Margin="10,0,0,0" VerticalAlignment="Top" Width="297">
                 <Label Content="AzureAD Joined:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                <Label Name="lbAzureAD_Joined" Content="" Margin="168,10,10,94" Foreground="Black" FontWeight="Normal"/>
+                <Label Name="lbAzureAD_Joined" Content="" Margin="168,10,10,54" Foreground="Black" FontWeight="Normal"/>
                 <Label Content="Workplace Joined:" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                <Label Name="lbWorkplace_Joined" Content="" Margin="169,36,10,68" Foreground="Black" FontWeight="Normal"/>
+                <Label Name="lbWorkplace_Joined" Content="" Margin="169,36,10,28" Foreground="Black" FontWeight="Normal"/>
                 <Label Content="Tenant Name:" HorizontalAlignment="Left" Margin="10,62,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                <Label Name="lbTenantName" Content="" Margin="168,62,10,42" Foreground="Black" FontWeight="Normal"/>
+                <Label Name="lbTenantName" Content="" Margin="168,62,10,2" Foreground="Black" FontWeight="Normal"/>
             </Grid>
         </GroupBox>
     </Grid>
