@@ -113,8 +113,8 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
             $securechannelstatus = Test-ComputerSecureChannel
         }
         elseif ($WmiComputerSystem.PartOfDomain -eq $false) {
-            $DomainName = 'N/A'
-            $NetBiosName = 'N/A'
+            $DomainName = @('N/A')
+            $NetBiosName = @('N/A')
             $securechannelstatus = 'N/A'
         }
         if ((Get-CimInstance Win32_OperatingSystem).Version -match '10' -and ($AzureADInfo[5].trimstart('AzureADJoined : ') -eq 'YES') ) {
@@ -224,7 +224,7 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
             $script:bDeleteProfile.IsEnabled = $true
             Return $true
         }
-        Elseif(($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name)){
+        Elseif(($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name) -or ($lvProfileList.selectedItem.Username -eq 'UNKNOWN ACCOUNT')){
             $script:bDeleteProfile.Content = "Select Domain Profile"
             $script:bDeleteProfile.IsEnabled = $false
             Return $false
