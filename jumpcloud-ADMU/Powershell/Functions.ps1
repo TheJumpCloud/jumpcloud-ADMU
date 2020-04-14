@@ -5442,22 +5442,40 @@ Function Start-Migration
 
     if ($LeaveDomain -eq $true)
     {
-      Write-Log -Message:('Leaving Domain')
-      Try
-      {
-        $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
-      }
-      Catch
-      {
-        Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
-        Exit;
+      if ($netBiosName -match 'AzureAD') {
+        try {
+          Write-Log -Message:('Leaving AzureAD')
+          dsregcmd.exe /leave
+        }
+        catch {
+          Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
+          Exit;
+        }
+        else {
+          Try
+          {
+            Write-Log -Message:('Leaving Domain')
+            $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+          }
+          Catch
+          {
+            Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
+            Exit;
+          }
+        }
       }
     }
 
     # Cleanup Folders Again Before Reboot
     Write-Log -Message:('Removing Temp Files & Folders.')
     Start-Sleep -s 10
-    Remove-ItemIfExists -Path:($jcAdmuTempPath) -Recurse
+    try {
+      Remove-ItemIfExists -Path:($jcAdmuTempPath) -Recurse
+    }
+    catch {
+      Write-Log -Message:('Failed to remove Temp Files & Folders.' + $jcAdmuTempPath)
+    }
+
 
     if ($ForceReboot -eq $true)
     {
