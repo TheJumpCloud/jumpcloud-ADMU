@@ -5451,7 +5451,8 @@ Function Start-Migration
           Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
           Exit;
         }
-        else {
+      }
+      else {
           Try
           {
             Write-Log -Message:('Leaving Domain')
@@ -5462,7 +5463,6 @@ Function Start-Migration
             Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
             Exit;
           }
-        }
       }
     }
 
