@@ -5286,12 +5286,12 @@ Function Start-Migration
     }
 
     # Test checks
-    if ($AzureADProfile) {
+    if ($AzureADProfile -eq $true) {
       $DomainName = 'AzureAD'
       $netBiosName = 'AzureAD'
       Write-Log -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
     }
-    else {
+    elseif($AzureADProfile -eq $false) {
       $DomainName = $WmiComputerSystem.Domain
       $netBiosName = GetNetBiosName
       Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + ' NetBiosName is ' + $netBiosName)
