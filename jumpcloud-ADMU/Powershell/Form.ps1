@@ -113,8 +113,8 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
             $securechannelstatus = Test-ComputerSecureChannel
         }
         elseif ($WmiComputerSystem.PartOfDomain -eq $false) {
-            $DomainName = @('N/A')
-            $NetBiosName = @('N/A')
+            $DomainName = 'N/A'
+            $NetBiosName = 'N/A'
             $securechannelstatus = 'N/A'
         }
         if ((Get-CimInstance Win32_OperatingSystem).Version -match '10' -and ($AzureADInfo[5].trimstart('AzureADJoined : ') -eq 'YES') ) {
@@ -197,8 +197,8 @@ $lbUSMTStatus.Content = (($InstalledProducts -match 'User State Migration Tool')
 $lbcfreespace.Content = $freespace
 
 #DomainInformation
-$lbDomainName.Content = $DomainName[1]
-$lbNetBios.Content = $NetBiosName[1]
+$lbDomainName.Content = $DomainName
+$lbNetBios.Content = $NetBiosName
 $lbsecurechannel.Content = $securechannelstatus
 
 #AzureADInformation
