@@ -5283,10 +5283,13 @@ Function Start-Migration
       $InstallJCAgent = $inputObject.InstallJCAgent
       $LeaveDomain = $InputObject.LeaveDomain
       $ForceReboot = $InputObject.ForceReboot
+      $netBiosName = $inputObject.NetBiosName
     }
 
+
+
     # Test checks
-    if ($AzureADProfile -eq $true) {
+    if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD') {
       $DomainName = 'AzureAD'
       $netBiosName = 'AzureAD'
       Write-Log -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
