@@ -323,15 +323,19 @@ function ConvertSID
   [CmdletBinding()]
   param
   (
-    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-    $Sid
+      [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+      $Sid
   )
   process
   {
+  try {
     (New-Object System.Security.Principal.SecurityIdentifier($Sid)).Translate( [System.Security.Principal.NTAccount]).Value
   }
+  catch {
+    return 'UNKNOWN ACCOUNT'
+  }
+  }
 }
-
 #endregion Functions
 
 #region Agent Install Helper Functions
@@ -5279,53 +5283,24 @@ Function Start-Migration
       $InstallJCAgent = $inputObject.InstallJCAgent
       $LeaveDomain = $InputObject.LeaveDomain
       $ForceReboot = $InputObject.ForceReboot
+      $netBiosName = $inputObject.NetBiosName
     }
 
-    #region Check Domain Join Status, Netbiosname, $AzureADProfile param & SecureChannel
-    If ($WmiComputerSystem.partOfDomain -eq $true)
-    {
-      if (Test-ComputerSecureChannel)
-      {
-        if ($AzureADProfile -eq $false)
-        {
-          $DomainName = $WmiComputerSystem.Domain
-          $netBiosName = GetNetBiosName
-          Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName)
-          Write-Log -Message:('The secure channel between the local computer and domain is in good condition')
-        }
-        elseif ($AzureADProfile -eq $true)
-        {
-          $DomainName = 'AzureAD'
-          $netBiosName = 'AzureAD'
-          Write-Log -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
-        }
-      }
-      else
-      {
-        Write-Log -Message:('System is joined to a domain But the secure channel between the domain & system is broken, this must be resolved.') -Level:('Error')
-        Read-Host "Press any key to exit..."
-        exit
-      }
 
+
+    # Test checks
+    if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD') {
+      $DomainName = 'AzureAD'
+      $netBiosName = 'AzureAD'
+      Write-Log -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
     }
-    elseif ($WmiComputerSystem.partOfDomain -eq $false)
-    {
-      if ($AzureADProfile -eq $false)
-      {
-        Write-Log -Message:('System is NOT joined to a domain and $AzureADProfile = $false.') -Level:('Error')
-        Read-Host "Press any key to exit..."
-        exit
-      }
-      elseif ($AzureADProfile -eq $true)
-      {
-        $DomainName = 'AzureAD'
-        $netBiosName = 'AzureAD'
-        Write-Log -Message:($localComputerName + ' is currently Not Domain joined and $AzureADProfile = $true')
-        exit
-      }
+    elseif($AzureADProfile -eq $false) {
+      $DomainName = $WmiComputerSystem.Domain
+      $netBiosName = GetNetBiosName
+      Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + ' NetBiosName is ' + $netBiosName)
     }
 
-    #endregion Check Domain Join Status & Netbiosname
+    #endregion Test checks
 
     # Start Of Console Output
     Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" going to be duplicated and converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
@@ -5467,22 +5442,40 @@ Function Start-Migration
 
     if ($LeaveDomain -eq $true)
     {
-      Write-Log -Message:('Leaving Domain')
-      Try
-      {
-        $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+      if ($netBiosName -match 'AzureAD') {
+        try {
+          Write-Log -Message:('Leaving AzureAD')
+          dsregcmd.exe /leave
+        }
+        catch {
+          Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
+          Exit;
+        }
       }
-      Catch
-      {
-        Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
-        Exit;
+      else {
+          Try
+          {
+            Write-Log -Message:('Leaving Domain')
+            $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+          }
+          Catch
+          {
+            Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
+            Exit;
+          }
       }
     }
 
     # Cleanup Folders Again Before Reboot
     Write-Log -Message:('Removing Temp Files & Folders.')
     Start-Sleep -s 10
-    Remove-ItemIfExists -Path:($jcAdmuTempPath) -Recurse
+    try {
+      Remove-ItemIfExists -Path:($jcAdmuTempPath) -Recurse
+    }
+    catch {
+      Write-Log -Message:('Failed to remove Temp Files & Folders.' + $jcAdmuTempPath)
+    }
+
 
     if ($ForceReboot -eq $true)
     {
