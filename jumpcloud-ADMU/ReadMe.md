@@ -2,10 +2,6 @@
 
 Jumpcloud Active Directory Migration Utility.
 
-## Documentation
-
-* [Architecture](docs/ARCHITECTURE.md) -
-
 ## Development
 
 This project is being developed in Powershell using XAML front-end.
