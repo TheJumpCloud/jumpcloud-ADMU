@@ -5207,6 +5207,63 @@ $usmtmiguser = [xml] @"
 
 #endregion miguser xml
 
+#region custom xml
+$usmtcustom = [xml] @"
+<?xml version="1.0" encoding="UTF-8"?>
+<migration urlid="http://www.microsoft.com/migration/1.0/migxmlext/AppDataMig">
+	<component context="User" type="Application">
+        <displayName>Local AppData</displayName>
+        <paths>
+            <path type="File">%CSIDL_LOCAL_APPDATA%</path>
+        </paths>
+        <role role="Settings">
+            <rules>
+                <include filter='MigXmlHelper.IgnoreIrrelevantLinks()'>
+                    <objectSet>
+                        <pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
+						<pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
+						<pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
+                    </objectSet>
+                </include>
+                <merge script="MigXmlHelper.DestinationPriority()">
+                    <objectSet>
+                        <pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
+						<pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
+						<pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
+                    </objectSet>
+                </merge>
+            </rules>
+        </role>
+    </component>
+	<component context="User" type="Application">
+        <displayName>Roaming AppData</displayName>
+        <paths>
+            <path type="File">%CSIDL_LOCAL_APPDATA%</path>
+        </paths>
+        <role role="Settings">
+            <rules>
+                <include filter='MigXmlHelper.IgnoreIrrelevantLinks()'>
+                    <objectSet>
+                        <pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
+						<pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
+						<pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
+                    </objectSet>
+                </include>
+                <merge script="MigXmlHelper.DestinationPriority()">
+                    <objectSet>
+                        <pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
+						<pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
+						<pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
+                    </objectSet>
+                </merge>
+            </rules>
+        </role>
+    </component>
+
+	</migration>
+"@
+
+#endregion custom xml
 
 Function Start-Migration
 {
@@ -5244,8 +5301,8 @@ Function Start-Migration
     $msvc2013x64Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x64.exe'
     $msvc2013x86Install = "$jcAdmuTempPath$msvc2013x86File /install /quiet /norestart"
     $msvc2013x64Install = "$jcAdmuTempPath$msvc2013x64File /install /quiet /norestart"
-    $CommandScanStateTemplate = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
-    $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+    $CommandScanStateTemplate = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"{0}custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
+    $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"{0}custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
 
     # JumpCloud Agent Installation Variables
     $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
@@ -5354,13 +5411,14 @@ Function Start-Migration
     {
       Write-Log -Message:('Microsoft Windows ADK - User State Migration Tool ready to be used.')
 
-      if (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\config.xml')) -or (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\MigUser.xml')) -or (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\MigApp.xml')))))
+      if (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\config.xml')) -or (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\MigUser.xml')) -or (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\MigApp.xml')) -or (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\custom.xml'))))))
       {
         try
         {
           $usmtconfig.save($UserStateMigrationToolVersionPath + '\config.xml')
           $usmtmiguser.save($UserStateMigrationToolVersionPath + '\MigUser.xml')
           $usmtmigapp.save($UserStateMigrationToolVersionPath + '\MigApp.xml')
+          $usmtcustom.save($UserStateMigrationToolVersionPath + '\custom.xml')
         }
         catch
         {
