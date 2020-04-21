@@ -336,6 +336,33 @@ function ConvertSID
   }
   }
 }
+
+function Test-XMLFile {
+  <#
+  .SYNOPSIS
+  Test the validity of an XML file
+  #>
+  [CmdletBinding()]
+  param (
+  [parameter(mandatory=$true)][ValidateNotNullorEmpty()][string]$xmlFilePath
+  )
+
+  # Check the file exists
+  if (!(Test-Path -Path $xmlFilePath)){
+  throw "$xmlFilePath is not valid. Please provide a valid path to the .xml fileh"
+  }
+  # Check for Load or Parse errors when loading the XML file
+  $xml = New-Object System.Xml.XmlDocument
+  try {
+  $xml.Load((Get-ChildItem -Path $xmlFilePath).FullName)
+  return $true
+  }
+  catch [System.Xml.XmlException] {
+  Write-Verbose "$xmlFilePath : $($_.toString())"
+  return $false
+  }
+  }
+
 #endregion Functions
 
 #region Agent Install Helper Functions
@@ -5345,7 +5372,7 @@ Function Start-Migration
       $LeaveDomain = $InputObject.LeaveDomain
       $ForceReboot = $InputObject.ForceReboot
       $netBiosName = $inputObject.NetBiosName
-      $Customxml = $inputObject.$Customxml
+      $Customxml = $inputObject.Customxml
     }
 
 
@@ -5440,23 +5467,12 @@ Function Start-Migration
     #endregion User State Migration Tool Install & EULA Check
 
     #region ScanState Step
-    if ($Customxml -eq $true) {
-      Try
-      {
-        $CommandScanState = $CommandScanStateTemplateCustom -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
-        Write-Log -Message:('Starting ScanState tool on user "' + $netBiosName + '\' + $DomainUserName + '"')
-        Write-Log -Message:('ScanState tool is in progress. Command: ' + $CommandScanState)
-        Invoke-Expression -command:($CommandScanState)
-        Write-Log -Message:('ScanState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"')
-      }
-      Catch
-      {
-        Write-Log -Message:('ScanState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"') -Level:('Error')
-        Exit;
-      }
+    if ($Customxml -eq $true -and (Test-XMLFile -xmlFilePath ($UserStateMigrationToolVersionPath + '\custom.xml'))) {
+      $CommandScanStateTemplate = $CommandScanStateTemplateCustom
+    }else{
+      Write-Log -Message:('Custom.xml is not valid xml, correct & try again') -Level:('Error')
+      Exit;
     }
-    else
-    {
       Try
       {
         $CommandScanState = $CommandScanStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
@@ -5470,14 +5486,15 @@ Function Start-Migration
         Write-Log -Message:('ScanState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"') -Level:('Error')
         Exit;
       }
-    }
     #endregion ScanState Step
 
     #region LoadState Step
     if ($Customxml -eq $true) {
+      $CommandLoadStateTemplate = $CommandLoadStateTemplateCustom
+    }
       Try
       {
-        $CommandLoadState = $CommandLoadStateTemplateCustom -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+        $CommandLoadState = $CommandLoadStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
         Write-Log -Message:('Starting LoadState tool on user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
         Write-Log -Message:('LoadState tool is in progress. Command: ' + $CommandLoadState)
         Invoke-Expression -Command:($CommandLoadState)
@@ -5488,24 +5505,6 @@ Function Start-Migration
         Write-Log -Message:('LoadState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"') -Level:('Error')
         Exit;
       }
-    }
-    else {
-      {
-        Try
-        {
-          $CommandLoadState = $CommandLoadStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
-          Write-Log -Message:('Starting LoadState tool on user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
-          Write-Log -Message:('LoadState tool is in progress. Command: ' + $CommandLoadState)
-          Invoke-Expression -Command:($CommandLoadState)
-          Write-Log -Message:('LoadState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
-        }
-        Catch
-        {
-          Write-Log -Message:('LoadState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"') -Level:('Error')
-          Exit;
-        }
-      }
-    }
     #endregion LoadState Step
 
     #region Add To Local Users Group
