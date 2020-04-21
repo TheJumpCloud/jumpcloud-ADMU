@@ -5467,11 +5467,14 @@ Function Start-Migration
     #endregion User State Migration Tool Install & EULA Check
 
     #region ScanState Step
-    if ($Customxml -eq $true -and (Test-XMLFile -xmlFilePath ($UserStateMigrationToolVersionPath + '\custom.xml'))) {
-      $CommandScanStateTemplate = $CommandScanStateTemplateCustom
-    }else{
-      Write-Log -Message:('Custom.xml is not valid xml, correct & try again') -Level:('Error')
-      Exit;
+    if ($Customxml -eq $true){
+      if (Test-XMLFile -xmlFilePath ($UserStateMigrationToolVersionPath + '\custom.xml')) {
+        $CommandScanStateTemplate = $CommandScanStateTemplateCustom
+      }
+      else {
+        Write-Log -Message:('Custom.xml is not valid xml, correct & try again') -Level:('Error')
+        Exit;
+      }
     }
       Try
       {
