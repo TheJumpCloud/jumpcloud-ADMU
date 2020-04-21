@@ -5278,6 +5278,7 @@ Function Start-Migration
     [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 6, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$LeaveDomain = $false ,
     [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 7, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$ForceReboot = $false ,
     [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 8, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$AzureADProfile = $false ,
+    [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 9, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$Customxml = $false ,
     #TODO ,[Parameter(ParameterSetName="cmd",Mandatory = $true, Position = 9, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][ValidateLength(40, 40)][string]$JumpCloudApiKey
     [Parameter(ParameterSetName = "form")][Object]$inputObject
   )
@@ -5301,8 +5302,11 @@ Function Start-Migration
     $msvc2013x64Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x64.exe'
     $msvc2013x86Install = "$jcAdmuTempPath$msvc2013x86File /install /quiet /norestart"
     $msvc2013x64Install = "$jcAdmuTempPath$msvc2013x64File /install /quiet /norestart"
-    $CommandScanStateTemplate = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"{0}custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
-    $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"{0}custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+    $CommandScanStateTemplate = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
+    $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+    $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"{0}custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
+    $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"{0}custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+
 
     # JumpCloud Agent Installation Variables
     $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
@@ -5341,6 +5345,7 @@ Function Start-Migration
       $LeaveDomain = $InputObject.LeaveDomain
       $ForceReboot = $InputObject.ForceReboot
       $netBiosName = $inputObject.NetBiosName
+      $Customxml = $inputObject.$Customxml
     }
 
 
@@ -5426,45 +5431,80 @@ Function Start-Migration
           Exit;
         }
       }
-
     }
     Else
     {
       Write-Log -Message:('Microsoft Windows ADK - User State Migration Tool not found. Make sure it is installed correctly and in the required location.') -Level:('Error')
       Exit;
     }
-
     #endregion User State Migration Tool Install & EULA Check
 
     #region ScanState Step
-    Try
-    {
-      $CommandScanState = $CommandScanStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
-      Write-Log -Message:('Starting ScanState tool on user "' + $netBiosName + '\' + $DomainUserName + '"')
-      Write-Log -Message:('ScanState tool is in progress. Command: ' + $CommandScanState)
-      Invoke-Expression -command:($CommandScanState)
-      Write-Log -Message:('ScanState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"')
+    if ($Customxml -eq $true) {
+      Try
+      {
+        $CommandScanState = $CommandScanStateTemplateCustom -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
+        Write-Log -Message:('Starting ScanState tool on user "' + $netBiosName + '\' + $DomainUserName + '"')
+        Write-Log -Message:('ScanState tool is in progress. Command: ' + $CommandScanState)
+        Invoke-Expression -command:($CommandScanState)
+        Write-Log -Message:('ScanState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"')
+      }
+      Catch
+      {
+        Write-Log -Message:('ScanState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"') -Level:('Error')
+        Exit;
+      }
     }
-    Catch
+    else
     {
-      Write-Log -Message:('ScanState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"') -Level:('Error')
-      Exit;
+      Try
+      {
+        $CommandScanState = $CommandScanStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
+        Write-Log -Message:('Starting ScanState tool on user "' + $netBiosName + '\' + $DomainUserName + '"')
+        Write-Log -Message:('ScanState tool is in progress. Command: ' + $CommandScanState)
+        Invoke-Expression -command:($CommandScanState)
+        Write-Log -Message:('ScanState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"')
+      }
+      Catch
+      {
+        Write-Log -Message:('ScanState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"') -Level:('Error')
+        Exit;
+      }
     }
     #endregion ScanState Step
 
     #region LoadState Step
-    Try
-    {
-      $CommandLoadState = $CommandLoadStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
-      Write-Log -Message:('Starting LoadState tool on user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
-      Write-Log -Message:('LoadState tool is in progress. Command: ' + $CommandLoadState)
-      Invoke-Expression -Command:($CommandLoadState)
-      Write-Log -Message:('LoadState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+    if ($Customxml -eq $true) {
+      Try
+      {
+        $CommandLoadState = $CommandLoadStateTemplateCustom -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+        Write-Log -Message:('Starting LoadState tool on user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+        Write-Log -Message:('LoadState tool is in progress. Command: ' + $CommandLoadState)
+        Invoke-Expression -Command:($CommandLoadState)
+        Write-Log -Message:('LoadState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+      }
+      Catch
+      {
+        Write-Log -Message:('LoadState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"') -Level:('Error')
+        Exit;
+      }
     }
-    Catch
-    {
-      Write-Log -Message:('LoadState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"') -Level:('Error')
-      Exit;
+    else {
+      {
+        Try
+        {
+          $CommandLoadState = $CommandLoadStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+          Write-Log -Message:('Starting LoadState tool on user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+          Write-Log -Message:('LoadState tool is in progress. Command: ' + $CommandLoadState)
+          Invoke-Expression -Command:($CommandLoadState)
+          Write-Log -Message:('LoadState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+        }
+        Catch
+        {
+          Write-Log -Message:('LoadState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"') -Level:('Error')
+          Exit;
+        }
+      }
     }
     #endregion LoadState Step
 
