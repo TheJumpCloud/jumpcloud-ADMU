@@ -5468,10 +5468,6 @@ Function Start-Migration
     #region ScanState Step
     if ($Customxml -eq $true){
         $CommandScanStateTemplate = $CommandScanStateTemplateCustom
-      else {
-        Write-Log -Message:('Custom.xml is not valid xml, correct & try again') -Level:('Error')
-        Exit;
-      }
     }
       Try
       {
