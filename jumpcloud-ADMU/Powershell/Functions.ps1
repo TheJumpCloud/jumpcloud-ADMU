@@ -5467,9 +5467,7 @@ Function Start-Migration
 
     #region ScanState Step
     if ($Customxml -eq $true){
-      if (Test-XMLFile -xmlFilePath ($UserStateMigrationToolVersionPath + '\custom.xml')) {
         $CommandScanStateTemplate = $CommandScanStateTemplateCustom
-      }
       else {
         Write-Log -Message:('Custom.xml is not valid xml, correct & try again') -Level:('Error')
         Exit;
