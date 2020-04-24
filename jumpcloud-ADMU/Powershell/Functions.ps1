@@ -5334,7 +5334,6 @@ Function Start-Migration
     $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"{0}custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
     $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"{0}custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
 
-      'C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\custom.xml'
     # JumpCloud Agent Installation Variables
     $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
     $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
@@ -5374,8 +5373,6 @@ Function Start-Migration
       $netBiosName = $inputObject.NetBiosName
       $Customxml = $inputObject.Customxml
     }
-
-
 
     # Test checks
     if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD') {
@@ -5607,7 +5604,6 @@ Function Start-Migration
     catch {
       Write-Log -Message:('Failed to remove Temp Files & Folders.' + $jcAdmuTempPath)
     }
-
 
     if ($ForceReboot -eq $true)
     {
