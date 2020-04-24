@@ -136,6 +136,18 @@ Catch
 $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) -Value $Form.FindName($_.Name) }
 
 # Define misc static variables
+
+        #USMT Path
+        $UserStateMigrationToolx64Path = 'C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
+        $UserStateMigrationToolx86Path = 'C:\Program Files\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
+
+        $UserStateMigrationToolVersionPath = Switch ([System.IntPtr]::Size)
+        {
+        8 { $UserStateMigrationToolx64Path }
+        4 { $UserStateMigrationToolx86Path }
+        Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
+        }
+
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
         try{$AzureADInfo = dsregcmd.exe /status}Catch{}
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
@@ -275,7 +287,6 @@ $usmtcustom = [xml] @"
         $LocalUserProfilesTrim = ForEach ($LocalPath in $LocalUserProfiles) { $LocalPath.LocalPath.substring(9) }
 
         $i = 0
-        $profiles2 = Get-ChildItem C:\Users | Where-Object { Test-Path C:\Users\$_\NTUSER.DAT } | Select-Object -ExpandProperty Name
         foreach ($userprofile in $LocalUserProfilesTrim)
         {
             $largeprofile = Get-ChildItem C:\Users\$userprofile -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Sum length | Select-Object -ExpandProperty Sum
@@ -461,8 +472,8 @@ $tb_customxml.add_TextChanged({
     [void] $data.Add($text -join "`n")
     $tmpDoc = New-Object System.Xml.XmlDataDocument
     $tmpDoc.LoadXml($data -join "`n")
-    $data | Out-File 'C:\windows\temp\test.xml'
-    $verifiedxml = (Test-XMLFile -xmlFilePath 'c:\windows\temp\test.xml')
+    $data | Out-File ($UserStateMigrationToolVersionPath + '\custom.xml')
+    $verifiedxml = (Test-XMLFile -xmlFilePath ($UserStateMigrationToolVersionPath + '\custom.xml'))
     $tab_jcadmu.IsEnabled = $false
 
     if ($verifiedxml -eq $true) {
@@ -483,8 +494,8 @@ $tab_usmtcustomxml.add_GotFocus({
     [void] $data.Add($text -join "`n")
     $tmpDoc = New-Object System.Xml.XmlDataDocument
     $tmpDoc.LoadXml($data -join "`n")
-    $data | Out-File 'C:\windows\temp\test.xml'
-    $verifiedxml = (Test-XMLFile -xmlFilePath 'c:\windows\temp\test.xml')
+    $data | Out-File ($UserStateMigrationToolVersionPath + '\custom.xml')
+    $verifiedxml = (Test-XMLFile -xmlFilePath ($UserStateMigrationToolVersionPath + '\custom.xml'))
     $tab_jcadmu.IsEnabled = $false
 
     if ($verifiedxml -eq $true) {
