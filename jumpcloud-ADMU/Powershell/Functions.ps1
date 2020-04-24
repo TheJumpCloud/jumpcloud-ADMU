@@ -5334,6 +5334,7 @@ Function Start-Migration
     $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"{0}custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
     $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"{0}custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
 
+      'C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\custom.xml'
     # JumpCloud Agent Installation Variables
     $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
     $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
@@ -5393,6 +5394,41 @@ Function Start-Migration
     # Start Of Console Output
     Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" going to be duplicated and converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
 
+     #check if jc is not installed and clear folder
+     if  (!(Check_Program_Installed("Jumpcloud")) -and (Test-Path 'C:\Program Files\Jumpcloud\')) {
+      Remove-ItemIfExists -Path 'C:\Program Files\Jumpcloud\' -Recurse
+    }
+
+    Write-Log -Message:('INSTALLING JC' + $InstallJCAgent)
+    #region SilentAgentInstall
+    if ($InstallJCAgent -eq $true)
+    {
+      # Agent Installer Loop
+      [int]$InstallReTryCounter = 0
+      Do
+      {
+        $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
+        $InstallReTryCounter++
+        If ($InstallReTryCounter -eq 3)
+        {
+          Write-Log -Message:('JumpCloud agent installation failed') -Level:('Error')
+          Exit;
+        }
+      } While ($ConfirmInstall -ne $true -and $InstallReTryCounter -le 3)
+    }
+
+    #agent install check
+    if (Test-Path 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf') {
+      Write-Log -Message:('JC Agent installed - Must be off domain to start jc agent service')
+    }
+    Else{
+      Write-Log -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
+      taskkill /IM "JumpCloudInstaller.exe" /F
+      taskkill /IM "JumpCloudInstaller.tmp" /F
+      Read-Host -Prompt "Press Enter to exit"
+      exit
+    }
+
     #region User State Migration Tool Install & EULA Check
     If (-not $WmiProduct -and -not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64')))
     {
@@ -5407,6 +5443,7 @@ Function Start-Migration
       {
         New-Item -Path:($jcAdmuTempPath) -ItemType:('Directory') | Out-Null
       }
+
       # Download WindowsADK
       DownloadLink -Link:($adkSetupLink) -Path:($adkSetupPath)
       # Test Path
