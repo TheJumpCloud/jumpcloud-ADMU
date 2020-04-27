@@ -277,6 +277,5 @@ $usmtcustom.save('C:\Windows\Temp\custom.xml')
 
             Test-XMLFile -xmlFilePath 'C:\Windows\Temp\custom.xml' | Should Be $false
         }
-
     }
 }
