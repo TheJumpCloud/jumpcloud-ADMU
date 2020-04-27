@@ -5236,7 +5236,6 @@ $usmtmiguser = [xml] @"
 
 #region custom xml
 $usmtcustom = [xml] @"
-<?xml version="1.0" encoding="UTF-8"?>
 <migration urlid="http://www.microsoft.com/migration/1.0/migxmlext/AppDataMig">
 	<component context="User" type="Application">
         <displayName>Local AppData</displayName>
