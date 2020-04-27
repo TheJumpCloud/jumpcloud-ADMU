@@ -261,65 +261,21 @@ Describe 'Functions' {
     Context 'Test-XMLFile Function'{
 $usmtcustom = [xml] @"
         <migration urlid="http://www.microsoft.com/migration/1.0/migxmlext/AppDataMig">
-            <component context="User" type="Application">
-                <displayName>Local AppData</displayName>
-                <paths>
-                    <path type="File">%CSIDL_LOCAL_APPDATA%</path>
-                </paths>
-                <role role="Settings">
-                    <rules>
-                        <include filter='MigXmlHelper.IgnoreIrrelevantLinks()'>
-                            <objectSet>
-                                <pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
-                                <pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
-                                <pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
-                            </objectSet>
-                        </include>
-                        <merge script="MigXmlHelper.DestinationPriority()">
-                            <objectSet>
-                                <pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
-                                <pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
-                                <pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
-                            </objectSet>
-                        </merge>
-                    </rules>
-                </role>
-            </component>
-            <component context="User" type="Application">
-                <displayName>Roaming AppData</displayName>
-                <paths>
-                    <path type="File">%CSIDL_LOCAL_APPDATA%</path>
-                </paths>
-                <role role="Settings">
-                    <rules>
-                        <include filter='MigXmlHelper.IgnoreIrrelevantLinks()'>
-                            <objectSet>
-                                <pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
-                                <pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
-                                <pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
-                            </objectSet>
-                        </include>
-                        <merge script="MigXmlHelper.DestinationPriority()">
-                            <objectSet>
-                                <pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
-                                <pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
-                                <pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
-                            </objectSet>
-                        </merge>
-                    </rules>
-                </role>
-            </component>
-            </migration>
+        </migration>
 "@
 $usmtcustom.save('C:\Windows\Temp\custom.xml')
+
         It 'Test-XMLFile - Valid XML' {
 
            Test-XMLFile -xmlFilePath 'C:\Windows\Temp\custom.xml' | Should Be $true
         }
 
+        $invalidxml = Get-Content 'C:\Windows\Temp\custom.xml'
+        $invalidxml | % { $_.Replace("`>", " ") } | Set-Content 'C:\Windows\Temp\custom.xml'
+
         It 'Test-XMLFile - InValid XML' {
 
-            $invalidxml | Should Be $false
+            Test-XMLFile -xmlFilePath 'C:\Windows\Temp\custom.xml' | Should Be $false
         }
 
     }
