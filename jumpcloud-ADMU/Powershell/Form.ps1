@@ -472,8 +472,8 @@ $tb_customxml.add_TextChanged({
     [void] $data.Add($text -join "`n")
     $tmpDoc = New-Object System.Xml.XmlDataDocument
     $tmpDoc.LoadXml($data -join "`n")
-    $data | Out-File ($UserStateMigrationToolVersionPath + '\custom.xml')
-    $verifiedxml = (Test-XMLFile -xmlFilePath ($UserStateMigrationToolVersionPath + '\custom.xml'))
+    $data | Out-File ('C:\Windows\Temp\custom.xml')
+    $verifiedxml = (Test-XMLFile -xmlFilePath ('C:\Windows\Temp\custom.xml'))
     $tab_jcadmu.IsEnabled = $false
 
     if ($verifiedxml -eq $true) {
@@ -494,8 +494,8 @@ $tab_usmtcustomxml.add_GotFocus({
     [void] $data.Add($text -join "`n")
     $tmpDoc = New-Object System.Xml.XmlDataDocument
     $tmpDoc.LoadXml($data -join "`n")
-    $data | Out-File ($UserStateMigrationToolVersionPath + '\custom.xml')
-    $verifiedxml = (Test-XMLFile -xmlFilePath ($UserStateMigrationToolVersionPath + '\custom.xml'))
+    $data | Out-File ('C:\Windows\Temp\custom.xml')
+    $verifiedxml = (Test-XMLFile -xmlFilePath ('C:\Windows\Temp\custom.xml'))
     $tab_jcadmu.IsEnabled = $false
 
     if ($verifiedxml -eq $true) {
