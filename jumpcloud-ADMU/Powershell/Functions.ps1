@@ -349,7 +349,7 @@ function Test-XMLFile {
 
   # Check the file exists
   if (!(Test-Path -Path $xmlFilePath)){
-  throw "$xmlFilePath is not valid. Please provide a valid path to the .xml fileh"
+  throw "$xmlFilePath is not valid. Please provide a valid path to the .xml file"
   }
   # Check for Load or Parse errors when loading the XML file
   $xml = New-Object System.Xml.XmlDocument
