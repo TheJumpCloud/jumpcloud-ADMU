@@ -149,7 +149,7 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         }
 
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-        try{$AzureADInfo = dsregcmd.exe /status}Catch{}
+        $AzureADInfo = dsregcmd.exe /status
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
 
         if ($WmiComputerSystem.PartOfDomain) {
