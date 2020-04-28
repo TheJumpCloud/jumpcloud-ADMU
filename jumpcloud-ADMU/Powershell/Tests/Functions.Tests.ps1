@@ -279,7 +279,7 @@ $usmtcustom.save('C:\Windows\Temp\custom.xml')
         }
 
         $invalidxml = Get-Content 'C:\Windows\Temp\custom.xml'
-        $invalidxml | % { $_.Replace("`>", " ") } | Set-Content 'C:\Windows\Temp\custom.xml'
+        $invalidxml | ForEach-Object { $_.Replace("`>", " ") } | Set-Content 'C:\Windows\Temp\custom.xml'
 
         It 'Test-XMLFile - InValid XML' {
 
