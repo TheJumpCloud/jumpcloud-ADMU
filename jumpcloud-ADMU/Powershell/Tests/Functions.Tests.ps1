@@ -15,7 +15,7 @@ Describe 'Functions' {
        }
 
        It 'VerifyAccount - Real local account with no domain' {
-           VerifyAccount -username blazar | Should Be $false
+           VerifyAccount -username blazar | Should Be $true
        }
 
        It 'VerifyAccount - Wrong local account with no domain' {
