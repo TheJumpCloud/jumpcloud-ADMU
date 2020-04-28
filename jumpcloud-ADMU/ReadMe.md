@@ -57,17 +57,20 @@ The pipeline runs the following steps on CD releases:
 
 ### Testing
 
-#### Unit testing
+TestSetup.ps1
 
-To run unit tests locally, run the following command:
+- Clears Temp & JCADMU Folders
+- Uninstalls JC, VS C++ prereqs
+- Reinstalls JCagent
 
-Set the var: ```$ENV:Common_TestResultsDirectory = Local Tests folder location```
-Run ```\InvokePester.ps1```
+Build.Tests.ps1
 
-```sh
+- Checks XAML form build number
+- Checks built exe build number
 
-```
+Functions.Tests.ps1
+gpo.Tests.ps1
 
-#### Functional testing
+PSScriptAnalyzer.Tests.ps1
 
-Requires domain joined build server - Using ADMU_WIN10_1809 local build server.
+- Runs psscriptanalyzer against powershell directory with custom exclude rules.
