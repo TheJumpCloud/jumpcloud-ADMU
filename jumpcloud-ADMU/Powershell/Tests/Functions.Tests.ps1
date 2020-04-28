@@ -98,7 +98,7 @@ Describe 'Functions' {
 
     }
 
-    Context 'DownloadLink'{
+    Context 'DownloadLink Function'{
 
         # It 'DownloadLink - ' {
         #     if(Test-Path 'c:\windows\Temp\test\') {Remove-Item 'c:\windows\Temp\test' -Recurse -Force}
@@ -106,32 +106,6 @@ Describe 'Functions' {
         #     #DownloadLink -Link:('http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x86.exe') -Path:('c:\windows\Temp\Test\vcredist_x86.exe')
         #     test-path ('c:\windows\Temp\test\vcredist_x86.exe')  | Should be $true
         # }
-
-    }
-
-    Context 'Add-LocalUser Function'{
-
-        It 'Add-LocalUser - testuser to Users ' {
-            net user testuser /delete | Out-Null
-            net user testuser Temp123! /add
-            Remove-LocalGroupMember -Group "Users" -Member "testuser"
-            Add-LocalGroupMember -SID S-1-5-32-545 -Member 'testuser'
-            ((Get-LocalGroupMember -SID S-1-5-32-545 | Select-Object Name).name -match 'testuser') -ne $null | Should Be $true
-        }
-
-    }
-
-    Context 'Uninstall_Program'{
-
-         It 'Install & Uninstall - x32 filezilla' {
-             $app = 'C:\FileZilla_3.46.3_win32.exe'
-             $arg = '/S'
-             Start-Process $app $arg
-             start-sleep -Seconds 5
-             Uninstall_Program -programName 'FileZilla Client 3.46.3'
-             start-sleep -Seconds 5
-             Check_Program_Installed -programName 'FileZilla' | Should Be $false
-         }
 
     }
 
@@ -147,6 +121,32 @@ Describe 'Functions' {
 
         It 'Check_Program_Installed - Program Name Does Not Exist' {
             Check_Program_Installed -programName 'Google Chrome1' | Should Be $false
+        }
+
+    }
+
+    Context 'Uninstall_Program Function'{
+
+        It 'Install & Uninstall - x32 filezilla' {
+            $app = 'C:\FileZilla_3.46.3_win32.exe'
+            $arg = '/S'
+            Start-Process $app $arg
+            start-sleep -Seconds 5
+            Uninstall_Program -programName 'FileZilla Client 3.46.3'
+            start-sleep -Seconds 5
+            Check_Program_Installed -programName 'FileZilla' | Should Be $false
+        }
+
+    }
+
+    Context 'Add-LocalUser Function'{
+
+        It 'Add-LocalUser - testuser to Users ' {
+            net user testuser /delete | Out-Null
+            net user testuser Temp123! /add
+            Remove-LocalGroupMember -Group "Users" -Member "testuser"
+            Add-LocalGroupMember -SID S-1-5-32-545 -Member 'testuser'
+            ((Get-LocalGroupMember -SID S-1-5-32-545 | Select-Object Name).name -match 'testuser') -ne $null | Should Be $true
         }
 
     }
@@ -255,7 +255,6 @@ Describe 'Functions' {
         It 'GetNetBiosName - JCADB2' {
             GetNetBiosName | Should Be 'JCADB2'
         }
-
     }
 
     Context 'ConvertSID Function'{
@@ -265,5 +264,26 @@ Describe 'Functions' {
             (ConvertSID -Sid $testusersid) | Should -match 'testuser'
         }
 
+    }
+
+    Context 'Test-XMLFile Function'{
+$usmtcustom = [xml] @"
+        <migration urlid="http://www.microsoft.com/migration/1.0/migxmlext/AppDataMig">
+        </migration>
+"@
+$usmtcustom.save('C:\Windows\Temp\custom.xml')
+
+        It 'Test-XMLFile - Valid XML' {
+
+           Test-XMLFile -xmlFilePath 'C:\Windows\Temp\custom.xml' | Should Be $true
+        }
+
+        $invalidxml = Get-Content 'C:\Windows\Temp\custom.xml'
+        $invalidxml | % { $_.Replace("`>", " ") } | Set-Content 'C:\Windows\Temp\custom.xml'
+
+        It 'Test-XMLFile - InValid XML' {
+
+            Test-XMLFile -xmlFilePath 'C:\Windows\Temp\custom.xml' | Should Be $false
+        }
     }
 }
