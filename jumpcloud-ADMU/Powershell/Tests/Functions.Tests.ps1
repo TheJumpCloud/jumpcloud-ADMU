@@ -14,6 +14,14 @@ Describe 'Functions' {
            VerifyAccount -username bob.lazar -domain JCADB2.localw | Should Be $false
        }
 
+       It 'VerifyAccount - Real local account with no domain' {
+           VerifyAccount -username blazar | Should Be $false
+       }
+
+       It 'VerifyAccount - Wrong local account with no domain' {
+           VerifyAccount -username blazarw | Should Be $false
+       }
+
     }
 
     Context 'Write-Log Function'{
