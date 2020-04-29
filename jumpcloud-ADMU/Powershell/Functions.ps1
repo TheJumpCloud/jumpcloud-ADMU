@@ -5395,7 +5395,6 @@ Function Start-Migration
       Remove-ItemIfExists -Path 'C:\Program Files\Jumpcloud\' -Recurse
     }
 
-    Write-Log -Message:('INSTALLING JC' + $InstallJCAgent)
     #region SilentAgentInstall
     if ($InstallJCAgent -eq $true)
     {
@@ -5414,6 +5413,7 @@ Function Start-Migration
     }
 
     #agent install check
+    start-sleep -seconds 30
     if (Test-Path 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf') {
       Write-Log -Message:('JC Agent installed - Must be off domain to start jc agent service')
     }
