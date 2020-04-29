@@ -280,7 +280,6 @@ Function DownloadAndInstallAgent(
         Start-Sleep -s 10
         InstallAgent
         Start-Sleep -s 5
-        Write-Log -Message:('JumpCloud Agent Installer Completed')
     }
     If (Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64") -and Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86") -and Check_Program_Installed("jumpcloud"))
     {
@@ -5355,6 +5354,9 @@ Function Start-Migration
       4 { $UserStateMigrationToolx86Path }
       Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
     }
+    if (!(Test-path $jcAdmuTempPath)) {
+      new-item -ItemType Directory -Force -Path $jcAdmuTempPath
+    }
   }
   Process
   {
@@ -5399,18 +5401,12 @@ Function Start-Migration
       if (Test-Path 'C:\Program Files\Jumpcloud\') {
          Remove-ItemIfExists -Path 'C:\Program Files\Jumpcloud\' -Recurse
       }
-      # Agent Installer Loop
-      [int]$InstallReTryCounter = 0
-      Do
-      {
-        $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
-        $InstallReTryCounter++
-        If ($InstallReTryCounter -eq 3)
-        {
-          Write-Log -Message:('JumpCloud agent installation failed') -Level:('Error')
-          Exit;
-        }
-      } While ($ConfirmInstall -ne $true -and $InstallReTryCounter -le 3)
+      # Agent Installer
+      $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
+
+
+
+
 
     start-sleep -seconds 30
     if (Test-Path 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf') {
