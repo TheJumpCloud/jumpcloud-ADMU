@@ -5364,7 +5364,9 @@ Function Start-Migration
       $DomainUserName = $inputObject.DomainUserName
       $JumpCloudUserName = $inputObject.JumpCloudUserName
       $TempPassword = $inputObject.TempPassword
-      $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
+      if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
+        $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
+      }
       $AcceptEULA = $inputObject.AcceptEula
       $InstallJCAgent = $inputObject.InstallJCAgent
       $LeaveDomain = $InputObject.LeaveDomain
@@ -5390,14 +5392,13 @@ Function Start-Migration
     # Start Of Console Output
     Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" going to be duplicated and converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
 
-     #check if jc is not installed and clear folder
-     if  (!(Check_Program_Installed("Jumpcloud")) -and (Test-Path 'C:\Program Files\Jumpcloud\')) {
-      Remove-ItemIfExists -Path 'C:\Program Files\Jumpcloud\' -Recurse
-    }
-
     #region SilentAgentInstall
-    if ($InstallJCAgent -eq $true)
+    if ($InstallJCAgent -eq $true -and (!(Check_Program_Installed("Jumpcloud"))))
     {
+      #check if jc is not installed and clear folder
+      if (Test-Path 'C:\Program Files\Jumpcloud\') {
+         Remove-ItemIfExists -Path 'C:\Program Files\Jumpcloud\' -Recurse
+      }
       # Agent Installer Loop
       [int]$InstallReTryCounter = 0
       Do
@@ -5410,9 +5411,7 @@ Function Start-Migration
           Exit;
         }
       } While ($ConfirmInstall -ne $true -and $InstallReTryCounter -le 3)
-    }
 
-    #agent install check
     start-sleep -seconds 30
     if (Test-Path 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf') {
       Write-Log -Message:('JC Agent installed - Must be off domain to start jc agent service')
@@ -5423,6 +5422,10 @@ Function Start-Migration
       taskkill /IM "JumpCloudInstaller.tmp" /F
       Read-Host -Prompt "Press Enter to exit"
       exit
+    }
+    }
+    elseif ($InstallJCAgent -eq $true -and (Check_Program_Installed("Jumpcloud"))) {
+      Write-Log -Message:('JumpCloud agent is already installed on the system.')
     }
 
     #region User State Migration Tool Install & EULA Check
