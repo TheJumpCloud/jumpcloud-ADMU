@@ -14,6 +14,14 @@ Describe 'Functions' {
            VerifyAccount -username bob.lazar -domain JCADB2.localw | Should Be $false
        }
 
+       It 'VerifyAccount - Real local account with no domain' {
+           VerifyAccount -username testuser | Should Be $true
+       }
+
+       It 'VerifyAccount - Wrong local account with no domain' {
+           VerifyAccount -username testuserq | Should Be $false
+       }
+
     }
 
     Context 'Write-Log Function'{
@@ -271,7 +279,7 @@ $usmtcustom.save('C:\Windows\Temp\custom.xml')
         }
 
         $invalidxml = Get-Content 'C:\Windows\Temp\custom.xml'
-        $invalidxml | % { $_.Replace("`>", " ") } | Set-Content 'C:\Windows\Temp\custom.xml'
+        $invalidxml | ForEach-Object { $_.Replace("`>", " ") } | Set-Content 'C:\Windows\Temp\custom.xml'
 
         It 'Test-XMLFile - InValid XML' {
 
