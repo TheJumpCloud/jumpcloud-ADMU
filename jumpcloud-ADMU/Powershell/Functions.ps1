@@ -5403,21 +5403,16 @@ Function Start-Migration
       }
       # Agent Installer
       $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
-
-
-
-
-
-    start-sleep -seconds 30
-    if (Test-Path 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf') {
-      Write-Log -Message:('JC Agent installed - Must be off domain to start jc agent service')
-    }
-    Else{
+    start-sleep -seconds 20
+    if ((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=1'){
       Write-Log -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
       taskkill /IM "JumpCloudInstaller.exe" /F
       taskkill /IM "JumpCloudInstaller.tmp" /F
       Read-Host -Prompt "Press Enter to exit"
       exit
+    }
+    elseif (((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=0')) {
+      Write-Log -Message:('JC Agent installed - Must be off domain to start jc agent service')
     }
     }
     elseif ($InstallJCAgent -eq $true -and (Check_Program_Installed("Jumpcloud"))) {
