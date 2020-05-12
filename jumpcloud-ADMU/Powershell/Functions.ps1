@@ -305,23 +305,6 @@ function Test-Domainusername {
   }
 }
 
-function Add-LocalGroupMemberSilent($groupName, $username)
-{
-    $existingMember = Get-LocalGroupMember -Name $groupName | Where-object {$_.Name -eq "$username"}
-    if ($existingMember)
-    {
-      Write-Log -Message:('User ' + $JumpCloudUserName + ' already exists in Users group')
-    }
-    else
-    {
-      try{Add-LocalGroupMember -Group "$groupName" -Member "$username"}
-        catch {
-              Write-Log -Message:('Failed To add new user "' + $JumpCloudUserName + '" to Users group') -Level:('Error')
-              Exit;
-        }
-    }
-}
-
 Function DownloadAndInstallAgent(
   [System.String]$msvc2013x64Link
   , [System.String]$msvc2013Path
@@ -5616,7 +5599,8 @@ Function Start-Migration
     #endregion LoadState Step
 
     #region Add To Local Users Group
-    Add-LocalGroupMemberSilent -groupName users -username $JumpCloudUserName
+    $JumpCloudUserName = 'jon.snow'
+    Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUserName -erroraction silentlycontinue
     #endregion Add To Local Users Group
 
     #region SilentAgentInstall
