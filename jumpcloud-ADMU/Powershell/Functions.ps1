@@ -255,7 +255,7 @@ function Test-Localusername {
             $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
             $localusers = new-object system.collections.arraylist
             foreach ($username in $users) {
-                if ($username -match $WmiComputerSystem.Name) {
+                if ($username -match $env:computername) {
                     $localusertrim = $username -creplace '^[^\\]*\\', ''
                     $localusers.Add($localusertrim) > Out-Null
                 }
@@ -285,7 +285,7 @@ function Test-Domainusername {
             $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
             $domainusers = new-object system.collections.arraylist
             foreach ($username in $users) {
-                if ($username -match $netBiosName) {
+                if ($username -match (GetNetBiosName)) {
                     $domainusertrim = $username -creplace '^[^\\]*\\', ''
                     $domainusers.Add($domainusertrim) > Out-Null
                 }
