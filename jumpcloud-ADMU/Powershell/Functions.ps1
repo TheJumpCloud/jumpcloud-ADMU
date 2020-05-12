@@ -285,7 +285,7 @@ function Test-Domainusername {
             $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
             $domainusers = new-object system.collections.arraylist
             foreach ($username in $users) {
-                if ($username -match (GetNetBiosName)) {
+                if ($username -match (GetNetBiosName) -or ($username -match 'AZUREAD')) {
                     $domainusertrim = $username -creplace '^[^\\]*\\', ''
                     $domainusers.Add($domainusertrim) > Out-Null
                 }
