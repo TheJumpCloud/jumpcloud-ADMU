@@ -258,9 +258,6 @@ $usmtcustom = [xml] @"
         $win32UserProfiles | Add-Member -membertype NoteProperty -name IsLocalAdmin -value $null
         $win32UserProfiles | Add-Member -membertype NoteProperty -name LocalProfileSize -value $null
 
-        $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
-        $userstrim = $users -creplace '^[^\\]*\\', ''
-
         $members = net localgroup administrators |
         Where-Object { $_ -AND $_ -notmatch "command completed successfully" } |
         Select-Object -Skip 4
@@ -326,7 +323,8 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
         If (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpaces $tbJumpCloudUserName.Text) `
                 -and (Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpaces $tbJumpCloudConnectKey.Text) -and ($cb_installjcagent.IsChecked -eq $true)`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpaces $tbTempPassword.Text)`
-                -and !($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name))
+                -and !($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name)`
+                -and !(Test-Localusername $tbJumpCloudUserName.Text))
         {
             $script:bDeleteProfile.Content = "Migrate Profile"
             $script:bDeleteProfile.IsEnabled = $true
@@ -335,9 +333,10 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
         Elseif(!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpaces $tbJumpCloudUserName.Text) `
         -and ($cb_installjcagent.IsChecked -eq $false)`
         -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpaces $tbTempPassword.Text)`
-        -and !($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name))
+        -and !($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name)`
+        -and !(Test-Localusername $tbJumpCloudUserName.Text))
         {
-            $script:bDeleteProfile.Content = "Migrate Profile2"
+            $script:bDeleteProfile.Content = "Migrate Profile"
             $script:bDeleteProfile.IsEnabled = $true
             Return $true
         }
@@ -397,10 +396,10 @@ $cb_custom_xml.Add_UnChecked({$tab_usmtcustomxml.IsEnabled = $false})
 
 $tbJumpCloudUserName.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList)
-        If ((!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpaces $tbJumpCloudUserName.Text)) -eq $false)
+        If ((Test-IsNotEmpty $tbJumpCloudUserName.Text) -or (!(Test-HasNoSpaces $tbJumpCloudUserName.Text)) -or (Test-Localusername $tbJumpCloudUserName.Text))
         {
             $tbJumpCloudUserName.Background = "#FFC6CBCF"
-            $tbJumpCloudUserName.Tooltip = "JumpCloud User Name Can't Be Empty Or Contain Spaces"
+            $tbJumpCloudUserName.Tooltip = "JumpCloud User Name Can't Be Empty, Contain Spaces or already exist on the system"
         }
         Else
         {

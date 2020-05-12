@@ -245,6 +245,83 @@ Function Test-HasNoSpaces ([System.String] $field)
   }
 }
 
+function Test-Localusername {
+  [CmdletBinding()]
+  param (
+    [system.array] $field
+  )
+  begin {
+            $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+            $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
+            $localusers = new-object system.collections.arraylist
+            foreach ($username in $users) {
+                if ($username -match $WmiComputerSystem.Name) {
+                    $localusertrim = $username -creplace '^[^\\]*\\', ''
+                    $localusers.Add($localusertrim) > Out-Null
+                }
+            }
+  }
+  process {
+    if ($localusers -eq $field)
+    {
+      Return $true
+    }
+    else
+    {
+     Return $false
+    }
+  }
+  end {
+  }
+}
+
+function Test-Domainusername {
+  [CmdletBinding()]
+  param (
+    [system.array] $field
+  )
+  begin {
+            $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+            $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
+            $domainusers = new-object system.collections.arraylist
+            foreach ($username in $users) {
+                if ($username -match $netBiosName) {
+                    $domainusertrim = $username -creplace '^[^\\]*\\', ''
+                    $domainusers.Add($domainusertrim) > Out-Null
+                }
+            }
+  }
+  process {
+    if ($domainusers -eq $field)
+    {
+      Return $true
+    }
+    else
+    {
+     Return $false
+    }
+  }
+  end {
+  }
+}
+
+function Add-LocalGroupMemberSilent($groupName, $username)
+{
+    $existingMember = Get-LocalGroupMember -Name $groupName | Where-object {$_.Name -eq "$username"}
+    if ($existingMember)
+    {
+      Write-Log -Message:('User ' + $JumpCloudUserName + ' already exists in Users group')
+    }
+    else
+    {
+      try{Add-LocalGroupMember -Group "$groupName" -Member "$username"}
+        catch {
+              Write-Log -Message:('Failed To add new user "' + $JumpCloudUserName + '" to Users group') -Level:('Error')
+              Exit;
+        }
+    }
+}
+
 Function DownloadAndInstallAgent(
   [System.String]$msvc2013x64Link
   , [System.String]$msvc2013Path
@@ -409,7 +486,6 @@ Function ForceRebootComputerWithDelay
   }
 }
 #endregion Agent Install Helper Functions
-
 
 #region config xml
 $usmtconfig = [xml] @"
@@ -5292,23 +5368,29 @@ $usmtcustom = [xml] @"
 
 Function Start-Migration
 {
-  [CmdletBinding(DefaultParameterSetName = "cmd")]
+  [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
   Param (
-    [Parameter(ParameterSetName = "cmd", Mandatory = $true, Position = 0, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$DomainUserName ,
-    [Parameter(ParameterSetName = "cmd", Mandatory = $true, Position = 1, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$JumpCloudUserName ,
-    [Parameter(ParameterSetName = "cmd", Mandatory = $true, Position = 2, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$TempPassword ,
-    [Parameter(ParameterSetName = "cmd", Mandatory = $true, Position = 3, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][ValidateLength(40, 40)][string]$JumpCloudConnectKey ,
-    [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 4, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$AcceptEULA = $false ,
-    [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 5, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$InstallJCAgent = $false,
-    [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 6, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$LeaveDomain = $false ,
-    [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 7, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$ForceReboot = $false ,
-    [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 8, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$AzureADProfile = $false ,
-    [Parameter(ParameterSetName = "cmd", Mandatory = $false, Position = 9, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][string]$Customxml = $false ,
-    #TODO ,[Parameter(ParameterSetName="cmd",Mandatory = $true, Position = 9, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][ValidateLength(40, 40)][string]$JumpCloudApiKey
-    [Parameter(ParameterSetName = "form")][Object]$inputObject
-  )
+  [Parameter(ParameterSetName='cmd',Mandatory=$true)]
+  [ValidateScript({
+         If (Test-Localusername $_){Throw [System.Management.Automation.ValidationMetadataException] "The username '${_}' is already in use."}else{$True}
+  })][string]$JumpCloudUserName,
+  [Parameter(ParameterSetName='cmd',Mandatory=$true)]
+  [ValidateScript({
+         If ((Test-Localusername $_)-eq $false){Throw [System.Management.Automation.ValidationMetadataException] "The username '${_}' is not a valid domainusername on this system."}else{$True}
+  })][string]$DomainUserName,
+  [Parameter(ParameterSetName='cmd',Mandatory=$true)][ValidateNotNullOrEmpty()][string]$TempPassword,
+  [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$AcceptEULA=$true,
+  [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$LeaveDomain=$false,
+  [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$ForceReboot=$false,
+  [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$AzureADProfile=$false,
+  [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$Customxml=$false,
+  [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$InstallJCAgent=$false,
+  [Parameter(ParameterSetName='cmd',Mandatory=$false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey
+  [Parameter(ParameterSetName = "form")][Object]$inputObject)
+
   Begin
   {
+    If ($InstallJCAgent -eq $true){Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent"}else{}
     # Define misc static variables
     $adkSetupLink = 'https://go.microsoft.com/fwlink/?linkid=2086042'
     $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
@@ -5343,6 +5425,7 @@ Function Start-Migration
     $EVENT_LOGGER_KEY_NAME = "hklm:\SYSTEM\CurrentControlSet\services\eventlog\Application\JumpCloud-agent"
     $INSTALLER_BINARY_NAMES = "JumpCloudInstaller.exe,JumpCloudInstaller.tmp"
     # Start script
+    Write-Log -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
     Write-Log -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
     Write-Log -Message:('Gathering system & profile information')
     $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
@@ -5533,16 +5616,7 @@ Function Start-Migration
     #endregion LoadState Step
 
     #region Add To Local Users Group
-    Try
-    {
-      Write-Log -Message:('Adding new user "' + $JumpCloudUserName + '" to Users group')
-      Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUserName
-    }
-    Catch
-    {
-      Write-Log -Message:('Failed To add new user "' + $JumpCloudUserName + '" to Users group') -Level:('Error')
-      Exit;
-    }
+    Add-LocalGroupMemberSilent -groupName users -username $JumpCloudUserName
     #endregion Add To Local Users Group
 
     #region SilentAgentInstall
