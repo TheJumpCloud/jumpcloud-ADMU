@@ -1,25 +1,25 @@
 ﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
-<test-results xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="nunit_schema_2.5.xsd" name="Pester" total="50" errors="0" failures="0" not-run="0" inconclusive="1" ignored="0" skipped="0" invalid="0" date="2020-05-12" time="09:42:54">
+<test-results xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="nunit_schema_2.5.xsd" name="Pester" total="50" errors="0" failures="0" not-run="0" inconclusive="1" ignored="0" skipped="0" invalid="0" date="2020-05-12" time="12:15:12">
   <environment clr-version="4.0.30319.42000" user-domain="10PRO18091" cwd="C:\agent\_work\1\s" platform="Microsoft Windows 10 Pro|C:\WINDOWS|\Device\Harddisk0\Partition5" machine-name="10PRO18091" nunit-version="2.5.8.0" os-version="10.0.18363" user="Administrator" />
   <culture-info current-culture="en-US" current-uiculture="en-US" />
-  <test-suite type="TestFixture" name="Pester" executed="True" result="Inconclusive" success="True" time="39.8469" asserts="0" description="Pester">
+  <test-suite type="TestFixture" name="Pester" executed="True" result="Inconclusive" success="True" time="36.0537" asserts="0" description="Pester">
     <results>
-      <test-suite type="TestFixture" name="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\Build.Tests.ps1" executed="True" result="Inconclusive" success="True" time="1.4263" asserts="0" description="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\Build.Tests.ps1">
+      <test-suite type="TestFixture" name="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\Build.Tests.ps1" executed="True" result="Inconclusive" success="True" time="3.2391" asserts="0" description="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\Build.Tests.ps1">
         <results>
-          <test-suite type="TestFixture" name="Build Tests" executed="True" result="Inconclusive" success="True" time="1.1833" asserts="0" description="Build Tests">
+          <test-suite type="TestFixture" name="Build Tests" executed="True" result="Inconclusive" success="True" time="3.1445" asserts="0" description="Build Tests">
             <results>
-              <test-suite type="TestFixture" name="Check Files Exist" executed="True" result="Success" success="True" time="0.5635" asserts="0" description="Check Files Exist">
+              <test-suite type="TestFixture" name="Check Files Exist" executed="True" result="Success" success="True" time="0.4085" asserts="0" description="Check Files Exist">
                 <results>
-                  <test-case description="gui_jcadmu.exe exists" name="Build Tests.Check Files Exist.gui_jcadmu.exe exists" time="0.108" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="ADMU.ps1 writen to in last 2mins" name="Build Tests.Check Files Exist.ADMU.ps1 writen to in last 2mins" time="0.0265" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="gui_jcadmu.exe exists" name="Build Tests.Check Files Exist.gui_jcadmu.exe exists" time="0.0115" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="gui_jcadmu.exe exists" name="Build Tests.Check Files Exist.gui_jcadmu.exe exists" time="0.0084" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="gui_jcadmu.exe exists" name="Build Tests.Check Files Exist.gui_jcadmu.exe exists" time="0.0869" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="ADMU.ps1 writen to in last 2mins" name="Build Tests.Check Files Exist.ADMU.ps1 writen to in last 2mins" time="0.0162" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="gui_jcadmu.exe exists" name="Build Tests.Check Files Exist.gui_jcadmu.exe exists" time="0.0046" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="gui_jcadmu.exe exists" name="Build Tests.Check Files Exist.gui_jcadmu.exe exists" time="0.0079" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="Check Versioning &amp; Signature" executed="True" result="Inconclusive" success="True" time="0.462" asserts="0" description="Check Versioning &amp; Signature">
+              <test-suite type="TestFixture" name="Check Versioning &amp; Signature" executed="True" result="Inconclusive" success="True" time="2.6229" asserts="0" description="Check Versioning &amp; Signature">
                 <results>
-                  <test-case description="XAML Form version" name="Build Tests.Check Versioning &amp; Signature.XAML Form version" time="0.2428" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="gui_jcadmu.exe version" name="Build Tests.Check Versioning &amp; Signature.gui_jcadmu.exe version" time="0.1668" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="XAML Form version" name="Build Tests.Check Versioning &amp; Signature.XAML Form version" time="1.504" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="gui_jcadmu.exe version" name="Build Tests.Check Versioning &amp; Signature.gui_jcadmu.exe version" time="1.0053" asserts="0" success="True" result="Success" executed="True" />
                   <test-case description="gui_jcadmu.exe signature valid" name="Build Tests.Check Versioning &amp; Signature.gui_jcadmu.exe signature valid" time="0" asserts="0" success="True" result="Inconclusive" executed="True" />
                 </results>
               </test-suite>
@@ -27,137 +27,137 @@
           </test-suite>
         </results>
       </test-suite>
-      <test-suite type="TestFixture" name="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\Functions.Tests.ps1" executed="True" result="Success" success="True" time="33.5452" asserts="0" description="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\Functions.Tests.ps1">
+      <test-suite type="TestFixture" name="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\Functions.Tests.ps1" executed="True" result="Success" success="True" time="29.2175" asserts="0" description="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\Functions.Tests.ps1">
         <results>
-          <test-suite type="TestFixture" name="Functions" executed="True" result="Success" success="True" time="33.5163" asserts="0" description="Functions">
+          <test-suite type="TestFixture" name="Functions" executed="True" result="Success" success="True" time="29.1835" asserts="0" description="Functions">
             <results>
-              <test-suite type="TestFixture" name="VerifyAccount Function" executed="True" result="Success" success="True" time="0.4656" asserts="0" description="VerifyAccount Function">
+              <test-suite type="TestFixture" name="VerifyAccount Function" executed="True" result="Success" success="True" time="0.1541" asserts="0" description="VerifyAccount Function">
                 <results>
-                  <test-case description="VerifyAccount - Real domain account bob.lazar@JCADB2.local" name="Functions.VerifyAccount Function.VerifyAccount - Real domain account bob.lazar@JCADB2.local" time="0.0112" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="VerifyAccount - Wrong account bobby.lazar@JCADB2.local" name="Functions.VerifyAccount Function.VerifyAccount - Wrong account bobby.lazar@JCADB2.local" time="0.0318" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="VerifyAccount - Real account with wrong domain bob.lazar@JCADB2.localw" name="Functions.VerifyAccount Function.VerifyAccount - Real account with wrong domain bob.lazar@JCADB2.localw" time="0.0063" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="VerifyAccount - Real local account with no domain" name="Functions.VerifyAccount Function.VerifyAccount - Real local account with no domain" time="0.0099" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="VerifyAccount - Wrong local account with no domain" name="Functions.VerifyAccount Function.VerifyAccount - Wrong local account with no domain" time="0.027" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="VerifyAccount - Real domain account bob.lazar@JCADB2.local" name="Functions.VerifyAccount Function.VerifyAccount - Real domain account bob.lazar@JCADB2.local" time="0.0282" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="VerifyAccount - Wrong account bobby.lazar@JCADB2.local" name="Functions.VerifyAccount Function.VerifyAccount - Wrong account bobby.lazar@JCADB2.local" time="0.0107" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="VerifyAccount - Real account with wrong domain bob.lazar@JCADB2.localw" name="Functions.VerifyAccount Function.VerifyAccount - Real account with wrong domain bob.lazar@JCADB2.localw" time="0.0132" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="VerifyAccount - Real local account with no domain" name="Functions.VerifyAccount Function.VerifyAccount - Real local account with no domain" time="0.0044" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="VerifyAccount - Wrong local account with no domain" name="Functions.VerifyAccount Function.VerifyAccount - Wrong local account with no domain" time="0.0093" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="Write-Log Function" executed="True" result="Success" success="True" time="1.6779" asserts="0" description="Write-Log Function">
+              <test-suite type="TestFixture" name="Write-Log Function" executed="True" result="Success" success="True" time="0.3395" asserts="0" description="Write-Log Function">
                 <results>
-                  <test-case description="Write-Log - " name="Functions.Write-Log Function.Write-Log - " time="0.3234" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Write-Log - Log is created" name="Functions.Write-Log Function.Write-Log - Log is created" time="0.0171" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Write-Log - ERROR: Log entry exists" name="Functions.Write-Log Function.Write-Log - ERROR: Log entry exists" time="0.0089" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Write-Log - WARNING: Log entry exists" name="Functions.Write-Log Function.Write-Log - WARNING: Log entry exists" time="0.0344" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Write-Log - INFO: Log entry exists" name="Functions.Write-Log Function.Write-Log - INFO: Log entry exists" time="0.0428" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Write-Log - " name="Functions.Write-Log Function.Write-Log - " time="0.052" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Write-Log - Log is created" name="Functions.Write-Log Function.Write-Log - Log is created" time="0.0077" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Write-Log - ERROR: Log entry exists" name="Functions.Write-Log Function.Write-Log - ERROR: Log entry exists" time="0.0087" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Write-Log - WARNING: Log entry exists" name="Functions.Write-Log Function.Write-Log - WARNING: Log entry exists" time="0.0115" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Write-Log - INFO: Log entry exists" name="Functions.Write-Log Function.Write-Log - INFO: Log entry exists" time="0.0101" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="Remove-ItemIfExists Function" executed="True" result="Success" success="True" time="0.9689" asserts="0" description="Remove-ItemIfExists Function">
+              <test-suite type="TestFixture" name="Remove-ItemIfExists Function" executed="True" result="Success" success="True" time="0.3923" asserts="0" description="Remove-ItemIfExists Function">
                 <results>
-                  <test-case description="Remove-ItemIfExists - Does Exist c:\windows\temp\test\" name="Functions.Remove-ItemIfExists Function.Remove-ItemIfExists - Does Exist c:\windows\temp\test\" time="0.0185" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Remove-ItemIfExists - Fails c:\windows\temp\test\" name="Functions.Remove-ItemIfExists Function.Remove-ItemIfExists - Fails c:\windows\temp\test\" time="0.6583" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Remove-ItemIfExists - Does Exist c:\windows\temp\test\" name="Functions.Remove-ItemIfExists Function.Remove-ItemIfExists - Does Exist c:\windows\temp\test\" time="0.0263" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Remove-ItemIfExists - Fails c:\windows\temp\test\" name="Functions.Remove-ItemIfExists Function.Remove-ItemIfExists - Fails c:\windows\temp\test\" time="0.2928" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="DownloadLink Function" executed="True" result="Success" success="True" time="0.035" asserts="0" description="DownloadLink Function">
+              <test-suite type="TestFixture" name="DownloadLink Function" executed="True" result="Success" success="True" time="0.029" asserts="0" description="DownloadLink Function">
                 <results />
               </test-suite>
-              <test-suite type="TestFixture" name="Check_Program_Installed Function" executed="True" result="Success" success="True" time="0.7641" asserts="0" description="Check_Program_Installed Function">
+              <test-suite type="TestFixture" name="Check_Program_Installed Function" executed="True" result="Success" success="True" time="0.7126" asserts="0" description="Check_Program_Installed Function">
                 <results>
-                  <test-case description="Check_Program_Installed x64 - Google Chrome" name="Functions.Check_Program_Installed Function.Check_Program_Installed x64 - Google Chrome" time="0.2579" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Check_Program_Installed x32 - TeamViewer 14" name="Functions.Check_Program_Installed Function.Check_Program_Installed x32 - TeamViewer 14" time="0.2176" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Check_Program_Installed - Program Name Does Not Exist" name="Functions.Check_Program_Installed Function.Check_Program_Installed - Program Name Does Not Exist" time="0.2052" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Check_Program_Installed x64 - Google Chrome" name="Functions.Check_Program_Installed Function.Check_Program_Installed x64 - Google Chrome" time="0.2236" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Check_Program_Installed x32 - TeamViewer 14" name="Functions.Check_Program_Installed Function.Check_Program_Installed x32 - TeamViewer 14" time="0.2184" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Check_Program_Installed - Program Name Does Not Exist" name="Functions.Check_Program_Installed Function.Check_Program_Installed - Program Name Does Not Exist" time="0.2042" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="Uninstall_Program Function" executed="True" result="Success" success="True" time="11.1209" asserts="0" description="Uninstall_Program Function">
+              <test-suite type="TestFixture" name="Uninstall_Program Function" executed="True" result="Success" success="True" time="10.5467" asserts="0" description="Uninstall_Program Function">
                 <results>
-                  <test-case description="Install &amp; Uninstall - x32 filezilla" name="Functions.Uninstall_Program Function.Install &amp; Uninstall - x32 filezilla" time="10.9966" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Install &amp; Uninstall - x32 filezilla" name="Functions.Uninstall_Program Function.Install &amp; Uninstall - x32 filezilla" time="10.4891" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="Start-NewProcess Function" executed="True" result="Success" success="True" time="4.2138" asserts="0" description="Start-NewProcess Function">
+              <test-suite type="TestFixture" name="Start-NewProcess Function" executed="True" result="Success" success="True" time="4.3783" asserts="0" description="Start-NewProcess Function">
                 <results>
-                  <test-case description="Start-NewProcess - Notepad" name="Functions.Start-NewProcess Function.Start-NewProcess - Notepad" time="1.0447" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Start-NewProcess &amp; end after 2s timeout - Notepad " name="Functions.Start-NewProcess Function.Start-NewProcess &amp; end after 2s timeout - Notepad " time="3.0243" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Start-NewProcess - Notepad" name="Functions.Start-NewProcess Function.Start-NewProcess - Notepad" time="1.2241" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Start-NewProcess &amp; end after 2s timeout - Notepad " name="Functions.Start-NewProcess Function.Start-NewProcess &amp; end after 2s timeout - Notepad " time="3.0258" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="Test-IsNotEmpty Function" executed="True" result="Success" success="True" time="0.0666" asserts="0" description="Test-IsNotEmpty Function">
+              <test-suite type="TestFixture" name="Test-IsNotEmpty Function" executed="True" result="Success" success="True" time="0.0656" asserts="0" description="Test-IsNotEmpty Function">
                 <results>
                   <test-case description="Test-IsNotEmpty - $null" name="Functions.Test-IsNotEmpty Function.Test-IsNotEmpty - $null" time="0.0038" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Test-IsNotEmpty - empty" name="Functions.Test-IsNotEmpty Function.Test-IsNotEmpty - empty" time="0.005" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Test-IsNotEmpty - test string" name="Functions.Test-IsNotEmpty Function.Test-IsNotEmpty - test string" time="0.0036" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-IsNotEmpty - empty" name="Functions.Test-IsNotEmpty Function.Test-IsNotEmpty - empty" time="0.0084" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-IsNotEmpty - test string" name="Functions.Test-IsNotEmpty Function.Test-IsNotEmpty - test string" time="0.0098" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="Test-Is40chars Function" executed="True" result="Success" success="True" time="0.0806" asserts="0" description="Test-Is40chars Function">
+              <test-suite type="TestFixture" name="Test-Is40chars Function" executed="True" result="Success" success="True" time="0.0705" asserts="0" description="Test-Is40chars Function">
                 <results>
-                  <test-case description="Test-Is40chars - $null" name="Functions.Test-Is40chars Function.Test-Is40chars - $null" time="0.0102" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Test-Is40chars - 39 Chars" name="Functions.Test-Is40chars Function.Test-Is40chars - 39 Chars" time="0.0104" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Test-Is40chars - 40 Chars" name="Functions.Test-Is40chars Function.Test-Is40chars - 40 Chars" time="0.0149" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-Is40chars - $null" name="Functions.Test-Is40chars Function.Test-Is40chars - $null" time="0.0101" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-Is40chars - 39 Chars" name="Functions.Test-Is40chars Function.Test-Is40chars - 39 Chars" time="0.0054" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-Is40chars - 40 Chars" name="Functions.Test-Is40chars Function.Test-Is40chars - 40 Chars" time="0.0088" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="Test-HasNoSpaces Function" executed="True" result="Success" success="True" time="0.6395" asserts="0" description="Test-HasNoSpaces Function">
+              <test-suite type="TestFixture" name="Test-HasNoSpaces Function" executed="True" result="Success" success="True" time="0.5782" asserts="0" description="Test-HasNoSpaces Function">
                 <results>
-                  <test-case description="Test-HasNoSpaces - $null" name="Functions.Test-HasNoSpaces Function.Test-HasNoSpaces - $null" time="0.0094" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Test-HasNoSpaces - no spaces" name="Functions.Test-HasNoSpaces Function.Test-HasNoSpaces - no spaces" time="0.0521" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Test-HasNoSpaces - spaces" name="Functions.Test-HasNoSpaces Function.Test-HasNoSpaces - spaces" time="0.0236" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-HasNoSpaces - $null" name="Functions.Test-HasNoSpaces Function.Test-HasNoSpaces - $null" time="0.0041" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-HasNoSpaces - no spaces" name="Functions.Test-HasNoSpaces Function.Test-HasNoSpaces - no spaces" time="0.0416" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-HasNoSpaces - spaces" name="Functions.Test-HasNoSpaces Function.Test-HasNoSpaces - spaces" time="0.0289" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="Add-LocalUser Function" executed="True" result="Success" success="True" time="0.714" asserts="0" description="Add-LocalUser Function">
+              <test-suite type="TestFixture" name="Add-LocalUser Function" executed="True" result="Success" success="True" time="0.4029" asserts="0" description="Add-LocalUser Function">
                 <results>
-                  <test-case description="Add-LocalUser - testuser to Users " name="Functions.Add-LocalUser Function.Add-LocalUser - testuser to Users " time="0.4486" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Add-LocalUser - testuser to Users " name="Functions.Add-LocalUser Function.Add-LocalUser - testuser to Users " time="0.2284" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="Test-Localusername Function" executed="True" result="Success" success="True" time="0.8046" asserts="0" description="Test-Localusername Function">
+              <test-suite type="TestFixture" name="Test-Localusername Function" executed="True" result="Success" success="True" time="0.1865" asserts="0" description="Test-Localusername Function">
                 <results>
-                  <test-case description="Test-Localusername - exists" name="Functions.Test-Localusername Function.Test-Localusername - exists" time="0.2307" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Test-Localusername - does not exist" name="Functions.Test-Localusername Function.Test-Localusername - does not exist" time="0.2755" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-Localusername - exists" name="Functions.Test-Localusername Function.Test-Localusername - exists" time="0.1006" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-Localusername - does not exist" name="Functions.Test-Localusername Function.Test-Localusername - does not exist" time="0.0426" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="Test-Domainusername Function" executed="True" result="Success" success="True" time="0.2423" asserts="0" description="Test-Domainusername Function">
+              <test-suite type="TestFixture" name="Test-Domainusername Function" executed="True" result="Success" success="True" time="0.2297" asserts="0" description="Test-Domainusername Function">
                 <results>
-                  <test-case description="Test-Domainusername - exists" name="Functions.Test-Domainusername Function.Test-Domainusername - exists" time="0.0648" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Test-Domainusername - does not exist" name="Functions.Test-Domainusername Function.Test-Domainusername - does not exist" time="0.0449" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-Domainusername - exists" name="Functions.Test-Domainusername Function.Test-Domainusername - exists" time="0.0418" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-Domainusername - does not exist" name="Functions.Test-Domainusername Function.Test-Domainusername - does not exist" time="0.0653" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="DownloadAndInstallAgent Function" executed="True" result="Success" success="True" time="10.7789" asserts="0" description="DownloadAndInstallAgent Function">
+              <test-suite type="TestFixture" name="DownloadAndInstallAgent Function" executed="True" result="Success" success="True" time="10.6966" asserts="0" description="DownloadAndInstallAgent Function">
                 <results>
-                  <test-case description="DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x64" name="Functions.DownloadAndInstallAgent Function.DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x64" time="0.0035" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x86" name="Functions.DownloadAndInstallAgent Function.DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x86" time="0.0036" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="DownloadAndInstallAgent - Verify Download JCAgent" name="Functions.DownloadAndInstallAgent Function.DownloadAndInstallAgent - Verify Download JCAgent" time="0.0038" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="DownloadAndInstallAgent - Verify Install JCAgent prereq Visual C++ 2013 x64" name="Functions.DownloadAndInstallAgent Function.DownloadAndInstallAgent - Verify Install JCAgent prereq Visual C++ 2013 x64" time="0.2347" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="DownloadAndInstallAgent - Verify Install JCAgent prereq Visual C++ 2013 x86" name="Functions.DownloadAndInstallAgent Function.DownloadAndInstallAgent - Verify Install JCAgent prereq Visual C++ 2013 x86" time="0.2756" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="DownloadAndInstallAgent - Verify Install JCAgent" name="Functions.DownloadAndInstallAgent Function.DownloadAndInstallAgent - Verify Install JCAgent" time="10.1947" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x64" name="Functions.DownloadAndInstallAgent Function.DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x64" time="0.0039" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x86" name="Functions.DownloadAndInstallAgent Function.DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x86" time="0.0039" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="DownloadAndInstallAgent - Verify Download JCAgent" name="Functions.DownloadAndInstallAgent Function.DownloadAndInstallAgent - Verify Download JCAgent" time="0.0039" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="DownloadAndInstallAgent - Verify Install JCAgent prereq Visual C++ 2013 x64" name="Functions.DownloadAndInstallAgent Function.DownloadAndInstallAgent - Verify Install JCAgent prereq Visual C++ 2013 x64" time="0.2062" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="DownloadAndInstallAgent - Verify Install JCAgent prereq Visual C++ 2013 x86" name="Functions.DownloadAndInstallAgent Function.DownloadAndInstallAgent - Verify Install JCAgent prereq Visual C++ 2013 x86" time="0.208" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="DownloadAndInstallAgent - Verify Install JCAgent" name="Functions.DownloadAndInstallAgent Function.DownloadAndInstallAgent - Verify Install JCAgent" time="10.2013" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="GetNetBiosName Function" executed="True" result="Success" success="True" time="0.0625" asserts="0" description="GetNetBiosName Function">
+              <test-suite type="TestFixture" name="GetNetBiosName Function" executed="True" result="Success" success="True" time="0.0587" asserts="0" description="GetNetBiosName Function">
                 <results>
-                  <test-case description="GetNetBiosName - JCADB2" name="Functions.GetNetBiosName Function.GetNetBiosName - JCADB2" time="0.0283" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="GetNetBiosName - JCADB2" name="Functions.GetNetBiosName Function.GetNetBiosName - JCADB2" time="0.0241" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="ConvertSID Function" executed="True" result="Success" success="True" time="0.1932" asserts="0" description="ConvertSID Function">
+              <test-suite type="TestFixture" name="ConvertSID Function" executed="True" result="Success" success="True" time="0.1893" asserts="0" description="ConvertSID Function">
                 <results>
-                  <test-case description="ConvertSID - Built In Administrator SID" name="Functions.ConvertSID Function.ConvertSID - Built In Administrator SID" time="0.1586" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="ConvertSID - Built In Administrator SID" name="Functions.ConvertSID Function.ConvertSID - Built In Administrator SID" time="0.1554" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
-              <test-suite type="TestFixture" name="Test-XMLFile Function" executed="True" result="Success" success="True" time="0.0832" asserts="0" description="Test-XMLFile Function">
+              <test-suite type="TestFixture" name="Test-XMLFile Function" executed="True" result="Success" success="True" time="0.0809" asserts="0" description="Test-XMLFile Function">
                 <results>
-                  <test-case description="Test-XMLFile - Valid XML" name="Functions.Test-XMLFile Function.Test-XMLFile - Valid XML" time="0.0079" asserts="0" success="True" result="Success" executed="True" />
-                  <test-case description="Test-XMLFile - InValid XML" name="Functions.Test-XMLFile Function.Test-XMLFile - InValid XML" time="0.0077" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-XMLFile - Valid XML" name="Functions.Test-XMLFile Function.Test-XMLFile - Valid XML" time="0.0153" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="Test-XMLFile - InValid XML" name="Functions.Test-XMLFile Function.Test-XMLFile - InValid XML" time="0.0075" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
             </results>
           </test-suite>
         </results>
       </test-suite>
-      <test-suite type="TestFixture" name="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\gpo.Tests.ps1" executed="True" result="Success" success="True" time="0.1149" asserts="0" description="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\gpo.Tests.ps1">
+      <test-suite type="TestFixture" name="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\gpo.Tests.ps1" executed="True" result="Success" success="True" time="0.0915" asserts="0" description="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\gpo.Tests.ps1">
         <results>
-          <test-suite type="TestFixture" name="GPO Folder Checks" executed="True" result="Success" success="True" time="0.083" asserts="0" description="GPO Folder Checks">
+          <test-suite type="TestFixture" name="GPO Folder Checks" executed="True" result="Success" success="True" time="0.0738" asserts="0" description="GPO Folder Checks">
             <results>
-              <test-suite type="TestFixture" name="Check Files &amp; Folders Exist" executed="True" result="Success" success="True" time="0.0527" asserts="0" description="Check Files &amp; Folders Exist">
+              <test-suite type="TestFixture" name="Check Files &amp; Folders Exist" executed="True" result="Success" success="True" time="0.0418" asserts="0" description="Check Files &amp; Folders Exist">
                 <results>
-                  <test-case description="manifest.xml exists" name="GPO Folder Checks.Check Files &amp; Folders Exist.manifest.xml exists" time="0.0134" asserts="0" success="True" result="Success" executed="True" />
+                  <test-case description="manifest.xml exists" name="GPO Folder Checks.Check Files &amp; Folders Exist.manifest.xml exists" time="0.0086" asserts="0" success="True" result="Success" executed="True" />
                 </results>
               </test-suite>
             </results>
           </test-suite>
         </results>
       </test-suite>
-      <test-suite type="TestFixture" name="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\PSScriptAnalyzer.Tests.ps1" executed="True" result="Success" success="True" time="4.7605" asserts="0" description="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\PSScriptAnalyzer.Tests.ps1">
+      <test-suite type="TestFixture" name="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\PSScriptAnalyzer.Tests.ps1" executed="True" result="Success" success="True" time="3.5057" asserts="0" description="C:\agent\_work\1\s\jumpcloud-ADMU\powershell\Tests\PSScriptAnalyzer.Tests.ps1">
         <results />
       </test-suite>
     </results>
