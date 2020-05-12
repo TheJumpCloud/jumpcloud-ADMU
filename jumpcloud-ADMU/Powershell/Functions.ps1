@@ -5385,7 +5385,7 @@ Function Start-Migration
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$AzureADProfile=$false,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$Customxml=$false,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$InstallJCAgent=$false,
-  [Parameter(ParameterSetName='cmd',Mandatory=$false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey
+  [Parameter(ParameterSetName='cmd',Mandatory=$false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
   [Parameter(ParameterSetName = "form")][Object]$inputObject)
 
   Begin
