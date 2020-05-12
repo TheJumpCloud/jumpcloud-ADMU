@@ -139,18 +139,6 @@ Describe 'Functions' {
 
     }
 
-    Context 'Add-LocalUser Function'{
-
-        It 'Add-LocalUser - testuser to Users ' {
-            net user testuser /delete | Out-Null
-            net user testuser Temp123! /add
-            Remove-LocalGroupMember -Group "Users" -Member "testuser"
-            Add-LocalGroupMember -SID S-1-5-32-545 -Member 'testuser'
-            ((Get-LocalGroupMember -SID S-1-5-32-545 | Select-Object Name).name -match 'testuser') -ne $null | Should Be $true
-        }
-
-    }
-
     Context 'Start-NewProcess Function'{
 
         It 'Start-NewProcess - Notepad' {
@@ -217,6 +205,46 @@ Describe 'Functions' {
 
         It 'Test-HasNoSpaces - spaces' {
             Test-HasNoSpaces -field 'test with spaces' | Should Be $false
+        }
+
+    }
+
+    Context 'Add-LocalUser Function'{
+
+        It 'Add-LocalUser - testuser to Users ' {
+            net user testuser /delete | Out-Null
+            net user testuser Temp123! /add
+            Remove-LocalGroupMember -Group "Users" -Member "testuser"
+            Add-LocalGroupMember -SID S-1-5-32-545 -Member 'testuser'
+            ((Get-LocalGroupMember -SID S-1-5-32-545 | Select-Object Name).name -match 'testuser') -ne $null | Should Be $true
+        }
+
+    }
+
+    Context 'Test-Localusername Function'{
+
+        It 'Test-Localusername - exists' {
+
+            Test-Localusername -field 'blazar' | Should Be $true
+        }
+
+        It 'Test-Localusername - does not exist' {
+
+            Test-Localusername -field 'blazarz' | Should Be $false
+        }
+
+    }
+
+    Context 'Test-Domainusername Function'{
+
+        It 'Test-Domainusername - exists' {
+
+            Test-Domainusername -field 'bob.lazar' | Should Be $true
+        }
+
+        It 'Test-Domainusername - does not exist' {
+
+            Test-Domainusername -field 'bob.lazarz' | Should Be $false
         }
 
     }
