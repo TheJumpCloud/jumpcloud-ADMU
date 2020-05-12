@@ -5599,7 +5599,6 @@ Function Start-Migration
     #endregion LoadState Step
 
     #region Add To Local Users Group
-    $JumpCloudUserName = 'jon.snow'
     Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUserName -erroraction silentlycontinue
     #endregion Add To Local Users Group
 
