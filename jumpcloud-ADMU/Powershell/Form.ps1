@@ -399,7 +399,7 @@ $tbJumpCloudUserName.add_TextChanged( {
         If ((Test-IsNotEmpty $tbJumpCloudUserName.Text) -or (!(Test-HasNoSpaces $tbJumpCloudUserName.Text)) -or (Test-Localusername $tbJumpCloudUserName.Text))
         {
             $tbJumpCloudUserName.Background = "#FFC6CBCF"
-            $tbJumpCloudUserName.Tooltip = "JumpCloud User Name Can't Be Empty, Contain Spaces or already exist on the system"
+            $tbJumpCloudUserName.Tooltip = "Local account user name can not be empty, contain spaces or already exist on the local system."
         }
         Else
         {
