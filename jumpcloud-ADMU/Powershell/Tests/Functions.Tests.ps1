@@ -32,7 +32,7 @@ Describe 'Functions' {
             }
                 Write-Log -Message:('Log is created - test.') -Level:('Info')
                 $log='C:\windows\Temp\jcAdmu.log'
-                $log | Should exist
+                $log | Should -exist
         }
 
         It 'Write-Log - Log is created' {
@@ -42,7 +42,7 @@ Describe 'Functions' {
                 Write-Log -Message:('Log is created - test.') -Level:('Info')
                 $log='C:\windows\Temp\jcAdmu.log'
 
-                $log | Should exist
+                $log | Should -exist
         }
 
         It 'Write-Log - ERROR: Log entry exists' {
