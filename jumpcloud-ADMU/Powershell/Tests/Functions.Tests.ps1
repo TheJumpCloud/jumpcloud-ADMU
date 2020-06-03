@@ -1,3 +1,15 @@
+BeforeAll {
+    if (Test-Path -Path 'C:\Windows\Temp\custom.xml') {
+        remove-item -Path 'C:\Windows\Temp\custom.xml' -Force}
+}
+
+$usmtcustom = [xml] @"
+        <migration urlid="http://www.microsoft.com/migration/1.0/migxmlext/AppDataMig">
+        </migration>
+"@
+
+$usmtcustom.save('C:\Windows\Temp\custom.xml')
+
 Describe 'Functions' {
 
     Context 'VerifyAccount Function'{
@@ -295,16 +307,6 @@ Describe 'Functions' {
     }
 
     Context 'Test-XMLFile Function'{
-$usmtcustom = [xml] @"
-        <migration urlid="http://www.microsoft.com/migration/1.0/migxmlext/AppDataMig">
-        </migration>
-"@
-
-if (Test-Path -Path 'C:\Windows\Temp\custom.xml') {
-    remove-item -Path 'C:\Windows\Temp\custom.xml' -Force
-}
-
-$usmtcustom.save('C:\Windows\Temp\custom.xml')
 
         It 'Test-XMLFile - Valid XML' {
 
