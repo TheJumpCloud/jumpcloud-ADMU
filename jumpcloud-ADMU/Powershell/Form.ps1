@@ -258,9 +258,15 @@ $usmtcustom = [xml] @"
         $win32UserProfiles | Add-Member -membertype NoteProperty -name IsLocalAdmin -value $null
         $win32UserProfiles | Add-Member -membertype NoteProperty -name LocalProfileSize -value $null
 
-        $members = net localgroup administrators |
-        Where-Object { $_ -AND $_ -notmatch "command completed successfully" } |
-        Select-Object -Skip 4
+        $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
+        $userstrim = $users -creplace '^[^\\]*\\', ''
+
+        $admingroupmembers = Get-LocalGroupMember -SID S-1-5-32-544 | Select-Object Name
+        $members = @()
+        foreach ($username in $admingroupmembers) {
+            $users = ($username.Name).ToString()
+            $members += $users.Substring($users.IndexOf('\')+1)
+        }
 
         $i = 0
         ForEach ($user in $userstrim)
