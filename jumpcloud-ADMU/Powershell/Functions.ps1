@@ -5373,7 +5373,7 @@ Function Start-Migration
 
   Begin
   {
-    If (($InstallJCAgent -eq $true) -and ($null -eq $JumpCloudConnectKey)){Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent"}else{}
+    If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))){Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent"}else{}
     # Define misc static variables
     $adkSetupLink = 'https://go.microsoft.com/fwlink/?linkid=2086042'
     $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
