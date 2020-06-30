@@ -5,20 +5,20 @@ Describe 'Build Tests' {
     Context 'Check Files Exist' {
 
         It 'gui_jcadmu.exe exists' {
-            (Test-Path -Path ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\exe\gui_jcadmu.exe')) | Should Be $true
+            (Test-Path -Path ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\exe\gui_jcadmu.exe')) | Should -Be $true
         }
 
         It 'ADMU.ps1 writen to in last 2mins' {
             if((@(Get-ChildItem ($Env:BUILD_SOURCESDIRECTORY + '\Deploy\ADMU.ps1')|Where-Object LastWriteTime -gt (Get-Date).AddMinutes(-2)).LastWriteTime).length -ge 1){$lessthan2 = $true}else{$lessthan2 = $false}
-            $lessthan2| Should Be $true
+            $lessthan2| Should -Be $true
         }
 
         It 'gui_jcadmu.exe exists' {
-            (Test-Path -Path ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\gui_jcadmu.exe')) | Should Be $true
+            (Test-Path -Path ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\gui_jcadmu.exe')) | Should -Be $true
         }
 
         It 'gui_jcadmu.exe exists' {
-            (Test-Path -Path ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\gui_jcadmu.exe')) | Should Be $true
+            (Test-Path -Path ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\gui_jcadmu.exe')) | Should -Be $true
         }
     }
 
@@ -32,7 +32,7 @@ Describe 'Build Tests' {
            $masterform = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1).tostring()
            $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
            $masterformversion = [version]$masterversion.Matches.value
-           $branchformversion | Should BeGreaterThan $masterformversion
+           $branchformversion | Should -BeGreaterThan $masterformversion
         }
 
         It 'gui_jcadmu.exe version' {
@@ -41,11 +41,11 @@ Describe 'Build Tests' {
            $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
            $masterformversion = [version]$masterversion.Matches.value
            $exeversion = [version](Get-Item ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\exe\gui_jcadmu.exe')).VersionInfo.FileVersion
-           $exeversion | Should BeGreaterThan $masterformversion
+           $exeversion | Should -BeGreaterThan $masterformversion
         }
 
         It 'gui_jcadmu.exe signature valid' {
-            #(Get-AuthenticodeSignature ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\exe\gui_jcadmu.exe')).Status  | Should Be 'Valid'
+            #(Get-AuthenticodeSignature ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\exe\gui_jcadmu.exe')).Status  | Should -Be 'Valid'
          }
     }
 }
