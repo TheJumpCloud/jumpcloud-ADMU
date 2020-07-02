@@ -8,7 +8,7 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
 <Window
      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-     Title="JumpCloud ADMU 1.4.0" Height="677.234" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
+     Title="JumpCloud ADMU 1.4.1" Height="677.234" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
     <Grid Margin="0,0,-0.2,0.168" RenderTransformOrigin="0.531,0.272">
         <TabControl Name="tc_main" HorizontalAlignment="Left" Height="614" VerticalAlignment="Top" Width="1012">
             <TabItem Name="tab_jcadmu" Header="JumpCloud ADMU">
@@ -258,9 +258,15 @@ $usmtcustom = [xml] @"
         $win32UserProfiles | Add-Member -membertype NoteProperty -name IsLocalAdmin -value $null
         $win32UserProfiles | Add-Member -membertype NoteProperty -name LocalProfileSize -value $null
 
-        $members = net localgroup administrators |
-        Where-Object { $_ -AND $_ -notmatch "command completed successfully" } |
-        Select-Object -Skip 4
+        $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
+        $userstrim = $users -creplace '^[^\\]*\\', ''
+
+        $admingroupmembers = Get-LocalGroupMember -SID S-1-5-32-544 | Select-Object Name
+        $members = @()
+        foreach ($username in $admingroupmembers) {
+            $users = ($username.Name).ToString()
+            $members += $users.Substring($users.IndexOf('\')+1)
+        }
 
         $i = 0
         ForEach ($user in $userstrim)
