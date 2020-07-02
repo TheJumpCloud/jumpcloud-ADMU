@@ -20,5 +20,5 @@ Import-Module -Name Pester
 
 # Run Pester tests
 $PesterResultsFileXml = $PSScriptRoot + '/Pester.Tests.Results.xml'
-Invoke-Pester -Script @{ Path = $PSScriptRoot + '/Tests/'; } -EnableExit -OutputFile ($PesterResultsFileXml)
+Invoke-Pester -Script ($PSScriptRoot + '/Tests/')
 Write-Host -ForegroundColor Green '-------------Done-------------'
