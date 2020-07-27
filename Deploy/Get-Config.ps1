@@ -27,10 +27,10 @@ $FolderPath_ModuleRootPath = (Get-Item -Path:($DEPLOYFOLDER)).Parent.FullName
 $RequiredFiles = ('LICENSE', 'psm1', 'psd1')
 $RequiredFolders = ('Docs', 'Private', 'Public', 'Tests', 'en-US')
 # Define folder path variables
-$FolderPath_Module = $FolderPath_ModuleRootPath + '/' + $ModuleFolderName
+$FolderPath_Module = $FolderPath_ModuleRootPath + '\' + $ModuleFolderName
 $RequiredFolders | ForEach-Object {
     $FolderName = $_
-    $FolderPath = $FolderPath_Module + '/' + $FolderName
+    $FolderPath = $FolderPath_Module + '\' + $FolderName
     New-Variable -Name:('FolderName_' + $_.Replace('-', '')) -Value:($FolderName) -Force;
     New-Variable -Name:('FolderPath_' + $_.Replace('-', '')) -Value:($FolderPath) -Force
 }
