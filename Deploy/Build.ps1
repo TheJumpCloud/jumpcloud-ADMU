@@ -16,13 +16,13 @@ If (Test-Path -Path:($Output)) { Remove-Item -Path:($Output) }
 
 # Get file contents
 $StartJCADMU = (Get-Content -Path:($RootPath + '\jumpcloud-ADMU\Powershell\Start-JCADMU.ps1') -Raw) -Replace ("`r", "")
-$Functions = (Get-Content -Path:($RootPath + '\jumpcloud-ADMU\Powershell\Functions.ps1') -Raw) -Replace ("`r", "")
+$Functions = (Get-Content -Path:($RootPath + '\jumpcloud-ADMU\Powershell\Start-Migration.ps1') -Raw) -Replace ("`r", "")
 $Form = (Get-Content -Path:($RootPath + '\jumpcloud-ADMU\Powershell\Form.ps1') -Raw) -Replace ("`r", "")
 # String manipulation
 $NewContent = $StartJCADMU
 $NewContent = $NewContent.Replace('# Get script path' + "`n", '')
 $NewContent = $NewContent.Replace('$scriptPath = (Split-Path -Path:($MyInvocation.MyCommand.Path))' + "`n", '')
-$NewContent = $NewContent.Replace('. ($scriptPath + ''\Functions.ps1'')', $Functions)
+$NewContent = $NewContent.Replace('. ($scriptPath + ''\Start-Migration.ps1'')', $Functions)
 $NewContent = $NewContent.Replace('$formResults = Invoke-Expression -Command:(''. "'' + $scriptPath + ''\Form.ps1"'')' + "`n", $Form)
 $NewContent = $NewContent.Replace('Return $FormResults' + "`n" + '}', '')
 $NewContent = $NewContent + "`n" + '}'
