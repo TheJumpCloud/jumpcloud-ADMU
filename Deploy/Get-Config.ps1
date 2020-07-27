@@ -41,7 +41,7 @@ $RequiredFiles | ForEach-Object {
     New-Variable -Name:('FilePath_' + $_) -Value:($FilePath) -Force;
 }
 # Load deploy functions
-$DeployFunctions = @(Get-ChildItem -Path:($PSScriptRoot + '/Functions/*.ps1') -Recurse)
+$DeployFunctions = @(Get-ChildItem -Path:($PSScriptRoot + '/Start-Migration/*.ps1') -Recurse)
 Foreach ($DeployFunction In $DeployFunctions)
 {
     Try
