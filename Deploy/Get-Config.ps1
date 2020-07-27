@@ -36,7 +36,7 @@ $RequiredFolders | ForEach-Object {
 }
 $RequiredFiles | ForEach-Object {
     $FileName = If ($_ -in ('psm1', 'psd1')) { $ModuleName + '.' + $_ } Else { $_ }
-    $FilePath = $FolderPath_Module + '/' + $FileName
+    $FilePath = $FolderPath_Module + '\' + $FileName
     New-Variable -Name:('FileName_' + $_) -Value:($FileName) -Force;
     New-Variable -Name:('FilePath_' + $_) -Value:($FilePath) -Force;
 }
@@ -61,27 +61,7 @@ If (!(Get-PackageProvider -Name:('NuGet') -ListAvailable -ErrorAction:('Silently
 # Get module function names
 $Functions_Public = If (Test-Path -Path:($FolderPath_Public)) { Get-ChildItem -Path:($FolderPath_Public + '/' + '*.ps1') -Recurse }
 $Functions_Private = If (Test-Path -Path:($FolderPath_Private)) { Get-ChildItem -Path:($FolderPath_Private + '/' + '*.ps1') -Recurse }
-# Import additional required modules
-If (-not [System.String]::IsNullOrEmpty($RequiredModules))
-{
-    ForEach ($RequiredModule In $RequiredModules)
-    {
-        # Check to see if the module is installed
-        If (-not (Get-InstalledModule -Name:($RequiredModule) -ErrorAction:('SilentlyContinue')))
-        {
-            Write-Host ('Installing module: ' + $RequiredModule)
-            Install-Module -Name:($RequiredModule) -Force -SkipPublisherCheck
-        }
-    }
-    ForEach ($RequiredModule In $RequiredModules)
-    {
-        If (-not (Get-Module -Name:($ModuleName) -ErrorAction:('SilentlyContinue')))
-        {
-            Write-Host ('Importing module: ' + $RequiredModule)
-            Import-Module -Name:($RequiredModule) -Force
-        }
-    }
-}
+
 # Import module in development
 Write-Host ('Importing module: ' + $FilePath_psd1)
 Import-Module $FilePath_psd1 -Force
