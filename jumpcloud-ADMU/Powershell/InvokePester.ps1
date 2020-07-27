@@ -1,5 +1,5 @@
 # Load functions
-. ($PSScriptRoot + '/Functions.ps1')
+. ($PSScriptRoot + '/Start-Migration.ps1')
 
 # # Run Pester tests
 # $PesterResults = Invoke-Pester -Script:(@{ Path = $PSScriptRoot + '/Tests/'; }) -PassThru
