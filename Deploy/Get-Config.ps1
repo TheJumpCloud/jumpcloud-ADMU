@@ -61,7 +61,7 @@ If (!(Get-PackageProvider -Name:('NuGet') -ListAvailable -ErrorAction:('Silently
 # Get module function names
 #$Functions_Public = If (Test-Path -Path:($FolderPath_Public)) { Get-ChildItem -Path:($FolderPath_Public + '/' + '*.ps1') -Recurse }
 #$Functions_Private = If (Test-Path -Path:($FolderPath_Private)) { Get-ChildItem -Path:($FolderPath_Private + '/' + '*.ps1') -Recurse }
-$Functions_Public = @(Get-ChildItem -Path "$PSScriptRoot\Powershell\Start-Migration.ps1")
+$Functions_Public = @(Get-ChildItem -Path "C:\agent\_work\1\s\jumpCloud-ADMU\Powershell\Start-Migration.ps1")
 
 
 # Import module in development
