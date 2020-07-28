@@ -59,8 +59,10 @@ If (!(Get-PackageProvider -Name:('NuGet') -ListAvailable -ErrorAction:('Silently
     Write-Host ('[status]Installing package provider NuGet'); Install-PackageProvider -Name:('NuGet') -Scope:('CurrentUser') -Force
 }
 # Get module function names
-$Functions_Public = If (Test-Path -Path:($FolderPath_Public)) { Get-ChildItem -Path:($FolderPath_Public + '/' + '*.ps1') -Recurse }
-$Functions_Private = If (Test-Path -Path:($FolderPath_Private)) { Get-ChildItem -Path:($FolderPath_Private + '/' + '*.ps1') -Recurse }
+#$Functions_Public = If (Test-Path -Path:($FolderPath_Public)) { Get-ChildItem -Path:($FolderPath_Public + '/' + '*.ps1') -Recurse }
+#$Functions_Private = If (Test-Path -Path:($FolderPath_Private)) { Get-ChildItem -Path:($FolderPath_Private + '/' + '*.ps1') -Recurse }
+$Functions_Public = @(Get-ChildItem -Path "$PSScriptRoot\Powershell\Start-Migration.ps1")
+
 
 # Import module in development
 Write-Host ('Importing module: ' + $FilePath_psd1)
