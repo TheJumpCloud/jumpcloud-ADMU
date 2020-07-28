@@ -10,7 +10,7 @@ if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -
 $scriptPath = (Split-Path -Path:($MyInvocation.MyCommand.Path))
 
 # Load functions
-. ($scriptPath + '\Functions.ps1')
+. ($scriptPath + '\Start-Migration.ps1')
 
 # Load form
 $formResults = Invoke-Expression -Command:('. "' + $scriptPath + '\Form.ps1"')
