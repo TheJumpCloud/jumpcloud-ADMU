@@ -9,10 +9,10 @@
 @{
 
 # Script module or binary module file associated with this manifest.
- RootModule = 'JumpCloud.ADMU.psm1'
+RootModule = 'JumpCloud.ADMU.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.4.1'
+ModuleVersion = '1.4.2'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -30,10 +30,10 @@ CompanyName = 'JumpCloud'
 Copyright = '(c) JumpCloud. All rights reserved.'
 
 # Description of the functionality provided by this module
- Description = 'PowerShell function to call JumpCloud Active Directory Migration Utility'
+Description = 'PowerShell function to call JumpCloud Active Directory Migration Utility'
 
 # Minimum version of the PowerShell engine required by this module
- PowerShellVersion = '5.1'
+#PowerShellVersion = '5.1'
 
 # Name of the PowerShell host required by this module
 # PowerShellHostName = ''
@@ -110,7 +110,7 @@ PrivateData = @{
         # ReleaseNotes = ''
 
         # Prerelease string of this module
-        # Prerelease = ''
+         Prerelease = 'alpha1'
 
         # Flag to indicate whether the module requires explicit user acceptance for install/update/save
         # RequireLicenseAcceptance = $false
