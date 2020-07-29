@@ -6,11 +6,16 @@ $PSGalleryInfo = Get-PSGalleryModuleVersion -Name:($ModuleName) -ReleaseType:($R
 $ModuleVersion = $PSGalleryInfo.NextVersion
 Write-Host ('[status]PowerShell Gallery Name:' + $PSGalleryInfo.Name + ';CurrentVersion:' + $PSGalleryInfo.Version + '; NextVersion:' + $ModuleVersion )
 # EndRegion Checking PowerShell Gallery module version
+
 # Region Building New-JCModuleManifest
 Write-Host ('[status]Building New-ModuleManifest')
-
 New-ModuleManifest -Path:($FilePath_psd1) `
     -FunctionsToExport:($Functions_Public.BaseName | Sort-Object) `
     -RootModule:((Get-Item -Path:($FilePath_psm1)).Name) `
-    -ModuleVersion:($ModuleVersion)
+    -ModuleVersion:($ModuleVersion) `
+    -Author:('JumpCloud Solutions Architect Team') `
+    -CompanyName:('JumpCloud') `
+    -Copyright:('(c) JumpCloud. All rights reserved.') `
+    -Description:('Powershell Module to run JumpCloud Active Directory Migration Utility.')
+
 # EndRegion Building New-JCModuleManifest
