@@ -32,7 +32,6 @@ The Start-Migration function allows the starting of the JumpCloud Active Directo
 ### Example 1
 ```powershell
 PS C:\> Start-Migration -JumpCloudUserName 'john.smith' -DomainUserName 'jsmith' -TempPassword 'Temp123!' -AcceptEULA $true -LeaveDomain $true -ForceReboot $true -AZureADProfile $false -Customxml $false -InstallJCAgent $true -JumpCloudConnectKey 'CONNECTKEYHERE'
-
 ```
 
 This example would run the `Start-Migration` function on a domain user `DOMAIN\jsmith` and create a new local user account `COMPUTERNAME\john.smith`. Using a temporary password `Temp123!`, accepting the EULA so no interactive prompts would display, the system would leave the bound domain and reboot, It is not converting a AzureAD profile or using a CustomXML for migration, It will also install the JumpCloud Agent and use the JumpCloud connect key provided.
@@ -40,7 +39,6 @@ This example would run the `Start-Migration` function on a domain user `DOMAIN\j
 ### Example 2
 ```powershell
 PS C:\> Start-Migration -JumpCloudUserName 'john.smith' -DomainUserName 'jsmith' -TempPassword 'Temp123!' -AcceptEULA $true -LeaveDomain $false -ForceReboot $false -InstallJCAgent $false
-
 ```
 
 This example would run the `Start-Migration` function on a domain user `DOMAIN\jsmith` and create a new local user account `COMPUTERNAME\john.smith`. Using a temporary password `Temp123!`, accepting the EULA so no interactive prompts would display, the system would remain bound to the current domain, no reboot or JumpCloud Agent would be installed. This would allow the administrator to run the converted account in parallel for testing.
@@ -48,7 +46,6 @@ This example would run the `Start-Migration` function on a domain user `DOMAIN\j
 ### Example 3
 ```powershell
 PS C:\> Start-Migration -JumpCloudUserName 'john.smith' -DomainUserName 'jsmith' -TempPassword 'Temp123!' -AcceptEULA $true -LeaveDomain $false -ForceReboot $false -InstallJCAgent $false -Customxml $true
-
 ```
 
 This example would run the `Start-Migration` function on a domain user `DOMAIN\jsmith` and create a new local user account `COMPUTERNAME\john.smith`. Using a temporary password `Temp123!`, accepting the EULA so no interactive prompts would display, the system would remain bound to the current domain, no reboot or JumpCloud Agent would be installed. This would allow the administrator to run the converted account in parallel for testing, A `Custom.XML` file would be used in the migration process from the location `C:\Windows\Temp\custom.xml` this could be edited from the default xml provided or the GUI utility could be used to edit.
