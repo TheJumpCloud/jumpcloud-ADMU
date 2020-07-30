@@ -35,8 +35,8 @@ $JumpCloudConnectKey = $TestOrgConnectKey
 
 #Prechecks
 #check if installer is stuck running and kill
-$process = get-process JumpCloudInstaller >$null 2>&1
-$process2 = get-process JumpCloudInstaller.tmp >$null 2>&1
+$process = get-process JumpCloudInstaller > Out-Null
+$process2 = get-process JumpCloudInstaller.tmp > Out-Null
 if (![System.String]::IsNullOrEmpty($process)){
     $process.kill()
 }
