@@ -36,7 +36,9 @@ $JumpCloudConnectKey = $TestOrgConnectKey
 #Prechecks
 #check if installer is stuck running and kill
 $process = get-process JumpCloudInstaller
-$process.kill
+$process2 = get-process JumpCloudInstaller.tmp
+$process.kill()
+$process2.kill()
 #Clear Temp\JCADMU folder
 if ((Test-Path 'C:\Windows\Temp\JCADMU') -eq $true){
     remove-item -Path 'C:\windows\Temp\JCADMU' -Force -Recurse
