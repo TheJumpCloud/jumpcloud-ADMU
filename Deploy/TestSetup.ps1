@@ -34,6 +34,11 @@ $INSTALLER_BINARY_NAMES = "JumpCloudInstaller.exe,JumpCloudInstaller.tmp"
 $JumpCloudConnectKey = $TestOrgConnectKey
 
 #Prechecks
+#check if installer is stuck running and kill
+if ((Get-Process -PID 1588) -or (Get-Process -PID 2824)){
+        taskkill.exe /F /PID 1588
+        taskkill.exe /F /PID 2824
+}
 #Clear Temp\JCADMU folder
 if ((Test-Path 'C:\Windows\Temp\JCADMU') -eq $true){
     remove-item -Path 'C:\windows\Temp\JCADMU' -Force -Recurse
