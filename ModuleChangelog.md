@@ -20,6 +20,131 @@ Release Date: July 31, 2020
 
 {{Fill in the Bug Fixes}}
 
+## 1.4.2
+
+Release Date: July 31, 2020
+
+#### RELEASE NOTES
+
+```
+{{Fill in the Release Notes}}
+```
+
+#### FEATURES:
+
+{{Fill in the Features}}
+
+#### IMPROVEMENTS:
+
+{{Fill in the Improvements}}
+
+#### BUG FIXES:
+
+{{Fill in the Bug Fixes}}
+
+## 1.4.1
+
+Release Date: July 31, 2020
+
+#### RELEASE NOTES
+
+```
+{{Fill in the Release Notes}}
+```
+
+#### FEATURES:
+
+{{Fill in the Features}}
+
+#### IMPROVEMENTS:
+
+{{Fill in the Improvements}}
+
+#### BUG FIXES:
+
+{{Fill in the Bug Fixes}}
+
+## 1.4.0
+
+Release Date: July 31, 2020
+
+#### RELEASE NOTES
+
+```
+{{Fill in the Release Notes}}
+```
+
+#### FEATURES:
+
+{{Fill in the Features}}
+
+#### IMPROVEMENTS:
+
+{{Fill in the Improvements}}
+
+#### BUG FIXES:
+
+{{Fill in the Bug Fixes}}
+
+## 1.3.1
+
+Release Date: July 31, 2020
+
+#### RELEASE NOTES
+
+```
+{{Fill in the Release Notes}}
+```
+
+#### FEATURES:
+
+{{Fill in the Features}}
+
+#### IMPROVEMENTS:
+
+{{Fill in the Improvements}}
+
+#### BUG FIXES:
+
+{{Fill in the Bug Fixes}}
+
+## 1.3.0
+
+Release Date: April 27, 2020
+
+#### RELEASE NOTES
+
+```
+Allow Administrator to customize USMT process with custom.xml file and modify in ADMU GUI.
+```
+
+#### FEATURES:
+
+Added ability to use and load custom.xml for use in scanstate & loadstate steps.
+XML validation in GUI
+CLI Start-migration -Customxml $true will use C:\Windows\Temp\custom.xml in migration script.
+
+## 1.2.16
+
+Release Date: April 14, 2020
+
+#### RELEASE NOTES
+
+```
+Improve JumpCloud ADMU to work in remote non domain joined scenarios.
+```
+
+#### IMPROVEMENTS:
+
+ADMU launches when not domain joined or broken secure channel
+Shows AzureAD accounts in GUI with AzureAD information
+Now allows migration of non domain joined, AzureAD bound scenarios
+Now allows migration of domain joined AND AzureAD bound scenarios
+Now allows migration of broken secure channel scenarios
+GUI now shows orphaned profile accounts as 'UNKNOWN ACCOUNT'
+Local Administrator check added on launch
+Leave domain option for AzureAD profile will disconnect AzureAD
+
 ## 1.2.15
 
 #### RELEASE DATE

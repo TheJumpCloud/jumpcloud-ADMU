@@ -5377,6 +5377,7 @@ Function Start-Migration
     # Define misc static variables
     $adkSetupLink = 'https://go.microsoft.com/fwlink/?linkid=2086042'
     $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
+    $usmtTempPath = 'C:\Windows\Temp\JCADMU\USMT\'
     $jcAdmuLogFile = 'C:\Windows\Temp\jcAdmu.log'
     $UserStateMigrationToolx64Path = 'C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
     $UserStateMigrationToolx86Path = 'C:\Program Files\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
@@ -5422,6 +5423,7 @@ Function Start-Migration
     }
     if (!(Test-path $jcAdmuTempPath)) {
       new-item -ItemType Directory -Force -Path $jcAdmuTempPath
+      new-item -ItemType Directory -Force -Path $usmtTempPath
     }
   }
   Process
@@ -5468,7 +5470,7 @@ Function Start-Migration
          Remove-ItemIfExists -Path 'C:\Program Files\Jumpcloud\' -Recurse
       }
       # Agent Installer
-      $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
+      $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($usmtTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
     start-sleep -seconds 20
     if ((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=1'){
       Write-Log -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
@@ -5489,15 +5491,15 @@ Function Start-Migration
     If (-not $WmiProduct -and -not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64')))
     {
       # Remove existing jcAdmu folder
-      If (Test-Path -Path:($jcAdmuTempPath))
+      If (Test-Path -Path:($usmtTempPath))
       {
-        Write-Log -Message:('Removing Temp Files & Folders')
-        Remove-ItemIfExists -Path:($jcAdmuTempPath) -Recurse
+        Write-Log -Message:('Removing USMT Temp Files & Folders')
+        Remove-ItemIfExists -Path:($usmtTempPath) -Recurse
       }
-      # Create jcAdmu folder
-      If (!(Test-Path -Path:($jcAdmuTempPath)))
+      # Create usmt temp folder
+      If (!(Test-Path -Path:($usmtTempPath)))
       {
-        New-Item -Path:($jcAdmuTempPath) -ItemType:('Directory') | Out-Null
+        New-Item -Path:($usmtTempPathh) -ItemType:('Directory') | Out-Null
       }
 
       # Download WindowsADK
