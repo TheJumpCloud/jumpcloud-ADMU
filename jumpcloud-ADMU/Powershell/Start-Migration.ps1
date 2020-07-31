@@ -5423,6 +5423,8 @@ Function Start-Migration
     }
     if (!(Test-path $jcAdmuTempPath)) {
       new-item -ItemType Directory -Force -Path $jcAdmuTempPath
+    }
+    if (!(Test-path $usmtTempPath)){
       new-item -ItemType Directory -Force -Path $usmtTempPath
     }
   }
