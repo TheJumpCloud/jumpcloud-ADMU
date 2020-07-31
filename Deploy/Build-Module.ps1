@@ -19,3 +19,13 @@ New-ModuleManifest -Path:($FilePath_psd1) `
     -Description:('Powershell Module to run JumpCloud Active Directory Migration Utility.')
 
 # EndRegion Building New-JCModuleManifest
+
+# Region Updating module change log
+Write-Host ('[status]Updating module change log: "' + $FilePath_ModuleChangelog + '"')
+$ModuleChangelog = Get-Content -Path:($FilePath_ModuleChangelog)
+$NewModuleChangelogRecord = New-ModuleChangelog -LatestVersion:($ModuleVersion) -ReleaseNotes:('{{Fill in the Release Notes}}') -Features:('{{Fill in the Features}}') -Improvements:('{{Fill in the Improvements}}') -BugFixes('{{Fill in the Bug Fixes}}')
+If (!(($ModuleChangelog | Select-Object -First 1) -match $ModuleVersion))
+{
+    ($NewModuleChangelogRecord + ($ModuleChangelog | Out-String)).Trim() | Set-Content -Path:($FilePath_ModuleChangelog) -Force
+}
+# EndRegion Updating module change log
