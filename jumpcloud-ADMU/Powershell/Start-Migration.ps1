@@ -5501,7 +5501,7 @@ Function Start-Migration
       # Create usmt temp folder
       If (!(Test-Path -Path:($usmtTempPath)))
       {
-        New-Item -Path:($usmtTempPathh) -ItemType:('Directory') | Out-Null
+        New-Item -Path:($usmtTempPath) -ItemType:('Directory') | Out-Null
       }
 
       # Download WindowsADK
