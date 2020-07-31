@@ -65,4 +65,10 @@ if (Test-Path 'C:\Program Files\JumpCloud') {
     remove-item -path 'C:\Program Files\JumpCloud' -Force -Recurse
 }
 #install jcagent and prereq
+if (!(Test-path $jcAdmuTempPath)) {
+    new-item -ItemType Directory -Force -Path $jcAdmuTempPath
+  }
+  if (!(Test-path $usmtTempPath)){
+    new-item -ItemType Directory -Force -Path $usmtTempPath
+  }
     DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
