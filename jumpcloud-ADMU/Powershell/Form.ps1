@@ -152,9 +152,15 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
         if ($WmiComputerSystem.PartOfDomain) {
             $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
-            $DomainName = [string]$WmiComputerDomain.DnsForestName
-            $NetBiosName = [string]$WmiComputerDomain.DomainName
             $securechannelstatus = Test-ComputerSecureChannel
+            if(![System.String]::IsNullOrEmpty($WmiComputerDomain.DomainName))
+            {
+                $DomainName = 'Fix Secure Channel'
+                $NetBiosName = 'Fix Secure Channel'
+            } else {
+                $DomainName = [string]$WmiComputerDomain.DnsForestName
+                $NetBiosName = [string]$WmiComputerDomain.DomainName
+            }
         }
         elseif ($WmiComputerSystem.PartOfDomain -eq $false) {
             $DomainName = 'N/A'
