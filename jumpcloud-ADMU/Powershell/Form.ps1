@@ -531,11 +531,11 @@ $btn_custom_cancel.Add_Click({
 })
 
 # Put the list of profiles in the profile box
-$Profiles | ForEach-Object { $lvProfileList.Items.Add($_) | Out-Null }
+$Profiles | ForEach-Object { $lvProfileList.Items.Add($_)  }
 #===========================================================================
 # Shows the form
 #===========================================================================
-$Form.Showdialog() | Out-Null
+$Form.Showdialog()
 If ($bDeleteProfile.IsEnabled -eq $true)
 {
     Return $FormResults
