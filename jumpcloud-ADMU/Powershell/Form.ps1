@@ -149,9 +149,7 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         }
 
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-        $AzureADInfo = dsregcmd.exe /status
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
-
         if ($WmiComputerSystem.PartOfDomain) {
             $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
             $DomainName = [string]$WmiComputerDomain.DnsForestName
@@ -162,6 +160,9 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
             $DomainName = 'N/A'
             $NetBiosName = 'N/A'
             $securechannelstatus = 'N/A'
+        }
+        if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
+            $AzureADInfo = dsregcmd.exe /status
         }
         if ((Get-CimInstance Win32_OperatingSystem).Version -match '10' -and ($AzureADInfo[5].trimstart('AzureADJoined : ') -eq 'YES') ) {
                 $AzureADStatus = ($AzureADInfo[5].trimstart('AzureADJoined : '))
