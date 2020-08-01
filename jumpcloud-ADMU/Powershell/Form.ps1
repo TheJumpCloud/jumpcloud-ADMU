@@ -532,7 +532,7 @@ $btn_custom_cancel.Add_Click({
 })
 
 # Put the list of profiles in the profile box
-$Profiles | ForEach-Object { $lvProfileList.Items.Add($_)  }
+$Profiles | ForEach-Object { $lvProfileList.Items.Add($_) | Out-Null  }
 #===========================================================================
 # Shows the form
 #===========================================================================
