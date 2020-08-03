@@ -62,6 +62,9 @@ If (!(Get-PackageProvider -Name:('NuGet') -ListAvailable -ErrorAction:('Silently
     Write-Host ('[status]Installing package provider NuGet'); Install-PackageProvider -Name:('NuGet') -Scope:('CurrentUser') -Force
 }
 
+# Get module function names
+$Functions_Public = @(Get-ChildItem -Path "C:\agent\_work\1\s\jumpCloud-ADMU\Powershell\Start-Migration.ps1")
+
 # Import module in development
 Write-Host ('Importing module: ' + $FilePath_psd1)
 Import-Module $FilePath_psd1 -Force
