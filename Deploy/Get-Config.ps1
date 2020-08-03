@@ -3,8 +3,10 @@ $ModuleName = $env:MODULENAME
 $ModuleFolderName = $env:MODULEFOLDERNAME
 $DEPLOYFOLDER = $env:DEPLOYFOLDER
 $RELEASETYPE = $env:RELEASETYPE
+$GitHubWikiUrl = 'https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/'
 $ScriptRoot = Switch ($env:DEPLOYFOLDER) { $true { $env:DEPLOYFOLDER } Default { $PSScriptRoot } }
 $FolderPath_ModuleRootPath = (Get-Item -Path:($ScriptRoot)).Parent.FullName
+$FilePath_ModuleChangelog = $FolderPath_ModuleRootPath + '/ModuleChangelog.md'
 Switch ($env:DEPLOYFOLDER) { $true { $env:DEPLOYFOLDER } Default { $env:DEPLOYFOLDER = $PSScriptRoot } }
 # Validate that variables have been populated
 @('MODULENAME', 'MODULEFOLDERNAME', 'DEPLOYFOLDER', 'RELEASETYPE') | ForEach-Object {
