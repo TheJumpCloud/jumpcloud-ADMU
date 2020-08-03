@@ -257,7 +257,7 @@ function Test-Localusername {
             foreach ($username in $users) {
                 if ($username -match $env:computername) {
                     $localusertrim = $username -creplace '^[^\\]*\\', ''
-                    $localusers.Add($localusertrim) > Out-Null
+                    $localusers.Add($localusertrim) | Out-Null
                 }
             }
   }
@@ -287,7 +287,7 @@ function Test-Domainusername {
             foreach ($username in $users) {
                 if ($username -match (GetNetBiosName) -or ($username -match 'AZUREAD')) {
                     $domainusertrim = $username -creplace '^[^\\]*\\', ''
-                    $domainusers.Add($domainusertrim) > Out-Null
+                    $domainusers.Add($domainusertrim) | Out-Null
                 }
             }
   }

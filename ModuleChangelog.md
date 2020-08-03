@@ -1,112 +1,111 @@
 ## 1.4.3
 
-Release Date: July 31, 2020
+Release Date: August 3, 2020
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Functions.ps1 renamed to Start-Migration.ps1 to allow module creation and import.
+Now allows install-module JumpCloud.ADMU
 ```
 
 #### FEATURES:
 
-{{Fill in the Features}}
+- Builds `ModuleChangeLog.md`
+- Start-Migration autogen help docs
 
 #### IMPROVEMENTS:
 
-{{Fill in the Improvements}}
+- Kill stuck installer for test pipeline
 
 #### BUG FIXES:
 
-{{Fill in the Bug Fixes}}
+- Out-null file
+- Error removing temp files when exe still in use
+- Remove double jcagent install
+- Don't call dsregcmd on windows 8.1 systems
+- Display 'Fix secure channel' when domain joined but no healthy secure channel, rather than blank.
+
 
 ## 1.4.2
 
-Release Date: July 31, 2020
+Release Date: July 28, 2020
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+JumpCloud-ADMU powershell module release pipeline.
 ```
 
 #### FEATURES:
 
-{{Fill in the Features}}
+- Package and release JumpCloud-ADMU to PSGallery.
 
 #### IMPROVEMENTS:
 
-{{Fill in the Improvements}}
-
-#### BUG FIXES:
-
-{{Fill in the Bug Fixes}}
+- Azure pipeline and release tasks for automated builds and module creation and deployment.
 
 ## 1.4.1
 
-Release Date: July 31, 2020
+Release Date: July 2, 2020
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Fix CLI bug when installing JCAgent, improve compatability with foreign language windows versions.
 ```
-
-#### FEATURES:
-
-{{Fill in the Features}}
 
 #### IMPROVEMENTS:
 
-{{Fill in the Improvements}}
+- Improve administrator group query changed to use SID to work with foreign language windows versions.
+- Test syntax updated for Pester V5
 
 #### BUG FIXES:
 
-{{Fill in the Bug Fixes}}
+- Add missing condition when $InstallJCAgent -eq $true to make sure JumpCloud Connect Key is provided
 
 ## 1.4.0
 
-Release Date: July 31, 2020
+Release Date: May 12, 2020
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Add local and domain username checks to avoid duplicate or failed migration.
 ```
-
-#### FEATURES:
-
-{{Fill in the Features}}
 
 #### IMPROVEMENTS:
 
-{{Fill in the Improvements}}
+- GUI check local username doesn't exist on system to avoid duplicate user errors
+- CLI parameter checks local username doesn't exist on system to avoid duplicate user errors
+- CLI improved parameter validation on DomainUserName
+- CLI $JumpCloudConnectKey check if $installagent $true
+- Add date line to log when tool run
 
 #### BUG FIXES:
 
-{{Fill in the Bug Fixes}}
+- Account for state if user exists on system but not ever logged in
 
 ## 1.3.1
 
-Release Date: July 31, 2020
+Release Date: April 30, 2020
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Improve JCAgent install order and connect key verification
 ```
-
-#### FEATURES:
-
-{{Fill in the Features}}
 
 #### IMPROVEMENTS:
 
-{{Fill in the Improvements}}
+- If agent install selected, will now try install steps first and error out if fails vs converting account and then running agent installer.
+- Added repository outline readme
+- Added JCAgent installer connect key check and error on failed install
+- Can run account conversion without installing agent or requiring a connect key input value
 
 #### BUG FIXES:
 
-{{Fill in the Bug Fixes}}
+- Clear old install directory that is generated when failed install so doesn't reuse bad connect key
 
 ## 1.3.0
 
@@ -120,9 +119,9 @@ Allow Administrator to customize USMT process with custom.xml file and modify in
 
 #### FEATURES:
 
-Added ability to use and load custom.xml for use in scanstate & loadstate steps.
-XML validation in GUI
-CLI Start-migration -Customxml $true will use C:\Windows\Temp\custom.xml in migration script.
+- Added ability to use and load custom.xml for use in scanstate & loadstate steps.
+- XML validation in GUI
+- CLI Start-migration -Customxml $true will use C:\Windows\Temp\custom.xml in migration script.
 
 ## 1.2.16
 
@@ -136,14 +135,14 @@ Improve JumpCloud ADMU to work in remote non domain joined scenarios.
 
 #### IMPROVEMENTS:
 
-ADMU launches when not domain joined or broken secure channel
-Shows AzureAD accounts in GUI with AzureAD information
-Now allows migration of non domain joined, AzureAD bound scenarios
-Now allows migration of domain joined AND AzureAD bound scenarios
-Now allows migration of broken secure channel scenarios
-GUI now shows orphaned profile accounts as 'UNKNOWN ACCOUNT'
-Local Administrator check added on launch
-Leave domain option for AzureAD profile will disconnect AzureAD
+- ADMU launches when not domain joined or broken secure channel
+- Shows AzureAD accounts in GUI with AzureAD information
+- Now allows migration of non domain joined, AzureAD bound scenarios
+- Now allows migration of domain joined AND AzureAD bound scenarios
+- Now allows migration of broken secure channel scenarios
+- GUI now shows orphaned profile accounts as 'UNKNOWN ACCOUNT'
+- Local Administrator check added on launch
+- Leave domain option for AzureAD profile will disconnect AzureAD
 
 ## 1.2.15
 
