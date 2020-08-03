@@ -3,10 +3,8 @@ $ModuleName = $env:MODULENAME
 $ModuleFolderName = $env:MODULEFOLDERNAME
 $DEPLOYFOLDER = $env:DEPLOYFOLDER
 $RELEASETYPE = $env:RELEASETYPE
-$GitHubWikiUrl = 'https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/'
 $ScriptRoot = Switch ($env:DEPLOYFOLDER) { $true { $env:DEPLOYFOLDER } Default { $PSScriptRoot } }
 $FolderPath_ModuleRootPath = (Get-Item -Path:($ScriptRoot)).Parent.FullName
-$FilePath_ModuleChangelog = $FolderPath_ModuleRootPath + '/ModuleChangelog.md'
 Switch ($env:DEPLOYFOLDER) { $true { $env:DEPLOYFOLDER } Default { $env:DEPLOYFOLDER = $PSScriptRoot } }
 # Validate that variables have been populated
 @('MODULENAME', 'MODULEFOLDERNAME', 'DEPLOYFOLDER', 'RELEASETYPE') | ForEach-Object {
@@ -61,8 +59,6 @@ If (!(Get-PackageProvider -Name:('NuGet') -ListAvailable -ErrorAction:('Silently
 {
     Write-Host ('[status]Installing package provider NuGet'); Install-PackageProvider -Name:('NuGet') -Scope:('CurrentUser') -Force
 }
-# Get module function names
-$Functions_Public = @(Get-ChildItem -Path "C:\agent\_work\1\s\jumpCloud-ADMU\Powershell\Start-Migration.ps1")
 
 # Import module in development
 Write-Host ('Importing module: ' + $FilePath_psd1)
