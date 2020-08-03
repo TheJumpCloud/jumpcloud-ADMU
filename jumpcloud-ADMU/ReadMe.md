@@ -13,9 +13,19 @@ The directory `Deploy` contains a set of scripts used in the pipeline for CI and
 - **admu.ico:** Icon file used in .exe generation
 - **ADMU.ps1:** Combined single file output used in .exe generation
 - **Build.ps1:** Builds .exe utilizing ps2exe module
+- **Build-HelpFiles.ps1:** Uses PlatyPS to generate function help file
+- **BuildNuspecFromPsd1.ps1:** Builds Nuspec from Powershell Module to publish
+- **Get-Config.ps1:** Used to set project configuration vars from CI pipeline
 - **Invoke-GitCommit.ps1:** Git commit script used in pipeline
 - **Sign.ps1:** Signs .exe with codesigning certificate
 - **TestSetup.ps1:** Ran in pipeline to clear & install latest JC agent using ADMU functions
+
+- **Get-PSGalleryModuleVersion.ps1:** Used to increment and find currently published module version
+- **New-ModuleChangeLog.ps1:** Used to generate and add to module changelog md file
+
+The directory `Docs` contains the generated and populated help files for the Powershell functions in the Module.
+
+- **`Start-Migration.md`:** Help file for start-migration function
 
 The directory `jumpcloud-ADMU\Exe\` contains the signed .exe output from the pipeline build used in the release steps.
 
