@@ -5606,22 +5606,7 @@ Function Start-Migration
     Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUserName -erroraction silentlycontinue
     #endregion Add To Local Users Group
 
-    #region SilentAgentInstall
-    if ($InstallJCAgent -eq $true)
-    {
-      # Agent Installer Loop
-      [int]$InstallReTryCounter = 0
-      Do
-      {
-        $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($usmtTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)        $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($usmtTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
-        $InstallReTryCounter++
-        If ($InstallReTryCounter -eq 3)
-        {
-          Write-Log -Message:('JumpCloud agent installation failed') -Level:('Error')
-          Exit;
-        }
-      } While ($ConfirmInstall -ne $true -and $InstallReTryCounter -le 3)
-    }
+    #region Leave Domain or AzureAD
 
     if ($LeaveDomain -eq $true)
     {
