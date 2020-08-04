@@ -8,7 +8,7 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
 <Window
      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-     Title="JumpCloud ADMU 1.4.1" Height="677.234" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
+     Title="JumpCloud ADMU 1.4.3" Height="677.234" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
     <Grid Margin="0,0,-0.2,0.168" RenderTransformOrigin="0.531,0.272">
         <TabControl Name="tc_main" HorizontalAlignment="Left" Height="614" VerticalAlignment="Top" Width="1012">
             <TabItem Name="tab_jcadmu" Header="JumpCloud ADMU">
@@ -149,19 +149,26 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         }
 
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-        $AzureADInfo = dsregcmd.exe /status
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
-
         if ($WmiComputerSystem.PartOfDomain) {
             $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
-            $DomainName = [string]$WmiComputerDomain.DnsForestName
-            $NetBiosName = [string]$WmiComputerDomain.DomainName
             $securechannelstatus = Test-ComputerSecureChannel
+            if(![System.String]::IsNullOrEmpty($WmiComputerDomain.DomainName))
+            {
+                $DomainName = 'Fix Secure Channel'
+                $NetBiosName = 'Fix Secure Channel'
+            } else {
+                $DomainName = [string]$WmiComputerDomain.DnsForestName
+                $NetBiosName = [string]$WmiComputerDomain.DomainName
+            }
         }
         elseif ($WmiComputerSystem.PartOfDomain -eq $false) {
             $DomainName = 'N/A'
             $NetBiosName = 'N/A'
             $securechannelstatus = 'N/A'
+        }
+        if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
+            $AzureADInfo = dsregcmd.exe /status
         }
         if ((Get-CimInstance Win32_OperatingSystem).Version -match '10' -and ($AzureADInfo[5].trimstart('AzureADJoined : ') -eq 'YES') ) {
                 $AzureADStatus = ($AzureADInfo[5].trimstart('AzureADJoined : '))
@@ -535,7 +542,7 @@ $Profiles | ForEach-Object { $lvProfileList.Items.Add($_) | Out-Null }
 #===========================================================================
 # Shows the form
 #===========================================================================
-$Form.Showdialog() | Out-Null
+$Form.Showdialog()
 If ($bDeleteProfile.IsEnabled -eq $true)
 {
     Return $FormResults
