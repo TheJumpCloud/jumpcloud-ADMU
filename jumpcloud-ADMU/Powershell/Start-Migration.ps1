@@ -257,7 +257,7 @@ function Test-Localusername {
             foreach ($username in $users) {
                 if ($username -match $env:computername) {
                     $localusertrim = $username -creplace '^[^\\]*\\', ''
-                    $localusers.Add($localusertrim) > Out-Null
+                    $localusers.Add($localusertrim) | Out-Null
                 }
             }
   }
@@ -287,7 +287,7 @@ function Test-Domainusername {
             foreach ($username in $users) {
                 if ($username -match (GetNetBiosName) -or ($username -match 'AZUREAD')) {
                     $domainusertrim = $username -creplace '^[^\\]*\\', ''
-                    $domainusers.Add($domainusertrim) > Out-Null
+                    $domainusers.Add($domainusertrim) | Out-Null
                 }
             }
   }
@@ -318,14 +318,14 @@ Function DownloadAndInstallAgent(
     If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64")))
     {
         Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x64')
-        (New-Object System.Net.WebClient).DownloadFile("${msvc2013x64Link}", ($jcAdmuTempPath + $msvc2013x64File))
+        (New-Object System.Net.WebClient).DownloadFile("${msvc2013x64Link}", ($usmtTempPath + $msvc2013x64File))
         Invoke-Expression -Command:($msvc2013x64Install)
         Write-Log -Message:('JCAgent prereq installed')
     }
     If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86")))
     {
         Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x86')
-        (New-Object System.Net.WebClient).DownloadFile("${msvc2013x86Link}", ($jcAdmuTempPath + $msvc2013x86File))
+        (New-Object System.Net.WebClient).DownloadFile("${msvc2013x86Link}", ($usmtTempPath + $msvc2013x86File))
         Invoke-Expression -Command:($msvc2013x86Install)
         Write-Log -Message:('JCAgent prereq installed')
     }
@@ -5377,6 +5377,7 @@ Function Start-Migration
     # Define misc static variables
     $adkSetupLink = 'https://go.microsoft.com/fwlink/?linkid=2086042'
     $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
+    $usmtTempPath = 'C:\Windows\Temp\JCADMU\USMT\'
     $jcAdmuLogFile = 'C:\Windows\Temp\jcAdmu.log'
     $UserStateMigrationToolx64Path = 'C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
     $UserStateMigrationToolx86Path = 'C:\Program Files\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
@@ -5390,8 +5391,8 @@ Function Start-Migration
     $msvc2013x86File = 'vc_redist.x86.exe'
     $msvc2013x86Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x86.exe'
     $msvc2013x64Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x64.exe'
-    $msvc2013x86Install = "$jcAdmuTempPath$msvc2013x86File /install /quiet /norestart"
-    $msvc2013x64Install = "$jcAdmuTempPath$msvc2013x64File /install /quiet /norestart"
+    $msvc2013x86Install = "$usmtTempPath$msvc2013x86File /install /quiet /norestart"
+    $msvc2013x64Install = "$usmtTempPath$msvc2013x64File /install /quiet /norestart"
     $CommandScanStateTemplate = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
     $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
     $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
@@ -5422,6 +5423,9 @@ Function Start-Migration
     }
     if (!(Test-path $jcAdmuTempPath)) {
       new-item -ItemType Directory -Force -Path $jcAdmuTempPath
+    }
+    if (!(Test-path $usmtTempPath)){
+      new-item -ItemType Directory -Force -Path $usmtTempPath
     }
   }
   Process
@@ -5468,7 +5472,7 @@ Function Start-Migration
          Remove-ItemIfExists -Path 'C:\Program Files\Jumpcloud\' -Recurse
       }
       # Agent Installer
-      $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
+      $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($usmtTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
     start-sleep -seconds 20
     if ((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=1'){
       Write-Log -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
@@ -5489,15 +5493,15 @@ Function Start-Migration
     If (-not $WmiProduct -and -not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64')))
     {
       # Remove existing jcAdmu folder
-      If (Test-Path -Path:($jcAdmuTempPath))
+      If (Test-Path -Path:($usmtTempPath))
       {
-        Write-Log -Message:('Removing Temp Files & Folders')
-        Remove-ItemIfExists -Path:($jcAdmuTempPath) -Recurse
+        Write-Log -Message:('Removing USMT Temp Files & Folders')
+        Remove-ItemIfExists -Path:($usmtTempPath) -Recurse
       }
-      # Create jcAdmu folder
-      If (!(Test-Path -Path:($jcAdmuTempPath)))
+      # Create usmt temp folder
+      If (!(Test-Path -Path:($usmtTempPath)))
       {
-        New-Item -Path:($jcAdmuTempPath) -ItemType:('Directory') | Out-Null
+        New-Item -Path:($usmtTempPath) -ItemType:('Directory') | Out-Null
       }
 
       # Download WindowsADK
@@ -5602,22 +5606,7 @@ Function Start-Migration
     Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUserName -erroraction silentlycontinue
     #endregion Add To Local Users Group
 
-    #region SilentAgentInstall
-    if ($InstallJCAgent -eq $true)
-    {
-      # Agent Installer Loop
-      [int]$InstallReTryCounter = 0
-      Do
-      {
-        $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
-        $InstallReTryCounter++
-        If ($InstallReTryCounter -eq 3)
-        {
-          Write-Log -Message:('JumpCloud agent installation failed') -Level:('Error')
-          Exit;
-        }
-      } While ($ConfirmInstall -ne $true -and $InstallReTryCounter -le 3)
-    }
+    #region Leave Domain or AzureAD
 
     if ($LeaveDomain -eq $true)
     {
