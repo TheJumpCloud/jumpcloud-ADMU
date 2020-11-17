@@ -5500,13 +5500,13 @@ Function Start-Migration
 if ($ConvertProfile -eq $true){
 
 #Create New User
-$newusername = $
-$domainuser = 
+$newusername = $JumpCloudUserName
+$domainuser =$DomainUserName
 net user $newusername $TempPassword /add
 
 #spawn process or build reg entry with sid
 $user = "$env:COMPUTERNAME\$newusername"
-$MyPlainTextString = "Temp123!Temp12"
+$MyPlainTextString = $TempPassword
 $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
 $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
 Start-Process Powershell.exe -Credential $Credential -WorkingDirectory 'C:\windows\System32' -ArgumentList ('-WindowStyle Hidden')
