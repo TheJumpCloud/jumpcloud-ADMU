@@ -5545,10 +5545,7 @@ Function Start-Migration
   [ValidateScript({
          If (Test-Localusername $_){Throw [System.Management.Automation.ValidationMetadataException] "The username '${_}' is already in use."}else{$True}
   })][string]$JumpCloudUserName,
-  [Parameter(ParameterSetName='cmd',Mandatory=$true)]
-  [ValidateScript({
-         If (!(Test-Domainusername $_)){Throw [System.Management.Automation.ValidationMetadataException] "The username '${_}' is not a valid domainusername on this system."}else{$True}
-  })][string]$DomainUserName,
+  [Parameter(ParameterSetName='cmd',Mandatory=$true)][string]$DomainUserName,
   [Parameter(ParameterSetName='cmd',Mandatory=$true)][ValidateNotNullOrEmpty()][string]$TempPassword,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$AcceptEULA=$true,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$LeaveDomain=$false,
@@ -5715,7 +5712,7 @@ foreach ($line in $nbtStat)
 }
 
 $newusersid = Get-SID -User $newusername
-$oldusersid = Get-SID -User ($NetBiosName.Trim() + '\' + $domainuser)
+$oldusersid = $domainuser
 
 $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $oldusersid) -Name 'ProfileImagePath'
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
@@ -5728,7 +5725,8 @@ Remove-Item -Path ($newuserprofileimagepath + '.old') -Force -Recurse
 Rename-Item -Path $olduserprofileimagepath -NewName $newusername
 Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $oldusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $domainuser + '.' + $NetBiosName)
 Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $newusername)
-
+Write-Log -Message:('new' + $newuserprofileimagepath)
+Write-Log -Message:('old' + $olduserprofileimagepath)
 #Get-ChildItem -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object {($_.Name -match $newusersid)}
 #Get-ChildItem -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object {($_.Name -match $oldusersid)}
 
