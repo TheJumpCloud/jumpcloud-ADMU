@@ -89,14 +89,14 @@ function getRegKeyOwner([string]$keyPath) {
 }
 
 
-function setValueToKey([string]$keyPath, [string]$name, [System.Object]$value, [Microsoft.Win32.RegistryValueKind]$regValueKind) {
-  $regRights = [System.Security.AccessControl.RegistryRights]::SetValue
-  $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
-  $Key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath, $permCheck, $regRights)
-  "Setting value with properties [name:$name, value:$value, value type:$regValueKind]"
-  $Key.SetValue($name, $value, $regValueKind)
-  $key.Close()
-}
+# function setValueToKey([string]$keyPath, [string]$name, [System.Object]$value, [Microsoft.Win32.RegistryValueKind]$regValueKind) {
+#   $regRights = [System.Security.AccessControl.RegistryRights]::SetValue
+#   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+#   $Key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath, $permCheck, $regRights)
+#   "Setting value with properties [name:$name, value:$value, value type:$regValueKind]"
+#   $Key.SetValue($name, $value, $regValueKind)
+#   $key.Close()
+# }
 
 function changeRegKeyOwner([string]$keyPath, [System.Security.Principal.SecurityIdentifier]$user) {
   try {
