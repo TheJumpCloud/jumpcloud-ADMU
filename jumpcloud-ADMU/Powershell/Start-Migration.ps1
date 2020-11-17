@@ -1,4 +1,181 @@
 #region Functions
+function enable-privilege {
+  param(
+      ## The privilege to adjust. This set is taken from
+      ## http://msdn.microsoft.com/en-us/library/bb530716(VS.85).aspx
+      [ValidateSet(
+          "SeAssignPrimaryTokenPrivilege", "SeAuditPrivilege", "SeBackupPrivilege",
+          "SeChangeNotifyPrivilege", "SeCreateGlobalPrivilege", "SeCreatePagefilePrivilege",
+          "SeCreatePermanentPrivilege", "SeCreateSymbolicLinkPrivilege", "SeCreateTokenPrivilege",
+          "SeDebugPrivilege", "SeEnableDelegationPrivilege", "SeImpersonatePrivilege", "SeIncreaseBasePriorityPrivilege",
+          "SeIncreaseQuotaPrivilege", "SeIncreaseWorkingSetPrivilege", "SeLoadDriverPrivilege",
+          "SeLockMemoryPrivilege", "SeMachineAccountPrivilege", "SeManageVolumePrivilege",
+          "SeProfileSingleProcessPrivilege", "SeRelabelPrivilege", "SeRemoteShutdownPrivilege",
+          "SeRestorePrivilege", "SeSecurityPrivilege", "SeShutdownPrivilege", "SeSyncAgentPrivilege",
+          "SeSystemEnvironmentPrivilege", "SeSystemProfilePrivilege", "SeSystemtimePrivilege",
+          "SeTakeOwnershipPrivilege", "SeTcbPrivilege", "SeTimeZonePrivilege", "SeTrustedCredManAccessPrivilege",
+          "SeUndockPrivilege", "SeUnsolicitedInputPrivilege")]
+      $Privilege,
+      ## The process on which to adjust the privilege. Defaults to the current process.
+      $ProcessId = $pid,
+      ## Switch to disable the privilege, rather than enable it.
+      [Switch] $Disable
+  )
+
+  ## Taken from P/Invoke.NET with minor adjustments.
+  $definition = @'
+using System;
+using System.Runtime.InteropServices;
+
+public class AdjPriv
+{
+[DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
+internal static extern bool AdjustTokenPrivileges(IntPtr htok, bool disall,
+ ref TokPriv1Luid newst, int len, IntPtr prev, IntPtr relen);
+
+[DllImport("advapi32.dll", ExactSpelling = true, SetLastError = true)]
+internal static extern bool OpenProcessToken(IntPtr h, int acc, ref IntPtr phtok);
+[DllImport("advapi32.dll", SetLastError = true)]
+internal static extern bool LookupPrivilegeValue(string host, string name, ref long pluid);
+[StructLayout(LayoutKind.Sequential, Pack = 1)]
+internal struct TokPriv1Luid
+{
+ public int Count;
+ public long Luid;
+ public int Attr;
+}
+
+internal const int SE_PRIVILEGE_ENABLED = 0x00000002;
+internal const int SE_PRIVILEGE_DISABLED = 0x00000000;
+internal const int TOKEN_QUERY = 0x00000008;
+internal const int TOKEN_ADJUST_PRIVILEGES = 0x00000020;
+public static bool EnablePrivilege(long processHandle, string privilege, bool disable)
+{
+ bool retVal;
+ TokPriv1Luid tp;
+ IntPtr hproc = new IntPtr(processHandle);
+ IntPtr htok = IntPtr.Zero;
+ retVal = OpenProcessToken(hproc, TOKEN_ADJUST_PRIVILEGES | TOKEN_QUERY, ref htok);
+ tp.Count = 1;
+ tp.Luid = 0;
+ if(disable)
+ {
+  tp.Attr = SE_PRIVILEGE_DISABLED;
+ }
+ else
+ {
+  tp.Attr = SE_PRIVILEGE_ENABLED;
+ }
+ retVal = LookupPrivilegeValue(null, privilege, ref tp.Luid);
+ retVal = AdjustTokenPrivileges(htok, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero);
+ return retVal;
+}
+}
+'@
+
+  $processHandle = (Get-Process -id $ProcessId).Handle
+  $type = Add-Type $definition -PassThru
+  $type[0]::EnablePrivilege($processHandle, $Privilege, $Disable)
+}
+
+function getRegKeyOwner([string]$keyPath){
+  $regRights=[System.Security.AccessControl.RegistryRights]::ReadPermissions
+  $permCheck=[Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+  $Key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath,$permCheck,$regRights)
+  $acl = $Key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::Owner)
+  $owner = $acl.GetOwner([type]::GetType([System.Security.Principal.NTAccount]))
+  $key.Close()
+  return $owner
+}
+
+
+function setValueToKey([string]$keyPath, [string]$name, [System.Object]$value,[Microsoft.Win32.RegistryValueKind]$regValueKind){
+  $regRights=[System.Security.AccessControl.RegistryRights]::SetValue
+  $permCheck=[Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+  $Key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath,$permCheck,$regRights)
+  "Setting value with properties [name:$name, value:$value, value type:$regValueKind]"
+  $Key.SetValue($name, $value, $regValueKind)
+  $key.Close()
+}
+
+function changeRegKeyOwner([string]$keyPath, [System.Security.Principal.NTAccount]$user){
+  try{
+      $regRights=[System.Security.AccessControl.RegistryRights]::takeownership
+      $permCheck=[Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+      $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath,$permCheck,$regRights)
+      # You must get a blank acl for the key b/c you do not currently have access
+      $acl = $key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::None)
+
+  #   if([string]::IsNullOrEmpty($user)){
+  #       $user = [System.Security.Principal.NTAccount]"$env:userdomain\$env:username"
+  #   }
+
+      "Changing owner of Registry key: USERS\$keyPath to `"$user`""
+      $acl.SetOwner($user)
+      $key.SetAccessControl($acl)
+  }
+  catch {
+      $_.Exception.toString()
+      $key.Close()
+      return
+  }
+#   giveFullControlToUser -userName "$user" -key $key
+
+  $key.Close()
+}
+
+function giveFullControlToUser([System.Security.Principal.NTAccount]$userName, [string]$keyPath) {
+  "giving full access to $userName for key $keyPath"
+  $regRights=[System.Security.AccessControl.RegistryRights]::takeownership
+  $permCheck=[Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+  $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath,$permCheck,$regRights)
+  # After you have set owner you need to get the acl with the perms so you can modify it.
+  $acl = $key.GetAccessControl()
+  $rule = New-Object System.Security.AccessControl.RegistryAccessRule ($userName,"FullControl", @("ObjectInherit","ContainerInherit"),"None","Allow")
+  $acl.SetAccessRule($rule)
+  $key.SetAccessControl($acl)
+}
+
+function giveReadToUser([System.Security.Principal.NTAccount]$userName, [string]$keyPath) {
+  "giving read access to $userName for key $keyPath"
+  $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
+  $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+  $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath, $permCheck, $regRights)
+  # After you have set owner you need to get the acl with the perms so you can modify it.
+  $acl = $key.GetAccessControl()
+  $rule = New-Object System.Security.AccessControl.RegistryAccessRule ($userName, "ReadKey", @("ObjectInherit", "ContainerInherit"), "None", "Allow")
+  $acl.SetAccessRule($rule)
+  $key.SetAccessControl($acl)
+}
+
+function copyPasteAccess {
+  [CmdletBinding()]
+  param (
+      [Parameter()]
+      [System.Security.AccessControl.AccessRule]
+      $accessItem,
+      [Parameter()]
+      [System.Security.Principal.NTAccount]
+      $user,
+      [Parameter()]
+      [string]
+      $keyPath
+  )
+  $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
+  $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+  $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath, $permCheck, $regRights)
+
+  $access = [System.Security.AccessControl.RegistryRights]$accessItem.RegistryRights
+  $type = [System.Security.AccessControl.AccessControlType]$accessItem.AccessControlType
+  $inheritance = [System.Security.AccessControl.InheritanceFlags]$accessItem.InheritanceFlags
+  $propagation = [System.Security.AccessControl.PropagationFlags]$accessItem.PropagationFlags
+  $acl = $key.GetAccessControl()
+  $rule = New-Object System.Security.AccessControl.RegistryAccessRule($user, $access, $inheritance, $propagation, $type)
+  $acl.AddAccessRule($rule)
+  $acl.RemoveAccessRule($accessItem) | Out-Null
+  $key.SetAccessControl($acl)
+}
+
 #username To SID Function
 function Get-SID ([string]$User)
 {
@@ -35,6 +212,7 @@ Function VerifyAccount
     Return $false
   }
 }
+
 #Logging function
 <#
   .Synopsis
@@ -5560,6 +5738,99 @@ $Acl = (Get-Item $usrhome).GetAccessControl('Access')
 $Ar = New-Object system.security.accesscontrol.filesystemaccessrule($NewSPN_Name,"FullControl","ContainerInherit,ObjectInherit","None","Allow")
 $Acl.SetAccessRule($Ar)
 $Acl | Set-Acl -Path $usrhome
+
+#reg permisions
+# Load both the usrClass Hive + NTUser.dat into registry
+REG LOAD HKU\$newusersid "C:\Users\$domainuser\NTUSER.DAT"
+$classes = $newusersid + "_Classes"
+REG LOAD HKU\$classes "C:\Users\$domainuser\AppData\Local\Microsoft\Windows\UsrClass.dat"
+
+New-PSDrive HKEY_USERS Registry HKEY_USERS
+$HKU = Get-Acl "HKEY_USERS:\$newusersid"
+$HKU_Classes = Get-Acl "HKEY_USERS:\$($newusersid)_Classes"
+$HKUKeys = @($HKU, $HKU_Classes)
+
+# Set the root keys
+ForEach ($rootKey in $HKUKeys.Path){
+  Write-Host $rootKey
+  $acl = Get-Acl $rootKey
+  foreach ($al in $acl.Access) {
+      if ($al.IdentityReference -eq "$NetBioName\$domainuser") {
+          Write-Host "$($acl.PSChildName)"
+          # $al.getType()
+          copyPasteAccess -accessItem $al -user "$env:computername\$newusername" -keyPath $acl.PSChildName
+          $acl | Set-Acl
+      }
+  }
+}
+
+# Track the number of ownership changes in registry to revert
+$list = @()
+$repoKeys = "\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository"
+Get-ChildItem -Recurse $HKUKeys.Path | ForEach-object {
+  # write-host $_.Name
+  $string = $_.Name
+  $string = $string.Insert(10, ':')
+  $acl = Get-Acl $string
+  ForEach ($al in $acl.Access) {
+      if ($al.IdentityReference -eq "$NetBioName\$domainuser") {
+          $aclString = $acl.path
+          $aclString = $aclString.replace("Microsoft.PowerShell.Core\Registry::HKEY_USERS\", "")
+          If ($al.IsInherited -eq $false -And $aclString -NotMatch $repoKeys) {
+              # copy permissions from domain user to new user
+              copyPasteAccess -accessItem $al -user "$env:computername\$newusername" -keyPath $aclString
+              $acl | Set-Acl
+          }
+          # Repository Keys need special permission.
+          If ($aclString -Match $repoKeys) {
+              enable-privilege SeTakeOwnershipPrivilege
+              $originalOwner = getRegKeyOwner -keyPath $aclString
+              "original Owner to the key `"$aclString`" is: `"$originalOwner`""
+              changeRegKeyOwner -keyPath $aclString -user "Administrators"
+              # Give Full Controll To Current Admin
+              If ($al.IsInherited -eq $false) {
+                  giveFullControlToUser -userName "Administrators" -key $aclString
+                  # While Current Admin is Admin, copy permission set from domain user to new user
+                  copyPasteAccess -accessItem $al -user "$env:computername\$newusername" -keyPath $aclString
+                  $acl | Set-Acl
+              }
+              # Track permission changes for later
+              $list += [PSCustomObject]@{
+                  Path           = $aclString
+                  OrigionalOwner = $originalOwner
+                  AdminToRemove  = "Administrators"
+              }
+          }
+      }
+  }
+}
+
+# Reset ACL Inheritance on ...\Repository\Pacakges\ and ...\Repository\Familes\
+$packages = Get-Acl "HKEY_USERS:\$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages"
+$packages.SetAccessRuleProtection($true, $false)
+giveReadToUser -userName "Administrators" -keyPath "$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages"
+$familes = Get-Acl "HKEY_USERS:\$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families"
+$familes.SetAccessRuleProtection($true, $false)
+giveReadToUser -userName "Administrators" -keyPath "$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families"
+
+# revert ownership changes if necessary
+ForEach ($item in $list){
+  $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
+  $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+  $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($item.Path, $permCheck, $regRights)
+  $acl = $key.GetAccessControl()
+  ForEach ($al in $acl.Access) {
+      enable-privilege SeRestorePrivilege
+      changeRegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
+  }
+}
+
+# Unload the Reg Hives
+REG UNLOAD HKU\$newusersid
+REG UNLOAD HKU\$classes
+
+#update uwp fix - do we need to schedule? why does profwiz utilize a service on startup
+Get-AppXpackage -User $domainuser | ForEach-Object {Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml"}
 
 Write-Log -Message:('DONE!!!')
 
