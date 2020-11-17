@@ -49,7 +49,7 @@ if (![System.String]::IsNullOrEmpty($process2)){
 if ((Test-Path 'C:\Windows\Temp\JCADMU') -eq $true){
     remove-item -Path 'C:\windows\Temp\JCADMU' -Force -Recurse
 }
-#Recreate JCADMU folder
+#Recreate JCADMU Folder
 New-Item -ItemType Directory -Path 'C:\windows\Temp\JCADMU' -Force
 #Is agent installed? If so uninstall it
 if (Check_Program_Installed('Jumpcloud')){
