@@ -5744,9 +5744,9 @@ $Acl | Set-Acl -Path $usrhome
 
 #reg permisions
 # Load both the usrClass Hive + NTUser.dat into registry
-REG LOAD HKU\$newusersid "$newuserprofileimagepath\NTUSER.DAT"
+REG LOAD HKU\$newusersid "$olduserprofileimagepath\NTUSER.DAT"
 $classes = $newusersid + "_Classes"
-REG LOAD HKU\$classes "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat"
+REG LOAD HKU\$classes "$olduserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat"
 
 New-PSDrive HKEY_USERS Registry HKEY_USERS
 $HKU = Get-Acl "HKEY_USERS:\$newusersid"
