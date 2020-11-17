@@ -5365,6 +5365,7 @@ Function Start-Migration
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$AcceptEULA=$true,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$LeaveDomain=$false,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$ForceReboot=$false,
+  [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$ConvertProfile=$false,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$AzureADProfile=$false,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$Customxml=$false,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$InstallJCAgent=$false,
@@ -5443,6 +5444,7 @@ Function Start-Migration
       $InstallJCAgent = $inputObject.InstallJCAgent
       $LeaveDomain = $InputObject.LeaveDomain
       $ForceReboot = $InputObject.ForceReboot
+      $ConvertProfile = $inputObject.ConvertProfile
       $netBiosName = $inputObject.NetBiosName
       $Customxml = $inputObject.Customxml
     }
@@ -5458,7 +5460,6 @@ Function Start-Migration
       $netBiosName = GetNetBiosName
       Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + ' NetBiosName is ' + $netBiosName)
     }
-
     #endregion Test checks
 
     # Start Of Console Output
@@ -5488,6 +5489,11 @@ Function Start-Migration
     elseif ($InstallJCAgent -eq $true -and (Check_Program_Installed("Jumpcloud"))) {
       Write-Log -Message:('JumpCloud agent is already installed on the system.')
     }
+
+if ($ConvertProfile -eq $true){
+
+} else {
+
 
     #region User State Migration Tool Install & EULA Check
     If (-not $WmiProduct -and -not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64')))
@@ -5601,6 +5607,8 @@ Function Start-Migration
         Exit;
       }
     #endregion LoadState Step
+
+}
 
     #region Add To Local Users Group
     Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUserName -erroraction silentlycontinue
