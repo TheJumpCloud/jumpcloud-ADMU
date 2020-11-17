@@ -5514,7 +5514,7 @@ $MyPlainTextString = $TempPassword
 $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
 $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
 Start-Process Powershell.exe -Credential $Credential -WorkingDirectory 'C:\windows\System32' -ArgumentList ('-WindowStyle Hidden')
-TASKKILL.exe /FI "USERNAME eq $newusername" /IM
+TASKKILL.exe /FI "USERNAME eq $newusername" 2>&1 | Out-Null
 
 Write-Log -Message:('Setting Registry Entrys')
 
