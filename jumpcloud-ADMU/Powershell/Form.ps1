@@ -163,13 +163,13 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         if ($WmiComputerSystem.PartOfDomain) {
             $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
             $securechannelstatus = Test-ComputerSecureChannel
-            if(![System.String]::IsNullOrEmpty($WmiComputerDomain.DomainName))
+            if([System.String]::IsNullOrEmpty($WmiComputerDomain.DnsForestName) -and $securechannelstatus -eq $false)
             {
                 $DomainName = 'Fix Secure Channel'
                 $NetBiosName = 'Fix Secure Channel'
             } else {
                 $DomainName = [string]$WmiComputerDomain.DnsForestName
-                $NetBiosName = [string]$WmiComputerDomain.DomainName
+                $NetBiosName = [string]$NetBiosName2
             }
         }
         elseif ($WmiComputerSystem.PartOfDomain -eq $false) {
