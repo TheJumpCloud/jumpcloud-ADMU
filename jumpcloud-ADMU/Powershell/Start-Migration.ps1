@@ -1,4 +1,11 @@
 #region Functions
+#username To SID Function
+function Get-SID ([string]$User)
+{
+$objUser = New-Object System.Security.Principal.NTAccount($User)
+$strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
+$strSID.Value
+}
 #Verify Domain Account Function
 Function VerifyAccount
 {
@@ -5491,6 +5498,57 @@ Function Start-Migration
     }
 
 if ($ConvertProfile -eq $true){
+
+#Create New User
+$newusername = $
+$domainuser = 
+net user $newusername $TempPassword /add
+
+#spawn process or build reg entry with sid
+$user = "$env:COMPUTERNAME\$newusername"
+$MyPlainTextString = "Temp123!Temp12"
+$MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
+$Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
+Start-Process Powershell.exe -Credential $Credential -WorkingDirectory 'C:\windows\System32' -ArgumentList ('-WindowStyle Hidden')
+TASKKILL.exe /FI "USERNAME eq $newusername" /IM
+
+#change profileimagepath to not conflict
+$nbtstat = nbtstat -n
+$NetBiosName = ''
+foreach ($line in $nbtStat)
+{
+    if ($line -match '^\s*([^<\s]+)\s*<00>\s*GROUP')
+    {
+        $NetBiosName = $matches[1]
+    }
+}
+
+$newusersid = Get-SID -User $newusername
+$oldusersid = Get-SID -User ($NetBiosName.Trim() + '\' + $domainuser)
+
+$olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $oldusersid) -Name 'ProfileImagePath'
+$newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
+$newfoldername = $newuserprofileimagepath.Split('\',3)[2]
+
+icacls $newuserprofileimagepath /grant administrators:F /T
+takeown /f ($newuserprofileimagepath) /a /r /d y
+Rename-Item -Path $newuserprofileimagepath -NewName ($newfoldername + '.old')
+Remove-Item -Path ($newuserprofileimagepath + '.old') -Force -Recurse
+Rename-Item -Path $olduserprofileimagepath -NewName $newusername
+Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $oldusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $domainuser + '.' + $NetBiosName)
+Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $newusername)
+
+Get-ChildItem -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object {($_.Name -match $newusersid)}
+Get-ChildItem -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object {($_.Name -match $oldusersid)}
+
+#ntfs acls on domain c:\users\ dir
+$usrhome = 'C:\Users\' + $newusername
+$NewSPN_Name = $env:COMPUTERNAME + '\' + $newusername
+$Acl = (Get-Item $usrhome).GetAccessControl('Access')
+$Ar = New-Object system.security.accesscontrol.filesystemaccessrule($NewSPN_Name,"FullControl","ContainerInherit,ObjectInherit","None","Allow")
+$Acl.SetAccessRule($Ar)
+$Acl | Set-Acl -Path $usrhome
+
 
 } else {
 
