@@ -5383,7 +5383,7 @@ Function Start-Migration
   {
     If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))){Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent"}else{}
     # Define misc static variables
-    $adkSetupLink = 'https://go.microsoft.com/fwlink/?linkid=2086042'
+    $adkSetupLink = 'https://go.microsoft.com/fwlink/?linkid=2120254'
     $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
     $usmtTempPath = 'C:\Windows\Temp\JCADMU\USMT\'
     $jcAdmuLogFile = 'C:\Windows\Temp\jcAdmu.log'
@@ -5430,10 +5430,10 @@ Function Start-Migration
       Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
     }
     if (!(Test-path $jcAdmuTempPath)) {
-      new-item -ItemType Directory -Force -Path $jcAdmuTempPath
+      new-item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
     }
     if (!(Test-path $usmtTempPath)){
-      new-item -ItemType Directory -Force -Path $usmtTempPath
+      new-item -ItemType Directory -Force -Path $usmtTempPath 2>&1 | Write-Verbose
     }
   }
   Process
@@ -5470,8 +5470,12 @@ Function Start-Migration
     #endregion Test checks
 
     # Start Of Console Output
-    Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" going to be duplicated and converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+    if ($ConvertProfile -eq $true){
+    Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+    } else {
+    Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
 
+    }
     #region SilentAgentInstall
     if ($InstallJCAgent -eq $true -and (!(Check_Program_Installed("Jumpcloud"))))
     {
@@ -5504,7 +5508,7 @@ Write-Log -Message:('Creating New user')
 #Create New User
 $newusername = $JumpCloudUserName
 $domainuser =$DomainUserName
-net user $newusername $TempPassword /add
+net user $newusername $TempPassword /add 2>&1 | Write-Verbose
 
 Write-Log -Message:('Spawning New Process')
 
@@ -5514,7 +5518,7 @@ $MyPlainTextString = $TempPassword
 $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
 $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
 Start-Process Powershell.exe -Credential $Credential -WorkingDirectory 'C:\windows\System32' -ArgumentList ('-WindowStyle Hidden')
-TASKKILL.exe /FI "USERNAME eq $newusername" 2>&1 | Out-Null
+TASKKILL.exe /FI "USERNAME eq $newusername" 2>&1 | Write-Verbose
 
 Write-Log -Message:('Setting Registry Entrys')
 
@@ -5536,8 +5540,8 @@ $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsof
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
 $newfoldername = $newuserprofileimagepath.Split('\',3)[2]
 
-icacls $newuserprofileimagepath /grant administrators:F /T 2>&1 | Out-Null
-takeown /f ($newuserprofileimagepath) /a /r /d y 2>&1 | Out-Null
+icacls $newuserprofileimagepath /grant administrators:F /T 2>&1 | Write-Verbose
+takeown /f ($newuserprofileimagepath) /a /r /d y 2>&1 | Write-Verbose
 Rename-Item -Path $newuserprofileimagepath -NewName ($newfoldername + '.old')
 Remove-Item -Path ($newuserprofileimagepath + '.old') -Force -Recurse
 Rename-Item -Path $olduserprofileimagepath -NewName $newusername
