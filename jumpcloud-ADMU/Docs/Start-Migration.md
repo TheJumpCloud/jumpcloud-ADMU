@@ -15,8 +15,9 @@ Starts the JumpCloud Active Directory Migration process.
 ### cmd
 ```
 Start-Migration -JumpCloudUserName <String> -DomainUserName <String> -TempPassword <String>
- [-AcceptEULA <Boolean>] [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-AzureADProfile <Boolean>]
- [-Customxml <Boolean>] [-InstallJCAgent <Boolean>] [-JumpCloudConnectKey <String>] [<CommonParameters>]
+ [-AcceptEULA <Boolean>] [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-ConvertProfile <Boolean>]
+ [-AzureADProfile <Boolean>] [-Customxml <Boolean>] [-InstallJCAgent <Boolean>] [-JumpCloudConnectKey <String>]
+ [<CommonParameters>]
 ```
 
 ### form
@@ -211,6 +212,21 @@ An PSObject can be passed to the function with the required values for the migra
 ```yaml
 Type: System.Object
 Parameter Sets: form
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ConvertProfile
+{{ Fill ConvertProfile Description }}
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
 Aliases:
 
 Required: False
