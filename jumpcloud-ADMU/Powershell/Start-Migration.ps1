@@ -1,5 +1,6 @@
 #region Functions
-function enable-privilege {
+function enable-privilege
+{
   param(
     ## The privilege to adjust. This set is taken from
     ## http://msdn.microsoft.com/en-us/library/bb530716(VS.85).aspx
@@ -78,7 +79,8 @@ function enable-privilege {
   $type[0]::EnablePrivilege($processHandle, $Privilege, $Disable)
 }
 
-function getRegKeyOwner([string]$keyPath) {
+function getRegKeyOwner([string]$keyPath)
+{
   $regRights = [System.Security.AccessControl.RegistryRights]::ReadPermissions
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $Key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath, $permCheck, $regRights)
@@ -88,7 +90,18 @@ function getRegKeyOwner([string]$keyPath) {
   return $owner
 }
 
-function changeRegKeyOwner([string]$keyPath, [System.Security.Principal.SecurityIdentifier]$user) {
+
+# function setValueToKey([string]$keyPath, [string]$name, [System.Object]$value, [Microsoft.Win32.RegistryValueKind]$regValueKind){
+#   $regRights = [System.Security.AccessControl.RegistryRights]::SetValue
+#   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+#   $Key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath, $permCheck, $regRights)
+#   "Setting value with properties [name:$name, value:$value, value type:$regValueKind]"
+#   $Key.SetValue($name, $value, $regValueKind)
+#   $key.Close()
+# }
+
+function changeRegKeyOwner([string]$keyPath, [System.Security.Principal.SecurityIdentifier]$user)
+{
   try {
     $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
     $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
@@ -96,7 +109,7 @@ function changeRegKeyOwner([string]$keyPath, [System.Security.Principal.Security
     # You must get a blank acl for the key b/c you do not currently have access
     $acl = $key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::None)
 
-    # "Changing owner of Registry key: USERS\$keyPath to `"$user`""
+    "Changing owner of Registry key: USERS\$keyPath to `"$user`""
     $acl.SetOwner($user)
     $key.SetAccessControl($acl)
   }
@@ -108,8 +121,9 @@ function changeRegKeyOwner([string]$keyPath, [System.Security.Principal.Security
   $key.Close()
 }
 
-function giveFullControlToUser([System.Security.Principal.SecurityIdentifier]$userName, [string]$keyPath) {
-  # "giving full access to $userName for key $keyPath"
+function giveFullControlToUser([System.Security.Principal.SecurityIdentifier]$userName, [string]$keyPath)
+{
+  "giving full access to $userName for key $keyPath"
   $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath, $permCheck, $regRights)
@@ -120,8 +134,9 @@ function giveFullControlToUser([System.Security.Principal.SecurityIdentifier]$us
   $key.SetAccessControl($acl)
 }
 
-function giveReadToUser([System.Security.Principal.SecurityIdentifier]$userName, [string]$keyPath) {
-  # "giving read access to $userName for key $keyPath"
+function giveReadToUser([System.Security.Principal.SecurityIdentifier]$userName, [string]$keyPath)
+{
+  "giving read access to $userName for key $keyPath"
   $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath, $permCheck, $regRights)
@@ -132,17 +147,18 @@ function giveReadToUser([System.Security.Principal.SecurityIdentifier]$userName,
   $key.SetAccessControl($acl)
 }
 
-function getAdminUser {
+function getAdminUser
+{
   $windowsKey = "SOFTWARE\Microsoft\Windows"
   $regRights = [System.Security.AccessControl.RegistryRights]::ReadPermissions
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $Key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($windowsKey, $permCheck, $regRights)
   $acl = $Key.GetAccessControl([System.Security.AccessControl.AccessControlSections]::Owner)
   $owner = $acl.GetOwner([type]::GetType([System.Security.Principal.SecurityIdentifier]))
-  # Return sid of owner
   return $owner.Value
 }
-function copyPasteAccess {
+function copyPasteAccess
+{
   [CmdletBinding()]
   param (
     [Parameter()]
@@ -158,16 +174,14 @@ function copyPasteAccess {
   $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath, $permCheck, $regRights)
-  # Get Access Variables from passed in Acl.Access item
+
   $access = [System.Security.AccessControl.RegistryRights]$accessItem.RegistryRights
   $type = [System.Security.AccessControl.AccessControlType]$accessItem.AccessControlType
   $inheritance = [System.Security.AccessControl.InheritanceFlags]$accessItem.InheritanceFlags
   $propagation = [System.Security.AccessControl.PropagationFlags]$accessItem.PropagationFlags
   $acl = $key.GetAccessControl()
   $rule = New-Object System.Security.AccessControl.RegistryAccessRule($user, $access, $inheritance, $propagation, $type)
-  # Add new Acl.Access rule to Acl so that passed in user now has access
   $acl.AddAccessRule($rule)
-  # Remove the old user access
   $acl.RemoveAccessRule($accessItem) | Out-Null
   $key.SetAccessControl($acl)
 }
@@ -5706,7 +5720,7 @@ foreach ($line in $nbtStat)
 }
 
 $newusersid = Get-SID -User $newusername
-$oldusersid = $domainuser
+$oldusersid = Get-SID -User $domainuser
 
 $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $oldusersid) -Name 'ProfileImagePath'
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
@@ -5719,7 +5733,8 @@ Remove-Item -Path ($newuserprofileimagepath + '.old') -Force -Recurse
 Rename-Item -Path $olduserprofileimagepath -NewName $newusername
 Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $oldusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $domainuser + '.' + $NetBiosName)
 Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $newusername)
-
+Write-Log -Message:('new' + $newuserprofileimagepath)
+Write-Log -Message:('old' + $olduserprofileimagepath)
 #Get-ChildItem -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object {($_.Name -match $newusersid)}
 #Get-ChildItem -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object {($_.Name -match $oldusersid)}
 
@@ -5733,10 +5748,7 @@ $Ar = New-Object system.security.accesscontrol.filesystemaccessrule($NewSPN_Name
 $Acl.SetAccessRule($Ar)
 $Acl | Set-Acl -Path $usrhome
 
-# Registry Permisions
-# Make a backup of the old user hives
-Copy-Item -Path "$newuserprofileimagepath\NTUSER.DAT" -Destination "$newuserprofileimagepath\NTUSER.DAT.BAK"
-Copy-Item -Path "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
+#reg permisions
 # Load both the usrClass Hive + NTUser.dat into registry
 REG LOAD HKU\$newusersid "$newuserprofileimagepath\NTUSER.DAT"
 $classes = $newusersid + "_Classes"
@@ -5762,59 +5774,14 @@ ForEach ($rootKey in $HKUKeys.Path){
 }
 
 # Track the number of ownership changes in registry to revert
-$changeList = @()
-# AppModel Repository Keys need sepecial permissions, regex patter to search
+$list = @()
 $repoKeys = "\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository"
-# Get the Admin Sid
 $adminsid = getAdminUser
-
-# Check each key to see if we can read them, set owner to admin if not. Until
-# no errors in while loop remain, set permissionsChecked true. Track changes if
-# permission changes are made
-$permssionsChecked = $false
-while (!$permssionsChecked) {
-  try {
-      $registryKeys = Get-ChildItem -Recurse $HKUKeys.Path -ErrorAction Stop
-      $permssionsChecked = $true
-  }
-  catch {
-    # If we cant get-childItem on a key we dont have access.
-    write-warning $_.Exception.Message
-    $aclString = $_.CategoryInfo.TargetName
-    $aclString = $aclString.replace("HKEY_USERS\", "")
-    # Take ownership
-    Write-Log "Grant user access to take ownership operations:"
-    enable-privilege SeTakeOwnershipPrivilege
-    # If we can't read the orgional owner, set as user
-    try {
-      $originalOwner = getRegKeyOwner -keyPath $aclString
-    }
-    catch{
-      $originalOwner = $newusersid
-    }
-    changeRegKeyOwner -keyPath $aclString -user "$adminsid"
-    giveFullControlToUser -userName "$adminsid" -key $aclString
-    # Track changes
-    $changeList += [PSCustomObject]@{
-      Path           = $aclString
-      OrigionalOwner = $originalOwner
-      AdminToRemove  = "$adminsid"
-    }
-  }
-}
-# Foreach registryKeys, search for $oldusersid permissions, replace w/
-# newusersid and remove oldusersid permssions. Track changes where we grant
-# admin ownership/ permissions on key.
-Write-Log "Grant user access to take ownership operations:"
-enable-privilege SeTakeOwnershipPrivilege
-$registryKeys | ForEach-object {
+Get-ChildItem -Recurse $HKUKeys.Path | ForEach-object {
   # write-host $_.Name
   $string = $_.Name
-  # $string = $string.Insert(10, ':')
-  $string = $string.Replace("HKEY_USERS\", "HKEY_USERS:\")
-  # Select parent item since we traverse each key anyways.
-  # resolves issue where wildcards are included in key names
-  $acl = Get-Acl $string | Select-Object -First 1
+  $string = $string.Insert(10, ':')
+  $acl = Get-Acl $string
   ForEach ($al in $acl.Access) {
     if ($al.IdentityReference -eq "$oldusersid") {
       $aclString = $acl.path
@@ -5826,8 +5793,9 @@ $registryKeys | ForEach-object {
       }
       # Repository Keys need special permission.
       If ($aclString -Match $repoKeys) {
+        enable-privilege SeTakeOwnershipPrivilege
         $originalOwner = getRegKeyOwner -keyPath $aclString
-        # "original Owner to the key `"$aclString`" is: `"$originalOwner`""
+        "original Owner to the key `"$aclString`" is: `"$originalOwner`""
         changeRegKeyOwner -keyPath $aclString -user "$adminsid"
         # Give Full Controll To Current Admin
         If ($al.IsInherited -eq $false) {
@@ -5837,7 +5805,7 @@ $registryKeys | ForEach-object {
           $acl | Set-Acl
         }
         # Track permission changes for later
-        $changeList += [PSCustomObject]@{
+        $list += [PSCustomObject]@{
           Path           = $aclString
           OrigionalOwner = $originalOwner
           AdminToRemove  = "$adminsid"
@@ -5855,16 +5823,14 @@ $familes = Get-Acl "HKEY_USERS:\$($newusersid)_Classes\Local Settings\Software\M
 $familes.SetAccessRuleProtection($true, $false)
 giveReadToUser -userName "$adminsid" -keyPath "$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families"
 
-# Revert ownership on tracked items in changeList to origional owner & access
-# Required to perform restore operations
-Write-Log "Grant user access to take perform restore operations:"
-enable-privilege SeRestorePrivilege
-ForEach ($item in $changeList){
+# revert ownership changes if necessary
+ForEach ($item in $list) {
   $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($item.Path, $permCheck, $regRights)
   $acl = $key.GetAccessControl()
   ForEach ($al in $acl.Access) {
+    enable-privilege SeRestorePrivilege
     changeRegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
   }
 }
@@ -5875,8 +5841,9 @@ REG UNLOAD HKU\$classes
 
 Write-Log -Message:('Updating UWP Apps for new user')
 #update uwp fix - do we need to schedule? why does profwiz utilize a service on startup
-Get-AppXpackage -User $domainuser | ForEach-Object {Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml"}
 
+$list = Get-AppXpackage -user "S-1-5-21-156575111-3938707022-2951340204-1106" | Select-Object InstallLocation
+$list | Export-CSV $jcAdmuTempPath\appx_installs.csv
 Write-Log -Message:('Profile Conversion Completed')
 
 } else {
