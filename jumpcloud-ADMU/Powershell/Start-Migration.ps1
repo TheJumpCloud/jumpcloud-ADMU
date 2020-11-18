@@ -1,5 +1,6 @@
 #region Functions
-function enable-privilege {
+function enable-privilege
+{
   param(
     ## The privilege to adjust. This set is taken from
     ## http://msdn.microsoft.com/en-us/library/bb530716(VS.85).aspx
@@ -78,7 +79,8 @@ function enable-privilege {
   $type[0]::EnablePrivilege($processHandle, $Privilege, $Disable)
 }
 
-function getRegKeyOwner([string]$keyPath) {
+function getRegKeyOwner([string]$keyPath)
+{
   $regRights = [System.Security.AccessControl.RegistryRights]::ReadPermissions
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $Key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath, $permCheck, $regRights)
@@ -89,7 +91,7 @@ function getRegKeyOwner([string]$keyPath) {
 }
 
 
-# function setValueToKey([string]$keyPath, [string]$name, [System.Object]$value, [Microsoft.Win32.RegistryValueKind]$regValueKind) {
+# function setValueToKey([string]$keyPath, [string]$name, [System.Object]$value, [Microsoft.Win32.RegistryValueKind]$regValueKind){
 #   $regRights = [System.Security.AccessControl.RegistryRights]::SetValue
 #   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
 #   $Key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath, $permCheck, $regRights)
@@ -98,7 +100,8 @@ function getRegKeyOwner([string]$keyPath) {
 #   $key.Close()
 # }
 
-function changeRegKeyOwner([string]$keyPath, [System.Security.Principal.SecurityIdentifier]$user) {
+function changeRegKeyOwner([string]$keyPath, [System.Security.Principal.SecurityIdentifier]$user)
+{
   try {
     $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
     $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
@@ -118,7 +121,8 @@ function changeRegKeyOwner([string]$keyPath, [System.Security.Principal.Security
   $key.Close()
 }
 
-function giveFullControlToUser([System.Security.Principal.SecurityIdentifier]$userName, [string]$keyPath) {
+function giveFullControlToUser([System.Security.Principal.SecurityIdentifier]$userName, [string]$keyPath)
+{
   "giving full access to $userName for key $keyPath"
   $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
@@ -130,7 +134,8 @@ function giveFullControlToUser([System.Security.Principal.SecurityIdentifier]$us
   $key.SetAccessControl($acl)
 }
 
-function giveReadToUser([System.Security.Principal.SecurityIdentifier]$userName, [string]$keyPath) {
+function giveReadToUser([System.Security.Principal.SecurityIdentifier]$userName, [string]$keyPath)
+{
   "giving read access to $userName for key $keyPath"
   $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
@@ -142,7 +147,8 @@ function giveReadToUser([System.Security.Principal.SecurityIdentifier]$userName,
   $key.SetAccessControl($acl)
 }
 
-function getAdminUser {
+function getAdminUser
+{
   $windowsKey = "SOFTWARE\Microsoft\Windows"
   $regRights = [System.Security.AccessControl.RegistryRights]::ReadPermissions
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
@@ -151,7 +157,8 @@ function getAdminUser {
   $owner = $acl.GetOwner([type]::GetType([System.Security.Principal.SecurityIdentifier]))
   return $owner.Value
 }
-function copyPasteAccess {
+function copyPasteAccess
+{
   [CmdletBinding()]
   param (
     [Parameter()]
@@ -180,15 +187,13 @@ function copyPasteAccess {
 }
 
 #username To SID Function
-function Get-SID ([string]$User)
-{
+function Get-SID ([string]$User){
 $objUser = New-Object System.Security.Principal.NTAccount($User)
 $strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
 $strSID.Value
 }
 #Verify Domain Account Function
-Function VerifyAccount
-{
+Function VerifyAccount{
   Param (
     [Parameter(Mandatory = $true)][System.String]$userName, [System.String]$domain = $null
   )
@@ -322,10 +327,10 @@ Function Remove-ItemIfExists
     }
   }
 }
+
 #Download $Link to $Path
 Function DownloadLink($Link, $Path)
 {
-
   $WebClient = New-Object -TypeName:('System.Net.WebClient')
   $Global:IsDownloaded = $false
   $SplatArgs = @{ InputObject = $WebClient
@@ -342,6 +347,7 @@ Function DownloadLink($Link, $Path)
   $WebClient.Dispose()
 
 }
+
 #Check if program is on system
 function Check_Program_Installed($programName)
 {
@@ -356,8 +362,8 @@ function Check_Program_Installed($programName)
     return $false
   }
 }
-#Check reg for program uninstallstring and silently uninstall
 
+#Check reg for program uninstallstring and silently uninstall
 function Uninstall_Program($programName)
 {
   $Ver = Get-ChildItem -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall, HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall |
@@ -384,7 +390,6 @@ function Uninstall_Program($programName)
   }
 }
 
-
 #Start process and wait then close after 5mins
 Function Start-NewProcess([string]$pfile, [string]$arguments, [int32]$Timeout = 300000)
 {
@@ -398,7 +403,8 @@ Function Start-NewProcess([string]$pfile, [string]$arguments, [int32]$Timeout = 
     Get-Process | Where-Object { $_.Name -like "adksetup*" } | Stop-Process
   }
 }
-# Validation
+
+#Validation functions
 Function Test-IsNotEmpty ([System.String] $field)
 {
   If (([System.String]::IsNullOrEmpty($field)))
@@ -5477,7 +5483,6 @@ $usmtmiguser = [xml] @"
 
 </migration>
 "@
-
 #endregion miguser xml
 
 #region custom xml
@@ -5534,7 +5539,6 @@ $usmtcustom = [xml] @"
 
 	</migration>
 "@
-
 #endregion custom xml
 
 Function Start-Migration
@@ -5594,10 +5598,12 @@ Function Start-Migration
     $AGENT_UNINSTALLER_NAME = "unins000.exe"
     $EVENT_LOGGER_KEY_NAME = "hklm:\SYSTEM\CurrentControlSet\services\eventlog\Application\JumpCloud-agent"
     $INSTALLER_BINARY_NAMES = "JumpCloudInstaller.exe,JumpCloudInstaller.tmp"
+
     # Start script
     Write-Log -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
     Write-Log -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
     Write-Log -Message:('Gathering system & profile information')
+if($ConvertProfile -eq $false){
     $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
     $WmiProduct = Get-WmiObject -Class:('Win32_Product') | Where-Object -FilterScript { $_.Name -like "User State Migration Tool*" }
     $localComputerName = $WmiComputerSystem.Name
@@ -5607,12 +5613,14 @@ Function Start-Migration
       4 { $UserStateMigrationToolx86Path }
       Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
     }
-    if (!(Test-path $jcAdmuTempPath)) {
-      new-item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
-    }
-    if (!(Test-path $usmtTempPath)){
-      new-item -ItemType Directory -Force -Path $usmtTempPath 2>&1 | Write-Verbose
-    }
+} elseif ($ConvertProfile -eq $true){
+  if (!(Test-path $jcAdmuTempPath)) {
+    new-item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
+  }
+  if (!(Test-path $usmtTempPath)){
+    new-item -ItemType Directory -Force -Path $usmtTempPath 2>&1 | Write-Verbose
+  }
+}
   }
   Process
   {
@@ -5831,13 +5839,13 @@ ForEach ($item in $list) {
 REG UNLOAD HKU\$newusersid
 REG UNLOAD HKU\$classes
 
+Write-Log -Message:('Updating UWP Apps for new user')
 #update uwp fix - do we need to schedule? why does profwiz utilize a service on startup
 Get-AppXpackage -User $domainuser | ForEach-Object {Add-AppxPackage -DisableDevelopmentMode -Register "$($_.InstallLocation)\AppXManifest.xml"}
 
-Write-Log -Message:('DONE!!!')
+Write-Log -Message:('Profile Conversion Completed')
 
 } else {
-
 
     #region User State Migration Tool Install & EULA Check
     If (-not $WmiProduct -and -not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64')))
