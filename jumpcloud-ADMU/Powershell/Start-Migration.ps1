@@ -5719,8 +5719,7 @@ Remove-Item -Path ($newuserprofileimagepath + '.old') -Force -Recurse
 Rename-Item -Path $olduserprofileimagepath -NewName $newusername
 Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $oldusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $domainuser + '.' + $NetBiosName)
 Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $newusername)
-Write-Log -Message:('new' + $newuserprofileimagepath)
-Write-Log -Message:('old' + $olduserprofileimagepath)
+
 #Get-ChildItem -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object {($_.Name -match $newusersid)}
 #Get-ChildItem -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object {($_.Name -match $oldusersid)}
 
@@ -5784,6 +5783,7 @@ while (!$permssionsChecked) {
     $aclString = $_.CategoryInfo.TargetName
     $aclString = $aclString.replace("HKEY_USERS\", "")
     # Take ownership
+    Write-Log "Grant user access to take ownership operations:"
     enable-privilege SeTakeOwnershipPrivilege
     # If we can't read the orgional owner, set as user
     try {
@@ -5803,8 +5803,10 @@ while (!$permssionsChecked) {
   }
 }
 # Foreach registryKeys, search for $oldusersid permissions, replace w/
-# newusersid and remove oldusersid permssions. Track changes where we take grand
+# newusersid and remove oldusersid permssions. Track changes where we grant
 # admin ownership/ permissions on key.
+Write-Log "Grant user access to take ownership operations:"
+enable-privilege SeTakeOwnershipPrivilege
 $registryKeys | ForEach-object {
   # write-host $_.Name
   $string = $_.Name
@@ -5824,7 +5826,6 @@ $registryKeys | ForEach-object {
       }
       # Repository Keys need special permission.
       If ($aclString -Match $repoKeys) {
-        enable-privilege SeTakeOwnershipPrivilege
         $originalOwner = getRegKeyOwner -keyPath $aclString
         # "original Owner to the key `"$aclString`" is: `"$originalOwner`""
         changeRegKeyOwner -keyPath $aclString -user "$adminsid"
@@ -5855,13 +5856,15 @@ $familes.SetAccessRuleProtection($true, $false)
 giveReadToUser -userName "$adminsid" -keyPath "$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families"
 
 # Revert ownership on tracked items in changeList to origional owner & access
+# Required to perform restore operations
+Write-Log "Grant user access to take perform restore operations:"
+enable-privilege SeRestorePrivilege
 ForEach ($item in $changeList){
   $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($item.Path, $permCheck, $regRights)
   $acl = $key.GetAccessControl()
   ForEach ($al in $acl.Access) {
-    enable-privilege SeRestorePrivilege
     changeRegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
   }
 }
