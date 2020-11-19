@@ -188,6 +188,21 @@ $objUser = New-Object System.Security.Principal.NTAccount($User)
 $strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
 $strSID.Value
 }
+
+#return sid of local user
+function GetSIDFromLocalUser
+{
+  [CmdletBinding()]
+  param
+  (
+      [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+      $LocalUserName
+  )
+  process
+  {
+  return (get-localuser | Where-Object {($_.Name -EQ $LocalUserName)} | Select-Object SID)
+  }
+}
 #Verify Domain Account Function
 Function VerifyAccount{
   Param (
@@ -5545,7 +5560,7 @@ Function Start-Migration
   [ValidateScript({
          If (Test-Localusername $_){Throw [System.Management.Automation.ValidationMetadataException] "The username '${_}' is already in use."}else{$True}
   })][string]$JumpCloudUserName,
-  [Parameter(ParameterSetName='cmd',Mandatory=$true)][string]$DomainUserName,
+  [Parameter(ParameterSetName='cmd',Mandatory=$true)][string]$SelectedUserName,
   [Parameter(ParameterSetName='cmd',Mandatory=$true)][ValidateNotNullOrEmpty()][string]$TempPassword,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$AcceptEULA=$true,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$LeaveDomain=$false,
@@ -5560,7 +5575,48 @@ Function Start-Migration
   Begin
   {
     If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))){Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent"}else{}
+
+    # Start script
+    Write-Log -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
+    Write-Log -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
+    Write-Log -Message:('Gathering system & profile information')
+
+    $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+    $WmiProduct = Get-WmiObject -Class:('Win32_Product') | Where-Object -FilterScript { $_.Name -like "User State Migration Tool*" }
+    $UserStateMigrationToolVersionPath = Switch ([System.IntPtr]::Size) {
+      8 { $UserStateMigrationToolx64Path }
+      4 { $UserStateMigrationToolx86Path }
+      Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
+    }
+
+    Write-Log -Message:('Creating JCADMU Temporary Path in ' + $jcAdmuTempPath)
+    if (!(Test-path $jcAdmuTempPath)) {
+      new-item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
+    }
+    if (!(Test-path $usmtTempPath)) {
+      new-item -ItemType Directory -Force -Path $usmtTempPath 2>&1 | Write-Verbose
+    }
+
+  # Conditional ParameterSet logic
+  If ($PSCmdlet.ParameterSetName -eq "form")
+  {
+    $SelectedUserName = $inputObject.DomainUserName
+    $JumpCloudUserName = $inputObject.JumpCloudUserName
+    $TempPassword = $inputObject.TempPassword
+    if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
+      $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
+    }
+    $AcceptEULA = $inputObject.AcceptEula
+    $InstallJCAgent = $inputObject.InstallJCAgent
+    $LeaveDomain = $InputObject.LeaveDomain
+    $ForceReboot = $InputObject.ForceReboot
+    $ConvertProfile = $inputObject.ConvertProfile
+    $netBiosName = $inputObject.NetBiosName
+    $Customxml = $inputObject.Customxml
+  }
+
     # Define misc static variables
+    $localComputerName = $WmiComputerSystem.Name
     $adkSetupLink = 'https://go.microsoft.com/fwlink/?linkid=2120254'
     $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
     $usmtTempPath = 'C:\Windows\Temp\JCADMU\USMT\'
@@ -5579,10 +5635,13 @@ Function Start-Migration
     $msvc2013x64Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x64.exe'
     $msvc2013x86Install = "$usmtTempPath$msvc2013x86File /install /quiet /norestart"
     $msvc2013x64Install = "$usmtTempPath$msvc2013x64File /install /quiet /norestart"
-    $CommandScanStateTemplate = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
-    $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
-    $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
-    $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+    $CommandScanStateTemplate = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
+    $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+    $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
+    $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+    $SelectedUserSID =  GetSIDFromLocalUser -LocalUserName $SelectedUserName
+    $NewUserSID = Get-SID -User $JumpCloudUserName
+
 
     # JumpCloud Agent Installation Variables
     $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
@@ -5594,48 +5653,6 @@ Function Start-Migration
     $AGENT_UNINSTALLER_NAME = "unins000.exe"
     $EVENT_LOGGER_KEY_NAME = "hklm:\SYSTEM\CurrentControlSet\services\eventlog\Application\JumpCloud-agent"
     $INSTALLER_BINARY_NAMES = "JumpCloudInstaller.exe,JumpCloudInstaller.tmp"
-
-    # Start script
-    Write-Log -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
-    Write-Log -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
-    Write-Log -Message:('Gathering system & profile information')
-if($ConvertProfile -eq $false){
-    $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-    $WmiProduct = Get-WmiObject -Class:('Win32_Product') | Where-Object -FilterScript { $_.Name -like "User State Migration Tool*" }
-    $localComputerName = $WmiComputerSystem.Name
-    $UserStateMigrationToolVersionPath = Switch ([System.IntPtr]::Size)
-    {
-      8 { $UserStateMigrationToolx64Path }
-      4 { $UserStateMigrationToolx86Path }
-      Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
-    }
-}
-if (!(Test-path $jcAdmuTempPath)) {
-  new-item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
-}
-if (!(Test-path $usmtTempPath)){
-  new-item -ItemType Directory -Force -Path $usmtTempPath 2>&1 | Write-Verbose
-}
-}
-Process
-{
-  # Conditional ParameterSet logic
-  If ($PSCmdlet.ParameterSetName -eq "form")
-  {
-    $DomainUserName = $inputObject.DomainUserName
-    $JumpCloudUserName = $inputObject.JumpCloudUserName
-    $TempPassword = $inputObject.TempPassword
-    if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
-      $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
-    }
-    $AcceptEULA = $inputObject.AcceptEula
-    $InstallJCAgent = $inputObject.InstallJCAgent
-    $LeaveDomain = $InputObject.LeaveDomain
-    $ForceReboot = $InputObject.ForceReboot
-    $ConvertProfile = $inputObject.ConvertProfile
-    $netBiosName = $inputObject.NetBiosName
-    $Customxml = $inputObject.Customxml
-  }
 
   # Test checks
   if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD') {
@@ -5650,11 +5667,14 @@ Process
   }
   #endregion Test checks
 
+}
+Process
+{
   # Start Of Console Output
   if ($ConvertProfile -eq $true){
-  Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+  Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
   } else {
-  Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+  Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $SelectedUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
 
   }
   #region SilentAgentInstall
@@ -5665,7 +5685,7 @@ Process
         Remove-ItemIfExists -Path 'C:\Program Files\Jumpcloud\' -Recurse
     }
     # Agent Installer
-    $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($usmtTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
+    DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($usmtTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
   start-sleep -seconds 20
   if ((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=1'){
     Write-Log -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
@@ -5684,22 +5704,20 @@ Process
 
 if ($ConvertProfile -eq $true){
 
-Write-Log -Message:('Creating New user')
+Write-Log -Message:('Creating New Local User' + $localComputerName + '\' + $JumpCloudUserName)
 
 #Create New User
-$newusername = $JumpCloudUserName
-$domainuser =$DomainUserName
-net user $newusername $TempPassword /add 2>&1 | Write-Verbose
+net user $JumpCloudUserName $TempPassword /add 2>&1 | Write-Verbose
 
 Write-Log -Message:('Spawning New Process')
 
 #spawn process or build reg entry with sid
-$user = "$env:COMPUTERNAME\$newusername"
+$user = "$env:COMPUTERNAME\$JumpCloudUserName"
 $MyPlainTextString = $TempPassword
 $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
 $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
 Start-Process Powershell.exe -Credential $Credential -WorkingDirectory 'C:\windows\System32' -ArgumentList ('-WindowStyle Hidden')
-TASKKILL.exe /FI "USERNAME eq $newusername" 2>&1 | Write-Verbose
+TASKKILL.exe /FI "USERNAME eq $JumpCloudUserName" 2>&1 | Write-Verbose
 
 Write-Log -Message:('Setting Registry Entrys')
 
@@ -5714,10 +5732,7 @@ foreach ($line in $nbtStat)
   }
 }
 
-$newusersid = Get-SID -User $newusername
-$oldusersid = Get-SID -User $domainuser
-
-$olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $oldusersid) -Name 'ProfileImagePath'
+$olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
 $newfoldername = $newuserprofileimagepath.Split('\',3)[2]
 
@@ -5725,19 +5740,19 @@ icacls $newuserprofileimagepath /grant administrators:F /T 2>&1 | Write-Verbose
 takeown /f ($newuserprofileimagepath) /a /r /d y 2>&1 | Write-Verbose
 Rename-Item -Path $newuserprofileimagepath -NewName ($newfoldername + '.old')
 Remove-Item -Path ($newuserprofileimagepath + '.old') -Force -Recurse
-Rename-Item -Path $olduserprofileimagepath -NewName $newusername
-Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $oldusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $domainuser + '.' + $NetBiosName)
-Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $newusername)
+Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
+Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ('C:\Users\' + $SelectedUserName + '.' + $NetBiosName)
+Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $JumpCloudUserName)
 Write-Log -Message:('new' + $newuserprofileimagepath)
 Write-Log -Message:('old' + $olduserprofileimagepath)
 #Get-ChildItem -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object {($_.Name -match $newusersid)}
-#Get-ChildItem -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object {($_.Name -match $oldusersid)}
+#Get-ChildItem -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object {($_.Name -match $SelectedUserSID)}
 
 Write-Log -Message:('ntfs acls on domain c:\users\ dir')
 
 #ntfs acls on domain c:\users\ dir
-$usrhome = 'C:\Users\' + $newusername
-$NewSPN_Name = $env:COMPUTERNAME + '\' + $newusername
+$usrhome = 'C:\Users\' + $JumpCloudUserName
+$NewSPN_Name = $env:COMPUTERNAME + '\' + $JumpCloudUserName
 $Acl = (Get-Item $usrhome).GetAccessControl('Access')
 $Ar = New-Object system.security.accesscontrol.filesystemaccessrule($NewSPN_Name,"FullControl","ContainerInherit,ObjectInherit","None","Allow")
 $Acl.SetAccessRule($Ar)
@@ -5762,7 +5777,7 @@ ForEach ($rootKey in $HKUKeys.Path){
 Write-Host $rootKey
 $acl = Get-Acl $rootKey
 foreach ($al in $acl.Access) {
-  if ($al.IdentityReference -eq "$oldusersid") {
+  if ($al.IdentityReference -eq "$SelectedUserSID") {
     Write-Host "$($acl.PSChildName)"
     # $al.getType()
     copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $acl.PSChildName
@@ -5812,7 +5827,7 @@ catch {
   }
 }
 }
-# Foreach registryKeys, search for $oldusersid permissions, replace w/
+# Foreach registryKeys, search for $SelectedUserSID permissions, replace w/
 # newusersid and remove oldusersid permssions. Track changes where we grant
 # admin ownership/ permissions on key.
 Write-Host "Grant user access to take ownership operations:"
@@ -5826,7 +5841,7 @@ $string = $string.Replace("HKEY_USERS\", "HKEY_USERS:\")
 # resolves issue where wildcards are included in key names
 $acl = Get-Acl $string | Select-Object -First 1
 ForEach ($al in $acl.Access) {
-  if ($al.IdentityReference -eq "$oldusersid") {
+  if ($al.IdentityReference -eq "$SelectedUserSID") {
     $aclString = $acl.path
     $aclString = $aclString.replace("Microsoft.PowerShell.Core\Registry::HKEY_USERS\", "")
     If ($al.IsInherited -eq $false -And $aclString -NotMatch $repoKeys) {
@@ -5886,7 +5901,7 @@ REG UNLOAD HKU\$classes
 Write-Log -Message:('Updating UWP Apps for new user')
 #update uwp fix - do we need to schedule? why does profwiz utilize a service on startup
 
-$list = Get-AppXpackage -user $oldusersid | Select-Object InstallLocation
+$list = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
 $list | Export-CSV $jcAdmuTempPath\appx_installs.csv
 Write-Log -Message:('Profile Conversion Completed')
 
@@ -5973,15 +5988,15 @@ Write-Log -Message:('Profile Conversion Completed')
   }
     Try
     {
-      $CommandScanState = $CommandScanStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
-      Write-Log -Message:('Starting ScanState tool on user "' + $netBiosName + '\' + $DomainUserName + '"')
+      $CommandScanState = $CommandScanStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
+      Write-Log -Message:('Starting ScanState tool on user "' + $netBiosName + '\' + $SelectedUserName + '"')
       Write-Log -Message:('ScanState tool is in progress. Command: ' + $CommandScanState)
       Invoke-Expression -command:($CommandScanState)
-      Write-Log -Message:('ScanState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"')
+      Write-Log -Message:('ScanState tool completed for user "' + $netBiosName + '\' + $SelectedUserName + '"')
     }
     Catch
     {
-      Write-Log -Message:('ScanState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"') -Level:('Error')
+      Write-Log -Message:('ScanState tool failed for user "' + $netBiosName + '\' + $SelectedUserName + '"') -Level:('Error')
       Exit;
     }
   #endregion ScanState Step
@@ -5992,15 +6007,15 @@ Write-Log -Message:('Profile Conversion Completed')
   }
     Try
     {
-      $CommandLoadState = $CommandLoadStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
-      Write-Log -Message:('Starting LoadState tool on user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+      $CommandLoadState = $CommandLoadStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+      Write-Log -Message:('Starting LoadState tool on user "' + $netBiosName + '\' + $SelectedUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
       Write-Log -Message:('LoadState tool is in progress. Command: ' + $CommandLoadState)
       Invoke-Expression -Command:($CommandLoadState)
-      Write-Log -Message:('LoadState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+      Write-Log -Message:('LoadState tool completed for user "' + $netBiosName + '\' + $SelectedUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
     }
     Catch
     {
-      Write-Log -Message:('LoadState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"') -Level:('Error')
+      Write-Log -Message:('LoadState tool failed for user "' + $netBiosName + '\' + $SelectedUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"') -Level:('Error')
       Exit;
     }
   #endregion LoadState Step
