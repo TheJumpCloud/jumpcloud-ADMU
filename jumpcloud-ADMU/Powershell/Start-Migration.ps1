@@ -5609,79 +5609,78 @@ if($ConvertProfile -eq $false){
       4 { $UserStateMigrationToolx86Path }
       Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
     }
-} elseif ($ConvertProfile -eq $true){
-  if (!(Test-path $jcAdmuTempPath)) {
-    new-item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
-  }
-  if (!(Test-path $usmtTempPath)){
-    new-item -ItemType Directory -Force -Path $usmtTempPath 2>&1 | Write-Verbose
-  }
 }
-  }
-  Process
+if (!(Test-path $jcAdmuTempPath)) {
+  new-item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
+}
+if (!(Test-path $usmtTempPath)){
+  new-item -ItemType Directory -Force -Path $usmtTempPath 2>&1 | Write-Verbose
+}
+}
+Process
+{
+  # Conditional ParameterSet logic
+  If ($PSCmdlet.ParameterSetName -eq "form")
   {
-    # Conditional ParameterSet logic
-    If ($PSCmdlet.ParameterSetName -eq "form")
-    {
-      $DomainUserName = $inputObject.DomainUserName
-      $JumpCloudUserName = $inputObject.JumpCloudUserName
-      $TempPassword = $inputObject.TempPassword
-      if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
-        $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
-      }
-      $AcceptEULA = $inputObject.AcceptEula
-      $InstallJCAgent = $inputObject.InstallJCAgent
-      $LeaveDomain = $InputObject.LeaveDomain
-      $ForceReboot = $InputObject.ForceReboot
-      $ConvertProfile = $inputObject.ConvertProfile
-      $netBiosName = $inputObject.NetBiosName
-      $Customxml = $inputObject.Customxml
+    $DomainUserName = $inputObject.DomainUserName
+    $JumpCloudUserName = $inputObject.JumpCloudUserName
+    $TempPassword = $inputObject.TempPassword
+    if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
+      $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
     }
+    $AcceptEULA = $inputObject.AcceptEula
+    $InstallJCAgent = $inputObject.InstallJCAgent
+    $LeaveDomain = $InputObject.LeaveDomain
+    $ForceReboot = $InputObject.ForceReboot
+    $ConvertProfile = $inputObject.ConvertProfile
+    $netBiosName = $inputObject.NetBiosName
+    $Customxml = $inputObject.Customxml
+  }
 
-    # Test checks
-    if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD') {
-      $DomainName = 'AzureAD'
-      $netBiosName = 'AzureAD'
-      Write-Log -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
-    }
-    elseif($AzureADProfile -eq $false) {
-      $DomainName = $WmiComputerSystem.Domain
-      $netBiosName = GetNetBiosName
-      Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + ' NetBiosName is ' + $netBiosName)
-    }
-    #endregion Test checks
+  # Test checks
+  if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD') {
+    $DomainName = 'AzureAD'
+    $netBiosName = 'AzureAD'
+    Write-Log -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
+  }
+  elseif($AzureADProfile -eq $false) {
+    $DomainName = $WmiComputerSystem.Domain
+    $netBiosName = GetNetBiosName
+    Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + ' NetBiosName is ' + $netBiosName)
+  }
+  #endregion Test checks
 
-    # Start Of Console Output
-    if ($ConvertProfile -eq $true){
-    Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
-    } else {
-    Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+  # Start Of Console Output
+  if ($ConvertProfile -eq $true){
+  Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+  } else {
+  Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $DomainUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
 
+  }
+  #region SilentAgentInstall
+  if ($InstallJCAgent -eq $true -and (!(Check_Program_Installed("Jumpcloud"))))
+  {
+    #check if jc is not installed and clear folder
+    if (Test-Path 'C:\Program Files\Jumpcloud\') {
+        Remove-ItemIfExists -Path 'C:\Program Files\Jumpcloud\' -Recurse
     }
-    #region SilentAgentInstall
-    if ($InstallJCAgent -eq $true -and (!(Check_Program_Installed("Jumpcloud"))))
-    {
-      #check if jc is not installed and clear folder
-      if (Test-Path 'C:\Program Files\Jumpcloud\') {
-         Remove-ItemIfExists -Path 'C:\Program Files\Jumpcloud\' -Recurse
-      }
-      # Agent Installer
-      $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($usmtTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
-    start-sleep -seconds 20
-    if ((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=1'){
-      Write-Log -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
-      taskkill /IM "JumpCloudInstaller.exe" /F
-      taskkill /IM "JumpCloudInstaller.tmp" /F
-      Read-Host -Prompt "Press Enter to exit"
-      exit
-    }
-    elseif (((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=0')) {
-      Write-Log -Message:('JC Agent installed - Must be off domain to start jc agent service')
-    }
-    }
-    elseif ($InstallJCAgent -eq $true -and (Check_Program_Installed("Jumpcloud"))) {
-      Write-Log -Message:('JumpCloud agent is already installed on the system.')
-    }
+    # Agent Installer
+    $ConfirmInstall = DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($usmtTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
+  start-sleep -seconds 20
+  if ((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=1'){
+    Write-Log -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
+    taskkill /IM "JumpCloudInstaller.exe" /F
+    taskkill /IM "JumpCloudInstaller.tmp" /F
+    Read-Host -Prompt "Press Enter to exit"
+    exit
+  }
+  elseif (((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=0')) {
+    Write-Log -Message:('JC Agent installed - Must be off domain to start jc agent service')
+  }
+  }
+  elseif ($InstallJCAgent -eq $true -and (Check_Program_Installed("Jumpcloud"))) {
+    Write-Log -Message:('JumpCloud agent is already installed on the system.')
+  }
 
 if ($ConvertProfile -eq $true){
 
@@ -5709,10 +5708,10 @@ $nbtstat = nbtstat -n
 $NetBiosName = ''
 foreach ($line in $nbtStat)
 {
-    if ($line -match '^\s*([^<\s]+)\s*<00>\s*GROUP')
-    {
-        $NetBiosName = $matches[1]
-    }
+  if ($line -match '^\s*([^<\s]+)\s*<00>\s*GROUP')
+  {
+      $NetBiosName = $matches[1]
+  }
 }
 
 $newusersid = Get-SID -User $newusername
@@ -5760,16 +5759,16 @@ $HKUKeys = @($HKU, $HKU_Classes)
 
 # Set the root keys
 ForEach ($rootKey in $HKUKeys.Path){
-  Write-Host $rootKey
-  $acl = Get-Acl $rootKey
-  foreach ($al in $acl.Access) {
-    if ($al.IdentityReference -eq "$oldusersid") {
-      Write-Host "$($acl.PSChildName)"
-      # $al.getType()
-      copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $acl.PSChildName
-      $acl | Set-Acl
-    }
+Write-Host $rootKey
+$acl = Get-Acl $rootKey
+foreach ($al in $acl.Access) {
+  if ($al.IdentityReference -eq "$oldusersid") {
+    Write-Host "$($acl.PSChildName)"
+    # $al.getType()
+    copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $acl.PSChildName
+    $acl | Set-Acl
   }
+}
 }
 
 # Track the number of ownership changes in registry to revert
@@ -5784,34 +5783,34 @@ $adminsid = getAdminUser
 # permission changes are made
 $permssionsChecked = $false
 while (!$permssionsChecked) {
+try {
+  $registryKeys = Get-ChildItem -Recurse $HKUKeys.Path -ErrorAction Stop
+  $permssionsChecked = $true
+}
+catch {
+  # If we cant get-childItem on a key we dont have access.
+  write-warning $_.Exception.Message
+  $aclString = $_.CategoryInfo.TargetName
+  $aclString = $aclString.replace("HKEY_USERS\", "")
+  # Take ownership
+  Write-Host "Grant user access to take ownership operations:"
+  enable-privilege SeTakeOwnershipPrivilege
+  # If we can't read the orgional owner, set as user
   try {
-    $registryKeys = Get-ChildItem -Recurse $HKUKeys.Path -ErrorAction Stop
-    $permssionsChecked = $true
+    $originalOwner = getRegKeyOwner -keyPath $aclString
   }
-  catch {
-    # If we cant get-childItem on a key we dont have access.
-    write-warning $_.Exception.Message
-    $aclString = $_.CategoryInfo.TargetName
-    $aclString = $aclString.replace("HKEY_USERS\", "")
-    # Take ownership
-    Write-Host "Grant user access to take ownership operations:"
-    enable-privilege SeTakeOwnershipPrivilege
-    # If we can't read the orgional owner, set as user
-    try {
-      $originalOwner = getRegKeyOwner -keyPath $aclString
-    }
-    catch{
-      $originalOwner = $newusersid
-    }
-    changeRegKeyOwner -keyPath $aclString -user "$adminsid"
-    giveFullControlToUser -userName "$adminsid" -key $aclString
-    # Track changes
-    $changeList += [PSCustomObject]@{
-      Path           = $aclString
-      OrigionalOwner = $originalOwner
-      AdminToRemove  = "$adminsid"
-    }
+  catch{
+    $originalOwner = $newusersid
   }
+  changeRegKeyOwner -keyPath $aclString -user "$adminsid"
+  giveFullControlToUser -userName "$adminsid" -key $aclString
+  # Track changes
+  $changeList += [PSCustomObject]@{
+    Path           = $aclString
+    OrigionalOwner = $originalOwner
+    AdminToRemove  = "$adminsid"
+  }
+}
 }
 # Foreach registryKeys, search for $oldusersid permissions, replace w/
 # newusersid and remove oldusersid permssions. Track changes where we grant
@@ -5819,43 +5818,43 @@ while (!$permssionsChecked) {
 Write-Host "Grant user access to take ownership operations:"
 enable-privilege SeTakeOwnershipPrivilege
 $registryKeys | ForEach-object {
-  # write-host $_.Name
-  $string = $_.Name
-  # $string = $string.Insert(10, ':')
-  $string = $string.Replace("HKEY_USERS\", "HKEY_USERS:\")
-  # Select parent item since we traverse each key anyways.
-  # resolves issue where wildcards are included in key names
-  $acl = Get-Acl $string | Select-Object -First 1
-  ForEach ($al in $acl.Access) {
-    if ($al.IdentityReference -eq "$oldusersid") {
-      $aclString = $acl.path
-      $aclString = $aclString.replace("Microsoft.PowerShell.Core\Registry::HKEY_USERS\", "")
-      If ($al.IsInherited -eq $false -And $aclString -NotMatch $repoKeys) {
-        # copy permissions from domain user to new user
+# write-host $_.Name
+$string = $_.Name
+# $string = $string.Insert(10, ':')
+$string = $string.Replace("HKEY_USERS\", "HKEY_USERS:\")
+# Select parent item since we traverse each key anyways.
+# resolves issue where wildcards are included in key names
+$acl = Get-Acl $string | Select-Object -First 1
+ForEach ($al in $acl.Access) {
+  if ($al.IdentityReference -eq "$oldusersid") {
+    $aclString = $acl.path
+    $aclString = $aclString.replace("Microsoft.PowerShell.Core\Registry::HKEY_USERS\", "")
+    If ($al.IsInherited -eq $false -And $aclString -NotMatch $repoKeys) {
+      # copy permissions from domain user to new user
+      copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $aclString
+      $acl | Set-Acl
+    }
+    # Repository Keys need special permission.
+    If ($aclString -Match $repoKeys) {
+      $originalOwner = getRegKeyOwner -keyPath $aclString
+      # "original Owner to the key `"$aclString`" is: `"$originalOwner`""
+      changeRegKeyOwner -keyPath $aclString -user "$adminsid"
+      # Give Full Controll To Current Admin
+      If ($al.IsInherited -eq $false) {
+        giveFullControlToUser -userName "$adminsid" -key $aclString
+        # While Current Admin is Admin, copy permission set from domain user to new user
         copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $aclString
         $acl | Set-Acl
       }
-      # Repository Keys need special permission.
-      If ($aclString -Match $repoKeys) {
-        $originalOwner = getRegKeyOwner -keyPath $aclString
-        # "original Owner to the key `"$aclString`" is: `"$originalOwner`""
-        changeRegKeyOwner -keyPath $aclString -user "$adminsid"
-        # Give Full Controll To Current Admin
-        If ($al.IsInherited -eq $false) {
-          giveFullControlToUser -userName "$adminsid" -key $aclString
-          # While Current Admin is Admin, copy permission set from domain user to new user
-          copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $aclString
-          $acl | Set-Acl
-        }
-        # Track permission changes for later
-        $changeList += [PSCustomObject]@{
-          Path           = $aclString
-          OrigionalOwner = $originalOwner
-          AdminToRemove  = "$adminsid"
-        }
+      # Track permission changes for later
+      $changeList += [PSCustomObject]@{
+        Path           = $aclString
+        OrigionalOwner = $originalOwner
+        AdminToRemove  = "$adminsid"
       }
     }
   }
+}
 }
 
 # Reset ACL Inheritance on ...\Repository\Pacakges\ and ...\Repository\Familes\
@@ -5871,13 +5870,13 @@ giveReadToUser -userName "$adminsid" -keyPath "$($newusersid)_Classes\Local Sett
 Write-Host "Grant user access to take perform restore operations:"
 enable-privilege SeRestorePrivilege
 ForEach ($item in $changeList){
-  $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
-  $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
-  $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($item.Path, $permCheck, $regRights)
-  $acl = $key.GetAccessControl()
-  ForEach ($al in $acl.Access) {
-      changeRegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
-  }
+$regRights = [System.Security.AccessControl.RegistryRights]::takeownership
+$permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+$key = [Microsoft.Win32.Registry]::Users.OpenSubKey($item.Path, $permCheck, $regRights)
+$acl = $key.GetAccessControl()
+ForEach ($al in $acl.Access) {
+    changeRegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
+}
 }
 
 # Unload the Reg Hives
@@ -5893,173 +5892,173 @@ Write-Log -Message:('Profile Conversion Completed')
 
 } else {
 
-    #region User State Migration Tool Install & EULA Check
-    If (-not $WmiProduct -and -not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64')))
+  #region User State Migration Tool Install & EULA Check
+  If (-not $WmiProduct -and -not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64')))
+  {
+    # Remove existing jcAdmu folder
+    If (Test-Path -Path:($usmtTempPath))
     {
-      # Remove existing jcAdmu folder
-      If (Test-Path -Path:($usmtTempPath))
-      {
-        Write-Log -Message:('Removing USMT Temp Files & Folders')
-        Remove-ItemIfExists -Path:($usmtTempPath) -Recurse
-      }
-      # Create usmt temp folder
-      If (!(Test-Path -Path:($usmtTempPath)))
-      {
-        New-Item -Path:($usmtTempPath) -ItemType:('Directory') | Out-Null
-      }
-
-      # Download WindowsADK
-      DownloadLink -Link:($adkSetupLink) -Path:($adkSetupPath)
-      # Test Path
-      If (Test-Path -Path:($adkSetupPath))
-      {
-        Write-Log -Message:('Download of Windows ADK Setup file completed successfully')
-      }
-      Else
-      {
-        Write-Log -Message:('Failed To Download Windows ADK Setup') -Level:('Error')
-        Exit;
-      }
-      # Not Installed & Not In Right Dir
-      If ($AcceptEULA -eq $false)
-      {
-        Write-Log -Message:('Installing Windows ADK, please complete GUI prompts & accept EULA within 5 mins or it will Exit.')
-        Start-NewProcess -pfile:($adkSetupPath) -arguments:($adkSetupArguments)
-      }
-      ElseIf ($AcceptEULA -eq $true)
-      {
-        Write-Log -Message:('Installing Windows ADK, silently. By using "$AcceptEULA = "true" you are accepting the "Microsoft Windows ADK EULA". This process could take up to 3 mins if .net is required to be installed, it will timeout if it takes longer than 5 mins.')
-        Start-NewProcess -pfile:($adkSetupPath) -arguments:($adkSetupArgumentsQuiet)
-      }
+      Write-Log -Message:('Removing USMT Temp Files & Folders')
+      Remove-ItemIfExists -Path:($usmtTempPath) -Recurse
     }
-    ElseIf ($WmiProduct -and (-not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64'))))
+    # Create usmt temp folder
+    If (!(Test-Path -Path:($usmtTempPath)))
     {
-      # Installed But Not In Right Dir
-      Write-Log -Message:('Microsoft Windows ADK is installed but User State Migration Tool cant be found - Please correct and Try again.') -Level:('Error')
-      Exit;
+      New-Item -Path:($usmtTempPath) -ItemType:('Directory') | Out-Null
     }
-    # Test User State Migration Tool install path & build config.xml
-    If (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64'))
-    {
-      Write-Log -Message:('Microsoft Windows ADK - User State Migration Tool ready to be used.')
 
-      if (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\config.xml')) -or (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\MigUser.xml')) -or (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\MigApp.xml')))))
-      {
-        try
-        {
-          $usmtconfig.save($UserStateMigrationToolVersionPath + '\config.xml')
-          $usmtmiguser.save($UserStateMigrationToolVersionPath + '\MigUser.xml')
-          $usmtmigapp.save($UserStateMigrationToolVersionPath + '\MigApp.xml')
-          if (!(Test-Path -Path 'C:\windows\Temp\custom.xml')) {
-            $usmtcustom.save('C:\Windows\Temp\custom.xml')
-          }
-        }
-        catch
-        {
-          Write-Log -Message:('Unable to create custom USMT xml files') -Level:('Error')
-          Exit;
-        }
-      }
+    # Download WindowsADK
+    DownloadLink -Link:($adkSetupLink) -Path:($adkSetupPath)
+    # Test Path
+    If (Test-Path -Path:($adkSetupPath))
+    {
+      Write-Log -Message:('Download of Windows ADK Setup file completed successfully')
     }
     Else
     {
-      Write-Log -Message:('Microsoft Windows ADK - User State Migration Tool not found. Make sure it is installed correctly and in the required location.') -Level:('Error')
+      Write-Log -Message:('Failed To Download Windows ADK Setup') -Level:('Error')
       Exit;
     }
-    #endregion User State Migration Tool Install & EULA Check
-
-    #region ScanState Step
-    if ($Customxml -eq $true){
-        $CommandScanStateTemplate = $CommandScanStateTemplateCustom
+    # Not Installed & Not In Right Dir
+    If ($AcceptEULA -eq $false)
+    {
+      Write-Log -Message:('Installing Windows ADK, please complete GUI prompts & accept EULA within 5 mins or it will Exit.')
+      Start-NewProcess -pfile:($adkSetupPath) -arguments:($adkSetupArguments)
     }
-      Try
+    ElseIf ($AcceptEULA -eq $true)
+    {
+      Write-Log -Message:('Installing Windows ADK, silently. By using "$AcceptEULA = "true" you are accepting the "Microsoft Windows ADK EULA". This process could take up to 3 mins if .net is required to be installed, it will timeout if it takes longer than 5 mins.')
+      Start-NewProcess -pfile:($adkSetupPath) -arguments:($adkSetupArgumentsQuiet)
+    }
+  }
+  ElseIf ($WmiProduct -and (-not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64'))))
+  {
+    # Installed But Not In Right Dir
+    Write-Log -Message:('Microsoft Windows ADK is installed but User State Migration Tool cant be found - Please correct and Try again.') -Level:('Error')
+    Exit;
+  }
+  # Test User State Migration Tool install path & build config.xml
+  If (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64'))
+  {
+    Write-Log -Message:('Microsoft Windows ADK - User State Migration Tool ready to be used.')
+
+    if (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\config.xml')) -or (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\MigUser.xml')) -or (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\MigApp.xml')))))
+    {
+      try
       {
-        $CommandScanState = $CommandScanStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
-        Write-Log -Message:('Starting ScanState tool on user "' + $netBiosName + '\' + $DomainUserName + '"')
-        Write-Log -Message:('ScanState tool is in progress. Command: ' + $CommandScanState)
-        Invoke-Expression -command:($CommandScanState)
-        Write-Log -Message:('ScanState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"')
+        $usmtconfig.save($UserStateMigrationToolVersionPath + '\config.xml')
+        $usmtmiguser.save($UserStateMigrationToolVersionPath + '\MigUser.xml')
+        $usmtmigapp.save($UserStateMigrationToolVersionPath + '\MigApp.xml')
+        if (!(Test-Path -Path 'C:\windows\Temp\custom.xml')) {
+          $usmtcustom.save('C:\Windows\Temp\custom.xml')
+        }
       }
-      Catch
+      catch
       {
-        Write-Log -Message:('ScanState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"') -Level:('Error')
+        Write-Log -Message:('Unable to create custom USMT xml files') -Level:('Error')
         Exit;
       }
-    #endregion ScanState Step
-
-    #region LoadState Step
-    if ($Customxml -eq $true) {
-      $CommandLoadStateTemplate = $CommandLoadStateTemplateCustom
     }
-      Try
-      {
-        $CommandLoadState = $CommandLoadStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
-        Write-Log -Message:('Starting LoadState tool on user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
-        Write-Log -Message:('LoadState tool is in progress. Command: ' + $CommandLoadState)
-        Invoke-Expression -Command:($CommandLoadState)
-        Write-Log -Message:('LoadState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
-      }
-      Catch
-      {
-        Write-Log -Message:('LoadState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"') -Level:('Error')
-        Exit;
-      }
-    #endregion LoadState Step
+  }
+  Else
+  {
+    Write-Log -Message:('Microsoft Windows ADK - User State Migration Tool not found. Make sure it is installed correctly and in the required location.') -Level:('Error')
+    Exit;
+  }
+  #endregion User State Migration Tool Install & EULA Check
+
+  #region ScanState Step
+  if ($Customxml -eq $true){
+      $CommandScanStateTemplate = $CommandScanStateTemplateCustom
+  }
+    Try
+    {
+      $CommandScanState = $CommandScanStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName
+      Write-Log -Message:('Starting ScanState tool on user "' + $netBiosName + '\' + $DomainUserName + '"')
+      Write-Log -Message:('ScanState tool is in progress. Command: ' + $CommandScanState)
+      Invoke-Expression -command:($CommandScanState)
+      Write-Log -Message:('ScanState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"')
+    }
+    Catch
+    {
+      Write-Log -Message:('ScanState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"') -Level:('Error')
+      Exit;
+    }
+  #endregion ScanState Step
+
+  #region LoadState Step
+  if ($Customxml -eq $true) {
+    $CommandLoadStateTemplate = $CommandLoadStateTemplateCustom
+  }
+    Try
+    {
+      $CommandLoadState = $CommandLoadStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $DomainUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+      Write-Log -Message:('Starting LoadState tool on user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+      Write-Log -Message:('LoadState tool is in progress. Command: ' + $CommandLoadState)
+      Invoke-Expression -Command:($CommandLoadState)
+      Write-Log -Message:('LoadState tool completed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+    }
+    Catch
+    {
+      Write-Log -Message:('LoadState tool failed for user "' + $netBiosName + '\' + $DomainUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"') -Level:('Error')
+      Exit;
+    }
+  #endregion LoadState Step
 
 }
 
-    #region Add To Local Users Group
-    Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUserName -erroraction silentlycontinue
-    #endregion Add To Local Users Group
+  #region Add To Local Users Group
+  Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUserName -erroraction silentlycontinue
+  #endregion Add To Local Users Group
 
-    #region Leave Domain or AzureAD
+  #region Leave Domain or AzureAD
 
-    if ($LeaveDomain -eq $true)
-    {
-      if ($netBiosName -match 'AzureAD') {
-        try {
-          Write-Log -Message:('Leaving AzureAD')
-          dsregcmd.exe /leave
+  if ($LeaveDomain -eq $true)
+  {
+    if ($netBiosName -match 'AzureAD') {
+      try {
+        Write-Log -Message:('Leaving AzureAD')
+        dsregcmd.exe /leave
+      }
+      catch {
+        Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
+        Exit;
+      }
+    }
+    else {
+        Try
+        {
+          Write-Log -Message:('Leaving Domain')
+          $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
         }
-        catch {
+        Catch
+        {
           Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
           Exit;
         }
-      }
-      else {
-          Try
-          {
-            Write-Log -Message:('Leaving Domain')
-            $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
-          }
-          Catch
-          {
-            Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
-            Exit;
-          }
-      }
     }
-
-    # Cleanup Folders Again Before Reboot
-    Write-Log -Message:('Removing Temp Files & Folders.')
-    Start-Sleep -s 10
-    try {
-      Remove-ItemIfExists -Path:($jcAdmuTempPath) -Recurse
-    }
-    catch {
-      Write-Log -Message:('Failed to remove Temp Files & Folders.' + $jcAdmuTempPath)
-    }
-
-    if ($ForceReboot -eq $true)
-    {
-      Write-Log -Message:('Forcing reboot of the PC now')
-      Restart-Computer -ComputerName $env:COMPUTERNAME -Force
-    }
-    #endregion SilentAgentInstall
   }
-  End
+
+  # Cleanup Folders Again Before Reboot
+  Write-Log -Message:('Removing Temp Files & Folders.')
+  Start-Sleep -s 10
+  try {
+    Remove-ItemIfExists -Path:($jcAdmuTempPath) -Recurse
+  }
+  catch {
+    Write-Log -Message:('Failed to remove Temp Files & Folders.' + $jcAdmuTempPath)
+  }
+
+  if ($ForceReboot -eq $true)
   {
-    Write-Log -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
-    Write-Log -Message:('Tool options chosen were : ' + 'Install JC Agent = ' + $InstallJCAgent + ', Leave Domain = ' + $LeaveDomain + ', Force Reboot = ' + $ForceReboot + ', AzureADProfile = ' + $AzureADProfile)
+    Write-Log -Message:('Forcing reboot of the PC now')
+    Restart-Computer -ComputerName $env:COMPUTERNAME -Force
   }
+  #endregion SilentAgentInstall
+}
+End
+{
+  Write-Log -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
+  Write-Log -Message:('Tool options chosen were : ' + 'Install JC Agent = ' + $InstallJCAgent + ', Leave Domain = ' + $LeaveDomain + ', Force Reboot = ' + $ForceReboot + ', AzureADProfile = ' + $AzureADProfile)
+}
 }
