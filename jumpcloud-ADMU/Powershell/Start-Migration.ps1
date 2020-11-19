@@ -5842,7 +5842,7 @@ REG UNLOAD HKU\$classes
 Write-Log -Message:('Updating UWP Apps for new user')
 #update uwp fix - do we need to schedule? why does profwiz utilize a service on startup
 
-$list = Get-AppXpackage -user "S-1-5-21-156575111-3938707022-2951340204-1106" | Select-Object InstallLocation
+$list = Get-AppXpackage -user $oldusersid | Select-Object InstallLocation
 $list | Export-CSV $jcAdmuTempPath\appx_installs.csv
 Write-Log -Message:('Profile Conversion Completed')
 
