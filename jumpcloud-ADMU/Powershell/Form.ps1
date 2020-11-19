@@ -149,15 +149,6 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
         }
 
-        $nbtstat = nbtstat -n
-        foreach ($line in $nbtStat)
-        {
-            if ($line -match '^\s*([^<\s]+)\s*<00>\s*GROUP')
-            {
-                $NetBiosName2 = $matches[1]
-            }
-        }
-
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
         if ($WmiComputerSystem.PartOfDomain) {
@@ -168,8 +159,18 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
                 $DomainName = 'Fix Secure Channel'
                 $NetBiosName = 'Fix Secure Channel'
             } else {
+
+                $nbtstat = nbtstat -n
+                foreach ($line in $nbtStat)
+                {
+                    if ($line -match '^\s*([^<\s]+)\s*<00>\s*GROUP')
+                    {
+                        $NetBiosName = $matches[1]
+                    }
+                }
+
                 $DomainName = [string]$WmiComputerDomain.DnsForestName
-                $NetBiosName = [string]$NetBiosName2
+                $NetBiosName = [string]$NetBiosName
             }
         }
         elseif ($WmiComputerSystem.PartOfDomain -eq $false) {
@@ -413,6 +414,7 @@ $cb_forcereboot.Add_Unchecked({$script:ForceReboot = $false})
 $script:ConvertProfile = $false
 $cb_convertprofile.Add_Checked({$script:ConvertProfile = $true})
 $cb_convertprofile.Add_Unchecked({$script:ConvertProfile = $false})
+$cb_custom_xml.Add_UnChecked({$tab_usmtcustomxml.IsEnabled = $false})
 
 # Custom XML checkbox
 $script:Customxml = $false
