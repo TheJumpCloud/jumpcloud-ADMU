@@ -184,23 +184,33 @@ function copyPasteAccess {
 
 #username To SID Function
 function Get-SID ([string]$User){
-$objUser = New-Object System.Security.Principal.NTAccount($User)
-$strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
-$strSID.Value
+  $objUser = New-Object System.Security.Principal.NTAccount($User)
+  $strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
+  $strSID.Value
 }
 
 #return sid of local user
-function GetSIDFromLocalUser
+function GetSIDFromWin32UserAccount
 {
   [CmdletBinding()]
   param
   (
       [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-      $LocalUserName
+      $UserName,
+      [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+      $NetBiosName
   )
   process
   {
-  return (get-localuser | Where-Object {($_.Name -EQ $LocalUserName)} | Select-Object SID)
+    $user = Get-WmiObject win32_useraccount | Select-Object sid, Name, Domain | Where-Object { ($_.Name -EQ $UserName) -And { $_.Domain -eq $NetBiosName } }
+    if ([string]::IsNullOrEmpty($user.sid)) {
+      # Broken Secure Channel
+      return $UserName
+    }
+    else {
+      # Working Secure Channel
+      return $user.sid
+    }
   }
 }
 #Verify Domain Account Function
@@ -5589,14 +5599,6 @@ Function Start-Migration
       Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
     }
 
-    Write-Log -Message:('Creating JCADMU Temporary Path in ' + $jcAdmuTempPath)
-    if (!(Test-path $jcAdmuTempPath)) {
-      new-item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
-    }
-    if (!(Test-path $usmtTempPath)) {
-      new-item -ItemType Directory -Force -Path $usmtTempPath 2>&1 | Write-Verbose
-    }
-
   # Conditional ParameterSet logic
   If ($PSCmdlet.ParameterSetName -eq "form")
   {
@@ -5615,44 +5617,51 @@ Function Start-Migration
     $Customxml = $inputObject.Customxml
   }
 
-    # Define misc static variables
-    $localComputerName = $WmiComputerSystem.Name
-    $adkSetupLink = 'https://go.microsoft.com/fwlink/?linkid=2120254'
-    $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
-    $usmtTempPath = 'C:\Windows\Temp\JCADMU\USMT\'
-    $jcAdmuLogFile = 'C:\Windows\Temp\jcAdmu.log'
-    $UserStateMigrationToolx64Path = 'C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
-    $UserStateMigrationToolx86Path = 'C:\Program Files\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
+  # Define misc static variables
+  $localComputerName = $WmiComputerSystem.Name
+  $adkSetupLink = 'https://go.microsoft.com/fwlink/?linkid=2120254'
+  $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
+  $usmtTempPath = 'C:\Windows\Temp\JCADMU\USMT\'
+  $jcAdmuLogFile = 'C:\Windows\Temp\jcAdmu.log'
+  $UserStateMigrationToolx64Path = 'C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
+  $UserStateMigrationToolx86Path = 'C:\Program Files\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
 
-    $profileStorePath = $jcAdmuTempPath + 'store'
-    $adksetupfile = 'adksetup.exe'
-    $adkSetupPath = $jcAdmuTempPath + $adksetupfile
-    $adkSetupArguments = ' /features OptionId.UserStateMigrationTool'
-    $adkSetupArgumentsQuiet = '/quiet ' + $adkSetupArguments
-    $msvc2013x64File = 'vc_redist.x64.exe'
-    $msvc2013x86File = 'vc_redist.x86.exe'
-    $msvc2013x86Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x86.exe'
-    $msvc2013x64Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x64.exe'
-    $msvc2013x86Install = "$usmtTempPath$msvc2013x86File /install /quiet /norestart"
-    $msvc2013x64Install = "$usmtTempPath$msvc2013x64File /install /quiet /norestart"
-    $CommandScanStateTemplate = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
-    $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
-    $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
-    $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
-    $SelectedUserSID =  GetSIDFromLocalUser -LocalUserName $SelectedUserName
-    $NewUserSID = Get-SID -User $JumpCloudUserName
+  $profileStorePath = $jcAdmuTempPath + 'store'
+  $adksetupfile = 'adksetup.exe'
+  $adkSetupPath = $jcAdmuTempPath + $adksetupfile
+  $adkSetupArguments = ' /features OptionId.UserStateMigrationTool'
+  $adkSetupArgumentsQuiet = '/quiet ' + $adkSetupArguments
+  $msvc2013x64File = 'vc_redist.x64.exe'
+  $msvc2013x86File = 'vc_redist.x86.exe'
+  $msvc2013x86Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x86.exe'
+  $msvc2013x64Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x64.exe'
+  $msvc2013x86Install = "$usmtTempPath$msvc2013x86File /install /quiet /norestart"
+  $msvc2013x64Install = "$usmtTempPath$msvc2013x64File /install /quiet /norestart"
+  $CommandScanStateTemplate = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
+  $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+  $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
+  $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+  $SelectedUserSID =  GetSIDFromWin32UserAccount -LocalUserName $SelectedUserName -NetBiosName $NetBiosName
 
 
-    # JumpCloud Agent Installation Variables
-    $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
-    $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
-    $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
-    $AGENT_SERVICE_NAME = "JumpCloud-agent"
-    $AGENT_INSTALLER_URL = "https://s3.amazonaws.com/jumpcloud-windows-agent/production/JumpCloudInstaller.exe"
-    $AGENT_INSTALLER_PATH = "C:\windows\Temp\JCADMU\JumpCloudInstaller.exe"
-    $AGENT_UNINSTALLER_NAME = "unins000.exe"
-    $EVENT_LOGGER_KEY_NAME = "hklm:\SYSTEM\CurrentControlSet\services\eventlog\Application\JumpCloud-agent"
-    $INSTALLER_BINARY_NAMES = "JumpCloudInstaller.exe,JumpCloudInstaller.tmp"
+  # JumpCloud Agent Installation Variables
+  $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
+  $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
+  $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
+  $AGENT_SERVICE_NAME = "JumpCloud-agent"
+  $AGENT_INSTALLER_URL = "https://s3.amazonaws.com/jumpcloud-windows-agent/production/JumpCloudInstaller.exe"
+  $AGENT_INSTALLER_PATH = "C:\windows\Temp\JCADMU\JumpCloudInstaller.exe"
+  $AGENT_UNINSTALLER_NAME = "unins000.exe"
+  $EVENT_LOGGER_KEY_NAME = "hklm:\SYSTEM\CurrentControlSet\services\eventlog\Application\JumpCloud-agent"
+  $INSTALLER_BINARY_NAMES = "JumpCloudInstaller.exe,JumpCloudInstaller.tmp"
+
+  Write-Log -Message:('Creating JCADMU Temporary Path in ' + $jcAdmuTempPath)
+  if (!(Test-path $jcAdmuTempPath)) {
+    new-item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
+  }
+  if (!(Test-path $usmtTempPath)) {
+    new-item -ItemType Directory -Force -Path $usmtTempPath 2>&1 | Write-Verbose
+  }
 
   # Test checks
   if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD') {
@@ -5718,19 +5727,10 @@ $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText
 $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
 Start-Process Powershell.exe -Credential $Credential -WorkingDirectory 'C:\windows\System32' -ArgumentList ('-WindowStyle Hidden')
 TASKKILL.exe /FI "USERNAME eq $JumpCloudUserName" 2>&1 | Write-Verbose
+# Now get NewUserSID
+$NewUserSID = Get-SID -User $JumpCloudUserName
 
 Write-Log -Message:('Setting Registry Entrys')
-
-#change profileimagepath to not conflict
-$nbtstat = nbtstat -n
-$NetBiosName = ''
-foreach ($line in $nbtStat)
-{
-  if ($line -match '^\s*([^<\s]+)\s*<00>\s*GROUP')
-  {
-      $NetBiosName = $matches[1]
-  }
-}
 
 $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
@@ -5743,12 +5743,11 @@ Remove-Item -Path ($newuserprofileimagepath + '.old') -Force -Recurse
 Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
 Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ('C:\Users\' + $SelectedUserName + '.' + $NetBiosName)
 Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $JumpCloudUserName)
-Write-Log -Message:('new' + $newuserprofileimagepath)
-Write-Log -Message:('old' + $olduserprofileimagepath)
-#Get-ChildItem -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object {($_.Name -match $newusersid)}
-#Get-ChildItem -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object {($_.Name -match $SelectedUserSID)}
 
-Write-Log -Message:('ntfs acls on domain c:\users\ dir')
+Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath)
+Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath)
+
+Write-Log -Message:('NTFS ACLs on domain c:\users\ dir')
 
 #ntfs acls on domain c:\users\ dir
 $usrhome = 'C:\Users\' + $JumpCloudUserName
@@ -5833,43 +5832,43 @@ catch {
 Write-Host "Grant user access to take ownership operations:"
 enable-privilege SeTakeOwnershipPrivilege
 $registryKeys | ForEach-object {
-# write-host $_.Name
-$string = $_.Name
-# $string = $string.Insert(10, ':')
-$string = $string.Replace("HKEY_USERS\", "HKEY_USERS:\")
-# Select parent item since we traverse each key anyways.
-# resolves issue where wildcards are included in key names
-$acl = Get-Acl $string | Select-Object -First 1
-ForEach ($al in $acl.Access) {
-  if ($al.IdentityReference -eq "$SelectedUserSID") {
-    $aclString = $acl.path
-    $aclString = $aclString.replace("Microsoft.PowerShell.Core\Registry::HKEY_USERS\", "")
-    If ($al.IsInherited -eq $false -And $aclString -NotMatch $repoKeys) {
-      # copy permissions from domain user to new user
-      copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $aclString
-      $acl | Set-Acl
-    }
-    # Repository Keys need special permission.
-    If ($aclString -Match $repoKeys) {
-      $originalOwner = getRegKeyOwner -keyPath $aclString
-      # "original Owner to the key `"$aclString`" is: `"$originalOwner`""
-      changeRegKeyOwner -keyPath $aclString -user "$adminsid"
-      # Give Full Controll To Current Admin
-      If ($al.IsInherited -eq $false) {
-        giveFullControlToUser -userName "$adminsid" -key $aclString
-        # While Current Admin is Admin, copy permission set from domain user to new user
+  # write-host $_.Name
+  $string = $_.Name
+  # $string = $string.Insert(10, ':')
+  $string = $string.Replace("HKEY_USERS\", "HKEY_USERS:\")
+  # Select parent item since we traverse each key anyways.
+  # resolves issue where wildcards are included in key names
+  $acl = Get-Acl $string | Select-Object -First 1
+  ForEach ($al in $acl.Access) {
+    if ($al.IdentityReference -eq "$SelectedUserSID") {
+      $aclString = $acl.path
+      $aclString = $aclString.replace("Microsoft.PowerShell.Core\Registry::HKEY_USERS\", "")
+      If ($al.IsInherited -eq $false -And $aclString -NotMatch $repoKeys) {
+        # copy permissions from domain user to new user
         copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $aclString
         $acl | Set-Acl
       }
-      # Track permission changes for later
-      $changeList += [PSCustomObject]@{
-        Path           = $aclString
-        OrigionalOwner = $originalOwner
-        AdminToRemove  = "$adminsid"
+      # Repository Keys need special permission.
+      If ($aclString -Match $repoKeys) {
+        $originalOwner = getRegKeyOwner -keyPath $aclString
+        # "original Owner to the key `"$aclString`" is: `"$originalOwner`""
+        changeRegKeyOwner -keyPath $aclString -user "$adminsid"
+        # Give Full Controll To Current Admin
+        If ($al.IsInherited -eq $false) {
+          giveFullControlToUser -userName "$adminsid" -key $aclString
+          # While Current Admin is Admin, copy permission set from domain user to new user
+          copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $aclString
+          $acl | Set-Acl
+        }
+        # Track permission changes for later
+        $changeList += [PSCustomObject]@{
+          Path           = $aclString
+          OrigionalOwner = $originalOwner
+          AdminToRemove  = "$adminsid"
+        }
       }
     }
   }
-}
 }
 
 # Reset ACL Inheritance on ...\Repository\Pacakges\ and ...\Repository\Familes\
@@ -5885,13 +5884,13 @@ giveReadToUser -userName "$adminsid" -keyPath "$($newusersid)_Classes\Local Sett
 Write-Host "Grant user access to take perform restore operations:"
 enable-privilege SeRestorePrivilege
 ForEach ($item in $changeList){
-$regRights = [System.Security.AccessControl.RegistryRights]::takeownership
-$permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
-$key = [Microsoft.Win32.Registry]::Users.OpenSubKey($item.Path, $permCheck, $regRights)
-$acl = $key.GetAccessControl()
-ForEach ($al in $acl.Access) {
-    changeRegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
-}
+  $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
+  $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+  $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($item.Path, $permCheck, $regRights)
+  $acl = $key.GetAccessControl()
+  ForEach ($al in $acl.Access) {
+      changeRegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
+  }
 }
 
 # Unload the Reg Hives
@@ -5904,6 +5903,8 @@ Write-Log -Message:('Updating UWP Apps for new user')
 $list = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
 $list | Export-CSV $jcAdmuTempPath\appx_installs.csv
 Write-Log -Message:('Profile Conversion Completed')
+
+# TODO: Schedule the reset of the apps on first login of new user account (Run Once Key)
 
 } else {
 
