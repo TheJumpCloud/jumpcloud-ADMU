@@ -5757,7 +5757,7 @@ else {
 Write-Log -Message:('Creating New Local User' + $localComputerName + '\' + $JumpCloudUserName)
 
 #Create New User
-net user $JumpCloudUserName $TempPassword /add 2>&1 | Write-Verbose
+net user $JumpCloudUserName $TempPassword /add
 
 Write-Log -Message:('Spawning New Process')
 
@@ -5767,8 +5767,7 @@ $MyPlainTextString = $TempPassword
 $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
 $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
 Start-Process Powershell.exe -Credential $Credential -WorkingDirectory 'C:\windows\System32' -ArgumentList ('-WindowStyle Hidden')
-TASKKILL.exe /FI "USERNAME eq $JumpCloudUserName" 2>&1 | Write-Verbose
-Start-Sleep -s 10
+TASKKILL.exe /FI "USERNAME eq $JumpCloudUserName"
 # Now get NewUserSID
 $NewUserSID = Get-SID -User $JumpCloudUserName
 
@@ -5778,11 +5777,12 @@ $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsof
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
 $newfoldername = $newuserprofileimagepath.Split('\',3)[2]
 
-icacls $newuserprofileimagepath /grant administrators:F /T 2>&1 | Write-Verbose
-takeown /f ($newuserprofileimagepath) /a /r /d y 2>&1 | Write-Verbose
+icacls $newuserprofileimagepath /grant administrators:F /T
+takeown /f ($newuserprofileimagepath) /a /r /d y
 Rename-Item -Path $newuserprofileimagepath -NewName ($newfoldername + '.old')
 Remove-Item -Path ($newuserprofileimagepath + '.old') -Force -Recurse
 Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
+
 Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ('C:\Users\' + $SelectedUserName + '.' + $NetBiosName)
 Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $JumpCloudUserName)
 
