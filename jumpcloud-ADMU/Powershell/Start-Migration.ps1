@@ -5898,13 +5898,17 @@ REG UNLOAD HKU\$newusersid
 REG UNLOAD HKU\$classes
 
 Write-Log -Message:('Updating UWP Apps for new user')
-#update uwp fix - do we need to schedule? why does profwiz utilize a service on startup
+$path = $HOME + '\AppData\Local\JumpCloudADMU'
+If(!(test-path $path))
+{
+      New-Item -ItemType Directory -Force -Path $path
+}
 
 $list = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
-$list | Export-CSV $jcAdmuTempPath\appx_installs.csv
+$list | Export-CSV ($HOME + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
 Write-Log -Message:('Profile Conversion Completed')
 
-# TODO: Schedule the reset of the apps on first login of new user account (Run Once Key)
+#TODO add active setup reg key to HKLM to launch exe on targeted user
 
 } else {
 
