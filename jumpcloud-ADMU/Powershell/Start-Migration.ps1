@@ -5924,7 +5924,10 @@ giveReadToUser -userName "$adminsid" -keyPath "$($newusersid)_Classes\Local Sett
 # Required to perform restore operations
 Write-Host "Grant user access to take perform restore operations:"
 enable-privilege SeRestorePrivilege
+$i=0
 ForEach ($item in $changeList){
+  $i += 1
+  Write-Progress -activity "Resetting HKU Permissions:" -status "Set: $i of $($changeList.Count)" -percentComplete (($i / $changeList.Count)  * 100)
   $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($item.Path, $permCheck, $regRights)
@@ -5940,14 +5943,14 @@ ForEach ($item in $changeList){
 # REG UNLOAD HKU\$classes
 
 Write-Log -Message:('Updating UWP Apps for new user')
-$path = $HOME + '\AppData\Local\JumpCloudADMU'
+$path = $newuserprofileimagepath + '\AppData\Local\JumpCloudADMU'
 If(!(test-path $path))
 {
       New-Item -ItemType Directory -Force -Path $path
 }
 
 $list = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
-$list | Export-CSV ($HOME + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
+$list | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
 Write-Log -Message:('Profile Conversion Completed')
 
 # Set Registry Check Key for New User
