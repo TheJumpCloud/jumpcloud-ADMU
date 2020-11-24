@@ -5773,14 +5773,21 @@ $NewUserSID = Get-SID -User $JumpCloudUserName
 Start-Sleep -s 20
 Write-Log -Message:('Setting Registry Entrys')
 
+
 $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
 $newfoldername = $newuserprofileimagepath.Split('\',3)[2]
+Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath)
+Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath)
+
 
 icacls $newuserprofileimagepath /grant administrators:F /T
 takeown /f ($newuserprofileimagepath) /a /r /d y
-Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
-Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
+Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath)
+Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath)
+
+Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse -WhatIf
+Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName -WhatIf
 
 #Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ('C:\Users\' + $SelectedUserName + '.' + $NetBiosName)
 #Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $JumpCloudUserName)
