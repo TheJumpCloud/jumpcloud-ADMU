@@ -5749,7 +5749,7 @@ else {
       setValueToKey -keyPath "$rootlessKey" -Name "$item" -value $propertyHash[$item] -regValueKind Dword
     }
     else {
-      setValueToKey -keyPath "$rootlessKey" -Name "$item" -value "$propertyHash[$item]" -regValueKind String
+      setValueToKey -keyPath "$rootlessKey" -Name "$item" -value $propertyHash[$item] -regValueKind String
     }
   }
 }
