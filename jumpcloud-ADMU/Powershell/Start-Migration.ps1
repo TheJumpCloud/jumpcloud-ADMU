@@ -5647,6 +5647,7 @@ Function Start-Migration
   $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
   $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
   $SelectedUserSID =  GetSIDFromWin32UserAccount -UserName $SelectedUserName -NetBiosName $NetBiosName
+  write-host $SelectedUserSID
 
 
   # JumpCloud Agent Installation Variables
