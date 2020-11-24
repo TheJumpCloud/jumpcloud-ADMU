@@ -5943,6 +5943,7 @@ ForEach ($item in $changeList){
 # REG UNLOAD HKU\$classes
 
 Write-Log -Message:('Updating UWP Apps for new user')
+$newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
 $path = $newuserprofileimagepath + '\AppData\Local\JumpCloudADMU'
 If(!(test-path $path))
 {
