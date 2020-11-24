@@ -5768,6 +5768,7 @@ $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText
 $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
 Start-Process Powershell.exe -Credential $Credential -WorkingDirectory 'C:\windows\System32' -ArgumentList ('-WindowStyle Hidden')
 TASKKILL.exe /FI "USERNAME eq $JumpCloudUserName" 2>&1 | Write-Verbose
+Start-Sleep -s 10
 # Now get NewUserSID
 $NewUserSID = Get-SID -User $JumpCloudUserName
 
