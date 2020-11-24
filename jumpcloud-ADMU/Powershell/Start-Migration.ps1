@@ -5728,7 +5728,7 @@ $rootlessKey = $ADMUKEY.Replace('HKLM:\', '')
 $propertyHash = @{
   IsInstalled = 1
   Locale      = "*"
-  StubPath    = "cmd.exe" # TODO: Replace w/ custom exe
+  StubPath    = "c:\uwp_jcadmu.exe"
   Version     = "1,0,00,0"
 }
 if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
