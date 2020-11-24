@@ -5770,7 +5770,7 @@ Start-Process Powershell.exe -Credential $Credential -WorkingDirectory 'C:\windo
 TASKKILL.exe /FI "USERNAME eq $JumpCloudUserName"
 # Now get NewUserSID
 $NewUserSID = Get-SID -User $JumpCloudUserName
-
+Start-Sleep -s 20
 Write-Log -Message:('Setting Registry Entrys')
 
 $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
