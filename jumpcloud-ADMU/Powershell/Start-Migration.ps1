@@ -5781,8 +5781,8 @@ Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath)
 Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath)
 
 
-icacls $newuserprofileimagepath /grant administrators:F /T 2>&1
-takeown /f ($newuserprofileimagepath) /a /r /d y 2>&1
+icacls $newuserprofileimagepath /grant administrators:F /T 2>&1 | Write-Verbose
+takeown /f ($newuserprofileimagepath) /a /r /d y 2>&1 | Write-Verbose
 Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath)
 Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath)
 
