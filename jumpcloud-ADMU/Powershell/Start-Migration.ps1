@@ -88,13 +88,18 @@ function getRegKeyOwner([string]$keyPath) {
   return $owner
 }
 
-
 function setValueToKey([string]$keyPath, [string]$name, [System.Object]$value, [Microsoft.Win32.RegistryValueKind]$regValueKind) {
   $regRights = [System.Security.AccessControl.RegistryRights]::SetValue
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
-  $Key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath, $permCheck, $regRights)
+  $Key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($keyPath, $permCheck, $regRights)
   "Setting value with properties [name:$name, value:$value, value type:$regValueKind]"
   $Key.SetValue($name, $value, $regValueKind)
+  $key.Close()
+}
+
+function newKey([string]$keyPath, [Microsoft.Win32.RegistryHive]$registryRoot) {
+  $Key = [Microsoft.Win32.Registry]::$registryRoot.CreateSubKey($keyPath)
+  "Setting key at [KeyPath:$keyPath]"
   $key.Close()
 }
 
@@ -5713,6 +5718,42 @@ Process
 
 if ($ConvertProfile -eq $true){
 
+Write-Log -Message:('Creating Registry Entries')
+
+# Root Key Path
+$ADMUKEY = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
+# Remove Root from key to pass into functions
+$rootlessKey = $ADMUKEY.Replace('HKLM:\', '')
+# Property Values
+$propertyHash = @{
+  IsInstalled = 1
+  Locale      = "*"
+  StubPath    = "cmd.exe" # TODO: Replace w/ custom exe
+  Version     = "1,0,00,0"
+}
+if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
+  write-host "The ADMU Registry Key exits"
+  $properties = Get-ItemProperty -Path "$ADMUKEY"
+  # TODO: check that the properties are set correctly
+  foreach ($item in $propertyHash.Keys) {
+    Write-host "Property: $($item) Value: $($properties.$item)"
+  }
+}
+else {
+  write-host "The ADMU Registry Key does not exist"
+  # Create the new key
+  newKey -keyPath $rootlessKey -registryRoot LocalMachine
+  foreach ($item in $propertyHash.Keys) {
+    # Eventually make this better
+    if ($item -eq "IsInstalled") {
+      setValueToKey -keyPath "$rootlessKey" -Name "$item" -value $propertyHash[$item] -regValueKind Dword
+    }
+    else {
+      setValueToKey -keyPath "$rootlessKey" -Name "$item" -value "$propertyHash[$item]" -regValueKind String
+    }
+  }
+}
+
 Write-Log -Message:('Creating New Local User' + $localComputerName + '\' + $JumpCloudUserName)
 
 #Create New User
@@ -5894,8 +5935,9 @@ ForEach ($item in $changeList){
 }
 
 # Unload the Reg Hives
-REG UNLOAD HKU\$newusersid
-REG UNLOAD HKU\$classes
+# TODO: Fix this or force reboot
+# REG UNLOAD HKU\$newusersid
+# REG UNLOAD HKU\$classes
 
 Write-Log -Message:('Updating UWP Apps for new user')
 $path = $HOME + '\AppData\Local\JumpCloudADMU'
@@ -5908,7 +5950,17 @@ $list = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
 $list | Export-CSV ($HOME + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
 Write-Log -Message:('Profile Conversion Completed')
 
-#TODO add active setup reg key to HKLM to launch exe on targeted user
+# Set Registry Check Key for New User
+$ADMUKEY = "$newusersid\SOFTWARE\ADMU"
+if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
+    # If the registry Key exists (it wont)
+    Write-Host "The Key Already Exists"
+}
+else{
+    # Just Create the new key
+    newKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\ADMU"
+}
+# TODO: Schedule the reset of the apps on first login of new user account (Run Once Key)
 
 } else {
 
