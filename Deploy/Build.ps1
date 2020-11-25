@@ -46,3 +46,6 @@ Else
 {
     Write-Error ('Build.ps1 failed. Transform process outputted an empty ADMU.ps1 file.')
 }
+
+#TODO - If change in uwp_fix_jcadmu.ps1 then rebuild exe and put in JUMPCLOUD-ADMU\Exe\ directory
+#& 'ps2exe' -inputFile 'C:\agent\_work\1\s\Deploy\uwp_fix_jcadmu.ps1' -outputFile 'C:\agent\_work\1\s\jumpcloud-ADMU\exe\uwp_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright '(c) 2020' -company 'JumpCloud' -iconfile 'C:\agent\_work\1\s\Deploy\admu.ico'
