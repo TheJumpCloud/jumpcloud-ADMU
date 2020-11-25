@@ -5647,8 +5647,6 @@ Function Start-Migration
   $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
   $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
   $SelectedUserSID =  GetSIDFromWin32UserAccount -UserName $SelectedUserName -NetBiosName $NetBiosName
-  write-host $SelectedUserSID
-
 
   # JumpCloud Agent Installation Variables
   $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
@@ -5771,24 +5769,21 @@ Start-Process Powershell.exe -Credential $Credential -WorkingDirectory 'C:\windo
 TASKKILL.exe /FI "USERNAME eq $JumpCloudUserName"
 # Now get NewUserSID
 $NewUserSID = Get-SID -User $JumpCloudUserName
-Start-Sleep -s 20
 Write-Log -Message:('Setting Registry Entrys')
-
 
 $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
 $newfoldername = $newuserprofileimagepath.Split('\',3)[2]
-Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath)
-Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath)
 
+$path= takeown /F $newuserprofileimagepath
+$acl = Get-Acl $path
+$AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:COMPUTERNAME\Administrators","FullControl","Allow")
+$acl.SetAccessRuleProtection($false,$true)
+$acl.SetAccessRule($AccessRule)
+$acl | Set-Acl $path.fullname
 
-icacls $newuserprofileimagepath /grant administrators:F /T 2>&1 | Write-Verbose
-takeown /f ($newuserprofileimagepath) /a /r /d y 2>&1 | Write-Verbose
-Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath)
-Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath)
-
-Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse -WhatIf
-Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName -WhatIf
+Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
+Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
 
 #Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ('C:\Users\' + $SelectedUserName + '.' + $NetBiosName)
 #Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $JumpCloudUserName)
