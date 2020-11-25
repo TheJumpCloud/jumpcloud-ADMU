@@ -222,13 +222,12 @@ Accept wildcard characters: False
 ```
 
 ### -SelectedUserName
-{{ Fill SelectedUserName Description }}
+A string value for the DomainUserName that is used in the migration script. This value is verified to make sure the account exists on the system. If the Domain Account does not exist, the script will error and not continue.
 
 ```yaml
 Type: System.String
 Parameter Sets: cmd
 Aliases:
-
 Required: True
 Position: Named
 Default value: None

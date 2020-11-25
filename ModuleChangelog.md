@@ -1,24 +1,21 @@
-## 1.4.4
+## 1.5.0
 
-Release Date: November 16, 2020
+Release Date: November 30, 2020
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Ability to convert rather than duplicate domain user account. Keep appdata intact, much faster & no storage space required.
 ```
 
 #### FEATURES:
 
-{{Fill in the Features}}
-
-#### IMPROVEMENTS:
-
-{{Fill in the Improvements}}
+Added convert User profile functionality to gui & cli.
+The tool now works when secure channel is in broken state when used with convert user profile.
 
 #### BUG FIXES:
 
-{{Fill in the Bug Fixes}}
+Fixed local admin membership bug not displaying consistently in gui.
 
 ## 1.4.3
 

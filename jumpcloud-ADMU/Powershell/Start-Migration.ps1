@@ -571,6 +571,7 @@ Function DownloadAndInstallAgent(
     }
 }
 
+#TODO Add check if library installed on system, else don't import
 Add-Type -MemberDefinition @"
 [DllImport("netapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
 public static extern uint NetApiBufferFree(IntPtr Buffer);
@@ -5575,7 +5576,9 @@ Function Start-Migration
   [ValidateScript({
          If (Test-Localusername $_){Throw [System.Management.Automation.ValidationMetadataException] "The username '${_}' is already in use."}else{$True}
   })][string]$JumpCloudUserName,
-  [Parameter(ParameterSetName='cmd',Mandatory=$true)][string]$SelectedUserName,
+  [ValidateScript({
+         If (!(Test-Domainusername $_)){Throw [System.Management.Automation.ValidationMetadataException] "The username '${_}' is not a valid domainusername on this system."}else{$True}
+  })][string]$SelectedUserName,
   [Parameter(ParameterSetName='cmd',Mandatory=$true)][ValidateNotNullOrEmpty()][string]$TempPassword,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$AcceptEULA=$true,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$LeaveDomain=$false,
@@ -5974,7 +5977,8 @@ else{
     newKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU"
 }
 
-#DownloadLink -Link 'GITHUBDIRECTLINKURLGOESHERE' -Path 'C:\Windows\uwp_jcadmu.exe'
+#TODO: Change link to master branch
+DownloadLink -Link 'https://github.com/TheJumpCloud/jumpcloud-ADMU/raw/SA-1517-User-Conversion/jumpcloud-ADMU/Exe/uwp_jcadmu.exe' -Path 'C:\Windows\uwp_jcadmu.exe'
 
 } else {
 
