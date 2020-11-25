@@ -1,5 +1,7 @@
 $signpath = 'C:\tools\signtool.exe'
 $GUI_JCADMU = ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\gui_jcadmu.exe')
+$UWP_JCADMU = ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\uwp_fix_jcadmu.exe')
+
 $certdir = 'C:\agent\_work\_temp\'
 $certFileName = "godaddy_windows_signing_cert.pfx"
 $certPasswordFileName = "godaddy_windows_signing_cert_password.txt"
@@ -19,7 +21,8 @@ $tsaServers = @(
 )
 
 $filesToSign = @(
-    $GUI_JCADMU
+    $GUI_JCADMU,
+    $UWP_JCADMU
 )
 
 foreach ($file in $filesToSign) {
