@@ -5778,17 +5778,15 @@ $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsof
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
 Write-Log -Message:($newuserprofileimagepath)
 
-$newfoldername = $newuserprofileimagepath.Split('\',3)[2]
-
-$path= takeown /F $newuserprofileimagepath
-$acl = Get-Acl $path
+$path= takeown /F ($newuserprofileimagepath)
+$acl = Get-Acl ($path)
 $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:COMPUTERNAME\Administrators","FullControl","Allow")
 $acl.SetAccessRuleProtection($false,$true)
 $acl.SetAccessRule($AccessRule)
 $acl | Set-Acl $path.fullname
 
 Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
-Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
+#Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
 
 #Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ('C:\Users\' + $SelectedUserName + '.' + $NetBiosName)
 #Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $JumpCloudUserName)
