@@ -5620,6 +5620,8 @@ Function Start-Migration
     $ConvertProfile = $inputObject.ConvertProfile
     $netBiosName = $inputObject.NetBiosName
     $Customxml = $inputObject.Customxml
+  }else{
+  $netBiosName = GetNetBiosname
   }
 
   # Define misc static variables
@@ -5766,7 +5768,7 @@ $MyPlainTextString = $TempPassword
 $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
 $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
 Start-Process Powershell.exe -Credential $Credential -WorkingDirectory 'C:\windows\System32' -ArgumentList ('-WindowStyle Hidden')
-TASKKILL.exe /FI "USERNAME eq $JumpCloudUserName"
+TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
 # Now get NewUserSID
 $NewUserSID = Get-SID -User $JumpCloudUserName
 Write-Log -Message:('Setting Registry Entrys')
@@ -5776,13 +5778,13 @@ $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsof
 
 $path = takeown /F $newuserprofileimagepath /a /r /d y
 $acl = Get-Acl ($newuserprofileimagepath)
-$AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:COMPUTERNAME\Administrators","FullControl","Allow")
+$AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("BUILTIN\Administrators","FullControl","Allow")
 $acl.SetAccessRuleProtection($false,$true)
 $acl.SetAccessRule($AccessRule)
 $acl | Set-Acl $newuserprofileimagepath
 
 Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
-#Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
+Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
 
 #Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ('C:\Users\' + $SelectedUserName + '.' + $NetBiosName)
 #Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $JumpCloudUserName)
@@ -5790,14 +5792,11 @@ Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
 Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath)
 Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath)
 Write-Log -Message:($NewUserSID)
-Write-Log -Message:($SelectedUserSID)
-
 Write-Log -Message:('NTFS ACLs on domain c:\users\ dir')
 
 #ntfs acls on domain c:\users\ dir
-$usrhome = 'C:\Users\' + $JumpCloudUserName
 $NewSPN_Name = $env:COMPUTERNAME + '\' + $JumpCloudUserName
-$Acl = (Get-Item $usrhome).GetAccessControl('Access')
+$Acl = (Get-Item $olduserprofileimagepath).GetAccessControl('Access')
 $Ar = New-Object system.security.accesscontrol.filesystemaccessrule($NewSPN_Name,"FullControl","ContainerInherit,ObjectInherit","None","Allow")
 $Acl.SetAccessRule($Ar)
 $Acl | Set-Acl -Path $usrhome
