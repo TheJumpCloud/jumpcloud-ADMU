@@ -5803,6 +5803,7 @@ $Acl | Set-Acl -Path $newuserprofileimagepath
 
 # Registry Permisions
 # Make a backup of the old user hives
+Write-Log -Message:('Making a backup of the user hive')
 Copy-Item -Path "$newuserprofileimagepath\NTUSER.DAT" -Destination "$newuserprofileimagepath\NTUSER.DAT.BAK"
 Copy-Item -Path "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
 # Load both the usrClass Hive + NTUser.dat into registry
@@ -5815,6 +5816,7 @@ $HKU = Get-Acl "HKEY_USERS:\$newusersid"
 $HKU_Classes = Get-Acl "HKEY_USERS:\$($newusersid)_Classes"
 $HKUKeys = @($HKU, $HKU_Classes)
 
+Write-Log -Message:('Setting the Root Keys Permission')
 # Set the root keys
 ForEach ($rootKey in $HKUKeys.Path){
 Write-Host $rootKey
@@ -5875,7 +5877,11 @@ catch {
 # admin ownership/ permissions on key.
 Write-Host "Grant user access to take ownership operations:"
 enable-privilege SeTakeOwnershipPrivilege
+Write-Log -Message:("Searching $($registryKeys.Count) User Registry Keys")
+$i=0
 $registryKeys | ForEach-object {
+  $i += 1
+  Write-Progress -activity "Granting $newusersid access to user hive:" -status "Verified: $i of $($registryKeys.Count) Keys" -percentComplete (($i / $registryKeys.Count)  * 100)
   # write-host $_.Name
   $string = $_.Name
   # $string = $string.Insert(10, ':')
@@ -5930,7 +5936,7 @@ enable-privilege SeRestorePrivilege
 $i=0
 ForEach ($item in $changeList){
   $i += 1
-  Write-Progress -activity "Resetting HKU Permissions:" -status "Set: $i of $($changeList.Count)" -percentComplete (($i / $changeList.Count)  * 100)
+  Write-Progress -activity "Resetting original ownership on $($changeList.Count) modified keys:" -status "Set: $i of $($changeList.Count)" -percentComplete (($i / $changeList.Count) * 100)
   $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($item.Path, $permCheck, $regRights)
