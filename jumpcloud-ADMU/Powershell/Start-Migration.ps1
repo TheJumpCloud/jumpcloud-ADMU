@@ -5771,24 +5771,15 @@ TASKKILL.exe /FI "USERNAME eq $JumpCloudUserName"
 $NewUserSID = Get-SID -User $JumpCloudUserName
 Write-Log -Message:('Setting Registry Entrys')
 
-Write-Log -Message:($JumpCloudUserName)
-Write-Log -Message:($NewUserSID)
-Write-Log -Message:($SelectedUserSID)
-Write-Log -Message:('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid)
-Write-Log -Message:('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID)
-Write-Log -Message:(Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath')
-Write-Log -Message:(Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath')
-
 $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
-Write-Log -Message:($newuserprofileimagepath + '\')
 
 $path = takeown /F $newuserprofileimagepath /a /r /d y
-$acl = Get-Acl ($path)
+$acl = Get-Acl ($newuserprofileimagepath)
 $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:COMPUTERNAME\Administrators","FullControl","Allow")
 $acl.SetAccessRuleProtection($false,$true)
 $acl.SetAccessRule($AccessRule)
-$acl | Set-Acl $path.fullname
+$acl | Set-Acl $newuserprofileimagepath
 
 Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
 #Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
