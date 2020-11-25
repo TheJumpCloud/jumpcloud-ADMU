@@ -5977,7 +5977,8 @@ else{
     newKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU"
 }
 
-#DownloadLink -Link 'GITHUBDIRECTLINKURLGOESHERE' -Path 'C:\Windows\uwp_jcadmu.exe'
+#TODO: Change link to master branch
+DownloadLink -Link 'https://github.com/TheJumpCloud/jumpcloud-ADMU/raw/SA-1517-User-Conversion/jumpcloud-ADMU/Exe/uwp_jcadmu.exe' -Path 'C:\Windows\uwp_jcadmu.exe'
 
 } else {
 
