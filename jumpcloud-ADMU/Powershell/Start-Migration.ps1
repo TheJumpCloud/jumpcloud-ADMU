@@ -571,15 +571,15 @@ Function DownloadAndInstallAgent(
     }
 }
 
-#Add-Type -MemberDefinition @"
-#[DllImport("netapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-#public static extern uint NetApiBufferFree(IntPtr Buffer);
-#[DllImport("netapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-#public static extern int NetGetJoinInformation(
-#  string server,
-#  out IntPtr NameBuffer,
-#  out int BufferType);
-#"@ -Namespace Win32Api -Name NetApi32
+Add-Type -MemberDefinition @"
+[DllImport("netapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+public static extern uint NetApiBufferFree(IntPtr Buffer);
+[DllImport("netapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+public static extern int NetGetJoinInformation(
+ string server,
+ out IntPtr NameBuffer,
+ out int BufferType);
+"@ -Namespace Win32Api -Name NetApi32
 
 function GetNetBiosName
 {
