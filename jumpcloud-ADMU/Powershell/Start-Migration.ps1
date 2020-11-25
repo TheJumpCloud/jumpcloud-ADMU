@@ -5973,7 +5973,8 @@ else{
     # Just Create the new key
     newKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU"
 }
-# TODO: Schedule the reset of the apps on first login of new user account (Run Once Key)
+
+#DownloadLink -Link 'GITHUBDIRECTLINKURLGOESHERE' -Path 'C:\Windows\uwp_jcadmu.exe'
 
 } else {
 
