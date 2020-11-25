@@ -5958,14 +5958,14 @@ $list | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\app
 Write-Log -Message:('Profile Conversion Completed')
 
 # Set Registry Check Key for New User
-$ADMUKEY = "$newusersid\SOFTWARE\ADMU"
+$ADMUKEY = "$newusersid\SOFTWARE\JCADMU"
 if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     # If the registry Key exists (it wont)
     Write-Host "The Key Already Exists"
 }
 else{
     # Just Create the new key
-    newKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\ADMU"
+    newKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU"
 }
 # TODO: Schedule the reset of the apps on first login of new user account (Run Once Key)
 
