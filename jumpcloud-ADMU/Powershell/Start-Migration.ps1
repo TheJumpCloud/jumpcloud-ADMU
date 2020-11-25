@@ -5773,6 +5773,7 @@ Write-Log -Message:('Setting Registry Entrys')
 
 Write-Log -Message:($JumpCloudUserName)
 Write-Log -Message:($NewUserSID)
+Write-Log -Message:($SelectedUserSID)
 
 $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
@@ -5793,6 +5794,8 @@ Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
 
 Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath)
 Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath)
+Write-Log -Message:($NewUserSID)
+Write-Log -Message:($SelectedUserSID)
 
 Write-Log -Message:('NTFS ACLs on domain c:\users\ dir')
 
