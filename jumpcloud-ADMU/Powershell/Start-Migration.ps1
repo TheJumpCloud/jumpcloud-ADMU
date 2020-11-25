@@ -5781,9 +5781,9 @@ Write-Log -Message:(Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windo
 
 $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
-Write-Log -Message:($newuserprofileimagepath)
+Write-Log -Message:($newuserprofileimagepath + '\')
 
-$path= takeown /F $newuserprofileimagepath /a /r /d y
+$path = takeown /F $newuserprofileimagepath /a /r /d y
 $acl = Get-Acl ($path)
 $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:COMPUTERNAME\Administrators","FullControl","Allow")
 $acl.SetAccessRuleProtection($false,$true)
