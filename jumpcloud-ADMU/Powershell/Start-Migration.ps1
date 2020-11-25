@@ -5783,7 +5783,7 @@ $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsof
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
 Write-Log -Message:($newuserprofileimagepath)
 
-$path= takeown /F ($newuserprofileimagepath)
+$path= takeown /F $newuserprofileimagepath /a /d y
 $acl = Get-Acl ($path)
 $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("$env:COMPUTERNAME\Administrators","FullControl","Allow")
 $acl.SetAccessRuleProtection($false,$true)
