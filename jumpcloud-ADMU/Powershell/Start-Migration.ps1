@@ -5771,8 +5771,13 @@ TASKKILL.exe /FI "USERNAME eq $JumpCloudUserName"
 $NewUserSID = Get-SID -User $JumpCloudUserName
 Write-Log -Message:('Setting Registry Entrys')
 
+Write-Log -Message:($JumpCloudUserName)
+Write-Log -Message:($NewUserSID)
+
 $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
+Write-Log -Message:($newuserprofileimagepath)
+
 $newfoldername = $newuserprofileimagepath.Split('\',3)[2]
 
 $path= takeown /F $newuserprofileimagepath
