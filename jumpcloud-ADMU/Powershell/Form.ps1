@@ -279,11 +279,18 @@ $usmtcustom = [xml] @"
         $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
         $userstrim = $users -creplace '^[^\\]*\\', ''
 
-        $admingroupmembers = Get-LocalGroupMember -SID S-1-5-32-544 | Select-Object Name
+$administrators = @(
+([ADSI]"WinNT://./Administrators").psbase.Invoke('Members') |
+% { 
+ $_.GetType().InvokeMember('AdsPath','GetProperty',$null,$($_),$null) 
+ }
+) -match '^WinNT';
+$administrators = $administrators -replace "WinNT://",""
+
         $members = @()
-        foreach ($username in $admingroupmembers) {
-            $users = ($username.Name).ToString()
-            $members += $users.Substring($users.IndexOf('\')+1)
+        foreach ($username in $administrators) {
+            $users = ($username)
+            $members += $users.Substring($users.IndexOf('/')+1)
         }
 
         $i = 0
@@ -332,7 +339,7 @@ $lbcfreespace.Content = $freespace
 
 #DomainInformation
 $lbDomainName.Content = $DomainName
-$lbNetBios.Content = $NetBiosName2
+$lbNetBios.Content = $NetBiosName
 $lbsecurechannel.Content = $securechannelstatus
 
 #AzureADInformation
@@ -413,8 +420,13 @@ $cb_forcereboot.Add_Unchecked({$script:ForceReboot = $false})
 # Convert Profile checkbox
 $script:ConvertProfile = $false
 $cb_convertprofile.Add_Checked({$script:ConvertProfile = $true})
+$cb_convertprofile.Add_Checked({$cb_custom_xml.IsEnabled = $false})
+$cb_convertprofile.Add_Checked({$cb_accepteula.IsEnabled = $false})
 $cb_convertprofile.Add_Unchecked({$script:ConvertProfile = $false})
+$cb_convertprofile.Add_UnChecked({$cb_custom_xml.IsEnabled = $True})
+$cb_convertprofile.Add_UnChecked({$cb_accepteula.IsEnabled = $True})
 $cb_custom_xml.Add_UnChecked({$tab_usmtcustomxml.IsEnabled = $false})
+
 
 # Custom XML checkbox
 $script:Customxml = $false
