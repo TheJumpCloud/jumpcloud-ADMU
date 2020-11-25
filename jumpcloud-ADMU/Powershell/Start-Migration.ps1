@@ -571,15 +571,15 @@ Function DownloadAndInstallAgent(
     }
 }
 
-Add-Type -MemberDefinition @"
-[DllImport("netapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-public static extern uint NetApiBufferFree(IntPtr Buffer);
-[DllImport("netapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-public static extern int NetGetJoinInformation(
-  string server,
-  out IntPtr NameBuffer,
-  out int BufferType);
-"@ -Namespace Win32Api -Name NetApi32
+#Add-Type -MemberDefinition @"
+#[DllImport("netapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+#public static extern uint NetApiBufferFree(IntPtr Buffer);
+#[DllImport("netapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+#public static extern int NetGetJoinInformation(
+#  string server,
+#  out IntPtr NameBuffer,
+#  out int BufferType);
+#"@ -Namespace Win32Api -Name NetApi32
 
 function GetNetBiosName
 {
@@ -5758,7 +5758,7 @@ else {
 Write-Log -Message:('Creating New Local User' + $localComputerName + '\' + $JumpCloudUserName)
 
 #Create New User
-net user $JumpCloudUserName $TempPassword /add
+net user $JumpCloudUserName $TempPassword /add /Y
 
 Write-Log -Message:('Spawning New Process')
 
@@ -5786,8 +5786,8 @@ $acl | Set-Acl $newuserprofileimagepath
 Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
 Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
 
-#Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ('C:\Users\' + $SelectedUserName + '.' + $NetBiosName)
-#Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $JumpCloudUserName)
+Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ('C:\Users\' + $SelectedUserName + '.' + $NetBiosName)
+Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $JumpCloudUserName)
 
 Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath)
 Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath)
@@ -5796,154 +5796,154 @@ Write-Log -Message:('NTFS ACLs on domain c:\users\ dir')
 
 #ntfs acls on domain c:\users\ dir
 $NewSPN_Name = $env:COMPUTERNAME + '\' + $JumpCloudUserName
-$Acl = (Get-Item $olduserprofileimagepath).GetAccessControl('Access')
+$Acl = Get-Acl $newuserprofileimagepath
 $Ar = New-Object system.security.accesscontrol.filesystemaccessrule($NewSPN_Name,"FullControl","ContainerInherit,ObjectInherit","None","Allow")
 $Acl.SetAccessRule($Ar)
-$Acl | Set-Acl -Path $usrhome
+$Acl | Set-Acl -Path $newuserprofileimagepath
 
-# # Registry Permisions
-# # Make a backup of the old user hives
-# Copy-Item -Path "$newuserprofileimagepath\NTUSER.DAT" -Destination "$newuserprofileimagepath\NTUSER.DAT.BAK"
-# Copy-Item -Path "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
-# # Load both the usrClass Hive + NTUser.dat into registry
-# REG LOAD HKU\$newusersid "$newuserprofileimagepath\NTUSER.DAT"
-# $classes = $newusersid + "_Classes"
-# REG LOAD HKU\$classes "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat"
+# Registry Permisions
+# Make a backup of the old user hives
+Copy-Item -Path "$newuserprofileimagepath\NTUSER.DAT" -Destination "$newuserprofileimagepath\NTUSER.DAT.BAK"
+Copy-Item -Path "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
+# Load both the usrClass Hive + NTUser.dat into registry
+REG LOAD HKU\$newusersid "$newuserprofileimagepath\NTUSER.DAT"
+$classes = $newusersid + "_Classes"
+REG LOAD HKU\$classes "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat"
 
-# New-PSDrive HKEY_USERS Registry HKEY_USERS
-# $HKU = Get-Acl "HKEY_USERS:\$newusersid"
-# $HKU_Classes = Get-Acl "HKEY_USERS:\$($newusersid)_Classes"
-# $HKUKeys = @($HKU, $HKU_Classes)
+New-PSDrive HKEY_USERS Registry HKEY_USERS
+$HKU = Get-Acl "HKEY_USERS:\$newusersid"
+$HKU_Classes = Get-Acl "HKEY_USERS:\$($newusersid)_Classes"
+$HKUKeys = @($HKU, $HKU_Classes)
 
-# # Set the root keys
-# ForEach ($rootKey in $HKUKeys.Path){
-# Write-Host $rootKey
-# $acl = Get-Acl $rootKey
-# foreach ($al in $acl.Access) {
-#   if ($al.IdentityReference -eq "$SelectedUserSID") {
-#     Write-Host "$($acl.PSChildName)"
-#     # $al.getType()
-#     copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $acl.PSChildName
-#     $acl | Set-Acl
-#   }
-# }
-# }
+# Set the root keys
+ForEach ($rootKey in $HKUKeys.Path){
+Write-Host $rootKey
+$acl = Get-Acl $rootKey
+foreach ($al in $acl.Access) {
+  if ($al.IdentityReference -eq "$SelectedUserSID") {
+    Write-Host "$($acl.PSChildName)"
+    # $al.getType()
+    copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $acl.PSChildName
+    $acl | Set-Acl
+  }
+}
+}
 
-# # Track the number of ownership changes in registry to revert
-# $changeList = @()
-# # AppModel Repository Keys need sepecial permissions, regex patter to search
-# $repoKeys = "\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository"
-# # Get the Admin Sid
-# $adminsid = getAdminUser
+# Track the number of ownership changes in registry to revert
+$changeList = @()
+# AppModel Repository Keys need sepecial permissions, regex patter to search
+$repoKeys = "\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository"
+# Get the Admin Sid
+$adminsid = getAdminUser
 
-# # Check each key to see if we can read them, set owner to admin if not. Until
-# # no errors in while loop remain, set permissionsChecked true. Track changes if
-# # permission changes are made
-# $permssionsChecked = $false
-# while (!$permssionsChecked) {
-# try {
-#   $registryKeys = Get-ChildItem -Recurse $HKUKeys.Path -ErrorAction Stop
-#   $permssionsChecked = $true
-# }
-# catch {
-#   # If we cant get-childItem on a key we dont have access.
-#   write-warning $_.Exception.Message
-#   $aclString = $_.CategoryInfo.TargetName
-#   $aclString = $aclString.replace("HKEY_USERS\", "")
-#   # Take ownership
-#   Write-Host "Grant user access to take ownership operations:"
-#   enable-privilege SeTakeOwnershipPrivilege
-#   # If we can't read the orgional owner, set as user
-#   try {
-#     $originalOwner = getRegKeyOwner -keyPath $aclString
-#   }
-#   catch{
-#     $originalOwner = $newusersid
-#   }
-#   changeRegKeyOwner -keyPath $aclString -user "$adminsid"
-#   giveFullControlToUser -userName "$adminsid" -key $aclString
-#   # Track changes
-#   $changeList += [PSCustomObject]@{
-#     Path           = $aclString
-#     OrigionalOwner = $originalOwner
-#     AdminToRemove  = "$adminsid"
-#   }
-# }
-# }
-# # Foreach registryKeys, search for $SelectedUserSID permissions, replace w/
-# # newusersid and remove oldusersid permssions. Track changes where we grant
-# # admin ownership/ permissions on key.
-# Write-Host "Grant user access to take ownership operations:"
-# enable-privilege SeTakeOwnershipPrivilege
-# $registryKeys | ForEach-object {
-#   # write-host $_.Name
-#   $string = $_.Name
-#   # $string = $string.Insert(10, ':')
-#   $string = $string.Replace("HKEY_USERS\", "HKEY_USERS:\")
-#   # Select parent item since we traverse each key anyways.
-#   # resolves issue where wildcards are included in key names
-#   $acl = Get-Acl $string | Select-Object -First 1
-#   ForEach ($al in $acl.Access) {
-#     if ($al.IdentityReference -eq "$SelectedUserSID") {
-#       $aclString = $acl.path
-#       $aclString = $aclString.replace("Microsoft.PowerShell.Core\Registry::HKEY_USERS\", "")
-#       If ($al.IsInherited -eq $false -And $aclString -NotMatch $repoKeys) {
-#         # copy permissions from domain user to new user
-#         copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $aclString
-#         $acl | Set-Acl
-#       }
-#       # Repository Keys need special permission.
-#       If ($aclString -Match $repoKeys) {
-#         $originalOwner = getRegKeyOwner -keyPath $aclString
-#         # "original Owner to the key `"$aclString`" is: `"$originalOwner`""
-#         changeRegKeyOwner -keyPath $aclString -user "$adminsid"
-#         # Give Full Controll To Current Admin
-#         If ($al.IsInherited -eq $false) {
-#           giveFullControlToUser -userName "$adminsid" -key $aclString
-#           # While Current Admin is Admin, copy permission set from domain user to new user
-#           copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $aclString
-#           $acl | Set-Acl
-#         }
-#         # Track permission changes for later
-#         $changeList += [PSCustomObject]@{
-#           Path           = $aclString
-#           OrigionalOwner = $originalOwner
-#           AdminToRemove  = "$adminsid"
-#         }
-#       }
-#     }
-#   }
-# }
+# Check each key to see if we can read them, set owner to admin if not. Until
+# no errors in while loop remain, set permissionsChecked true. Track changes if
+# permission changes are made
+$permssionsChecked = $false
+while (!$permssionsChecked) {
+try {
+  $registryKeys = Get-ChildItem -Recurse $HKUKeys.Path -ErrorAction Stop
+  $permssionsChecked = $true
+}
+catch {
+  # If we cant get-childItem on a key we dont have access.
+  write-warning $_.Exception.Message
+  $aclString = $_.CategoryInfo.TargetName
+  $aclString = $aclString.replace("HKEY_USERS\", "")
+  # Take ownership
+  Write-Host "Grant user access to take ownership operations:"
+  enable-privilege SeTakeOwnershipPrivilege
+  # If we can't read the orgional owner, set as user
+  try {
+    $originalOwner = getRegKeyOwner -keyPath $aclString
+  }
+  catch{
+    $originalOwner = $newusersid
+  }
+  changeRegKeyOwner -keyPath $aclString -user "$adminsid"
+  giveFullControlToUser -userName "$adminsid" -key $aclString
+  # Track changes
+  $changeList += [PSCustomObject]@{
+    Path           = $aclString
+    OrigionalOwner = $originalOwner
+    AdminToRemove  = "$adminsid"
+  }
+}
+}
+# Foreach registryKeys, search for $SelectedUserSID permissions, replace w/
+# newusersid and remove oldusersid permssions. Track changes where we grant
+# admin ownership/ permissions on key.
+Write-Host "Grant user access to take ownership operations:"
+enable-privilege SeTakeOwnershipPrivilege
+$registryKeys | ForEach-object {
+  # write-host $_.Name
+  $string = $_.Name
+  # $string = $string.Insert(10, ':')
+  $string = $string.Replace("HKEY_USERS\", "HKEY_USERS:\")
+  # Select parent item since we traverse each key anyways.
+  # resolves issue where wildcards are included in key names
+  $acl = Get-Acl $string | Select-Object -First 1
+  ForEach ($al in $acl.Access) {
+    if ($al.IdentityReference -eq "$SelectedUserSID") {
+      $aclString = $acl.path
+      $aclString = $aclString.replace("Microsoft.PowerShell.Core\Registry::HKEY_USERS\", "")
+      If ($al.IsInherited -eq $false -And $aclString -NotMatch $repoKeys) {
+        # copy permissions from domain user to new user
+        copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $aclString
+        $acl | Set-Acl
+      }
+      # Repository Keys need special permission.
+      If ($aclString -Match $repoKeys) {
+        $originalOwner = getRegKeyOwner -keyPath $aclString
+        # "original Owner to the key `"$aclString`" is: `"$originalOwner`""
+        changeRegKeyOwner -keyPath $aclString -user "$adminsid"
+        # Give Full Controll To Current Admin
+        If ($al.IsInherited -eq $false) {
+          giveFullControlToUser -userName "$adminsid" -key $aclString
+          # While Current Admin is Admin, copy permission set from domain user to new user
+          copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $aclString
+          $acl | Set-Acl
+        }
+        # Track permission changes for later
+        $changeList += [PSCustomObject]@{
+          Path           = $aclString
+          OrigionalOwner = $originalOwner
+          AdminToRemove  = "$adminsid"
+        }
+      }
+    }
+  }
+}
 
-# # Reset ACL Inheritance on ...\Repository\Pacakges\ and ...\Repository\Familes\
-# $packages = Get-Acl "HKEY_USERS:\$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages"
-# $packages.SetAccessRuleProtection($true, $false)
-# giveReadToUser -userName "$adminsid" -keyPath "$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages"
-# $familes = Get-Acl "HKEY_USERS:\$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families"
-# $familes.SetAccessRuleProtection($true, $false)
-# giveReadToUser -userName "$adminsid" -keyPath "$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families"
+# Reset ACL Inheritance on ...\Repository\Pacakges\ and ...\Repository\Familes\
+$packages = Get-Acl "HKEY_USERS:\$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages"
+$packages.SetAccessRuleProtection($true, $false)
+giveReadToUser -userName "$adminsid" -keyPath "$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages"
+$familes = Get-Acl "HKEY_USERS:\$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families"
+$familes.SetAccessRuleProtection($true, $false)
+giveReadToUser -userName "$adminsid" -keyPath "$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families"
 
-# # Revert ownership on tracked items in changeList to origional owner & access
-# # Required to perform restore operations
-# Write-Host "Grant user access to take perform restore operations:"
-# enable-privilege SeRestorePrivilege
-# $i=0
-# ForEach ($item in $changeList){
-#   $i += 1
-#   Write-Progress -activity "Resetting HKU Permissions:" -status "Set: $i of $($changeList.Count)" -percentComplete (($i / $changeList.Count)  * 100)
-#   $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
-#   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
-#   $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($item.Path, $permCheck, $regRights)
-#   $acl = $key.GetAccessControl()
-#   ForEach ($al in $acl.Access) {
-#       changeRegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
-#   }
-# }
+# Revert ownership on tracked items in changeList to origional owner & access
+# Required to perform restore operations
+Write-Host "Grant user access to take perform restore operations:"
+enable-privilege SeRestorePrivilege
+$i=0
+ForEach ($item in $changeList){
+  $i += 1
+  Write-Progress -activity "Resetting HKU Permissions:" -status "Set: $i of $($changeList.Count)" -percentComplete (($i / $changeList.Count)  * 100)
+  $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
+  $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+  $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($item.Path, $permCheck, $regRights)
+  $acl = $key.GetAccessControl()
+  ForEach ($al in $acl.Access) {
+      changeRegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
+  }
+}
 
-# # Unload the Reg Hives
-# # TODO: Fix this or force reboot
-# # REG UNLOAD HKU\$newusersid
-# # REG UNLOAD HKU\$classes
+# Unload the Reg Hives
+# TODO: Fix this or force reboot
+# REG UNLOAD HKU\$newusersid
+# REG UNLOAD HKU\$classes
 
 Write-Log -Message:('Updating UWP Apps for new user')
 $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
