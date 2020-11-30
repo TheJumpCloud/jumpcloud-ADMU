@@ -5976,7 +5976,8 @@ else{
 }
 
 #TODO: Change link to master branch
-DownloadLink -Link 'https://github.com/TheJumpCloud/jumpcloud-ADMU/raw/SA-1517-User-Conversion/jumpcloud-ADMU/Exe/uwp_jcadmu.exe' -Path 'C:\Windows\uwp_jcadmu.exe'
+#https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe
+DownloadLink -Link 'https://jcautopkg.s3-us-west-2.amazonaws.com/uwp_jcadmu.exe' -Path 'C:\Windows\uwp_jcadmu.exe'
 
 } else {
 
