@@ -14,7 +14,7 @@ Starts the JumpCloud Active Directory Migration process.
 
 ### cmd
 ```
-Start-Migration -JumpCloudUserName <String> [-SelectedUserName <String>] -TempPassword <String>
+Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPassword <String>
  [-AcceptEULA <Boolean>] [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-ConvertProfile <Boolean>]
  [-AzureADProfile <Boolean>] [-Customxml <Boolean>] [-InstallJCAgent <Boolean>] [-JumpCloudConnectKey <String>]
  [<CommonParameters>]
@@ -22,7 +22,7 @@ Start-Migration -JumpCloudUserName <String> [-SelectedUserName <String>] -TempPa
 
 ### form
 ```
-Start-Migration [-SelectedUserName <String>] [-inputObject <Object>] [<CommonParameters>]
+Start-Migration [-inputObject <Object>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -226,10 +226,10 @@ A string value for the DomainUserName that is used in the migration script. This
 
 ```yaml
 Type: System.String
-Parameter Sets: (All)
+Parameter Sets: cmd
 Aliases:
 
-Required: False
+Required: True
 Position: Named
 Default value: None
 Accept pipeline input: False
