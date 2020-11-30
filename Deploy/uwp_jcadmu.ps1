@@ -6,7 +6,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
    $output = foreach ($item in $newlist) {
       Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml"
    }
-   $output | Out-File "$HOME + '\AppData\Local\JumpCloudADMU\appx_manifestLog.txt"
+   $output | Out-File "$HOME\AppData\Local\JumpCloudADMU\appx_manifestLog.txt"
 }
 else{
      exit
