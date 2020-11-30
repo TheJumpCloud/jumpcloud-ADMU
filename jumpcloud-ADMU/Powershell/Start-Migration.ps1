@@ -5576,9 +5576,7 @@ Function Start-Migration
   [ValidateScript({
          If (Test-Localusername $_){Throw [System.Management.Automation.ValidationMetadataException] "The username '${_}' is already in use."}else{$True}
   })][string]$JumpCloudUserName,
-  [ValidateScript({
-         If (!(Test-Domainusername $_)){Throw [System.Management.Automation.ValidationMetadataException] "The username '${_}' is not a valid domainusername on this system."}else{$True}
-  })][string]$SelectedUserName,
+  [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][string]$SelectedUserName,
   [Parameter(ParameterSetName='cmd',Mandatory=$true)][ValidateNotNullOrEmpty()][string]$TempPassword,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$AcceptEULA=$true,
   [Parameter(ParameterSetName='cmd',Mandatory=$false)][bool]$LeaveDomain=$false,
