@@ -47,7 +47,7 @@ Else
     Write-Error ('Build.ps1 failed. Transform process outputted an empty ADMU.ps1 file.')
 }
 
-$masteruwp = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/tree/SA-1517-User-Conversion/Deply/uwp_jcadmu.ps1).tostring() | Out-File -FilePath C:\windows\Temp\master.ps1
+$masteruwp = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/tree/SA-1517-User-Conversion/Deploy/uwp_jcadmu.ps1).tostring() | Out-File -FilePath C:\windows\Temp\master.ps1
 $branchuwp ='C:\agent\_work\1\s\Deploy\uwp_jcadmu.ps1'
 
 if ($(Get-FileHash $masteruwp).Hash -ne $(Get-FileHash $branchuwp).Hash) {
