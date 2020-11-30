@@ -11,3 +11,5 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
 else{
      exit
 }
+
+#TODO add UWP powershell fullscreen form
