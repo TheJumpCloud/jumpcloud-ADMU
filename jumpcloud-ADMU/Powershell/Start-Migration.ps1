@@ -194,30 +194,6 @@ function Get-SID ([string]$User){
   $strSID.Value
 }
 
-#return sid of local user
-function GetSIDFromWin32UserAccount
-{
-  [CmdletBinding()]
-  param
-  (
-      [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-      $UserName,
-      [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-      $NetBiosName
-  )
-  process
-  {
-    $user = Get-WmiObject win32_useraccount | Select-Object sid, Name, Domain | Where-Object { ($_.Name -EQ $UserName) -And { $_.Domain -eq $NetBiosName } }
-    if ([string]::IsNullOrEmpty($user.sid)) {
-      # Broken Secure Channel
-      return $UserName
-    }
-    else {
-      # Working Secure Channel
-      return $user.sid
-    }
-  }
-}
 #Verify Domain Account Function
 Function VerifyAccount{
   Param (
@@ -598,24 +574,90 @@ function GetNetBiosName
   }
 }
 
-function ConvertSID
-{
+function ConvertSID {
   [CmdletBinding()]
   param
   (
-      [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-      $Sid
+    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+    $Sid
   )
-  process
-  {
-  try {
-    (New-Object System.Security.Principal.SecurityIdentifier($Sid)).Translate( [System.Security.Principal.NTAccount]).Value
-  }
-  catch {
-    return $Sid
-  }
+  process {
+    try {
+      (New-Object System.Security.Principal.SecurityIdentifier($Sid)).Translate( [System.Security.Principal.NTAccount]).Value
+    }
+    catch {
+      return $Sid
+    }
   }
 }
+
+function ConvertUserName {
+  [CmdletBinding()]
+  param
+  (
+    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+    $user
+  )
+  process {
+    try {
+      (New-Object System.Security.Principal.NTAccount($user)).Translate( [System.Security.Principal.SecurityIdentifier]).Value
+    }
+    catch {
+      return $user
+    }
+  }
+}
+
+function CheckUsernameorSID {
+  [CmdletBinding()]
+  param
+  (
+    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+    $usernameorsid
+  )
+  Begin {
+    $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+$"
+    $localcomputersidprefix = ((Get-LocalUser | Select-Object -First 1).SID).AccountDomainSID.ToString()
+    $convertedUser = ConvertUserName $usernameorsid
+    $registyProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
+    $list = @()
+    foreach ($profile in $registyProfiles) {
+      $list += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
+    }
+    $users = @()
+    foreach ($listItem in $list) {
+      $isValidFormat = [regex]::IsMatch($($listItem.PSChildName), $sidPattern);
+      # Get Valid SIDS
+      if ($isValidFormat) {
+        $users += [PSCustomObject]@{
+          Name = ConvertSID $listItem.PSChildName
+          SID  = $listItem.PSChildName
+        }
+      }
+    }
+  }
+  process {
+    #check if sid, if valid sid and return sid
+    if ([regex]::IsMatch($usernameorsid, $sidPattern)) {
+      if (($usernameorsid -in $users.SID) -And !($users.SID.Contains($localcomputersidprefix))) {
+          # return, it's a valid SID
+          write-host "valid sid returning sid"
+          return $usernameorsid
+        }
+      }
+      elseif ([regex]::IsMatch($convertedUser, $sidPattern)) {
+        if (($convertedUser -in $users.SID) -And !($users.SID.Contains($localcomputersidprefix))) {
+            # return, it's a valid SID
+            write-host "valid user returning sid"
+            return $convertedUser
+          }
+        }
+        else {
+          write-host 'SID or Username is invalid'
+          exit
+        }
+      }
+    }
 
 function Test-XMLFile {
   <#
@@ -5649,7 +5691,7 @@ Function Start-Migration
   $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
   $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
   $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
-  $SelectedUserSID =  GetSIDFromWin32UserAccount -UserName $SelectedUserName -NetBiosName $NetBiosName
+  $SelectedUserSid = CheckUsernameorSID $SelectedUserName
 
   # JumpCloud Agent Installation Variables
   $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
