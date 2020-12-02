@@ -270,62 +270,67 @@ $usmtcustom = [xml] @"
         $tmpDoc.WriteContentTo($writer)
         $tb_customxml.Text = $sw.ToString()
 
-        # Get list of profiles from computer into listview
-        $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-        $win32UserProfiles | Add-Member -membertype NoteProperty -name IsLocalAdmin -value $null
-        $win32UserProfiles | Add-Member -membertype NoteProperty -name LocalProfileSize -value $null
-
-        $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
-        $userstrim = $users -creplace '^[^\\]*\\', ''
-
-$administrators = @(
-([ADSI]"WinNT://./Administrators").psbase.Invoke('Members') |
-% { 
- $_.GetType().InvokeMember('AdsPath','GetProperty',$null,$($_),$null) 
- }
-) -match '^WinNT';
-$administrators = $administrators -replace "WinNT://",""
-
-        $members = @()
-        foreach ($username in $administrators) {
-            $users = ($username)
-            $members += $users.Substring($users.IndexOf('/')+1)
-        }
-
-        $i = 0
-        ForEach ($user in $userstrim)
-        {
-            If ($members -contains $user)
-            {
-                $win32UserProfiles[$i].IsLocalAdmin = $true
-                $i++
-            }
-            Else
-            {
-                $win32UserProfiles[$i].IsLocalAdmin = $false
-                $i++
-            }
-        }
-
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
-
-        #local profile file size check
-        $LocalUserProfiles = $win32UserProfiles | Select-Object LocalPath
-        $LocalUserProfilesTrim = ForEach ($LocalPath in $LocalUserProfiles) { $LocalPath.LocalPath.substring(9) }
-
-        $i = 0
-        foreach ($userprofile in $LocalUserProfilesTrim)
-        {
-            $largeprofile = Get-ChildItem C:\Users\$userprofile -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Sum length | Select-Object -ExpandProperty Sum
+        # Get Valid SIDs from the Registry and build user object
+        $registyProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
+        $profileList = @()
+        foreach ($profile in $registyProfiles) {
+            $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
+        }
+        # List to store users
+        $users = @()
+        foreach ($listItem in $profileList) {
+            $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+$"
+            $isValidFormat = [regex]::IsMatch($($listItem.PSChildName), $sidPattern);
+            # Get Valid SIDs
+            if ($isValidFormat) {
+                # Populate Users List
+                $users += [PSCustomObject]@{
+                    Name              = ConvertSID $listItem.PSChildName
+                    LocalPath         = $listItem.ProfileImagePath
+                    SID               = $listItem.PSChildName
+                    IsLocalAdmin      = $null
+                    LocalProfileSize  = $null
+                    Loaded            = $null
+                    RoamingConfigured = $null
+                    LastLogin         = $null
+                }
+            }
+        }
+        # Get Win32 Profiles to merge data with valid SIDs
+        $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+        $date_format = "yyyy-MM-dd HH:mm"
+        foreach ($user in $users) {
+            # Get Data from Win32Profile
+            foreach ($win32user in $win32UserProfiles) {
+                if ($($user.SID) -eq $($win32user.SID)) {
+                    $user.RoamingConfigured = $win32user.RoamingConfigured
+                    $user.Loaded = $win32user.Loaded
+                    $user.LastLogin = [System.Management.ManagementDateTimeConverter]::ToDateTime($($win32user.lastusetime)).ToUniversalTime().ToSTring($date_format)
+                }
+            }
+            # Get Admin Status
+            try {
+                $admin = Get-LocalGroupMember -Member "$($user.SID)" -Name "Administrators" -EA SilentlyContinue
+            }
+            catch {
+                $user = Get-LocalGroupMember -Member "$($user.SID)" -Name "Users"
+            }
+            if ($admin) {
+                $user.IsLocalAdmin = $true
+            }
+            else {
+                $user.IsLocalAdmin = $false
+            }
+            # Get Profile Size
+            $largeprofile = Get-ChildItem $($user.LocalPath) -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Sum length | Select-Object -ExpandProperty Sum
             $largeprofile = [math]::Round($largeprofile / 1MB, 0)
-            $largeprofile = $largeprofile
-            $win32UserProfiles[$i].LocalProfileSize = $largeprofile
-            $i++
+            $user.LocalProfileSize = $largeprofile
         }
 
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Building Profile Group Box Query..'
 
-        $Profiles = $win32UserProfiles | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, @{Name = "LastLogin"; EXPRESSION = { $_.ConvertToDateTime($_.lastusetime) } }, @{Name = "UserName"; EXPRESSION = { ConvertSID($_.SID) } }
+        $Profiles = $users | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, LastLogin, @{Name = "UserName"; EXPRESSION = { $_.Name } }
 
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Done!'
 
