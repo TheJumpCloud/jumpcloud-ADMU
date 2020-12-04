@@ -248,12 +248,17 @@ Function VerifyAccount {
   .LINK
      https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0
   #>
+Function Get-WindowsDrive{
+  $drive = (wmic OS GET SystemDrive /VALUE)
+  $drive = [regex]::Match($drive, 'SystemDrive=(.\:)').Groups[1].Value
+  return $drive 
+}
 Function Write-Log {
   [CmdletBinding()]
   Param
   (
     [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
-    , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = 'C:\Windows\Temp\jcAdmu.log'
+    , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
     , [Parameter(Mandatory = $false)][ValidateSet("Error", "Warn", "Info")][string]$Level = "Info"
   )
   Begin {
@@ -5751,6 +5756,7 @@ Function Start-Migration {
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$LeaveDomain = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ForceReboot = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ConvertProfile = $false,
+    [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$CreateRestore = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AzureADProfile = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$Customxml = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$InstallJCAgent = $false,
@@ -5786,6 +5792,7 @@ Function Start-Migration {
       $LeaveDomain = $InputObject.LeaveDomain
       $ForceReboot = $InputObject.ForceReboot
       $ConvertProfile = $inputObject.ConvertProfile
+      $CreateRestore = $inputObject.$CreateRestore
       $netBiosName = $inputObject.NetBiosName
       $Customxml = $inputObject.Customxml
     }
@@ -5795,12 +5802,13 @@ Function Start-Migration {
 
     # Define misc static variables
     $localComputerName = $WmiComputerSystem.Name
-    $adkSetupLink = 'https://go.microsoft.com/fwlink/?linkid=2120254'
-    $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
-    $usmtTempPath = 'C:\Windows\Temp\JCADMU\USMT\'
-    $jcAdmuLogFile = 'C:\Windows\Temp\jcAdmu.log'
-    $UserStateMigrationToolx64Path = 'C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
-    $UserStateMigrationToolx86Path = 'C:\Program Files\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
+    $windowsDrive = Get-WindowsDrive
+    $adkSetupLink = "https://go.microsoft.com/fwlink/?linkid=2120254"
+    $jcAdmuTempPath = "$()\Windows\Temp\JCADMU\"
+    $usmtTempPath = "$windowsDrive\Windows\Temp\JCADMU\USMT\"
+    $jcAdmuLogFile = "$windowsDrive\Windows\Temp\jcAdmu.log"
+    $UserStateMigrationToolx64Path = "$windowsDrive\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\"
+    $UserStateMigrationToolx86Path = "$windowsDrive\Program Files\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\"
 
     $profileStorePath = $jcAdmuTempPath + 'store'
     $adksetupfile = 'adksetup.exe'
@@ -5825,7 +5833,7 @@ Function Start-Migration {
     $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
     $AGENT_SERVICE_NAME = "JumpCloud-agent"
     $AGENT_INSTALLER_URL = "https://s3.amazonaws.com/jumpcloud-windows-agent/production/JumpCloudInstaller.exe"
-    $AGENT_INSTALLER_PATH = "C:\windows\Temp\JCADMU\JumpCloudInstaller.exe"
+    $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\JumpCloudInstaller.exe"
     $AGENT_UNINSTALLER_NAME = "unins000.exe"
     $EVENT_LOGGER_KEY_NAME = "hklm:\SYSTEM\CurrentControlSet\services\eventlog\Application\JumpCloud-agent"
     $INSTALLER_BINARY_NAMES = "JumpCloudInstaller.exe,JumpCloudInstaller.tmp"
@@ -5861,11 +5869,16 @@ Function Start-Migration {
       Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $SelectedUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
 
     }
+    if ($CreateRestore -eq $true) {
+      Checkpoint-Computer -Description "ADMU Convert User" -EA silentlycontinue
+      Write-Host "The following restore points were found on this system:"
+      Get-ComputerRestorePoint
+    }
     #region SilentAgentInstall
     if ($InstallJCAgent -eq $true -and (!(Check_Program_Installed("Jumpcloud")))) {
       #check if jc is not installed and clear folder
-      if (Test-Path 'C:\Program Files\Jumpcloud\') {
-        Remove-ItemIfExists -Path 'C:\Program Files\Jumpcloud\' -Recurse
+      if (Test-Path "$windowsDrive\Program Files\Jumpcloud\") {
+        Remove-ItemIfExists -Path "$windowsDrive\Program Files\Jumpcloud\" -Recurse
       }
       # Agent Installer
       DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($usmtTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
@@ -5886,9 +5899,6 @@ Function Start-Migration {
     }
 
     if ($ConvertProfile -eq $true) {
-      #TODO: Add Parameter to create Restore Point & Uncomment
-      # Write-log -message:("Createing System Restore Point")
-      # Checkpoint-Computer -Description "ADMU Convert User"
       Write-Log -Message:('Creating Registry Entries')
 
       # Root Key Path
@@ -5925,7 +5935,7 @@ Function Start-Migration {
         }
       }
 
-      Write-Log -Message:('Creating New Local User' + $localComputerName + '\' + $JumpCloudUserName)
+      Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
 
       #Create New User
       net user $JumpCloudUserName $TempPassword /add /Y
@@ -5937,7 +5947,7 @@ Function Start-Migration {
       $MyPlainTextString = $TempPassword
       $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
       $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
-      Start-Process Powershell.exe -Credential $Credential -WorkingDirectory 'C:\windows\System32' -ArgumentList ('-WindowStyle Hidden')
+      Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
       TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
       # Now get NewUserSID
       $NewUserSID = Get-SID -User $JumpCloudUserName
@@ -5953,18 +5963,27 @@ Function Start-Migration {
       $acl.SetAccessRule($AccessRule)
       $acl | Set-Acl $newuserprofileimagepath
 
-      Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
-      Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
+      # Test Condition for same names
+      if ([regex]::IsMatch($newuserprofileimagepath, $($olduserprofileimagepath.Replace('\', '\\')))) {
+        Write-Host "Selected User Path and New User Path Match"
+        Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
+        $newuserprofileimagepath = $olduserprofileimagepath
+      }
+      else {
+        write-host "Selected User Path and New User Path Differ"
+        Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
+        Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
+      }
 
-      Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ('C:\Users\' + $SelectedUserName + '.' + $NetBiosName)
-      Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ('C:\Users\' + $JumpCloudUserName)
+      Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $SelectedUserName + '.' + $NetBiosName)
+      Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUserName)
 
       Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath)
       Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath)
       Write-Log -Message:($NewUserSID)
-      Write-Log -Message:('NTFS ACLs on domain c:\users\ dir')
+      Write-Log -Message:("NTFS ACLs on domain $windowsDrive\users\ dir")
 
-      #ntfs acls on domain c:\users\ dir
+      #ntfs acls on domain $windowsDrive\users\ dir
       $NewSPN_Name = $env:COMPUTERNAME + '\' + $JumpCloudUserName
       $Acl = Get-Acl $newuserprofileimagepath
       $Ar = New-Object system.security.accesscontrol.filesystemaccessrule($NewSPN_Name, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
@@ -6001,7 +6020,7 @@ Function Start-Migration {
         newKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU"
       }
 
-      DownloadLink -Link 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -Path 'C:\Windows\uwp_jcadmu.exe'
+      DownloadLink -Link 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -Path "$windowsDrive\Windows\uwp_jcadmu.exe"
 
     }
     else {
@@ -6052,8 +6071,8 @@ Function Start-Migration {
             $usmtconfig.save($UserStateMigrationToolVersionPath + '\config.xml')
             $usmtmiguser.save($UserStateMigrationToolVersionPath + '\MigUser.xml')
             $usmtmigapp.save($UserStateMigrationToolVersionPath + '\MigApp.xml')
-            if (!(Test-Path -Path 'C:\windows\Temp\custom.xml')) {
-              $usmtcustom.save('C:\Windows\Temp\custom.xml')
+            if (!(Test-Path -Path "$windowsDrive\windows\Temp\custom.xml")) {
+              $usmtcustom.save("$windowsDrive\Windows\Temp\custom.xml")
             }
           }
           catch {

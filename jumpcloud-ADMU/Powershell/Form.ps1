@@ -67,6 +67,7 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                             <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="359.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                             <CheckBox Name="cb_custom_xml" Content="Use USMT Custom.XML" HorizontalAlignment="Left" Margin="4,68,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
                             <CheckBox Name="cb_convertprofile" Content="Convert Profile" HorizontalAlignment="Left" Margin="156,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                            <CheckBox Name="cb_createrestore" Content="Create Restore Point" HorizontalAlignment="Left" Margin="258,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                         </Grid>
                     </GroupBox>
                     <GroupBox Header="Domain Information" HorizontalAlignment="Left" Height="120" Margin="269,103,0,0" VerticalAlignment="Top" Width="321" FontWeight="Bold" Grid.Column="1">
@@ -306,7 +307,12 @@ $usmtcustom = [xml] @"
                 if ($($user.SID) -eq $($win32user.SID)) {
                     $user.RoamingConfigured = $win32user.RoamingConfigured
                     $user.Loaded = $win32user.Loaded
-                    $user.LastLogin = [System.Management.ManagementDateTimeConverter]::ToDateTime($($win32user.lastusetime)).ToUniversalTime().ToSTring($date_format)
+                    if ($($win32user.lastusetime)::IsNullOrEmpty){
+                        $user.LastLogin = "Never"
+                    }
+                    else{
+                        $user.LastLogin = [System.Management.ManagementDateTimeConverter]::ToDateTime($($win32user.lastusetime)).ToUniversalTime().ToSTring($date_format)
+                    }
                 }
             }
             # Get Admin Status
@@ -431,6 +437,10 @@ $cb_convertprofile.Add_UnChecked({$cb_custom_xml.IsEnabled = $True})
 $cb_convertprofile.Add_UnChecked({$cb_accepteula.IsEnabled = $True})
 $cb_custom_xml.Add_UnChecked({$tab_usmtcustomxml.IsEnabled = $false})
 
+# Create Restore Point checkbox
+$script:CreateRestore = $false
+$cb_createrestore.Add_Checked( { $script:CreateRestore = $true })
+$cb_createrestore.Add_Unchecked( { $script:CreateRestore = $false })
 
 # Custom XML checkbox
 $script:Customxml = $false
@@ -510,6 +520,7 @@ $bDeleteProfile.Add_Click( {
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('LeaveDomain') -Value:($LeaveDomain)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ForceReboot') -Value:($ForceReboot)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ConvertProfile') -Value:($ConvertProfile)
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('CreateRestore') -Value:($CreateRestore)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('DomainUserName') -Value:($SelectedUserName.Substring($SelectedUserName.IndexOf('\') + 1))
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudUserName') -Value:($tbJumpCloudUserName.Text)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('TempPassword') -Value:($tbTempPassword.Text)
