@@ -5804,7 +5804,7 @@ Function Start-Migration {
     $localComputerName = $WmiComputerSystem.Name
     $windowsDrive = Get-WindowsDrive
     $adkSetupLink = "https://go.microsoft.com/fwlink/?linkid=2120254"
-    $jcAdmuTempPath = "$()\Windows\Temp\JCADMU\"
+    $jcAdmuTempPath = "$windowsDrive\Windows\Temp\JCADMU\"
     $usmtTempPath = "$windowsDrive\Windows\Temp\JCADMU\USMT\"
     $jcAdmuLogFile = "$windowsDrive\Windows\Temp\jcAdmu.log"
     $UserStateMigrationToolx64Path = "$windowsDrive\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\"
