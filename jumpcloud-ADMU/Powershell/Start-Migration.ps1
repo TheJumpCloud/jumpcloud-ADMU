@@ -251,7 +251,7 @@ Function VerifyAccount {
 Function Get-WindowsDrive{
   $drive = (wmic OS GET SystemDrive /VALUE)
   $drive = [regex]::Match($drive, 'SystemDrive=(.\:)').Groups[1].Value
-  return $drive 
+  return $drive
 }
 Function Write-Log {
   [CmdletBinding()]
@@ -593,19 +593,19 @@ function CheckUsernameorSID {
     if ([regex]::IsMatch($usernameorsid, $sidPattern)) {
       if (($usernameorsid -in $users.SID) -And !($users.SID.Contains($localcomputersidprefix))) {
         # return, it's a valid SID
-        write-host "valid sid returning sid"
+        Write-Log "valid sid returning sid"
         return $usernameorsid
       }
     }
     elseif ([regex]::IsMatch($convertedUser, $sidPattern)) {
       if (($convertedUser -in $users.SID) -And !($users.SID.Contains($localcomputersidprefix))) {
         # return, it's a valid SID
-        write-host "valid user returning sid"
+        Write-Log "valid user returning sid"
         return $convertedUser
       }
     }
     else {
-      write-host 'SID or Username is invalid'
+      Write-Log 'SID or Username is invalid'
       exit
     }
   }
@@ -5871,7 +5871,7 @@ Function Start-Migration {
     }
     if ($CreateRestore -eq $true) {
       Checkpoint-Computer -Description "ADMU Convert User" -EA silentlycontinue
-      Write-Host "The following restore points were found on this system:"
+      Write-host "The following restore points were found on this system:"
       Get-ComputerRestorePoint
     }
     #region SilentAgentInstall
@@ -6170,6 +6170,6 @@ Function Start-Migration {
   }
   End {
     Write-Log -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
-    Write-Log -Message:('Tool options chosen were : ' + 'Install JC Agent = ' + $InstallJCAgent + ', Leave Domain = ' + $LeaveDomain + ', Force Reboot = ' + $ForceReboot + ', AzureADProfile = ' + $AzureADProfile)
+    Write-Log -Message:('Tool options chosen were : ' + 'Install JC Agent = ' + $InstallJCAgent + ', Leave Domain = ' + $LeaveDomain + ', Force Reboot = ' + $ForceReboot + ', AzureADProfile = ' + $AzureADProfile + ', Convert User Profile = ' + $ConvertProfile + ', Create System Restore Point = ' + $CreateRestore)
   }
 }
