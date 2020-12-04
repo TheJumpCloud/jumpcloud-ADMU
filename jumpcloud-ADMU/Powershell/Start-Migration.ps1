@@ -5792,7 +5792,7 @@ Function Start-Migration {
       $LeaveDomain = $InputObject.LeaveDomain
       $ForceReboot = $InputObject.ForceReboot
       $ConvertProfile = $inputObject.ConvertProfile
-      $CreateRestore = $inputObject.$CreateRestore
+      $CreateRestore = $inputObject.CreateRestore
       $netBiosName = $inputObject.NetBiosName
       $Customxml = $inputObject.Customxml
     }
@@ -5867,8 +5867,8 @@ Function Start-Migration {
     }
     else {
       Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $SelectedUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
-
     }
+    # Create Restore
     if ($CreateRestore -eq $true) {
       Checkpoint-Computer -Description "ADMU Convert User" -EA silentlycontinue
       Write-host "The following restore points were found on this system:"
