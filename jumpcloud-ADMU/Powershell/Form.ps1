@@ -307,11 +307,11 @@ $usmtcustom = [xml] @"
                 if ($($user.SID) -eq $($win32user.SID)) {
                     $user.RoamingConfigured = $win32user.RoamingConfigured
                     $user.Loaded = $win32user.Loaded
-                    if ($($win32user.lastusetime)::IsNullOrEmpty){
-                        $user.LastLogin = "Never"
+                    if ([string]::IsNullOrEmpty($($win32user.LastUseTime))){
+                        $user.LastLogin = "N/A"
                     }
                     else{
-                        $user.LastLogin = [System.Management.ManagementDateTimeConverter]::ToDateTime($($win32user.lastusetime)).ToUniversalTime().ToSTring($date_format)
+                        $user.LastLogin = [System.Management.ManagementDateTimeConverter]::ToDateTime($($win32user.LastUseTime)).ToUniversalTime().ToSTring($date_format)
                     }
                 }
             }
@@ -439,8 +439,8 @@ $cb_custom_xml.Add_UnChecked({$tab_usmtcustomxml.IsEnabled = $false})
 
 # Create Restore Point checkbox
 $script:CreateRestore = $false
-$cb_createrestore.Add_Checked( { $script:CreateRestore = $true })
-$cb_createrestore.Add_Unchecked( { $script:CreateRestore = $false })
+$cb_createrestore.Add_Checked({$script:CreateRestore = $true})
+$cb_createrestore.Add_Unchecked({$script:CreateRestore = $false})
 
 # Custom XML checkbox
 $script:Customxml = $false
