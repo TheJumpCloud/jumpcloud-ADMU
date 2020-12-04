@@ -16,8 +16,8 @@ Starts the JumpCloud Active Directory Migration process.
 ```
 Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPassword <String>
  [-AcceptEULA <Boolean>] [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-ConvertProfile <Boolean>]
- [-AzureADProfile <Boolean>] [-Customxml <Boolean>] [-InstallJCAgent <Boolean>] [-JumpCloudConnectKey <String>]
- [<CommonParameters>]
+ [-CreateRestore <Boolean>] [-AzureADProfile <Boolean>] [-Customxml <Boolean>] [-InstallJCAgent <Boolean>]
+ [-JumpCloudConnectKey <String>] [<CommonParameters>]
 ```
 
 ### form
@@ -230,6 +230,21 @@ Parameter Sets: cmd
 Aliases:
 
 Required: True
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -CreateRestore
+{{ Fill CreateRestore Description }}
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
 Position: Named
 Default value: None
 Accept pipeline input: False
