@@ -218,6 +218,12 @@ Function VerifyAccount {
   }
 }
 
+Function Get-WindowsDrive {
+  $drive = (wmic OS GET SystemDrive /VALUE)
+  $drive = [regex]::Match($drive, 'SystemDrive=(.\:)').Groups[1].Value
+  return $drive
+}
+
 #Logging function
 <#
   .Synopsis
@@ -248,11 +254,6 @@ Function VerifyAccount {
   .LINK
      https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0
   #>
-Function Get-WindowsDrive{
-  $drive = (wmic OS GET SystemDrive /VALUE)
-  $drive = [regex]::Match($drive, 'SystemDrive=(.\:)').Groups[1].Value
-  return $drive
-}
 Function Write-Log {
   [CmdletBinding()]
   Param
@@ -636,14 +637,29 @@ function convertUserRegistry {
     # Get the Administrators Group Sid
     $adminsid = getAdminUser
     #####################
-    # Test Secure Channel
-    If (Test-ComputerSecureChannel) {
-      # Set accessIdentity to user we are converting from
-      $accessIdentity = ConvertSID $selectedUserSID
+    # Determine how to check for user ACLs
+    $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+    if ($WmiComputerSystem.PartOfDomain) {
+      $securechannelstatus = Test-ComputerSecureChannel
+      if ($securechannelstatus) {
+        # Domain bound and secure channel working, search ACLs w/ account name
+        $accessIdentity = ConvertSID -sid $selectedUserSID
+      }
+      else {
+        # Domain bound and broken secure channel, search w/ SID
+        $accessIdentity = $selectedUserSID
+      }
     }
-    Else {
-      # set accessIdentity to user's sid we are converting from
-      $accessIdentity = $selectedUserSID
+    if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
+      $AzureADInfo = dsregcmd.exe /status
+      foreach ($line in $AzureADInfo) {
+        if ($line -match "AzureADJoined : YES") {
+          # AzureAD bound, search ACLs w/ account name
+          $accessIdentity = ConvertSID -sid $selectedUserSID
+
+          break
+        }
+      }
     }
   }
   process {
@@ -5821,11 +5837,17 @@ Function Start-Migration {
     $msvc2013x64Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x64.exe'
     $msvc2013x86Install = "$usmtTempPath$msvc2013x86File /install /quiet /norestart"
     $msvc2013x64Install = "$usmtTempPath$msvc2013x64File /install /quiet /norestart"
-    $CommandScanStateTemplate = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
-    $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
-    $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
-    $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+    write-log "##### $SelectedUserName #####"
     $SelectedUserSid = CheckUsernameorSID $SelectedUserName
+    if (!$ConvertProfile){
+      # Since we are not converting we require the username
+      $SelectedUserName = $SelectedUserName.Substring($SelectedUserName.IndexOf('\') + 1)
+      # Set Scan State Vars
+      $CommandScanStateTemplate = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
+      $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+      $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
+      $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+    }
 
     # JumpCloud Agent Installation Variables
     $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
@@ -5936,7 +5958,6 @@ Function Start-Migration {
       }
 
       Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
-
       #Create New User
       net user $JumpCloudUserName $TempPassword /add /Y
 
@@ -5976,11 +5997,10 @@ Function Start-Migration {
       }
 
       Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $SelectedUserName + '.' + $NetBiosName)
-      Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUserName)
+      Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUserName)
 
-      Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath)
-      Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath)
-      Write-Log -Message:($NewUserSID)
+      Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath + ' New User SID: ' + $NewUserSID)
+      Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath + ' Old User SID: ' + $SelectedUserSID)
       Write-Log -Message:("NTFS ACLs on domain $windowsDrive\users\ dir")
 
       #ntfs acls on domain $windowsDrive\users\ dir
@@ -6004,12 +6024,17 @@ Function Start-Migration {
       If (!(test-path $path)) {
         New-Item -ItemType Directory -Force -Path $path
       }
-
-      $list = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
+      if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD') {
+        # Find Appx User Apps by Username
+        $list = Get-AppXpackage -user (ConvertSID $SelectedUserSID) | Select-Object InstallLocation
+      }
+      else {
+        $list = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
+      }
       $list | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
-      Write-Log -Message:('Profile Conversion Completed')
 
       # Set Registry Check Key for New User
+      # TODO: Check if SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage key exists, clear version if it exists
       $ADMUKEY = "$newusersid\SOFTWARE\JCADMU"
       if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
         # If the registry Key exists (it wont)
@@ -6021,7 +6046,7 @@ Function Start-Migration {
       }
 
       DownloadLink -Link 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -Path "$windowsDrive\Windows\uwp_jcadmu.exe"
-
+      Write-Log -Message:('Profile Conversion Completed')
     }
     else {
 
