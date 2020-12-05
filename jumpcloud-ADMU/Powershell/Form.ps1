@@ -180,11 +180,17 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         }
         if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
             $AzureADInfo = dsregcmd.exe /status
-        }
-        if ((Get-CimInstance Win32_OperatingSystem).Version -match '10' -and ($AzureADInfo[5].trimstart('AzureADJoined : ') -eq 'YES') ) {
-                $AzureADStatus = ($AzureADInfo[5].trimstart('AzureADJoined : '))
-                $Workplace_join = ($AzureADInfo[51].trimstart('WorkplaceJoined : '))
-                $TenantName = ($AzureADInfo[24].trimstart('TenantName : '))
+            foreach ($line in $AzureADInfo) {
+                if ($line -match "AzureADJoined : ") {
+                    $AzureADStatus = ($line.trimstart('AzureADJoined : '))
+                }
+                if ($line -match "WorkplaceJoined : ") {
+                    $Workplace_join = ($line.trimstart('WorkplaceJoined : '))
+                }
+                if ($line -match "TenantName : ") {
+                    $TenantName = ($line.trimstart('TenantName : '))
+                }
+            }
         }
         else {
             $AzureADStatus = 'N/A'
@@ -521,7 +527,8 @@ $bDeleteProfile.Add_Click( {
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ForceReboot') -Value:($ForceReboot)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ConvertProfile') -Value:($ConvertProfile)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('CreateRestore') -Value:($CreateRestore)
-        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('DomainUserName') -Value:($SelectedUserName.Substring($SelectedUserName.IndexOf('\') + 1))
+        # Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('DomainUserName') -Value:($SelectedUserName.Substring($SelectedUserName.IndexOf('\') + 1))
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('DomainUserName') -Value:($SelectedUserName)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudUserName') -Value:($tbJumpCloudUserName.Text)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('TempPassword') -Value:($tbTempPassword.Text)
         if(($tbJumpCloudConnectKey.Text).length -eq 40){
