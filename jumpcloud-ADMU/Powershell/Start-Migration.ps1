@@ -88,11 +88,11 @@ function getRegKeyOwner([string]$keyPath) {
   return $owner
 }
 
-function setValueToKey([string]$keyPath, [string]$name, [System.Object]$value, [Microsoft.Win32.RegistryValueKind]$regValueKind) {
+function setValueToKey([Microsoft.Win32.RegistryHive]$registryRoot, [string]$keyPath, [string]$name, [System.Object]$value, [Microsoft.Win32.RegistryValueKind]$regValueKind) {
   $regRights = [System.Security.AccessControl.RegistryRights]::SetValue
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
-  $Key = [Microsoft.Win32.Registry]::LocalMachine.OpenSubKey($keyPath, $permCheck, $regRights)
-  "Setting value with properties [name:$name, value:$value, value type:$regValueKind]"
+  $Key = [Microsoft.Win32.Registry]::$registryRoot.OpenSubKey($keyPath, $permCheck, $regRights)
+  Write-host "Setting value with properties [name:$name, value:$value, value type:$regValueKind]"
   $Key.SetValue($name, $value, $regValueKind)
   $key.Close()
 }
@@ -663,19 +663,7 @@ function convertUserRegistry {
     }
   }
   process {
-    # Debugging
     Write-Host "Checking for $accessIdentity in user hive"
-
-    # Backup User Hive
-    Write-Log -Message:('Making a backup of the user hive')
-    try {
-      Copy-Item -Path "$newuserprofileimagepath\NTUSER.DAT" -Destination "$newuserprofileimagepath\NTUSER.DAT.BAK"
-      Copy-Item -Path "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
-    }
-    catch {
-      write-log -Message("Count Not Backup Registry: Reverting exiting")
-      #TODO: Invoke Revert From this stage
-    }
 
     # Load both the usrClass Hive + NTUser.dat into registry
     REG LOAD HKU\$newusersid "$newuserprofileimagepath\NTUSER.DAT"
@@ -5837,7 +5825,7 @@ Function Start-Migration {
     $msvc2013x64Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x64.exe'
     $msvc2013x86Install = "$usmtTempPath$msvc2013x86File /install /quiet /norestart"
     $msvc2013x64Install = "$usmtTempPath$msvc2013x64File /install /quiet /norestart"
-    write-log "##### $SelectedUserName #####"
+    write-log -Message("The Selected Migration user is: $SelectedUserName")
     $SelectedUserSid = CheckUsernameorSID $SelectedUserName
     if (!$ConvertProfile){
       # Since we are not converting we require the username
@@ -5921,8 +5909,19 @@ Function Start-Migration {
     }
 
     if ($ConvertProfile -eq $true) {
-      Write-Log -Message:('Creating Registry Entries')
+      Write-Log -Message:('Creating Backup of User Registry Hive')
+      $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
+      try {
+        Copy-Item -Path "$olduserprofileimagepath\NTUSER.DAT" -Destination "$olduserprofileimagepath\NTUSER.DAT.BAK" -ErrorAction Stop
+        Copy-Item -Path "$olduserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$olduserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -ErrorAction Stop
+      }
+      catch {
+        write-log -Message("Could Not Backup Registry Hives: Exiting...")
+        write-log -Message($_.Exception.Message)
+        exit
+      }
 
+      Write-Log -Message:('Creating Registry Entries')
       # Root Key Path
       $ADMUKEY = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
       # Remove Root from key to pass into functions
@@ -5949,10 +5948,10 @@ Function Start-Migration {
         foreach ($item in $propertyHash.Keys) {
           # Eventually make this better
           if ($item -eq "IsInstalled") {
-            setValueToKey -keyPath "$rootlessKey" -Name "$item" -value $propertyHash[$item] -regValueKind Dword
+            setValueToKey -registryRoot LocalMachine -keyPath "$rootlessKey" -Name "$item" -value $propertyHash[$item] -regValueKind Dword
           }
           else {
-            setValueToKey -keyPath "$rootlessKey" -Name "$item" -value $propertyHash[$item] -regValueKind String
+            setValueToKey -registryRoot LocalMachine -keyPath "$rootlessKey" -Name "$item" -value $propertyHash[$item] -regValueKind String
           }
         }
       }
@@ -5962,7 +5961,6 @@ Function Start-Migration {
       net user $JumpCloudUserName $TempPassword /add /Y
 
       Write-Log -Message:('Spawning New Process')
-
       #spawn process or build reg entry with sid
       $user = "$env:COMPUTERNAME\$JumpCloudUserName"
       $MyPlainTextString = $TempPassword
@@ -5972,9 +5970,9 @@ Function Start-Migration {
       TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
       # Now get NewUserSID
       $NewUserSID = Get-SID -User $JumpCloudUserName
-      Write-Log -Message:('Setting Registry Entrys')
 
-      $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
+      Write-Log -Message:('Setting New Profile Permissions')
+      # Set the New User Profile Path
       $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
 
       $path = takeown /F $newuserprofileimagepath /a /r /d y
@@ -6013,11 +6011,6 @@ Function Start-Migration {
       # Registry Permisions
       convertUserRegistry -newUserProfileImagePath $newUserProfileImagePath -selectedUserSID $selectedUserSID -newUserSid $newUserSid
 
-      # Unload the Reg Hives
-      # TODO: Fix this or force reboot
-      # REG UNLOAD HKU\$newusersid
-      # REG UNLOAD HKU\$classes
-
       Write-Log -Message:('Updating UWP Apps for new user')
       $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
       $path = $newuserprofileimagepath + '\AppData\Local\JumpCloudADMU'
@@ -6034,8 +6027,19 @@ Function Start-Migration {
       $list | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
 
       # Set Registry Check Key for New User
-      # TODO: Check if SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage key exists, clear version if it exists
-      $ADMUKEY = "$newusersid\SOFTWARE\JCADMU"
+      # Check that the installed components key does not exist
+      if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
+        Write-Host "Mounting HKEY_USERS to check USER UWP keys"
+        New-PSDrive HKEY_USERS Registry HKEY_USERS
+      }
+      $ADMU_PackageKey = "HKEY_USERS:\$newusersid\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
+      if (Get-Item $ADMU_PackageKey -ErrorAction SilentlyContinue){
+        # If the account to be converted already has this key, reset the version
+        $rootlessKey = $ADMU_PackageKey.Replace('HKEY_USERS:\', '')
+        setValueToKey -registryRoot Users -KeyPath $rootlessKey -name Version -value "0,0,00,0" -regValueKind String
+      }
+      # Set the trigger to reset Appx Packages on first login
+      $ADMUKEY = "HKEY_USERS:\$newusersid\SOFTWARE\JCADMU"
       if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
         # If the registry Key exists (it wont)
         Write-Host "The Key Already Exists"
@@ -6044,8 +6048,15 @@ Function Start-Migration {
         # Just Create the new key
         newKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU"
       }
-
+      # Download the appx register exe
+      # TODO: implement check
       DownloadLink -Link 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -Path "$windowsDrive\Windows\uwp_jcadmu.exe"
+
+      # Unload the Reg Hives
+      # TODO: Fix this or force reboot
+      # REG UNLOAD HKU\$newusersid
+      # REG UNLOAD HKU\$classes
+
       Write-Log -Message:('Profile Conversion Completed')
     }
     else {
