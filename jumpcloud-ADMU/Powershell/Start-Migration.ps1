@@ -650,18 +650,22 @@ function convertUserRegistry {
         $accessIdentity = $selectedUserSID
       }
     }
-    if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
+    elseif ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
       $AzureADInfo = dsregcmd.exe /status
       foreach ($line in $AzureADInfo) {
         if ($line -match "AzureADJoined : YES") {
           # AzureAD bound, search ACLs w/ account name
           $accessIdentity = ConvertSID -sid $selectedUserSID
-
           break
         }
       }
     }
+    if ([string]::ISNullorEmpty($accessIdentity)) {
+      # Domain bound and broken secure channel, search w/ SID
+      $accessIdentity = $selectedUserSID
+    }
   }
+  # If we haven't set accessIdentity variable, set to SID
   process {
     Write-Host "Checking for $accessIdentity in user hive"
 
@@ -801,6 +805,7 @@ function convertUserRegistry {
       ForEach ($al in $acl.Access) {
         changeRegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
       }
+      write-log "Restoring $($item.Path)"
     }
   }
 }
@@ -1078,7 +1083,7 @@ $usmtconfig = [xml] @"
 
           <fileError>
             <nonFatal errorCode="33">* [*]</nonFatal>
-            <fatal errorCode="any">C:\Users\* [*]</fatal>
+            <fatal errorCode="any">$windowsDrive\Users\* [*]</fatal>
           </fileError>
           <registryError>
             <nonFatal errorCode="5">* [*]</nonFatal>
@@ -1089,8 +1094,8 @@ $usmtconfig = [xml] @"
       <!--   Example:
 
           <fileLocked>
-            <createHardLink>c:\Users\* [*]</createHardLink>
-            <errorHardLink>C:\* [*]</errorHardLink>
+            <createHardLink>$windowsDrive\Users\* [*]</createHardLink>
+            <errorHardLink>$windowsDrive\* [*]</errorHardLink>
           </fileLocked>
       -->
     </HardLinkStoreControl>
@@ -5833,8 +5838,8 @@ Function Start-Migration {
       # Set Scan State Vars
       $CommandScanStateTemplate = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
       $CommandLoadStateTemplate = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
-      $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
-      $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"C:\Windows\Temp\custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+      $CommandScanStateTemplateCustom = 'cd "{0}amd64\"; .\ScanState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"{4}\Windows\Temp\custom.xml" /l:"{1}\scan.log" /progress:"{1}\scan_progress.log" /o /ue:"*\*" /ui:"{2}\{3}" /c' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $windowsDrive
+      $CommandLoadStateTemplateCustom = 'cd "{0}amd64\"; .\LoadState.exe "{1}" /config:"{0}config.xml" /i:"{0}miguser.xml" /i:"{0}migapp.xml" /i:"{7}\Windows\Temp\custom.xml" /l:"{1}\load.log" /progress:"{1}\load_progress.log" /ue:"*\*" /ui:"{2}\{3}" /laC:"{4}" /lae /c /mu:"{2}\{3}:{5}\{6}"' # $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName, $windowsDrive
     }
 
     # JumpCloud Agent Installation Variables
@@ -6049,8 +6054,14 @@ Function Start-Migration {
         newKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU"
       }
       # Download the appx register exe
-      # TODO: implement check
       DownloadLink -Link 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -Path "$windowsDrive\Windows\uwp_jcadmu.exe"
+      try {
+          Get-Item -Path "$windowsDrive\Windows\uwp_jcadmu.exe" -ErrorAction Stop
+      }
+      catch{
+          write-Log -Message("Could not find uwp_jcadmu.exe in $windowsDrive\Windows\ UWP Apps will not migrate")
+          write-Log -Message($_.Exception.Message)
+      }
 
       # Unload the Reg Hives
       # TODO: Fix this or force reboot
@@ -6128,7 +6139,7 @@ Function Start-Migration {
         $CommandScanStateTemplate = $CommandScanStateTemplateCustom
       }
       Try {
-        $CommandScanState = $CommandScanStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName
+        $CommandScanState = $CommandScanStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $windowsDrive
         Write-Log -Message:('Starting ScanState tool on user "' + $netBiosName + '\' + $SelectedUserName + '"')
         Write-Log -Message:('ScanState tool is in progress. Command: ' + $CommandScanState)
         Invoke-Expression -command:($CommandScanState)
@@ -6145,7 +6156,7 @@ Function Start-Migration {
         $CommandLoadStateTemplate = $CommandLoadStateTemplateCustom
       }
       Try {
-        $CommandLoadState = $CommandLoadStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName
+        $CommandLoadState = $CommandLoadStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName, $windowsDrive
         Write-Log -Message:('Starting LoadState tool on user "' + $netBiosName + '\' + $SelectedUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
         Write-Log -Message:('LoadState tool is in progress. Command: ' + $CommandLoadState)
         Invoke-Expression -Command:($CommandLoadState)
