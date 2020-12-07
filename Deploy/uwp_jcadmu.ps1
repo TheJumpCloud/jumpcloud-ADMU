@@ -5,7 +5,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
    $newList = Import-CSV $appxmanifest
    $output = @()
    foreach ($item in $newlist) {
-      $output += Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml" *>&1
+      $output += Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml" -Verbose *>&1
    }
    $output | Out-File "$HOME\AppData\Local\JumpCloudADMU\appx_manifestLog.txt"
 }
