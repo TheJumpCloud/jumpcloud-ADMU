@@ -5988,7 +5988,8 @@ Function Start-Migration {
       $acl | Set-Acl $newuserprofileimagepath
 
       # Test Condition for same names
-      if ([regex]::IsMatch($newuserprofileimagepath, $($olduserprofileimagepath.Replace('\', '\\')))) {
+      $options = [Text.RegularExpressions.RegexOptions]'IgnoreCase'
+      if ([regex]::IsMatch($newuserprofileimagepath, $($olduserprofileimagepath.Replace('\', '\\')), $options )) {
         Write-Host "Selected User Path and New User Path Match"
         Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
         $newuserprofileimagepath = $olduserprofileimagepath
