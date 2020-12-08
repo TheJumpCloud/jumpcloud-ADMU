@@ -1,3 +1,25 @@
+## 1.4.5
+
+Release Date: December 08, 2020
+
+#### RELEASE NOTES
+
+```
+{{Fill in the Release Notes}}
+```
+
+#### FEATURES:
+
+{{Fill in the Features}}
+
+#### IMPROVEMENTS:
+
+{{Fill in the Improvements}}
+
+#### BUG FIXES:
+
+{{Fill in the Bug Fixes}}
+
 ## 1.5.0
 
 Release Date: Dec 8, 2020
