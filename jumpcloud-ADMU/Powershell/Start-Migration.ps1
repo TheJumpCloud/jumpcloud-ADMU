@@ -683,6 +683,7 @@ function convertUserRegistry {
     # Test and Set the Root keys, bail if we can't do this
     Write-Log -Message:('Setting the Root Keys Permission')
     # Set the root keys
+    $rootSet = 0
     ForEach ($rootKey in $HKUKeys.Path) {
       # Write-Host $rootKey
       $acl = Get-Acl $rootKey
@@ -690,9 +691,34 @@ function convertUserRegistry {
         if ($al.IdentityReference -eq "$accessIdentity") {
           Write-Host "$($acl.PSChildName)"
           # $al.getType()
+          $rootSet += 1
           copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $acl.PSChildName
           $acl | Set-Acl
         }
+      }
+    }
+    $retrySet = 0
+    if ($rootSet -eq 0){
+      $accessIdentity = ConvertSID $selecteduserSID
+      Write-Log "Could not set Root Keys with SID, retrying with converted SID: $accessIdentity"
+      #now retry:
+      ForEach ($rootKey in $HKUKeys.Path) {
+        # Write-Host $rootKey
+        $acl = Get-Acl $rootKey
+        foreach ($al in $acl.Access) {
+          if ($al.IdentityReference -eq "$accessIdentity") {
+            Write-Host "$($acl.PSChildName)"
+            # $al.getType()
+            $retrySet += 1
+            copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $acl.PSChildName
+            $acl | Set-Acl
+          }
+        }
+      }
+      if ($retrySet -eq 0 -And $rootSet -eq 0){
+        Write-Log "Could not set Root Keys: Exiting..."
+        # TODO: $accessIdentity check implemented before anything else.
+        exit
       }
     }
 
