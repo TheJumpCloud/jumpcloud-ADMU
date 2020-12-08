@@ -6022,14 +6022,20 @@ Function Start-Migration {
       If (!(test-path $path)) {
         New-Item -ItemType Directory -Force -Path $path
       }
+      $appxList = @()
       if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD') {
         # Find Appx User Apps by Username
-        $list = Get-AppXpackage -user (ConvertSID $SelectedUserSID) | Select-Object InstallLocation
+        $appxList = Get-AppXpackage -user (ConvertSID $SelectedUserSID) | Select-Object InstallLocation
       }
       else {
-        $list = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
+        $appxList = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
       }
-      $list | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
+      if ($appxList.Count -eq 0) {
+        # Get Common Apps in edge case:
+        $appxList = Get-AppXpackage -AllUsers | Select-Object InstallLocation
+
+      }
+      $appxList | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
 
       # Set Registry Check Key for New User
       # Check that the installed components key does not exist
@@ -6064,9 +6070,11 @@ Function Start-Migration {
       }
 
       # Unload the Reg Hives
-      # TODO: Fix this or force reboot
-      # REG UNLOAD HKU\$newusersid
-      # REG UNLOAD HKU\$classes
+      [gc]::collect()
+      REG UNLOAD HKU\$newusersid
+      Start-Sleep -Seconds 1
+      REG UNLOAD HKU\"$($newusersid)_Classes"
+      # $null = Remove-PSDrive -Name HKEY_USERS
 
       Write-Log -Message:('Profile Conversion Completed')
     }
