@@ -611,7 +611,85 @@ function CheckUsernameorSID {
     }
   }
 }
-function convertUserRegistry {
+
+function Test-RegistryAccess {
+  [CmdletBinding()]
+  param (
+    [Parameter()]
+    [string]
+    $profilePath,
+    [Parameter()]
+    [string]
+    $userSID
+  )
+  begin {
+    # Load keys
+    REG LOAD HKU\"testUserAccess" "$profilePath\NTUSER.DAT" *>6
+    $classes = "testUserAccess_Classes"
+    # wait just a moment mountng can take a moment
+    Start-Sleep 1
+    REG LOAD HKU\$classes "$profilePath\AppData\Local\Microsoft\Windows\UsrClass.dat" *>6
+    New-PSDrive HKEY_USERS Registry HKEY_USERS *>6
+    $HKU = Get-Acl "HKEY_USERS:\testUserAccess"
+    $HKU_Classes = Get-Acl "HKEY_USERS:\testUserAccess_Classes"
+    $HKUKeys = @($HKU, $HKU_Classes)
+
+    # $convertedSID = ConvertSID "$userSID" -ErrorAction SilentlyContinue
+    try {
+      $convertedSID = ConvertSID "$userSID" -ErrorAction SilentlyContinue
+    }
+    catch {
+      write-information "Could not convert user SID, testing ACLs for SID access" -InformationAction Continue
+    }
+  }
+  process {
+    # Check the access for the root key
+    $sidAccessCount = 0
+    $userAccessCount = 0
+    ForEach ($rootKey in $HKUKeys.Path) {
+      $acl = Get-Acl $rootKey
+      foreach ($al in $acl.Access) {
+        if ($al.IdentityReference -eq "$userSID") {
+          # write-information "ACL Access identified by SID: $userSID" -InformationAction Continue
+          $sidAccessCount += 1
+        }
+        elseif ($al.IdentityReference -eq $convertedSID) {
+          # write-information "ACL Access identified by username : $convertedSID" -InformationAction Continue
+          $userAccessCount += 1
+        }
+      }
+    }
+    if ($sidAccessCount -eq 2) {
+      # If both root keys have been verified by sid set $accessIdentity
+      write-information "Verified ACL access by SID: $userSID" -InformationAction Continue
+      $accessIdentity = $userSID
+    }
+    if ($userAccessCount -eq 2) {
+      # If both root keys have been verified by sid set $accessIdentity
+      write-information "Verified ACL access by username: $convertedSID" -InformationAction Continue
+      $accessIdentity = $convertedSID
+    }
+    if ([string]::ISNullorEmpty($accessIdentity)) {
+      # if failed to find user access in registry, exit
+      write-information "Could not verify ACL access on root keys" -InformationAction Continue
+      exit
+    }
+    else {
+      # return the $identityAccess variable for registry changes later
+      return $accessIdentity
+    }
+  }
+  end {
+    # unload the registry
+    [gc]::collect()
+    REG UNLOAD HKU\"testUserAccess" *>6
+    # sometimes this can take a moment between unloading
+    Start-Sleep -Seconds 1
+    REG UNLOAD HKU\"testUserAccess_Classes" *>6
+    $null = Remove-PSDrive -Name HKEY_USERS
+  }
+}
+function Convert-UserRegistry {
   [CmdletBinding()]
   param (
     [Parameter()]
@@ -619,10 +697,10 @@ function convertUserRegistry {
     $newUserProfileImagePath,
     [Parameter()]
     [System.Security.Principal.SecurityIdentifier]
-    $selectedUserSID,
+    $newUserSid,
     [Parameter()]
-    [System.Security.Principal.SecurityIdentifier]
-    $newUserSid
+    [string]
+    $accessACL
   )
   begin {
     # Function Variables
@@ -637,37 +715,10 @@ function convertUserRegistry {
     # Get the Administrators Group Sid
     $adminsid = getAdminUser
     #####################
-    # Determine how to check for user ACLs
-    $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-    if ($WmiComputerSystem.PartOfDomain) {
-      $securechannelstatus = Test-ComputerSecureChannel
-      if ($securechannelstatus) {
-        # Domain bound and secure channel working, search ACLs w/ account name
-        $accessIdentity = ConvertSID -sid $selectedUserSID
-      }
-      else {
-        # Domain bound and broken secure channel, search w/ SID
-        $accessIdentity = $selectedUserSID
-      }
-    }
-    elseif ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
-      $AzureADInfo = dsregcmd.exe /status
-      foreach ($line in $AzureADInfo) {
-        if ($line -match "AzureADJoined : YES") {
-          # AzureAD bound, search ACLs w/ account name
-          $accessIdentity = ConvertSID -sid $selectedUserSID
-          break
-        }
-      }
-    }
-    if ([string]::ISNullorEmpty($accessIdentity)) {
-      # Domain bound and broken secure channel, search w/ SID
-      $accessIdentity = $selectedUserSID
-    }
   }
   # If we haven't set accessIdentity variable, set to SID
   process {
-    Write-Host "Checking for $accessIdentity in user hive"
+    Write-Host "Checking for $accessACL in user hive"
 
     # Load both the usrClass Hive + NTUser.dat into registry
     REG LOAD HKU\$newusersid "$newuserprofileimagepath\NTUSER.DAT"
@@ -683,42 +734,16 @@ function convertUserRegistry {
     # Test and Set the Root keys, bail if we can't do this
     Write-Log -Message:('Setting the Root Keys Permission')
     # Set the root keys
-    $rootSet = 0
     ForEach ($rootKey in $HKUKeys.Path) {
       # Write-Host $rootKey
       $acl = Get-Acl $rootKey
       foreach ($al in $acl.Access) {
-        if ($al.IdentityReference -eq "$accessIdentity") {
+        if ($al.IdentityReference -eq "$accessACL") {
           Write-Host "$($acl.PSChildName)"
           # $al.getType()
-          $rootSet += 1
           copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $acl.PSChildName
           $acl | Set-Acl
         }
-      }
-    }
-    $retrySet = 0
-    if ($rootSet -eq 0){
-      $accessIdentity = ConvertSID $selecteduserSID
-      Write-Log "Could not set Root Keys with SID, retrying with converted SID: $accessIdentity"
-      #now retry:
-      ForEach ($rootKey in $HKUKeys.Path) {
-        # Write-Host $rootKey
-        $acl = Get-Acl $rootKey
-        foreach ($al in $acl.Access) {
-          if ($al.IdentityReference -eq "$accessIdentity") {
-            Write-Host "$($acl.PSChildName)"
-            # $al.getType()
-            $retrySet += 1
-            copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $acl.PSChildName
-            $acl | Set-Acl
-          }
-        }
-      }
-      if ($retrySet -eq 0 -And $rootSet -eq 0){
-        Write-Log "Could not set Root Keys: Exiting..."
-        # TODO: $accessIdentity check implemented before anything else.
-        exit
       }
     }
 
@@ -773,7 +798,7 @@ function convertUserRegistry {
       # resolves issue where wildcards are included in key names
       $acl = Get-Acl $string | Select-Object -First 1
       ForEach ($al in $acl.Access) {
-        if ($al.IdentityReference -eq "$accessIdentity") {
+        if ($al.IdentityReference -eq "$accessACL") {
           $aclString = $acl.path
           $aclString = $aclString.replace("Microsoft.PowerShell.Core\Registry::HKEY_USERS\", "")
           If ($al.IsInherited -eq $false -And $aclString -NotMatch $repoKeys) {
@@ -5951,6 +5976,8 @@ Function Start-Migration {
         write-log -Message($_.Exception.Message)
         exit
       }
+      # Test user ACL access match the user's registry's root keys, else exit
+      $identityAccessACL = Test-RegistryAccess -profilePath $olduserprofileimagepath -userSID $selectedUserSID
 
       Write-Log -Message:('Creating Registry Entries')
       # Root Key Path
@@ -6041,7 +6068,7 @@ Function Start-Migration {
       $Acl | Set-Acl -Path $newuserprofileimagepath
 
       # Registry Permisions
-      convertUserRegistry -newUserProfileImagePath $newUserProfileImagePath -selectedUserSID $selectedUserSID -newUserSid $newUserSid
+      Convert-UserRegistry -newUserProfileImagePath $newUserProfileImagePath -newUserSid $newUserSid -accessACL $identityAccessACL
 
       Write-Log -Message:('Updating UWP Apps for new user')
       $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
