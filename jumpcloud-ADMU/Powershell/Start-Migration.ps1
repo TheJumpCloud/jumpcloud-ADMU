@@ -78,7 +78,9 @@ function enable-privilege {
   $type[0]::EnablePrivilege($processHandle, $Privilege, $Disable)
 }
 
-function getRegKeyOwner([string]$keyPath) {
+# Reg Functions adapted from:
+# https://social.technet.microsoft.com/Forums/windows/en-US/9f517a39-8dc8-49d3-82b3-96671e2b6f45/powershell-set-registry-key-owner-to-the-system-user-throws-error?forum=winserverpowershell
+function Get-RegKeyOwner([string]$keyPath) {
   $regRights = [System.Security.AccessControl.RegistryRights]::ReadPermissions
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $Key = [Microsoft.Win32.Registry]::Users.OpenSubKey($keyPath, $permCheck, $regRights)
@@ -88,7 +90,7 @@ function getRegKeyOwner([string]$keyPath) {
   return $owner
 }
 
-function setValueToKey([Microsoft.Win32.RegistryHive]$registryRoot, [string]$keyPath, [string]$name, [System.Object]$value, [Microsoft.Win32.RegistryValueKind]$regValueKind) {
+function Set-ValueToKey([Microsoft.Win32.RegistryHive]$registryRoot, [string]$keyPath, [string]$name, [System.Object]$value, [Microsoft.Win32.RegistryValueKind]$regValueKind) {
   $regRights = [System.Security.AccessControl.RegistryRights]::SetValue
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $Key = [Microsoft.Win32.Registry]::$registryRoot.OpenSubKey($keyPath, $permCheck, $regRights)
@@ -97,13 +99,13 @@ function setValueToKey([Microsoft.Win32.RegistryHive]$registryRoot, [string]$key
   $key.Close()
 }
 
-function newKey([string]$keyPath, [Microsoft.Win32.RegistryHive]$registryRoot) {
+function New-RegKey([string]$keyPath, [Microsoft.Win32.RegistryHive]$registryRoot) {
   $Key = [Microsoft.Win32.Registry]::$registryRoot.CreateSubKey($keyPath)
-  "Setting key at [KeyPath:$keyPath]"
+  write-Host "Setting key at [KeyPath:$keyPath]"
   $key.Close()
 }
 
-function changeRegKeyOwner([string]$keyPath, [System.Security.Principal.SecurityIdentifier]$user) {
+function Change-RegKeyOwner([string]$keyPath, [System.Security.Principal.SecurityIdentifier]$user) {
   try {
     $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
     $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
@@ -123,7 +125,7 @@ function changeRegKeyOwner([string]$keyPath, [System.Security.Principal.Security
   $key.Close()
 }
 
-function giveFullControlToUser([System.Security.Principal.SecurityIdentifier]$userName, [string]$keyPath) {
+function Set-FullControlToUser([System.Security.Principal.SecurityIdentifier]$userName, [string]$keyPath) {
   # "giving full access to $userName for key $keyPath"
   $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
@@ -135,7 +137,7 @@ function giveFullControlToUser([System.Security.Principal.SecurityIdentifier]$us
   $key.SetAccessControl($acl)
 }
 
-function giveReadToUser([System.Security.Principal.SecurityIdentifier]$userName, [string]$keyPath) {
+function Set-ReadToUser([System.Security.Principal.SecurityIdentifier]$userName, [string]$keyPath) {
   # "giving read access to $userName for key $keyPath"
   $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
@@ -147,7 +149,7 @@ function giveReadToUser([System.Security.Principal.SecurityIdentifier]$userName,
   $key.SetAccessControl($acl)
 }
 
-function getAdminUser {
+function Get-AdminUserSID {
   $windowsKey = "SOFTWARE\Microsoft\Windows"
   $regRights = [System.Security.AccessControl.RegistryRights]::ReadPermissions
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
@@ -157,7 +159,7 @@ function getAdminUser {
   # Return sid of owner
   return $owner.Value
 }
-function copyPasteAccess {
+function Set-AccessFromDomainUserToLocal {
   [CmdletBinding()]
   param (
     [Parameter()]
@@ -682,6 +684,7 @@ function Test-RegistryAccess {
   end {
     # unload the registry
     [gc]::collect()
+    Start-Sleep -Seconds 1
     REG UNLOAD HKU\"testUserAccess" *>6
     # sometimes this can take a moment between unloading
     Start-Sleep -Seconds 1
@@ -713,7 +716,7 @@ function Convert-UserRegistry {
     $repoKeysPackages = "$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages"
     $repoKeysFamiles = "$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families"
     # Get the Administrators Group Sid
-    $adminsid = getAdminUser
+    $adminsid = Get-AdminUserSID
     #####################
   }
   # If we haven't set accessIdentity variable, set to SID
@@ -721,9 +724,9 @@ function Convert-UserRegistry {
     Write-Host "Checking for $accessACL in user hive"
 
     # Load both the usrClass Hive + NTUser.dat into registry
-    REG LOAD HKU\$newusersid "$newuserprofileimagepath\NTUSER.DAT"
+    REG LOAD HKU\$newusersid $hiveNTUserPath
     $classes = "$($newusersid)_Classes"
-    REG LOAD HKU\$classes "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat"
+    REG LOAD HKU\$classes $hiveUsrClassPath
 
     # Mount HKEY_USERS hives with PSDrive
     New-PSDrive HKEY_USERS Registry HKEY_USERS
@@ -741,7 +744,7 @@ function Convert-UserRegistry {
         if ($al.IdentityReference -eq "$accessACL") {
           Write-Host "$($acl.PSChildName)"
           # $al.getType()
-          copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $acl.PSChildName
+          Set-AccessFromDomainUserToLocal -accessItem $al -user "$newusersid" -keyPath $acl.PSChildName
           $acl | Set-Acl
         }
       }
@@ -767,13 +770,13 @@ function Convert-UserRegistry {
         enable-privilege SeTakeOwnershipPrivilege
         # If we can't read the orgional owner, set as user
         try {
-          $originalOwner = getRegKeyOwner -keyPath $aclString
+          $originalOwner = Get-RegKeyOwner -keyPath $aclString
         }
         catch {
           $originalOwner = $newusersid
         }
-        changeRegKeyOwner -keyPath $aclString -user "$adminsid"
-        giveFullControlToUser -userName "$adminsid" -key $aclString
+        Change-RegKeyOwner -keyPath $aclString -user "$adminsid"
+        Set-FullControlToUser -userName "$adminsid" -key $aclString
         # Track changes
         $changeList += [PSCustomObject]@{
           Path           = $aclString
@@ -803,23 +806,23 @@ function Convert-UserRegistry {
           $aclString = $aclString.replace("Microsoft.PowerShell.Core\Registry::HKEY_USERS\", "")
           If ($al.IsInherited -eq $false -And $aclString -NotMatch $repoKeys) {
             # copy permissions from domain user to new user
-            copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $aclString
+            Set-AccessFromDomainUserToLocal -accessItem $al -user "$newusersid" -keyPath $aclString
             Write-Log "Set $aclString"
             $acl | Set-Acl
           }
           # Repository Keys need special permission.
           If ($aclString -Match $repoKeys) {
-            $originalOwner = getRegKeyOwner -keyPath $aclString
+            $originalOwner = Get-RegKeyOwner -keyPath $aclString
             # "original Owner to the key `"$aclString`" is: `"$originalOwner`""
-            changeRegKeyOwner -keyPath $aclString -user "$adminsid"
+            Change-RegKeyOwner -keyPath $aclString -user "$adminsid"
             Write-Log "Changing Owner to $adminsid on $aclString"
             # Give Full Controll To Current Admin
             If ($al.IsInherited -eq $false) {
               Write-Log "Granting Full Control to $adminsid on $aclString"
-              giveFullControlToUser -userName "$adminsid" -key $aclString
+              Set-FullControlToUser -userName "$adminsid" -key $aclString
               # While Current Admin is Admin, copy permission set from domain user to new user
               Write-Log "Granting $newusersid access on $aclString"
-              copyPasteAccess -accessItem $al -user "$newusersid" -keyPath $aclString
+              Set-AccessFromDomainUserToLocal -accessItem $al -user "$newusersid" -keyPath $aclString
               $acl | Set-Acl
             }
             # Track permission changes for later
@@ -836,10 +839,10 @@ function Convert-UserRegistry {
     # Reset ACL Inheritance on ...\Repository\Pacakges\ and ...\Repository\Familes\
     $packages = Get-Acl "HKEY_USERS:\$($repoKeysPackages)"
     $packages.SetAccessRuleProtection($true, $false)
-    giveReadToUser -userName "$adminsid" -keyPath "$($repoKeysPackages)"
+    Set-ReadToUser -userName "$adminsid" -keyPath "$($repoKeysPackages)"
     $familes = Get-Acl "HKEY_USERS:\$($repoKeysFamiles)"
     $familes.SetAccessRuleProtection($true, $false)
-    giveReadToUser -userName "$adminsid" -keyPath "$($repoKeysFamiles)"
+    Set-ReadToUser -userName "$adminsid" -keyPath "$($repoKeysFamiles)"
 
     # Revert ownership on tracked items in changeList to origional owner & access
     # Required to perform restore operations
@@ -854,7 +857,7 @@ function Convert-UserRegistry {
       $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($item.Path, $permCheck, $regRights)
       $acl = $key.GetAccessControl()
       ForEach ($al in $acl.Access) {
-        changeRegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
+        Change-RegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
       }
       write-log "Restoring $($item.Path)"
     }
@@ -5977,9 +5980,10 @@ Function Start-Migration {
         exit
       }
       # Test user ACL access match the user's registry's root keys, else exit
+      Write-Log -Message:('Verifying Registry ACLs can be copied')
       $identityAccessACL = Test-RegistryAccess -profilePath $olduserprofileimagepath -userSID $selectedUserSID
 
-      Write-Log -Message:('Creating Registry Entries')
+      Write-Log -Message:('Creating HKLM Registry Entries')
       # Root Key Path
       $ADMUKEY = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
       # Remove Root from key to pass into functions
@@ -6000,16 +6004,16 @@ Function Start-Migration {
         }
       }
       else {
-        write-host "The ADMU Registry Key does not exist"
+        # write-host "The ADMU Registry Key does not exist"
         # Create the new key
-        newKey -keyPath $rootlessKey -registryRoot LocalMachine
+        New-RegKey -keyPath $rootlessKey -registryRoot LocalMachine
         foreach ($item in $propertyHash.Keys) {
           # Eventually make this better
           if ($item -eq "IsInstalled") {
-            setValueToKey -registryRoot LocalMachine -keyPath "$rootlessKey" -Name "$item" -value $propertyHash[$item] -regValueKind Dword
+            Set-ValueToKey -registryRoot LocalMachine -keyPath "$rootlessKey" -Name "$item" -value $propertyHash[$item] -regValueKind Dword
           }
           else {
-            setValueToKey -registryRoot LocalMachine -keyPath "$rootlessKey" -Name "$item" -value $propertyHash[$item] -regValueKind String
+            Set-ValueToKey -registryRoot LocalMachine -keyPath "$rootlessKey" -Name "$item" -value $propertyHash[$item] -regValueKind String
           }
         }
       }
@@ -6018,7 +6022,7 @@ Function Start-Migration {
       #Create New User
       net user $JumpCloudUserName $TempPassword /add /Y
 
-      Write-Log -Message:('Spawning New Process')
+      Write-Log -Message:('Spawning process for new profile')
       #spawn process or build reg entry with sid
       $user = "$env:COMPUTERNAME\$JumpCloudUserName"
       $MyPlainTextString = $TempPassword
@@ -6029,7 +6033,7 @@ Function Start-Migration {
       # Now get NewUserSID
       $NewUserSID = Get-SID -User $JumpCloudUserName
 
-      Write-Log -Message:('Setting New Profile Permissions')
+      Write-Log -Message:('Setting new profile permissions')
       # Set the New User Profile Path
       $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
 
@@ -6101,7 +6105,7 @@ Function Start-Migration {
       if (Get-Item $ADMU_PackageKey -ErrorAction SilentlyContinue){
         # If the account to be converted already has this key, reset the version
         $rootlessKey = $ADMU_PackageKey.Replace('HKEY_USERS:\', '')
-        setValueToKey -registryRoot Users -KeyPath $rootlessKey -name Version -value "0,0,00,0" -regValueKind String
+        Set-ValueToKey -registryRoot Users -KeyPath $rootlessKey -name Version -value "0,0,00,0" -regValueKind String
       }
       # Set the trigger to reset Appx Packages on first login
       $ADMUKEY = "HKEY_USERS:\$newusersid\SOFTWARE\JCADMU"
@@ -6110,8 +6114,10 @@ Function Start-Migration {
         Write-Host "The Key Already Exists"
       }
       else {
-        # Just Create the new key
-        newKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU"
+        # Create the new key & remind add tracking from previous domain account for reversion if necessary
+        New-RegKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU"
+        Set-ValueToKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU" -Name "previousSID" -value "$SelectedUserSID" -regValueKind String
+        Set-ValueToKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU" -Name "previousProfilePath" -value "$olduserprofileimagepath" -regValueKind String
       }
       # Download the appx register exe
       DownloadLink -Link 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -Path "$windowsDrive\Windows\uwp_jcadmu.exe"
@@ -6125,6 +6131,7 @@ Function Start-Migration {
 
       # Unload the Reg Hives
       [gc]::collect()
+      Start-Sleep -Seconds 1
       REG UNLOAD HKU\$newusersid
       Start-Sleep -Seconds 1
       REG UNLOAD HKU\"$($newusersid)_Classes"
