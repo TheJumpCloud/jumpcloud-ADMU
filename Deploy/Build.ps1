@@ -46,3 +46,14 @@ Else
 {
     Write-Error ('Build.ps1 failed. Transform process outputted an empty ADMU.ps1 file.')
 }
+
+(Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/Deploy/uwp_jcadmu.ps1).tostring() | Out-File -FilePath C:\windows\Temp\master.ps1
+$masteruwp = 'C:\windows\Temp\master.ps1'
+$branchuwp = 'C:\agent\_work\1\s\Deploy\uwp_jcadmu.ps1'
+$compare = (Compare-Object -ReferenceObject (Get-Content $masteruwp) -DifferenceObject (Get-Content $branchuwp))
+
+if (-not [System.String]::IsNullOrEmpty($compare)) {
+    & 'ps2exe' -inputFile 'C:\agent\_work\1\s\Deploy\uwp_jcadmu.ps1' -outputFile 'C:\agent\_work\1\s\jumpcloud-ADMU\exe\uwp_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright '(c) 2020' -company 'JumpCloud' -iconfile 'C:\agent\_work\1\s\Deploy\admu.ico'
+} else {
+    Write-Host "No changes to uwp_jcadmu.ps1 file"
+}

@@ -17,8 +17,8 @@ Describe 'Build Tests' {
             (Test-Path -Path ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\gui_jcadmu.exe')) | Should -Be $true
         }
 
-        It 'gui_jcadmu.exe exists' {
-            (Test-Path -Path ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\gui_jcadmu.exe')) | Should -Be $true
+        It 'uwp_jcadmu.exe exists' {
+            (Test-Path -Path ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\uwp_jcadmu.exe')) | Should -Be $true
         }
     }
 
