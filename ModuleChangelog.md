@@ -1,6 +1,6 @@
 ## 1.5.0
 
-Release Date: Dec 9, 2020
+Release Date: Dec 10, 2020
 
 #### RELEASE NOTES
 
