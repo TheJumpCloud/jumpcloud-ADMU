@@ -14,9 +14,10 @@ Starts the JumpCloud Active Directory Migration process.
 
 ### cmd
 ```
-Start-Migration -JumpCloudUserName <String> -DomainUserName <String> -TempPassword <String>
- [-AcceptEULA <Boolean>] [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-AzureADProfile <Boolean>]
- [-Customxml <Boolean>] [-InstallJCAgent <Boolean>] [-JumpCloudConnectKey <String>] [<CommonParameters>]
+Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPassword <String>
+ [-AcceptEULA <Boolean>] [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-ConvertProfile <Boolean>]
+ [-CreateRestore <Boolean>] [-AzureADProfile <Boolean>] [-Customxml <Boolean>] [-InstallJCAgent <Boolean>]
+ [-JumpCloudConnectKey <String>] [<CommonParameters>]
 ```
 
 ### form
@@ -31,21 +32,21 @@ The Start-Migration function allows the starting of the JumpCloud Active Directo
 
 ### Example 1
 ```powershell
-PS C:\> Start-Migration -JumpCloudUserName 'john.smith' -DomainUserName 'jsmith' -TempPassword 'Temp123!' -AcceptEULA $true -LeaveDomain $true -ForceReboot $true -AZureADProfile $false -Customxml $false -InstallJCAgent $true -JumpCloudConnectKey 'CONNECTKEYHERE'.
+PS C:\> Start-Migration -JumpCloudUserName 'john.smith' -SelectedUserName 'DOMAIN\jsmith' -TempPassword 'Temp123!' -AcceptEULA $true -LeaveDomain $true -ForceReboot $true -AZureADProfile $false -Customxml $false -InstallJCAgent $true -JumpCloudConnectKey 'CONNECTKEYHERE'.
 ```
 
 This example would run the `Start-Migration` function on a domain user `DOMAIN\jsmith` and create a new local user account `COMPUTERNAME\john.smith`. Using a temporary password `Temp123!`, accepting the EULA so no interactive prompts would display, the system would leave the bound domain and reboot, It is not converting a AzureAD profile or using a CustomXML for migration, It will also install the JumpCloud Agent and use the JumpCloud connect key provided.
 
 ### Example 2
 ```powershell
-PS C:\> Start-Migration -JumpCloudUserName 'john.smith' -DomainUserName 'jsmith' -TempPassword 'Temp123!' -AcceptEULA $true -LeaveDomain $false -ForceReboot $false -InstallJCAgent $false
+PS C:\> Start-Migration -JumpCloudUserName 'john.smith' -SelectedUserName 'DOMAIN\jsmith' -TempPassword 'Temp123!' -AcceptEULA $true -LeaveDomain $false -ForceReboot $false -InstallJCAgent $false
 ```
 
 This example would run the `Start-Migration` function on a domain user `DOMAIN\jsmith` and create a new local user account `COMPUTERNAME\john.smith`. Using a temporary password `Temp123!`, accepting the EULA so no interactive prompts would display, the system would remain bound to the current domain, no reboot or JumpCloud Agent would be installed. This would allow the administrator to run the converted account in parallel for testing.
 
 ### Example 3
 ```powershell
-PS C:\> Start-Migration -JumpCloudUserName 'john.smith' -DomainUserName 'jsmith' -TempPassword 'Temp123!' -AcceptEULA $true -LeaveDomain $false -ForceReboot $false -InstallJCAgent $false -Customxml $true
+PS C:\> Start-Migration -JumpCloudUserName 'john.smith' -SelectedUserName 'DOMAIN\jsmith' -TempPassword 'Temp123!' -AcceptEULA $true -LeaveDomain $false -ForceReboot $false -InstallJCAgent $false -Customxml $true
 ```
 
 This example would run the `Start-Migration` function on a domain user `DOMAIN\jsmith` and create a new local user account `COMPUTERNAME\john.smith`. Using a temporary password `Temp123!`, accepting the EULA so no interactive prompts would display, the system would remain bound to the current domain, no reboot or JumpCloud Agent would be installed. This would allow the administrator to run the converted account in parallel for testing, A `Custom.XML` file would be used in the migration process from the location `C:\Windows\Temp\custom.xml` this could be edited from the default xml provided or the GUI utility could be used to edit.
@@ -94,21 +95,6 @@ Parameter Sets: cmd
 Aliases:
 
 Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -DomainUserName
-A string value for the DomainUserName that is used in the migration script. This value is verified to make sure the account exists on the system. If the Domain Account does not exist, the script will error and not continue.
-
-```yaml
-Type: System.String
-Parameter Sets: cmd
-Aliases:
-
-Required: True
 Position: Named
 Default value: None
 Accept pipeline input: False
@@ -211,6 +197,51 @@ An PSObject can be passed to the function with the required values for the migra
 ```yaml
 Type: System.Object
 Parameter Sets: form
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ConvertProfile
+The Convert User functionality from v1.5.0 can be invoked with the ConvertProfile parameter. This functionality will convert the SelectedUserName user or SID to a local user with the account name specified by the JumpCloudUserName parameter.
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -SelectedUserName
+A string value for the DomainUserName that is used in the migration script. This value is verified to make sure the account exists on the system. If the Domain Account does not exist, the script will error and not continue. Either pass a username using the "Domain\username" syntax or a domain user SID.
+
+```yaml
+Type: System.String
+Parameter Sets: cmd
+Aliases:
+
+Required: True
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -CreateRestore
+If set, the ADMU will attempt to invoke Checkpoint-Computer and make a system restore checkpoint before any migration actions are taken. By default in Windows 10, only one system restore point can be set per day.
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
 Aliases:
 
 Required: False

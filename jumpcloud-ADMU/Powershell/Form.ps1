@@ -8,7 +8,7 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
 <Window
      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-     Title="JumpCloud ADMU 1.4.4" Height="677.234" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
+     Title="JumpCloud ADMU 1.5.0" Height="677.234" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
     <Grid Margin="0,0,-0.2,0.168" RenderTransformOrigin="0.531,0.272">
         <TabControl Name="tc_main" HorizontalAlignment="Left" Height="614" VerticalAlignment="Top" Width="1012">
             <TabItem Name="tab_jcadmu" Header="JumpCloud ADMU">
@@ -53,7 +53,7 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                             <Label Content="Local Account Username :" HorizontalAlignment="Left" Margin="7.088,8.287,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
                             <Label Content="Local Account Password :" HorizontalAlignment="Left" Margin="7.088,36.287,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
                             <TextBox Name="tbJumpCloudUserName" HorizontalAlignment="Left" Height="23" Margin="151.11,10.287,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="301.026" Text="Username should match JumpCloud username" Background="#FFC6CBCF" FontWeight="Bold" />
-                            <TextBox Name="tbTempPassword" HorizontalAlignment="Left" Height="23" Margin="151.11,39.287,0,0" TextWrapping="Wrap" Text="Temp123!" VerticalAlignment="Top" Width="301.026" FontWeight="Normal"/>
+                            <TextBox Name="tbTempPassword" HorizontalAlignment="Left" Height="23" Margin="151.11,39.287,0,0" TextWrapping="Wrap" Text="Temp123!Temp123!" VerticalAlignment="Top" Width="301.026" FontWeight="Normal"/>
                         </Grid>
                     </GroupBox>
                     <GroupBox Header="System Migration Options" HorizontalAlignment="Left" Height="121" Margin="10,459,0,0" VerticalAlignment="Top" Width="517" FontWeight="Bold" Grid.ColumnSpan="2">
@@ -66,6 +66,8 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                             <CheckBox Name="cb_leavedomain" Content="Leave Domain" HorizontalAlignment="Left" Margin="258.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                             <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="359.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                             <CheckBox Name="cb_custom_xml" Content="Use USMT Custom.XML" HorizontalAlignment="Left" Margin="4,68,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
+                            <CheckBox Name="cb_convertprofile" Content="Convert Profile" HorizontalAlignment="Left" Margin="156,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                            <CheckBox Name="cb_createrestore" Content="Create Restore Point" HorizontalAlignment="Left" Margin="258,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                         </Grid>
                     </GroupBox>
                     <GroupBox Header="Domain Information" HorizontalAlignment="Left" Height="120" Margin="269,103,0,0" VerticalAlignment="Top" Width="321" FontWeight="Bold" Grid.Column="1">
@@ -153,14 +155,23 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         if ($WmiComputerSystem.PartOfDomain) {
             $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
             $securechannelstatus = Test-ComputerSecureChannel
-            if(![System.String]::IsNullOrEmpty($WmiComputerDomain.DomainName))
+
+            $nbtstat = nbtstat -n
+            foreach ($line in $nbtStat)
+            {
+                if ($line -match '^\s*([^<\s]+)\s*<00>\s*GROUP')
+                {
+                    $NetBiosName = $matches[1]
+                }
+            }
+
+            if([System.String]::IsNullOrEmpty($WmiComputerDomain[0].DnsForestName) -and $securechannelstatus -eq $false)
             {
                 $DomainName = 'Fix Secure Channel'
-                $NetBiosName = 'Fix Secure Channel'
             } else {
                 $DomainName = [string]$WmiComputerDomain.DnsForestName
-                $NetBiosName = [string]$WmiComputerDomain.DomainName
             }
+                $NetBiosName = [string]$NetBiosName
         }
         elseif ($WmiComputerSystem.PartOfDomain -eq $false) {
             $DomainName = 'N/A'
@@ -169,11 +180,17 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         }
         if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
             $AzureADInfo = dsregcmd.exe /status
-        }
-        if ((Get-CimInstance Win32_OperatingSystem).Version -match '10' -and ($AzureADInfo[5].trimstart('AzureADJoined : ') -eq 'YES') ) {
-                $AzureADStatus = ($AzureADInfo[5].trimstart('AzureADJoined : '))
-                $Workplace_join = ($AzureADInfo[51].trimstart('WorkplaceJoined : '))
-                $TenantName = ($AzureADInfo[24].trimstart('TenantName : '))
+            foreach ($line in $AzureADInfo) {
+                if ($line -match "AzureADJoined : ") {
+                    $AzureADStatus = ($line.trimstart('AzureADJoined : '))
+                }
+                if ($line -match "WorkplaceJoined : ") {
+                    $Workplace_join = ($line.trimstart('WorkplaceJoined : '))
+                }
+                if ($line -match "TenantName : ") {
+                    $TenantName = ($line.trimstart('TenantName : '))
+                }
+            }
         }
         else {
             $AzureADStatus = 'N/A'
@@ -260,55 +277,72 @@ $usmtcustom = [xml] @"
         $tmpDoc.WriteContentTo($writer)
         $tb_customxml.Text = $sw.ToString()
 
-        # Get list of profiles from computer into listview
-        $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-        $win32UserProfiles | Add-Member -membertype NoteProperty -name IsLocalAdmin -value $null
-        $win32UserProfiles | Add-Member -membertype NoteProperty -name LocalProfileSize -value $null
-
-        $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
-        $userstrim = $users -creplace '^[^\\]*\\', ''
-
-        $admingroupmembers = Get-LocalGroupMember -SID S-1-5-32-544 | Select-Object Name
-        $members = @()
-        foreach ($username in $admingroupmembers) {
-            $users = ($username.Name).ToString()
-            $members += $users.Substring($users.IndexOf('\')+1)
-        }
-
-        $i = 0
-        ForEach ($user in $userstrim)
-        {
-            If ($members -contains $user)
-            {
-                $win32UserProfiles[$i].IsLocalAdmin = $true
-                $i++
-            }
-            Else
-            {
-                $win32UserProfiles[$i].IsLocalAdmin = $false
-                $i++
-            }
-        }
-
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
-
-        #local profile file size check
-        $LocalUserProfiles = $win32UserProfiles | Select-Object LocalPath
-        $LocalUserProfilesTrim = ForEach ($LocalPath in $LocalUserProfiles) { $LocalPath.LocalPath.substring(9) }
-
-        $i = 0
-        foreach ($userprofile in $LocalUserProfilesTrim)
-        {
-            $largeprofile = Get-ChildItem C:\Users\$userprofile -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Sum length | Select-Object -ExpandProperty Sum
+        # Get Valid SIDs from the Registry and build user object
+        $registyProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
+        $profileList = @()
+        foreach ($profile in $registyProfiles) {
+            $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
+        }
+        # List to store users
+        $users = @()
+        foreach ($listItem in $profileList) {
+            $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+$"
+            $isValidFormat = [regex]::IsMatch($($listItem.PSChildName), $sidPattern);
+            # Get Valid SIDs
+            if ($isValidFormat) {
+                # Populate Users List
+                $users += [PSCustomObject]@{
+                    Name              = ConvertSID $listItem.PSChildName
+                    LocalPath         = $listItem.ProfileImagePath
+                    SID               = $listItem.PSChildName
+                    IsLocalAdmin      = $null
+                    LocalProfileSize  = $null
+                    Loaded            = $null
+                    RoamingConfigured = $null
+                    LastLogin         = $null
+                }
+            }
+        }
+        # Get Win32 Profiles to merge data with valid SIDs
+        $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+        $date_format = "yyyy-MM-dd HH:mm"
+        foreach ($user in $users) {
+            # Get Data from Win32Profile
+            foreach ($win32user in $win32UserProfiles) {
+                if ($($user.SID) -eq $($win32user.SID)) {
+                    $user.RoamingConfigured = $win32user.RoamingConfigured
+                    $user.Loaded = $win32user.Loaded
+                    if ([string]::IsNullOrEmpty($($win32user.LastUseTime))){
+                        $user.LastLogin = "N/A"
+                    }
+                    else{
+                        $user.LastLogin = [System.Management.ManagementDateTimeConverter]::ToDateTime($($win32user.LastUseTime)).ToUniversalTime().ToSTring($date_format)
+                    }
+                }
+            }
+            # Get Admin Status
+            try {
+                $admin = Get-LocalGroupMember -Member "$($user.SID)" -Name "Administrators" -EA SilentlyContinue
+            }
+            catch {
+                $user = Get-LocalGroupMember -Member "$($user.SID)" -Name "Users"
+            }
+            if ($admin) {
+                $user.IsLocalAdmin = $true
+            }
+            else {
+                $user.IsLocalAdmin = $false
+            }
+            # Get Profile Size
+            $largeprofile = Get-ChildItem $($user.LocalPath) -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Sum length | Select-Object -ExpandProperty Sum
             $largeprofile = [math]::Round($largeprofile / 1MB, 0)
-            $largeprofile = $largeprofile
-            $win32UserProfiles[$i].LocalProfileSize = $largeprofile
-            $i++
+            $user.LocalProfileSize = $largeprofile
         }
 
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Building Profile Group Box Query..'
 
-        $Profiles = $win32UserProfiles | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, @{Name = "LastLogin"; EXPRESSION = { $_.ConvertToDateTime($_.lastusetime) } }, @{Name = "UserName"; EXPRESSION = { ConvertSID($_.SID) } }
+        $Profiles = $users | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, LastLogin, @{Name = "UserName"; EXPRESSION = { $_.Name } }
 
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Done!'
 
@@ -399,6 +433,21 @@ $script:ForceReboot = $false
 $cb_forcereboot.Add_Checked({$script:ForceReboot = $true})
 $cb_forcereboot.Add_Unchecked({$script:ForceReboot = $false})
 
+# Convert Profile checkbox
+$script:ConvertProfile = $false
+$cb_convertprofile.Add_Checked({$script:ConvertProfile = $true})
+$cb_convertprofile.Add_Checked({$cb_custom_xml.IsEnabled = $false})
+$cb_convertprofile.Add_Checked({$cb_accepteula.IsEnabled = $false})
+$cb_convertprofile.Add_Unchecked({$script:ConvertProfile = $false})
+$cb_convertprofile.Add_UnChecked({$cb_custom_xml.IsEnabled = $True})
+$cb_convertprofile.Add_UnChecked({$cb_accepteula.IsEnabled = $True})
+$cb_custom_xml.Add_UnChecked({$tab_usmtcustomxml.IsEnabled = $false})
+
+# Create Restore Point checkbox
+$script:CreateRestore = $false
+$cb_createrestore.Add_Checked({$script:CreateRestore = $true})
+$cb_createrestore.Add_Unchecked({$script:CreateRestore = $false})
+
 # Custom XML checkbox
 $script:Customxml = $false
 $cb_custom_xml.Add_Checked({$script:Customxml = $true})
@@ -476,7 +525,10 @@ $bDeleteProfile.Add_Click( {
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('InstallJCAgent') -Value:($InstallJCAgent)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('LeaveDomain') -Value:($LeaveDomain)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ForceReboot') -Value:($ForceReboot)
-        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('DomainUserName') -Value:($SelectedUserName.Substring($SelectedUserName.IndexOf('\') + 1))
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ConvertProfile') -Value:($ConvertProfile)
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('CreateRestore') -Value:($CreateRestore)
+        # Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('DomainUserName') -Value:($SelectedUserName.Substring($SelectedUserName.IndexOf('\') + 1))
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('DomainUserName') -Value:($SelectedUserName)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudUserName') -Value:($tbJumpCloudUserName.Text)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('TempPassword') -Value:($tbTempPassword.Text)
         if(($tbJumpCloudConnectKey.Text).length -eq 40){

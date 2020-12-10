@@ -1,46 +1,27 @@
-## 1.4.5
+## 1.5.0
 
-Release Date: December 02, 2020
+Release Date: Dec 10, 2020
 
 #### RELEASE NOTES
 
+
 ```
-{{Fill in the Release Notes}}
+Ability to convert rather than duplicate domain user accounts. User's AppData is kept intact. This conversion process is much faster than the default behaivor of migration and no addtitional storage space is required.
+
+The Convet User Process makes several changes to the registry. It is reccommended to take a backup before converting the user account. Included in this release is an additional option to take a system restore checkpoint before running the ADMU.
 ```
 
 #### FEATURES:
 
-{{Fill in the Features}}
-
-#### IMPROVEMENTS:
-
-{{Fill in the Improvements}}
-
-#### BUG FIXES:
-
-{{Fill in the Bug Fixes}}
-
-## 1.4.4
-
-Release Date: November 30, 2020
-
-#### RELEASE NOTES
-
-```
-{{Fill in the Release Notes}}
-```
-
-#### FEATURES:
-
-{{Fill in the Features}}
-
-#### IMPROVEMENTS:
-
-{{Fill in the Improvements}}
+Added convert User profile functionality to GUI & CLI.
+If secure channel is in a broken state, the ADMU can convert a profile to a local account.
+Added optional field to create a system restore point before migration or conversion.
+SelectedUserName parameter is verified to ensure that a username in the form of Domain\username or user account SID is valid on the system before migration.
 
 #### BUG FIXES:
 
-{{Fill in the Bug Fixes}}
+Fixed local admin membership bug not displaying consistently in GUI.
+Fixed AzureAD informational display in GUI form.
 
 ## 1.4.3
 
