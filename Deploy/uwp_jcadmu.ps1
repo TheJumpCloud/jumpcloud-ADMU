@@ -10,18 +10,45 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
    Set-Content -Path $env:temp\jclogo.jpg -Value $Content -Encoding Byte
 
    $img = [System.Drawing.Image]::Fromfile("$env:temp\jclogo.jpg");
+   # Get Primary Screen Size
+   $screenSize = [System.Windows.Forms.SystemInformation]::PrimaryMonitorSize
 
    [System.Windows.Forms.Application]::EnableVisualStyles();
+
+   # Set label text
+   $displayText = "JumpCloud is doing stuff"
+   $textLabel = new-object Windows.Forms.Label
+   $textLabel.Text = "$displayText";
+   $textLabel.Font = [System.Drawing.Font]::new("Arial", 20)
+   $textLabel.Size = [System.Drawing.Size]::new(500, 100);
+   $textLabel.ImageAlign = [System.Drawing.ContentAlignment]::MiddleCenter;
+   $textLabel.TextAlign = [System.Drawing.ContentAlignment]::TopCenter;
+   $textLabel.Location = [System.Drawing.Point]::new((($screenSize.width - $textLabel.width) / 2), (($screenSize.height - $textLabel.height) / 2) + 200);
+
+   # Set form
    $form = new-object Windows.Forms.Form
-   $form.TopMost = $true
+   $form.TopMost = $false
    $form.FormBorderStyle = [System.Windows.Forms.BorderStyle]::None;
    $form.WindowState = [System.Windows.Forms.FormWindowState]::Maximized;
    $form.BackColor = [System.Drawing.Color]::white;
-   $Form.ControlBox = $False
+   $form.ControlBox = $False
+
+   # Set pictureBox
    $pictureBox = new-object Windows.Forms.PictureBox
-   $pictureBox.Width = $img.Size.Width;
-   $pictureBox.Height = $img.Size.Height;
+   $pictureBox.Width = $screenSize.Width;
+   $pictureBox.Height = $screenSize.Height;
+
+   # set padding for picturebox
+   $a = $picturebox.Width - $img.Width;
+   $b = $picturebox.Height - $img.Height;
+   $Padding = new-object System.Windows.Forms.Padding
+   $Padding.Left = $a / 2;
+   $Padding.Top = $b / 3;
+   $picturebox.Padding = $Padding;
    $pictureBox.Image = $img;
+
+   # initilaze the form
+   $form.controls.Add($textLabel)
    $form.controls.add($pictureBox)
    $form.Add_Shown( { $form.Activate() } )
    $form.Show()
@@ -29,7 +56,13 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
    $appxmanifest = ($HOME + '\AppData\Local\JumpCloudADMU\appx_manifest.csv')
    $newList = Import-CSV $appxmanifest
    $output = @()
+   $i = 0
    foreach ($item in $newlist) {
+      $i += 1
+      $precent = [Math]::Round([Math]::Ceiling(($i / $newList.Count) * 100))
+      $textLabel.Text = "Finalizing account takeover: $precent%";
+      # Update the textLabel
+      $textLabel.Refresh();
       $output += Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml" -Verbose *>&1
    }
    $output | Out-File "$HOME\AppData\Local\JumpCloudADMU\appx_manifestLog.txt"
