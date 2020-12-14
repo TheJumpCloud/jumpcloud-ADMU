@@ -16,7 +16,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
    [System.Windows.Forms.Application]::EnableVisualStyles();
 
    # Set label text
-   $displayText = "JumpCloud is doing stuff"
+   $displayText = "JumpCloud is almost done converting your account."
    $textLabel = new-object Windows.Forms.Label
    $textLabel.Text = "$displayText";
    $textLabel.Font = [System.Drawing.Font]::new("Arial", 20)
