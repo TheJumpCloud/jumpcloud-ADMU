@@ -1,3 +1,17 @@
+## 1.5.1
+
+Release Date: December 11, 2020
+
+#### RELEASE NOTES
+
+```
+During login and after an account has been converted, a powershell window displayed while the uwp apps were registered to the new local account. This release includes an update to the uwp_jcadmu.exe to display the JumpCloud logo and a progress counter with progress percentage of the uwp apps registered to the new user.
+```
+
+#### FEATURES:
+
+* Splash screen added during first login to converted account
+
 ## 1.5.0
 
 Release Date: Dec 10, 2020
