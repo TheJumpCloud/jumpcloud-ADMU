@@ -766,7 +766,7 @@ function Convert-UserRegistry {
         $aclString = $_.CategoryInfo.TargetName
         $aclString = $aclString.replace("HKEY_USERS\", "")
         # Take ownership
-        Write-Host "Grant user access to take ownership operations:"
+        Write-Log "Grant user access to take ownership operations on: $aclString"
         enable-privilege SeTakeOwnershipPrivilege
         # If we can't read the orgional owner, set as user
         try {
@@ -5983,6 +5983,25 @@ Function Start-Migration {
       Write-Log -Message:('Verifying Registry ACLs can be copied')
       $identityAccessACL = Test-RegistryAccess -profilePath $olduserprofileimagepath -userSID $selectedUserSID
 
+      Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
+      #Create New User
+      $userMessage = net user $JumpCloudUserName $TempPassword /add /Active *>&1
+      $userExitCode = $lastExitCode
+      if ($userExitCode -ne 0) {
+        Write-Log -Message("$userMessage")
+        Write-Log -Message:("The user: $JumpCloudUserName could not be created, exiting")
+        exit
+      }
+      Write-Log -Message:('Spawning process for new profile')
+      $user = "$env:COMPUTERNAME\$JumpCloudUserName"
+      $MyPlainTextString = $TempPassword
+      $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
+      $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
+      Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
+      TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
+      # Now get NewUserSID
+      $NewUserSID = Get-SID -User $JumpCloudUserName
+
       Write-Log -Message:('Creating HKLM Registry Entries')
       # Root Key Path
       $ADMUKEY = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
@@ -6018,24 +6037,13 @@ Function Start-Migration {
         }
       }
 
-      Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
-      #Create New User
-      net user $JumpCloudUserName $TempPassword /add /Y
-
-      Write-Log -Message:('Spawning process for new profile')
-      #spawn process or build reg entry with sid
-      $user = "$env:COMPUTERNAME\$JumpCloudUserName"
-      $MyPlainTextString = $TempPassword
-      $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
-      $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
-      Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
-      TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
-      # Now get NewUserSID
-      $NewUserSID = Get-SID -User $JumpCloudUserName
-
       Write-Log -Message:('Setting new profile permissions')
       # Set the New User Profile Path
       $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
+      if ([System.String]::IsNullOrEmpty($newUserProfileImagePath)) {
+        Write-Log -Message("Could not set the profile path for $jumpcloudusername exiting...")
+        exit
+      }
 
       $path = takeown /F $newuserprofileimagepath /a /r /d y
       $acl = Get-Acl ($newuserprofileimagepath)
