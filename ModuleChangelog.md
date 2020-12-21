@@ -1,24 +1,16 @@
 ## 1.5.2
 
-Release Date: December 17, 2020
+Release Date: December 21, 2020
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Added exit code check if error when creation of user for example if password does not meet complexity requirements.
 ```
-
-#### FEATURES:
-
-{{Fill in the Features}}
 
 #### IMPROVEMENTS:
 
-{{Fill in the Improvements}}
-
-#### BUG FIXES:
-
-{{Fill in the Bug Fixes}}
+ADMU will error and exit if the new user creation step does not complete.
 
 ## 1.5.1
 
