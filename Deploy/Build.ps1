@@ -53,7 +53,7 @@ $branchuwp = 'C:\agent\_work\1\s\Deploy\uwp_jcadmu.ps1'
 $compare = (Compare-Object -ReferenceObject (Get-Content $masteruwp) -DifferenceObject (Get-Content $branchuwp))
 
 if (-not [System.String]::IsNullOrEmpty($compare)) {
-    #& 'ps2exe' -inputFile 'C:\agent\_work\1\s\Deploy\uwp_jcadmu.ps1' -outputFile 'C:\agent\_work\1\s\jumpcloud-ADMU\exe\uwp_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright '(c) 2020' -company 'JumpCloud' -iconfile 'C:\agent\_work\1\s\Deploy\admu.ico'
+    & 'ps2exe' -inputFile 'C:\agent\_work\1\s\Deploy\uwp_jcadmu.ps1' -outputFile 'C:\agent\_work\1\s\jumpcloud-ADMU\exe\uwp_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright '(c) 2020' -company 'JumpCloud' -iconfile 'C:\agent\_work\1\s\Deploy\admu.ico'
 } else {
     Write-Host "No changes to uwp_jcadmu.ps1 file"
 }
