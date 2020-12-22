@@ -14,7 +14,7 @@ Release Date: December 22, 2020
 
 #### IMPROVEMENTS:
 
-{{Fill in the Improvements}}
+Added improved ADMU advanced deployment scripts.
 
 #### BUG FIXES:
 

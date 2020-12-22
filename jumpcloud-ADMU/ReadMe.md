@@ -44,6 +44,11 @@ The directory `jumpcloud-ADMU\Powershell\Tests\` contains the signed .exe output
 
 - **gui_jcadmu.exe:** Signed executable file
 
+The directory `jumpcloud-ADMU-Advanced-Deployment` contains powershell scripts to run discovery and migration in a mass deployment scenario.
+
+- **invoke-admu-discovery.ps1:** Used to collect and output ADMU_DISCOVERY.csv which contains domain accounts and information from each system
+- **invoke-admu-migration.ps1:** Used to install and invoke the ADMU start-migration cmd and pass params from the ADMU_DISCOVERY.csv
+
 ### CI\CD Pipeline
 
 https://dev.azure.com/JumpCloudPowershell/JumpCloud%20ADMU/_build?definitionId=24&_a=summary
