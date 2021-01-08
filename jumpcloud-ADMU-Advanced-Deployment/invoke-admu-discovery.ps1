@@ -51,7 +51,7 @@ foreach ( $i in $OnlineComputers ) {
         }
 
         #return csv excluding headers & local accounts
-        $profiles = $Win32UserProfiles | Select-Object ComputerName, @{Name = "DomainUserName"; EXPRESSION = { (New-Object System.Security.Principal.SecurityIdentifier($_.SID)).Translate([System.Security.Principal.NTAccount]).Value }; }, LocalPath , RoamingConfigured, Loaded, LocalProfileSize, @{Name = "JumpCloudUserName"; EXPRESSION = { ((New-Object System.Security.Principal.SecurityIdentifier($_.SID)).Translate([System.Security.Principal.NTAccount]).Value).Split('\')[1] }; }, TempPassword, AcceptEULA, LeaveDomain, ForceReboot, AzureADProfile, InstallJCAgent, JumpCloudConnectKey, Customxml, MigrationSuccess | Where-Object { $_.DomainUserName -notmatch $env:computername }
+        $profiles = $Win32UserProfiles | Select-Object ComputerName, @{Name = "DomainUserName"; EXPRESSION = { (New-Object System.Security.Principal.SecurityIdentifier($_.SID)).Translate([System.Security.Principal.NTAccount]).Value }; }, LocalPath , RoamingConfigured, Loaded, LocalProfileSize, @{Name = "JumpCloudUserName"; EXPRESSION = { ((New-Object System.Security.Principal.SecurityIdentifier($_.SID)).Translate([System.Security.Principal.NTAccount]).Value).Split('\')[1] }; }, TempPassword, AcceptEULA, LeaveDomain, ForceReboot, AzureADProfile, InstallJCAgent, JumpCloudConnectKey, Customxml, ConvertProfile, MigrationSuccess | Where-Object { $_.DomainUserName -notmatch $env:computername }
         return ($profiles | ConvertTo-Csv -NoTypeInformation | Select-Object -Skip 1)
     }
 }
