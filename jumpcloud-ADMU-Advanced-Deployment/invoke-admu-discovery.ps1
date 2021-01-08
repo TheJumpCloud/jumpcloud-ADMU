@@ -5,7 +5,7 @@ $Computers = (Get-ADGroupMember -Identity $ADgroup | Select-Object name).name
 #create admu_discovery.csv
 $CSV = "C:\Windows\Temp\admu_discovery.csv"
 New-Item -ItemType file -path $CSV -force | Out-Null
-("" | Select-Object "ComputerName", "DomainUserName", "LocalPath", "RoamingConfigured", "Loaded", "LocalProfileSize", "JumpCloudUserName", "TempPassword", "AcceptEULA", "LeaveDomain", "ForceReboot", "AzureADProfile", "InstallJCAgent", "JumpCloudConnectKey", "Customxml", "MigrationSuccess" | ConvertTo-Csv -NoType -Delimiter ",")[0] | Out-File $CSV
+("" | Select-Object "ComputerName", "DomainUserName", "LocalPath", "RoamingConfigured", "Loaded", "LocalProfileSize", "JumpCloudUserName", "TempPassword", "AcceptEULA", "LeaveDomain", "ForceReboot", "AzureADProfile", "InstallJCAgent", "JumpCloudConnectKey", "Customxml", "ConvertProfile", "MigrationSuccess" | ConvertTo-Csv -NoType -Delimiter ",")[0] | Out-File $CSV
 
 #check network connectivity to computers
 $ConnectionTest = $Computers | ForEach-Object {
@@ -35,6 +35,7 @@ foreach ( $i in $OnlineComputers ) {
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name InstallJCAgent -Value '$false'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name JumpCloudConnectKey -Value '1111111111111111111111'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name Customxml -Value '$false'
+        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name ConvertProfile -Value '$true'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name MigrationSuccess -Value '$false'
         $LocalUserProfiles = $Win32UserProfiles | Select-Object LocalPath
         $LocalUserProfilesTrim = ForEach ($LocalPath in $LocalUserProfiles) { $LocalPath.LocalPath.substring(9) }
