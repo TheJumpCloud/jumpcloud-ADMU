@@ -5993,7 +5993,7 @@ Function Start-Migration {
         exit
       }
       Write-Log -Message:('Spawning process for new profile')
-
+      Add-LocalGroupMember -SID S-1-5-32-544 -Member $JumpCloudUserName -erroraction silentlycontinue
       $RunTime = (Get-Date).AddMinutes(1) | Get-Date -UFormat %R
       SchTasks /Create /SC Once /TN "buildAccount" /TR "c:\windows\system32\powershell.exe" /ST $RunTime /RU "$env:COMPUTERNAME\$JumpCloudUserName" /RP "$TempPassword"
       Start-Sleep -Seconds 70
