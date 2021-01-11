@@ -5993,12 +5993,16 @@ Function Start-Migration {
         exit
       }
       Write-Log -Message:('Spawning process for new profile')
-      $user = "$env:COMPUTERNAME\$JumpCloudUserName"
-      $MyPlainTextString = $TempPassword
-      $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
-      $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
-      Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
-      TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
+
+      $RunTime = (Get-Date).AddMinutes(1) | Get-Date -UFormat %R
+      SchTasks /Create /SC Once /TN "buildAccount" /TR "c:\windows\system32\powershell.exe" /ST $RunTime /RU "$env:COMPUTERNAME\$JumpCloudUserName" /RP "$TempPassword"
+      Start-Sleep -Seconds 70
+      # $user = "$env:COMPUTERNAME\$JumpCloudUserName"
+      # $MyPlainTextString = $TempPassword
+      # $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
+      # $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
+      # Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
+      # TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
       # Now get NewUserSID
       $NewUserSID = Get-SID -User $JumpCloudUserName
 
