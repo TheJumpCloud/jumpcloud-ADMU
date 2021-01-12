@@ -5982,7 +5982,16 @@ Function Start-Migration {
       # Test user ACL access match the user's registry's root keys, else exit
       Write-Log -Message:('Verifying Registry ACLs can be copied')
       $identityAccessACL = Test-RegistryAccess -profilePath $olduserprofileimagepath -userSID $selectedUserSID
-
+      if ($PSSenderInfo)
+      {
+        Write-Log -Message:("Running Remote as $($PSSenderInfo.ConnectedUser) on $($PSSenderInfo.PSComputerName)")
+        $remoteRun = $true
+      }
+      else
+      {
+        Write-Log -Message:("Running local")
+        $remoteRun = $false
+      }
       Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
       #Create New User
       $userMessage = net user $JumpCloudUserName $TempPassword /add /Active *>&1
@@ -5994,15 +6003,26 @@ Function Start-Migration {
       }
       Write-Log -Message:('Spawning process for new profile')
       Add-LocalGroupMember -SID S-1-5-32-544 -Member $JumpCloudUserName -erroraction silentlycontinue
-      $RunTime = (Get-Date).AddMinutes(1) | Get-Date -UFormat %R
-      SchTasks /Create /SC Once /TN "buildAccount" /TR "c:\windows\system32\powershell.exe" /ST $RunTime /RU "$env:COMPUTERNAME\$JumpCloudUserName" /RP "$TempPassword"
-      Start-Sleep -Seconds 70
-      # $user = "$env:COMPUTERNAME\$JumpCloudUserName"
-      # $MyPlainTextString = $TempPassword
-      # $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
-      # $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
-      # Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
-      # TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
+      $user = "$env:COMPUTERNAME\$JumpCloudUserName"
+      $MyPlainTextString = $TempPassword
+      $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
+      $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
+      if ($remoteRun)
+      {
+        # Solve for second hop via CredSSP
+        Invoke-Command -ComputerName MachineName.domain.com -Authentication CredSSP -Credential $Credential -ScriptBlock {
+          Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
+          start-sleep 1
+          TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
+        }
+      }
+      else
+      {
+        Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
+          start-sleep 1
+          TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
+      }
+      # TODO: verify that the user is unloaded from registry
       # Now get NewUserSID
       $NewUserSID = Get-SID -User $JumpCloudUserName
 
