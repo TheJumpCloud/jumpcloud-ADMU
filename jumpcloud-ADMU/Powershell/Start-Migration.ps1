@@ -5810,9 +5810,7 @@ Function Start-Migration {
   [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
   Param (
     [Parameter(ParameterSetName = 'cmd', Mandatory = $true)]
-    [ValidateScript( {
-        If (Test-Localusername $_) { Throw [System.Management.Automation.ValidationMetadataException] "The username '${_}' is already in use." }else { $True }
-      })][string]$JumpCloudUserName,
+    [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][string]$JumpCloudUserName,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][string]$SelectedUserName,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][ValidateNotNullOrEmpty()][string]$TempPassword,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AcceptEULA = $true,
@@ -5932,10 +5930,10 @@ Function Start-Migration {
   Process {
     # Start Of Console Output
     if ($ConvertProfile -eq $true) {
-      Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+      Write-Log -Message:('Windows Profile "' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
     }
     else {
-      Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $SelectedUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+      Write-Log -Message:('Windows Profile "' + $SelectedUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
     }
     # Create Restore
     if ($CreateRestore -eq $true) {
@@ -5968,6 +5966,33 @@ Function Start-Migration {
     }
 
     if ($ConvertProfile -eq $true) {
+      if ($PSSenderInfo)
+      {
+        Write-Log -Message:("Running ADMU Convert User Remotely as $($PSSenderInfo.ConnectedUser)")
+        # $remoteRun = $true
+      }
+      else
+      {
+        Write-Log -Message:("Running ADMU Convert User locally")
+        # $remoteRun = $false
+        Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
+        #Create New User
+        $userMessage = net user $JumpCloudUserName $TempPassword /add /Active *>&1
+        $userExitCode = $lastExitCode
+        if ($userExitCode -ne 0) {
+          Write-Log -Message("$userMessage")
+          Write-Log -Message:("The user: $JumpCloudUserName could not be created, exiting")
+          exit
+        }
+        Write-Log -Message:('Spawning process for new profile')
+        $user = "$env:COMPUTERNAME\$JumpCloudUserName"
+        $MyPlainTextString = $TempPassword
+        $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
+        $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
+        Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
+        start-sleep 1
+        TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
+      }
       Write-Log -Message:('Creating Backup of User Registry Hive')
       $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
       try {
@@ -5982,50 +6007,8 @@ Function Start-Migration {
       # Test user ACL access match the user's registry's root keys, else exit
       Write-Log -Message:('Verifying Registry ACLs can be copied')
       $identityAccessACL = Test-RegistryAccess -profilePath $olduserprofileimagepath -userSID $selectedUserSID
-      if ($PSSenderInfo)
-      {
-        Write-Log -Message:("Running Remote as $($PSSenderInfo.ConnectedUser) on $($PSSenderInfo.PSComputerName)")
-        $remoteRun = $true
-      }
-      else
-      {
-        Write-Log -Message:("Running local")
-        $remoteRun = $false
-      }
-      Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
-      #Create New User
-      $userMessage = net user $JumpCloudUserName $TempPassword /add /Active *>&1
-      $userExitCode = $lastExitCode
-      if ($userExitCode -ne 0) {
-        Write-Log -Message("$userMessage")
-        Write-Log -Message:("The user: $JumpCloudUserName could not be created, exiting")
-        exit
-      }
-      Write-Log -Message:('Spawning process for new profile')
-      Add-LocalGroupMember -SID S-1-5-32-544 -Member $JumpCloudUserName -erroraction silentlycontinue
-      $user = "$env:COMPUTERNAME\$JumpCloudUserName"
-      $MyPlainTextString = $TempPassword
-      $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
-      $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
-      if ($remoteRun)
-      {
-        # Solve for second hop via CredSSP
-        Invoke-Command -ComputerName MachineName.domain.com -Authentication CredSSP -Credential $Credential -ScriptBlock {
-          Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
-          start-sleep 1
-          TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
-        }
-      }
-      else
-      {
-        Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
-          start-sleep 1
-          TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
-      }
-      # TODO: verify that the user is unloaded from registry
       # Now get NewUserSID
       $NewUserSID = Get-SID -User $JumpCloudUserName
-
       Write-Log -Message:('Creating HKLM Registry Entries')
       # Root Key Path
       $ADMUKEY = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
@@ -6061,6 +6044,7 @@ Function Start-Migration {
         }
       }
 
+      ## Regedit Block ##
       Write-Log -Message:('Setting new profile permissions')
       # Set the New User Profile Path
       $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
@@ -6078,10 +6062,15 @@ Function Start-Migration {
 
       # Test Condition for same names
       $options = [Text.RegularExpressions.RegexOptions]'IgnoreCase'
-      if ([regex]::IsMatch($newuserprofileimagepath, $($olduserprofileimagepath.Replace('\', '\\')), $options )) {
-        Write-Host "Selected User Path and New User Path Match"
-        Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
-        $newuserprofileimagepath = $olduserprofileimagepath
+      if ([regex]::IsMatch($newuserprofileimagepath, ".$ENV:Computername", $options ))
+      {
+        $newuserprofileimagepath = $newuserprofileimagepath.Replace(".$ENV:Computername", '')
+        if ([regex]::Equals($newuserprofileimagepath, $olduserprofileimagepath))
+        {
+          Write-Host "Selected User Path and New User Path Match"
+          Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
+          $newuserprofileimagepath = $olduserprofileimagepath
+        }
       }
       else {
         write-host "Selected User Path and New User Path Differ"
@@ -6105,6 +6094,7 @@ Function Start-Migration {
 
       # Registry Permisions
       Convert-UserRegistry -newUserProfileImagePath $newUserProfileImagePath -newUserSid $newUserSid -accessACL $identityAccessACL
+      ## End Regedit Block ##
 
       Write-Log -Message:('Updating UWP Apps for new user')
       $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
