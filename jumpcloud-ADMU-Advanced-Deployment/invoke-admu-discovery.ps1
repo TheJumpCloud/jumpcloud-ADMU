@@ -5,7 +5,7 @@ $Computers = (Get-ADGroupMember -Identity $ADgroup | Select-Object name).name
 #create admu_discovery.csv
 $CSV = "C:\Windows\Temp\admu_discovery.csv"
 New-Item -ItemType file -path $CSV -force | Out-Null
-("" | Select-Object "ComputerName", "DomainUserName", "LocalPath", "RoamingConfigured", "Loaded", "LocalProfileSize", "JumpCloudUserName", "TempPassword", "AcceptEULA", "LeaveDomain", "ForceReboot", "AzureADProfile", "InstallJCAgent", "JumpCloudConnectKey", "Customxml", "ConvertProfile", "MigrationSuccess", "DomainName" | ConvertTo-Csv -NoType -Delimiter ",")[0] | Out-File $CSV
+("" | Select-Object "ComputerName", "SelectedUserName", "LocalPath", "RoamingConfigured", "Loaded", "LocalProfileSize", "JumpCloudUserName", "TempPassword", "AcceptEULA", "LeaveDomain", "ForceReboot", "AzureADProfile", "InstallJCAgent", "JumpCloudConnectKey", "Customxml", "ConvertProfile", "MigrationSuccess", "DomainName" | ConvertTo-Csv -NoType -Delimiter ",")[0] | Out-File $CSV
 
 #check network connectivity to computers
 $ConnectionTest = $Computers | ForEach-Object {
@@ -55,7 +55,7 @@ foreach ( $i in $OnlineComputers ) {
         # }
 
         #return csv excluding headers & local accounts
-        $profiles = $Win32UserProfiles | Select-Object ComputerName, @{Name = "DomainUserName"; EXPRESSION = { (New-Object System.Security.Principal.SecurityIdentifier($_.SID)).Translate([System.Security.Principal.NTAccount]).Value }; }, LocalPath , RoamingConfigured, Loaded, LocalProfileSize, @{Name = "JumpCloudUserName"; EXPRESSION = { ((New-Object System.Security.Principal.SecurityIdentifier($_.SID)).Translate([System.Security.Principal.NTAccount]).Value).Split('\')[1] }; }, TempPassword, AcceptEULA, LeaveDomain, ForceReboot, AzureADProfile, InstallJCAgent, JumpCloudConnectKey, Customxml, ConvertProfile, MigrationSuccess, DomainName
+        $profiles = $Win32UserProfiles | Select-Object ComputerName, @{Name = "SelectedUserName"; EXPRESSION = { (New-Object System.Security.Principal.SecurityIdentifier($_.SID)).Translate([System.Security.Principal.NTAccount]).Value }; }, LocalPath , RoamingConfigured, Loaded, LocalProfileSize, @{Name = "JumpCloudUserName"; EXPRESSION = { ((New-Object System.Security.Principal.SecurityIdentifier($_.SID)).Translate([System.Security.Principal.NTAccount]).Value).Split('\')[1] }; }, TempPassword, AcceptEULA, LeaveDomain, ForceReboot, AzureADProfile, InstallJCAgent, JumpCloudConnectKey, Customxml, ConvertProfile, MigrationSuccess, DomainName
         return ($profiles | ConvertTo-Csv -NoTypeInformation | Select-Object -Skip 1)
     }
 }

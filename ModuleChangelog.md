@@ -18,7 +18,7 @@ Added improved ADMU advanced deployment scripts.
 
 #### BUG FIXES:
 
-{{Fill in the Bug Fixes}}
+* Fix for profile path where similarly named profile paths evaluated to the same profile path
 
 ## 1.5.2
 
