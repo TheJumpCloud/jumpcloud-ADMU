@@ -6021,11 +6021,11 @@ Function Start-Migration {
         Version     = "1,0,00,0"
       }
       if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
-        write-host "The ADMU Registry Key exits"
+        write-log -message:("The ADMU Registry Key exits")
         $properties = Get-ItemProperty -Path "$ADMUKEY"
         # TODO: check that the properties are set correctly
         foreach ($item in $propertyHash.Keys) {
-          Write-host "Property: $($item) Value: $($properties.$item)"
+          Write-log -message:("Property: $($item) Value: $($properties.$item)")
         }
       }
       else {
@@ -6139,8 +6139,8 @@ Function Start-Migration {
         Set-ValueToKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU" -Name "previousSID" -value "$SelectedUserSID" -regValueKind String
         Set-ValueToKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU" -Name "previousProfilePath" -value "$olduserprofileimagepath" -regValueKind String
       }
-      # Download the appx register exe
-      DownloadLink -Link 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -Path "$windowsDrive\Windows\uwp_jcadmu.exe"
+      # Download the appx register exe.
+      DownloadLink -Link 'https://github.com/TheJumpCloud/jumpcloud-ADMU/blob/master/jumpcloud-ADMU/Exe/uwp_jcadmu.exe?raw=true' -Path "$windowsDrive\Windows\uwp_jcadmu.exe"
       try {
           Get-Item -Path "$windowsDrive\Windows\uwp_jcadmu.exe" -ErrorAction Stop
       }
