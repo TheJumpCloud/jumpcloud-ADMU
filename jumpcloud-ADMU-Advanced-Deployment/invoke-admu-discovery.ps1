@@ -24,10 +24,10 @@ foreach ( $i in $OnlineComputers ) {
         # Get Computer Info
         $info = Get-ComputerInfo
         $Win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name ComputerName -Value ''
-        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name LocalProfileSize -Value ''
-        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name JumpCloudUserName -Value ''
-        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name SelectedUserName -Value ''
+        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name ComputerName -Value "$($info.csname)"
+        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name LocalProfileSize -Value $null
+        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name JumpCloudUserName -Value $null
+        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name SelectedUserName -Value $null
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name TempPassword -Value 'Temp123!'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name AcceptEULA -Value 'true'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name LeaveDomain -Value 'false'
@@ -38,8 +38,8 @@ foreach ( $i in $OnlineComputers ) {
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name Customxml -Value 'false'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name ConvertProfile -Value 'true'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name CreateRestore -Value 'false'
-        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name MigrationSuccess -Value ''
-        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name DomainName -Value $info.csdomain
+        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name MigrationSuccess -Value $null
+        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name DomainName -Value "$($info.csdomain)"
 
         # # Uncomment to check profile sizes (this may take addtional time)
         # # calculate estimated profile size
@@ -55,7 +55,7 @@ foreach ( $i in $OnlineComputers ) {
         # }
 
         #return csv excluding headers & local accounts
-        $profiles = $Win32UserProfiles | Select-Object ComputerName, @{Name = "DomainUserName"; EXPRESSION = { (New-Object System.Security.Principal.SecurityIdentifier($_.SID)).Translate([System.Security.Principal.NTAccount]).Value }; }, LocalPath , RoamingConfigured, Loaded, LocalProfileSize, @{Name = "JumpCloudUserName"; EXPRESSION = { ((New-Object System.Security.Principal.SecurityIdentifier($_.SID)).Translate([System.Security.Principal.NTAccount]).Value).Split('\')[1] }; }, TempPassword, AcceptEULA, LeaveDomain, ForceReboot, AzureADProfile, InstallJCAgent, JumpCloudConnectKey, Customxml, ConvertProfile, MigrationSuccess | Where-Object { $_.DomainUserName -notmatch $env:computername }, DomainName
+        $profiles = $Win32UserProfiles | Select-Object ComputerName, @{Name = "DomainUserName"; EXPRESSION = { (New-Object System.Security.Principal.SecurityIdentifier($_.SID)).Translate([System.Security.Principal.NTAccount]).Value }; }, LocalPath , RoamingConfigured, Loaded, LocalProfileSize, @{Name = "JumpCloudUserName"; EXPRESSION = { ((New-Object System.Security.Principal.SecurityIdentifier($_.SID)).Translate([System.Security.Principal.NTAccount]).Value).Split('\')[1] }; }, TempPassword, AcceptEULA, LeaveDomain, ForceReboot, AzureADProfile, InstallJCAgent, JumpCloudConnectKey, Customxml, ConvertProfile, MigrationSuccess, DomainName
         return ($profiles | ConvertTo-Csv -NoTypeInformation | Select-Object -Skip 1)
     }
 }
