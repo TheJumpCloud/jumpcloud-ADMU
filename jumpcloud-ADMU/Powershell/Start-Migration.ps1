@@ -5809,7 +5809,6 @@ $usmtcustom = [xml] @"
 Function Start-Migration {
   [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
   Param (
-    [Parameter(ParameterSetName = 'cmd', Mandatory = $true)]
     [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][string]$JumpCloudUserName,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][string]$SelectedUserName,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][ValidateNotNullOrEmpty()][string]$TempPassword,
@@ -6064,8 +6063,7 @@ Function Start-Migration {
       $options = [Text.RegularExpressions.RegexOptions]'IgnoreCase'
       if ([regex]::IsMatch($newuserprofileimagepath, ".$ENV:Computername", $options ))
       {
-        $newuserprofileimagepath = $newuserprofileimagepath.Replace(".$ENV:Computername", '')
-        if ([regex]::Equals($newuserprofileimagepath, $olduserprofileimagepath))
+        if (([regex]::Equals($newuserprofileimagepath.Replace(".$ENV:Computername", ''), $olduserprofileimagepath)))
         {
           Write-Host "Selected User Path and New User Path Match"
           Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
