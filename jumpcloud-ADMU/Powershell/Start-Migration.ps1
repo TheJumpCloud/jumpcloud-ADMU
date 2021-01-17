@@ -94,14 +94,14 @@ function Set-ValueToKey([Microsoft.Win32.RegistryHive]$registryRoot, [string]$ke
   $regRights = [System.Security.AccessControl.RegistryRights]::SetValue
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $Key = [Microsoft.Win32.Registry]::$registryRoot.OpenSubKey($keyPath, $permCheck, $regRights)
-  Write-host "Setting value with properties [name:$name, value:$value, value type:$regValueKind]"
+  Write-log -Message:("Setting value with properties [name:$name, value:$value, value type:$regValueKind]")
   $Key.SetValue($name, $value, $regValueKind)
   $key.Close()
 }
 
 function New-RegKey([string]$keyPath, [Microsoft.Win32.RegistryHive]$registryRoot) {
   $Key = [Microsoft.Win32.Registry]::$registryRoot.CreateSubKey($keyPath)
-  write-Host "Setting key at [KeyPath:$keyPath]"
+  write-log -Message:("Setting key at [KeyPath:$keyPath]")
   $key.Close()
 }
 
@@ -6005,7 +6005,7 @@ Function Start-Migration {
       }
       # Test user ACL access match the user's registry's root keys, else exit
       Write-Log -Message:('Verifying Registry ACLs can be copied')
-      $identityAccessACL = Test-RegistryAccess -profilePath $olduserprofileimagepath -userSID $selectedUserSID
+      # $identityAccessACL = Test-RegistryAccess -profilePath $olduserprofileimagepath -userSID $selectedUserSID
       # Now get NewUserSID
       $NewUserSID = Get-SID -User $JumpCloudUserName
       Write-Log -Message:('Creating HKLM Registry Entries')
@@ -6059,19 +6059,44 @@ Function Start-Migration {
       $acl.SetAccessRule($AccessRule)
       $acl | Set-Acl $newuserprofileimagepath
 
-      # Test Condition for same names
+      Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath + ' New User SID: ' + $NewUserSID)
+      Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath + ' Old User SID: ' + $SelectedUserSID)
+      # Load New User Profile Registry Keys
+      reg load HKU\"$NewUserSID" "$newuserprofileimagepath/NTUSER.DAT"
+      reg load HKU\"$($NewUserSID)_Classes" "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"
+      # Load Selected User Profile Keys
+      reg load HKU\"$SelectedUserSID" "$olduserprofileimagepath/NTUSER.DAT"
+      REG LOAD HKU\"$($SelectedUserSID)_Classes" "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"
+      # Copy from "SelectedUser" to "NewUser"
+      reg copy HKU\"$SelectedUserSID" HKU\"$NewUserSID" /s /f
+      reg copy HKU\"$($SelectedUserSID)_Classes" HKU\"$($NewUserSID)_Classes" /s /f
+      # Unload "Selected" and "NewUser"
+      [gc]::collect()
+      Start-Sleep -Seconds 1
+      REG UNLOAD HKU\$NewUserSID
+      Start-Sleep -Seconds 1
+      REG UNLOAD HKU\"$($NewUserSID)_Classes"
+      Start-Sleep -Seconds 1
+      REG UNLOAD HKU\$SelectedUserSID
+      Start-Sleep -Seconds 1
+      REG UNLOAD HKU\"$($SelectedUserSID)_Classes"
+      Start-Sleep -Seconds 1
+      # Copy the profile containing the correct access and data to the destination profile
+      Copy-Item -Path "$newuserprofileimagepath/NTUSER.DAT" -Destination "$olduserprofileimagepath/NTUSER.DAT" -Force
+      Copy-Item -Path "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat" -Destination "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"-Force
       $options = [Text.RegularExpressions.RegexOptions]'IgnoreCase'
+      # Test Condition for same names
       if ([regex]::IsMatch($newuserprofileimagepath, ".$ENV:Computername", $options ))
       {
         if (([regex]::Equals($newuserprofileimagepath.Replace(".$ENV:Computername", ''), $olduserprofileimagepath)))
         {
-          Write-Host "Selected User Path and New User Path Match"
+          Write-log -Message:("Selected User Path and New User Path Match")
           Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
           $newuserprofileimagepath = $olduserprofileimagepath
         }
       }
       else {
-        write-host "Selected User Path and New User Path Differ"
+        write-log -Message:("Selected User Path and New User Path Differ")
         Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
         Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
       }
@@ -6091,7 +6116,7 @@ Function Start-Migration {
       $Acl | Set-Acl -Path $newuserprofileimagepath
 
       # Registry Permisions
-      Convert-UserRegistry -newUserProfileImagePath $newUserProfileImagePath -newUserSid $newUserSid -accessACL $identityAccessACL
+      # Convert-UserRegistry -newUserProfileImagePath $newUserProfileImagePath -newUserSid $newUserSid -accessACL $identityAccessACL
       ## End Regedit Block ##
 
       Write-Log -Message:('Updating UWP Apps for new user')
@@ -6114,6 +6139,10 @@ Function Start-Migration {
 
       }
       $appxList | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
+
+      # load registry items back for the last time.
+      reg load HKU\"$NewUserSID" "$newuserprofileimagepath/NTUSER.DAT"
+      reg load HKU\"$($NewUserSID)_Classes" "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"
 
       # Set Registry Check Key for New User
       # Check that the installed components key does not exist
