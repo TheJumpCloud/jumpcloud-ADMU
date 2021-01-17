@@ -60,7 +60,15 @@ foreach ( $i in $OnlineComputers )
     $ADMUConvertSession = New-PSSession -ComputerName $System.ComputerName
     Invoke-Command -asJob -Session $ADMUConvertSession -JobName 'ADMU-Convert' -ScriptBlock {
         Param ($SelectedUserName, $JumpCloudUserName, $TempPassword, $JumpCloudConnectKey, $AcceptEULA, $InstallJCAgent, $LeaveDomain, $ForceReboot, $AzureADProfile, $Customxml, $ConvertProfile, $CreateRestore)
-        # Insatall the ADMU
+        #Logoff all users on the system
+        $quserResult = quser
+        $quserRegex = $quserResult | ForEach-Object -Process { $_ -replace '\s{2,}',',' }
+        $quserObject = $quserRegex | ConvertFrom-Csv
+            ForEach ($session In $quserObject)
+            {
+              logoff.exe $session.ID
+            }
+        # Install the ADMU
         # [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         # Install-PackageProvider -Name NuGet -Force
         # Install-Module JumpCloud.ADMU -Force
