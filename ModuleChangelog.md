@@ -15,6 +15,7 @@ Release Date: December 22, 2020
 #### IMPROVEMENTS:
 
 Added improved ADMU advanced deployment scripts.
+Time required to 'Convert User' has been significantly decreased.
 
 #### BUG FIXES:
 
