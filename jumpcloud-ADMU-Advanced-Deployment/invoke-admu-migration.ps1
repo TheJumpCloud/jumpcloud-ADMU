@@ -7,8 +7,6 @@ foreach ($i in $counts)
     if ($i.count -gt 1)
     {
         write-error "Duplicate system found $($i.Name)"
-        #TODO check no empty values
-        #exit
     }
 }
 
@@ -37,41 +35,51 @@ foreach ( $i in $OnlineComputers )
         $userExitCode = $lastExitCode
         if ($userExitCode -ne 0)
         {
-            Write-host -Message("$userMessage")
-            Write-host -Message:("The user: $JumpCloudUserName could not be created, exiting")
-            exit
+            Write-host ("$userMessage")
+            Write-host ("The user: $JumpCloudUserName could not be created, exiting")
+            throw "The user: $JumpCloudUserName could not be created, exiting"
         }
         Add-LocalGroupMember -SID S-1-5-32-544 -Member $JumpCloudUserName -erroraction silentlycontinue
     } -ArgumentList ($System.SelectedUserName, $System.JumpCloudUserName, $System.TempPassword)
 
     # Step 2 - build profile
-    Wait-Job -Name 'ADMU-Create'
+    # If previous job faild, break
+    $condition = wait-job -name 'ADMU-Create'
+    if ($condition.state -eq 'Failed')
+    {
+        break
+    }
     # Build the profile
-    # TODO: Validate CredSSP and exit if invalid
     $user = "$($System.computername)\$($System.JumpCloudUserName)"
     $MyPlainTextString = $System.TempPassword
     $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
     $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
     Invoke-Command -computerName "$($System.ComputerName).$($system.DomainName)" -Authentication CredSSP -Credential $Credential -ScriptBlock {
         $PSsenderInfo
+    } -ErrorVariable ErrorText
+    # If credssp step failed, break
+    if ($ErrorText)
+    {
+        Write-host "The WINRM/CREDSSP command failed, exiting"
+        break
     }
 
     # Step 3 - Convert the Profile
     $ADMUConvertSession = New-PSSession -ComputerName $System.ComputerName
     Invoke-Command -asJob -Session $ADMUConvertSession -JobName 'ADMU-Convert' -ScriptBlock {
         Param ($SelectedUserName, $JumpCloudUserName, $TempPassword, $JumpCloudConnectKey, $AcceptEULA, $InstallJCAgent, $LeaveDomain, $ForceReboot, $AzureADProfile, $Customxml, $ConvertProfile, $CreateRestore)
-        #Logoff all users on the system
+        # Logoff all users on the system
         $quserResult = quser
-        $quserRegex = $quserResult | ForEach-Object -Process { $_ -replace '\s{2,}',',' }
+        $quserRegex = $quserResult | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
         $quserObject = $quserRegex | ConvertFrom-Csv
-            ForEach ($session In $quserObject)
-            {
-              logoff.exe $session.ID
-            }
+        ForEach ($session In $quserObject)
+        {
+            logoff.exe $session.ID
+        }
         # Install the ADMU
-        # [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        # Install-PackageProvider -Name NuGet -Force
-        # Install-Module JumpCloud.ADMU -Force
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        Install-PackageProvider -Name NuGet -Force
+        Install-Module JumpCloud.ADMU -Force
         # Convert Strings to Bools
         $AcceptEULA = ([System.Convert]::ToBoolean($AcceptEULA))
         $LeaveDomain = ([System.Convert]::ToBoolean($LeaveDomain))
@@ -81,31 +89,50 @@ foreach ( $i in $OnlineComputers )
         $Customxml = ([System.Convert]::ToBoolean($Customxml))
         $ConvertProfile = ([System.Convert]::ToBoolean($ConvertProfile))
         $CreateRestore = ([System.Convert]::ToBoolean($CreateRestore))
+
         # Start Migration
-        # Start-Migration -SelectedUserName $SelectedUserName -JumpCloudUserName $JumpCloudUserName -TempPassword $TempPassword -JumpCloudConnectKey $JumpCloudConnectKey -AcceptEULA $AcceptEULA -InstallJCAgent $InstallJCAgent -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -AZureADProfile $AzureADProfile -ConvertProfile $ConvertProfile -CreateRestore $CreateRestore
-
-        # Run the ADMU Remotely
-        set-executionpolicy -ExecutionPolicy Bypass
-        import-module C:\jumpcloud-ADMU\JumpCloud.ADMU.psd1 -Force
+        # set-executionpolicy -ExecutionPolicy Bypass
         Start-Migration -SelectedUserName $SelectedUserName -JumpCloudUserName $JumpCloudUserName -TempPassword $TempPassword -JumpCloudConnectKey $JumpCloudConnectKey -AcceptEULA $AcceptEULA -InstallJCAgent $InstallJCAgent -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -AZureADProfile $AzureADProfile -ConvertProfile $ConvertProfile -CreateRestore $CreateRestore
-        #     #install ADMU from psgallery & call start-migration using coresponding params from ADMU_Discovery.csv
-
     } -ArgumentList  ($System.SelectedUserName, $System.JumpCloudUserName, $System.TempPassword, $System.JumpCloudConnectKey, $System.AcceptEULA, $System.InstallJCAgent, $System.LeaveDomain, $System.ForceReboot, $System.AzureADProfile, $System.Customxml, $System.ConvertProfile, $System.CreateRestore)
+    ####
+    # $theJob = receive-job -name "ADMU-Convert" -wait
+    # $FinalLogLines = $theJob | Select-Object -Last 2
+
+    # if (($finalloglines -match 'Script finished successfully') -And ($theJob.state -eq 'Completed'))
+    # {
+    #     $TrackList += [PSCustomObject]@{
+    #         ComputerName       = "$System.ComputerName";
+    #         MigrationStatus    = "Complete";
+    #     }
+    # }
+    # else
+    # {
+    #     $TrackList += [PSCustomObject]@{
+    #         ComputerName    = "$System.ComputerName";
+    #         MigrationStatus = "Failed";
+    #     }
+    # }
+    ####
 }
 
-$admujobs = (get-job) | where-object { $_.Name -eq 'ADMU-MIGRATION' }
-foreach ($i in $admujobs)
-{
-    do
-    {
-        write-host 'Pending Jobs still running on ' $i.Location
-        start-sleep -Seconds 5
-    } while ($i.state -ne 'Completed')
-    write-host 'appending to csv'
-    #TODO append success or fail to csv
-}
+# TODO: track changes in final CSV
+# foreach ($completedItem in $TrackList) {
+#     foreach ($system in $Rows) {
+#         if ($System.ComputerName -match $completedItem.ComputerName) {
+#             if ($completedItem.MigrationStatus -eq "Complete") {
+#                 $System.MigrationSuccess = "true"
+#             }
+#             else {
+#                 $System.MigrationSuccess = "false"
+#             }
+#         }
+#     }
+# }
 
-$confirmation = Read-Host "Do you want to remove all completed psjobs and sessions:"
+# # Change location of report file if desired.
+# $rows | ConvertTo-Csv | Out-File ADMU-Report.csv
+
+$confirmation = Read-Host "Do you want to remove all completed psjobs and sessions: (y/n)"
 if ($confirmation -eq 'y')
 {
     Get-Job | Remove-Job
