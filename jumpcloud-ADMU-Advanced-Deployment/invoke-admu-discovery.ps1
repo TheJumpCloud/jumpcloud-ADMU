@@ -70,7 +70,7 @@ foreach ($i in $admujobs) {
     $i | Receive-Job -Keep | Out-File -FilePath $CSV -Append
 }
 
-$confirmation = Read-Host "Do you want to remove all completed psjobs and sessions:"
+$confirmation = Read-Host "Do you want to remove all completed psjobs and sessions: (y/n)"
 if ($confirmation -eq 'y') {
     Get-Job | Remove-Job
     Get-PSSession | Remove-PSSession
