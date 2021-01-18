@@ -1,25 +1,26 @@
 ## 1.5.3
 
-Release Date: December 22, 2020
+Release Date: January 18, 2021
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Added ADMU advanced deployment scripts for use with mass deployments, added ability to utilize credssp for new user instantiation.
 ```
 
 #### FEATURES:
 
-{{Fill in the Features}}
+Added mass deployment scripts for discovery and invoke-admu
 
 #### IMPROVEMENTS:
 
-Added improved ADMU advanced deployment scripts.
+
 Time required to 'Convert User' has been significantly decreased.
 
 #### BUG FIXES:
 
 * Fix for profile path where similarly named profile paths evaluated to the same profile path
+* Fix uwp_jcadmu.exe 0kb download bug
 
 ## 1.5.2
 
