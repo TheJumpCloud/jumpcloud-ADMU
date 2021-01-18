@@ -5,3 +5,4 @@ Files:
 - invoke-admu-migration.ps1
 
 Explanation:
+See https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/advanced-deployment-scenarios
