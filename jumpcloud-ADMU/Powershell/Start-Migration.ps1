@@ -6249,6 +6249,7 @@ Function Start-Migration {
         Set-ValueToKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU" -Name "previousProfilePath" -value "$olduserprofileimagepath" -regValueKind String
       }
       # Download the appx register exe
+      [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
       Invoke-WebRequest -Uri 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -OutFile 'C:\windows\uwp_jcadmu.exe'
       Start-Sleep -Seconds 5
       try {
