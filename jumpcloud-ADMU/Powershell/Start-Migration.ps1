@@ -94,14 +94,14 @@ function Set-ValueToKey([Microsoft.Win32.RegistryHive]$registryRoot, [string]$ke
   $regRights = [System.Security.AccessControl.RegistryRights]::SetValue
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $Key = [Microsoft.Win32.Registry]::$registryRoot.OpenSubKey($keyPath, $permCheck, $regRights)
-  Write-host "Setting value with properties [name:$name, value:$value, value type:$regValueKind]"
+  Write-log -Message:("Setting value with properties [name:$name, value:$value, value type:$regValueKind]")
   $Key.SetValue($name, $value, $regValueKind)
   $key.Close()
 }
 
 function New-RegKey([string]$keyPath, [Microsoft.Win32.RegistryHive]$registryRoot) {
   $Key = [Microsoft.Win32.Registry]::$registryRoot.CreateSubKey($keyPath)
-  write-Host "Setting key at [KeyPath:$keyPath]"
+  write-log -Message:("Setting key at [KeyPath:$keyPath]")
   $key.Close()
 }
 
@@ -5809,10 +5809,7 @@ $usmtcustom = [xml] @"
 Function Start-Migration {
   [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
   Param (
-    [Parameter(ParameterSetName = 'cmd', Mandatory = $true)]
-    [ValidateScript( {
-        If (Test-Localusername $_) { Throw [System.Management.Automation.ValidationMetadataException] "The username '${_}' is already in use." }else { $True }
-      })][string]$JumpCloudUserName,
+    [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][string]$JumpCloudUserName,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][string]$SelectedUserName,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][ValidateNotNullOrEmpty()][string]$TempPassword,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AcceptEULA = $true,
@@ -5932,10 +5929,10 @@ Function Start-Migration {
   Process {
     # Start Of Console Output
     if ($ConvertProfile -eq $true) {
-      Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+      Write-Log -Message:('Windows Profile "' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
     }
     else {
-      Write-Log -Message:('Windows Profile "' + $netBiosName + '\' + $SelectedUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+      Write-Log -Message:('Windows Profile "' + $SelectedUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
     }
     # Create Restore
     if ($CreateRestore -eq $true) {
@@ -5968,6 +5965,33 @@ Function Start-Migration {
     }
 
     if ($ConvertProfile -eq $true) {
+      if ($PSSenderInfo)
+      {
+        Write-Log -Message:("Running ADMU Convert User Remotely as $($PSSenderInfo.ConnectedUser)")
+        # $remoteRun = $true
+      }
+      else
+      {
+        Write-Log -Message:("Running ADMU Convert User locally")
+        # $remoteRun = $false
+        Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
+        #Create New User
+        $userMessage = net user $JumpCloudUserName $TempPassword /add /Active *>&1
+        $userExitCode = $lastExitCode
+        if ($userExitCode -ne 0) {
+          Write-Log -Message("$userMessage")
+          Write-Log -Message:("The user: $JumpCloudUserName could not be created, exiting")
+          exit
+        }
+        Write-Log -Message:('Spawning process for new profile')
+        $user = "$env:COMPUTERNAME\$JumpCloudUserName"
+        $MyPlainTextString = $TempPassword
+        $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
+        $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
+        Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
+        start-sleep 1
+        TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
+      }
       Write-Log -Message:('Creating Backup of User Registry Hive')
       $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
       try {
@@ -5981,27 +6005,9 @@ Function Start-Migration {
       }
       # Test user ACL access match the user's registry's root keys, else exit
       Write-Log -Message:('Verifying Registry ACLs can be copied')
-      $identityAccessACL = Test-RegistryAccess -profilePath $olduserprofileimagepath -userSID $selectedUserSID
-
-      Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
-      #Create New User
-      $userMessage = net user $JumpCloudUserName $TempPassword /add /Active *>&1
-      $userExitCode = $lastExitCode
-      if ($userExitCode -ne 0) {
-        Write-Log -Message("$userMessage")
-        Write-Log -Message:("The user: $JumpCloudUserName could not be created, exiting")
-        exit
-      }
-      Write-Log -Message:('Spawning process for new profile')
-      $user = "$env:COMPUTERNAME\$JumpCloudUserName"
-      $MyPlainTextString = $TempPassword
-      $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
-      $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
-      Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
-      TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
+      # $identityAccessACL = Test-RegistryAccess -profilePath $olduserprofileimagepath -userSID $selectedUserSID
       # Now get NewUserSID
       $NewUserSID = Get-SID -User $JumpCloudUserName
-
       Write-Log -Message:('Creating HKLM Registry Entries')
       # Root Key Path
       $ADMUKEY = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
@@ -6015,11 +6021,11 @@ Function Start-Migration {
         Version     = "1,0,00,0"
       }
       if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
-        write-host "The ADMU Registry Key exits"
+        write-log -message:("The ADMU Registry Key exits")
         $properties = Get-ItemProperty -Path "$ADMUKEY"
         # TODO: check that the properties are set correctly
         foreach ($item in $propertyHash.Keys) {
-          Write-host "Property: $($item) Value: $($properties.$item)"
+          Write-log -message:("Property: $($item) Value: $($properties.$item)")
         }
       }
       else {
@@ -6037,6 +6043,7 @@ Function Start-Migration {
         }
       }
 
+      ## Regedit Block ##
       Write-Log -Message:('Setting new profile permissions')
       # Set the New User Profile Path
       $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
@@ -6052,15 +6059,110 @@ Function Start-Migration {
       $acl.SetAccessRule($AccessRule)
       $acl | Set-Acl $newuserprofileimagepath
 
-      # Test Condition for same names
-      $options = [Text.RegularExpressions.RegexOptions]'IgnoreCase'
-      if ([regex]::IsMatch($newuserprofileimagepath, $($olduserprofileimagepath.Replace('\', '\\')), $options )) {
-        Write-Host "Selected User Path and New User Path Match"
-        Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
-        $newuserprofileimagepath = $olduserprofileimagepath
+      Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath + ' New User SID: ' + $NewUserSID)
+      Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath + ' Old User SID: ' + $SelectedUserSID)
+      # Load New User Profile Registry Keys
+      reg load HKU\"$NewUserSID" "$newuserprofileimagepath/NTUSER.DAT"
+      if ($?){
+        Write-Log -Message:('Load Profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
       }
       else {
-        write-host "Selected User Path and New User Path Differ"
+        Write-Log -Message:('Could not load Profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
+      }
+      reg load HKU\"$($NewUserSID)_Classes" "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"
+      if ($?)
+      {
+        Write-Log -Message:('Load Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
+      else {
+        Write-Log -Message:('Could not load Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
+      # Load Selected User Profile Keys
+      reg load HKU\"$SelectedUserSID" "$olduserprofileimagepath/NTUSER.DAT"
+      if ($?){
+        Write-Log -Message:('Load Profile: ' + "$olduserprofileimagepath/NTUSER.DAT")
+      }
+      else {
+        Write-Log -Message:('Could not load Profile: ' + "$olduserprofileimagepath/NTUSER.DAT")
+      }
+      REG LOAD HKU\"$($SelectedUserSID)_Classes" "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"
+      if ($?)
+      {
+        Write-Log -Message:('Load Profile: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
+      else {
+        Write-Log -Message:('Could not load Profile: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
+      # Copy from "SelectedUser" to "NewUser"
+      reg copy HKU\"$SelectedUserSID" HKU\"$NewUserSID" /s /f
+      if ($?){
+        Write-Log -Message:('Copy Profile: ' + "$newuserprofileimagepath/NTUSER.DAT" + ' To: ' + "$olduserprofileimagepath/NTUSER.DAT")
+      }
+      else {
+        Write-Log -Message:('Could not copy Profile: ' + "$newuserprofileimagepath/NTUSER.DAT" + ' To: ' + "$olduserprofileimagepath/NTUSER.DAT")
+      }
+      reg copy HKU\"$($SelectedUserSID)_Classes" HKU\"$($NewUserSID)_Classes" /s /f
+      if ($?)
+      {
+        Write-Log -Message:('Copy Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
+      else {
+        Write-Log -Message:('Could not copy Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
+      # Unload "Selected" and "NewUser"
+      [gc]::collect()
+      Start-Sleep -Seconds 1
+      REG UNLOAD HKU\$NewUserSID
+      if ($?){
+        Write-Log -Message:('Unloaded Profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
+      }
+      else {
+        Write-Log -Message:('Could not unload profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
+      }
+      Start-Sleep -Seconds 1
+      REG UNLOAD HKU\"$($NewUserSID)_Classes"
+      if ($?)
+      {
+        Write-Log -Message:('Unloaded Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
+      else {
+        Write-Log -Message:('Could not unload profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
+      Start-Sleep -Seconds 1
+      REG UNLOAD HKU\$SelectedUserSID
+      if ($?){
+        Write-Log -Message:('Unloaded Profile: ' + "$olduserprofileimagepath/NTUSER.DAT")
+      }
+      else {
+        Write-Log -Message:('Could not unload profile: ' + "$olduserprofileimagepath/NTUSER.DAT")
+      }
+      Start-Sleep -Seconds 1
+      REG UNLOAD HKU\"$($SelectedUserSID)_Classes"
+      if ($?)
+      {
+        Write-Log -Message:('Unloaded Profile: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
+      else {
+        Write-Log -Message:('Could not unload profile: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
+      Start-Sleep -Seconds 1
+      # Copy the profile containing the correct access and data to the destination profile
+      Write-Log -Message:('Copying merged profiles to destination profile path')
+      Copy-Item -Path "$newuserprofileimagepath/NTUSER.DAT" -Destination "$olduserprofileimagepath/NTUSER.DAT" -Force
+      Copy-Item -Path "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat" -Destination "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"-Force
+      $options = [Text.RegularExpressions.RegexOptions]'IgnoreCase'
+      # Test Condition for same names
+      if ([regex]::IsMatch($newuserprofileimagepath, ".$ENV:Computername", $options ))
+      {
+        if (([regex]::Equals($newuserprofileimagepath.Replace(".$ENV:Computername", ''), $olduserprofileimagepath)))
+        {
+          Write-log -Message:("Selected User Path and New User Path Match")
+          Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
+          $newuserprofileimagepath = $olduserprofileimagepath
+        }
+      }
+      else {
+        write-log -Message:("Selected User Path and New User Path Differ")
         Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
         Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
       }
@@ -6080,7 +6182,9 @@ Function Start-Migration {
       $Acl | Set-Acl -Path $newuserprofileimagepath
 
       # Registry Permisions
-      Convert-UserRegistry -newUserProfileImagePath $newUserProfileImagePath -newUserSid $newUserSid -accessACL $identityAccessACL
+      # TODO: remove convert-UserRegistry functions
+      # Convert-UserRegistry -newUserProfileImagePath $newUserProfileImagePath -newUserSid $newUserSid -accessACL $identityAccessACL
+      ## End Regedit Block ##
 
       Write-Log -Message:('Updating UWP Apps for new user')
       $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
@@ -6102,6 +6206,23 @@ Function Start-Migration {
 
       }
       $appxList | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
+
+      # load registry items back for the last time.
+      reg load HKU\"$NewUserSID" "$newuserprofileimagepath/NTUSER.DAT"
+      if ($?){
+        Write-Log -Message:('Load Profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
+      }
+      else {
+        Write-Log -Message:('Cound not load profile: ' + + "$newuserprofileimagepath/NTUSER.DAT")
+      }
+      reg load HKU\"$($NewUserSID)_Classes" "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"
+      if ($?)
+      {
+        Write-Log -Message:('Load Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
+      else {
+        Write-Log -Message:('Cound not load profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
 
       # Set Registry Check Key for New User
       # Check that the installed components key does not exist
@@ -6128,7 +6249,9 @@ Function Start-Migration {
         Set-ValueToKey -registryRoot Users -keyPath "$newusersid\SOFTWARE\JCADMU" -Name "previousProfilePath" -value "$olduserprofileimagepath" -regValueKind String
       }
       # Download the appx register exe
-      DownloadLink -Link 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -Path "$windowsDrive\Windows\uwp_jcadmu.exe"
+      [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+      Invoke-WebRequest -Uri 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -OutFile 'C:\windows\uwp_jcadmu.exe'
+      Start-Sleep -Seconds 5
       try {
           Get-Item -Path "$windowsDrive\Windows\uwp_jcadmu.exe" -ErrorAction Stop
       }
@@ -6141,8 +6264,23 @@ Function Start-Migration {
       [gc]::collect()
       Start-Sleep -Seconds 1
       REG UNLOAD HKU\$newusersid
+      if ($?){
+        Write-Log -Message:('Unloaded Profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
+      }
+      else
+      {
+        Write-Log -Message:('Could not unload profile:' + "$newuserprofileimagepath/NTUSER.DAT")
+      }
       Start-Sleep -Seconds 1
       REG UNLOAD HKU\"$($newusersid)_Classes"
+      if ($?)
+      {
+        Write-Log -Message:('Unloaded Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
+      else
+      {
+        Write-Log -Message:('Could not unload profile:' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+      }
       # $null = Remove-PSDrive -Name HKEY_USERS
 
       Write-Log -Message:('Profile Conversion Completed')
