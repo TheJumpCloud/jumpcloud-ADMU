@@ -47,6 +47,7 @@ Else
     Write-Error ('Build.ps1 failed. Transform process outputted an empty ADMU.ps1 file.')
 }
 
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/Deploy/uwp_jcadmu.ps1).tostring() | Out-File -FilePath C:\windows\Temp\master.ps1
 $masteruwp = 'C:\windows\Temp\master.ps1'
 $branchuwp = 'C:\agent\_work\1\s\Deploy\uwp_jcadmu.ps1'
