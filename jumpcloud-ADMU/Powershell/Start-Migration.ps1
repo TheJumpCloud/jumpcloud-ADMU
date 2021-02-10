@@ -6208,6 +6208,7 @@ Function Start-Migration {
       $appxList | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
 
       # load registry items back for the last time.
+      Start-Sleep -Seconds 1
       reg load HKU\"$NewUserSID" "$newuserprofileimagepath/NTUSER.DAT"
       if ($?){
         Write-Log -Message:('Load Profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
@@ -6215,6 +6216,7 @@ Function Start-Migration {
       else {
         Write-Log -Message:('Cound not load profile: ' + + "$newuserprofileimagepath/NTUSER.DAT")
       }
+      Start-Sleep -Seconds 1
       reg load HKU\"$($NewUserSID)_Classes" "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"
       if ($?)
       {
