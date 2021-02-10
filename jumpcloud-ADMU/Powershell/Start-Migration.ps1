@@ -5976,11 +5976,12 @@ Function Start-Migration {
         # $remoteRun = $false
         Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
         #Create New User
-        $userMessage = net user $JumpCloudUserName $TempPassword /add /Active *>&1
-        $userExitCode = $lastExitCode
-        if ($userExitCode -ne 0) {
-          Write-Log -Message("$userMessage")
-          Write-Log -Message:("The user: $JumpCloudUserName could not be created, exiting")
+        $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
+        $userMessage = new-localUser -Name $JumpCloudUserName -password $newUserPassword *>&1
+        $userExitCode = $?
+        if ($userExitCode -ne $true) {
+          Write-host "$userMessage"
+          Write-host "The user: $JumpCloudUserName could not be created, exiting"
           exit
         }
         Write-Log -Message:('Spawning process for new profile')
