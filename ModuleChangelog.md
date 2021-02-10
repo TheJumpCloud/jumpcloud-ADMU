@@ -5,9 +5,13 @@ Release Date: February 10, 2021
 #### RELEASE NOTES
 
 ```
-Minor bug fixes to improve conversion process when run as foregin language
+Minor bug fixes to improve conversion process when run as foregin language.
+Add monitor job and improve admu-discovery script.
 ```
 
+#### IMPROVEMENTS:
+
+*  Improve admu-discovery script and add monitor job function
 #### BUG FIXES:
 
 * Add SID lookup to ACL function to account for foreign languages
