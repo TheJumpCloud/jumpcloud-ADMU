@@ -1,3 +1,6 @@
+# JumpCloud API Key
+$JcApiKey = ''
+
 #check csv for duplicate rows per system
 $CSV = "C:\Windows\Temp\admu_discovery.csv"
 $Rows = Import-CSV -Path $CSV
@@ -92,7 +95,62 @@ foreach ( $i in $OnlineComputers )
 
         # Start Migration
         # set-executionpolicy -ExecutionPolicy Bypass
+        # TODO: Deselect or don't pass in forceReboot
         Start-Migration -SelectedUserName $SelectedUserName -JumpCloudUserName $JumpCloudUserName -TempPassword $TempPassword -JumpCloudConnectKey $JumpCloudConnectKey -AcceptEULA $AcceptEULA -InstallJCAgent $InstallJCAgent -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -AZureADProfile $AzureADProfile -ConvertProfile $ConvertProfile -CreateRestore $CreateRestore
+        # Get the JumpCloud SystemKey
+        $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
+        $regex = 'systemKey\":\"(\w+)\"'
+        $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+        if ($systemKey){
+            $Headers = @{
+                'Accept'       = 'application/json';
+                'Content-Type' = 'application/json';
+                'x-api-key'    = $JcApiKey;
+            }
+            $Form = @{
+                'filter' = "username:eq:$($JumpcloudUserName)"
+            }
+            Try{
+                $Response = Invoke-WebRequest -Method 'Get' -Uri "https://console.jumpcloud.com/api/systemusers" -Headers $Headers -Body $Form
+                $StatusCode = $Response.StatusCode
+            }
+            catch
+            {
+                $StatusCode = $_.Exception.Response.StatusCode.value__
+            }
+            # Get Results, convert from Json
+            $Results = $Response.Content | ConvertFrom-JSON
+            $JcUserId = $Results.results.id
+            # Bind Step
+            if ($JcUserId){
+                $Headers = @{
+                    'Accept'    = 'application/json';
+                    'x-api-key' = $JcApiKey
+                }
+                $Form = @{
+                    'op'   = 'add';
+                    'type' = 'system';
+                    'id'   = "$systemKey"
+                } | ConvertTo-Json
+                Try
+                {
+                    $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JcUserId/associations" -Headers $Headers -Body $Form -ContentType 'application/json'
+                    $StatusCode = $Response.StatusCode
+                }
+                catch
+                {
+                    $StatusCode = $_.Exception.Response.StatusCode.value__
+                }
+            }
+            else {
+                Write-Host "Cound not bind user/ JumpCloudUsername did not exist in JC Directory"
+            }
+        }
+        else{
+            Write-Host "Could not find systemKey, aborting bind step"
+        }
+        # TODO: Return job as successful
+        # TODO: Force reboot
     } -ArgumentList  ($System.SelectedUserName, $System.JumpCloudUserName, $System.TempPassword, $System.JumpCloudConnectKey, $System.AcceptEULA, $System.InstallJCAgent, $System.LeaveDomain, $System.ForceReboot, $System.AzureADProfile, $System.Customxml, $System.ConvertProfile, $System.CreateRestore)
     ####
     # $theJob = receive-job -name "ADMU-Convert" -wait
