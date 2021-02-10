@@ -6054,7 +6054,8 @@ Function Start-Migration {
 
       $path = takeown /F $newuserprofileimagepath /a /r /d y
       $acl = Get-Acl ($newuserprofileimagepath)
-      $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("BUILTIN\Administrators", "FullControl", "Allow")
+      $AdministratorsGroupSIDName = ([wmi]"Win32_SID.SID='S-1-5-32-544'").AccountName
+      $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($AdministratorsGroupSIDName, "FullControl", "Allow")
       $acl.SetAccessRuleProtection($false, $true)
       $acl.SetAccessRule($AccessRule)
       $acl | Set-Acl $newuserprofileimagepath
