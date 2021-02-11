@@ -477,12 +477,34 @@ Function DownloadAndInstallAgent(
     Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x64')
     (New-Object System.Net.WebClient).DownloadFile("${msvc2013x64Link}", ($usmtTempPath + $msvc2013x64File))
     Invoke-Expression -Command:($msvc2013x64Install)
+    $timeout = 0
+    While (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64")))
+    {
+      Start-Sleep 5
+      Write-Log -Message:("Waiting for Visual C++ 2013 x64 to finish installing")
+      $timeout += 1
+      if ($timeout -eq 10)
+      {
+        break
+      }
+    }
     Write-Log -Message:('JCAgent prereq installed')
   }
   If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86"))) {
     Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x86')
     (New-Object System.Net.WebClient).DownloadFile("${msvc2013x86Link}", ($usmtTempPath + $msvc2013x86File))
     Invoke-Expression -Command:($msvc2013x86Install)
+    $timeout=0
+    While (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86")))
+    {
+      Start-Sleep 5
+      Write-Log -Message:("Waiting for Visual C++ 2013 x86 to finish installing")
+      $timeout+=1
+      if ($timeout -eq 10)
+      {
+        break
+      }
+    }
     Write-Log -Message:('JCAgent prereq installed')
   }
   If (!(AgentIsOnFileSystem)) {
@@ -5976,11 +5998,12 @@ Function Start-Migration {
         # $remoteRun = $false
         Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
         #Create New User
-        $userMessage = net user $JumpCloudUserName $TempPassword /add /Active *>&1
-        $userExitCode = $lastExitCode
-        if ($userExitCode -ne 0) {
-          Write-Log -Message("$userMessage")
-          Write-Log -Message:("The user: $JumpCloudUserName could not be created, exiting")
+        $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
+        $userMessage = new-localUser -Name $JumpCloudUserName -password $newUserPassword *>&1
+        $userExitCode = $?
+        if ($userExitCode -ne $true) {
+          Write-log -Message:("$userMessage")
+          Write-log -Message:("The user: $JumpCloudUserName could not be created, exiting")
           exit
         }
         Write-Log -Message:('Spawning process for new profile')
@@ -6054,7 +6077,8 @@ Function Start-Migration {
 
       $path = takeown /F $newuserprofileimagepath /a /r /d y
       $acl = Get-Acl ($newuserprofileimagepath)
-      $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("BUILTIN\Administrators", "FullControl", "Allow")
+      $AdministratorsGroupSIDName = ([wmi]"Win32_SID.SID='S-1-5-32-544'").AccountName
+      $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($AdministratorsGroupSIDName, "FullControl", "Allow")
       $acl.SetAccessRuleProtection($false, $true)
       $acl.SetAccessRule($AccessRule)
       $acl | Set-Acl $newuserprofileimagepath
@@ -6208,6 +6232,7 @@ Function Start-Migration {
       $appxList | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
 
       # load registry items back for the last time.
+      Start-Sleep -Seconds 1
       reg load HKU\"$NewUserSID" "$newuserprofileimagepath/NTUSER.DAT"
       if ($?){
         Write-Log -Message:('Load Profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
@@ -6215,6 +6240,7 @@ Function Start-Migration {
       else {
         Write-Log -Message:('Cound not load profile: ' + + "$newuserprofileimagepath/NTUSER.DAT")
       }
+      Start-Sleep -Seconds 1
       reg load HKU\"$($NewUserSID)_Classes" "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"
       if ($?)
       {
