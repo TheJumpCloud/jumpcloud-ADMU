@@ -1,3 +1,22 @@
+## 1.5.4
+
+Release Date: February 11, 2021
+
+#### RELEASE NOTES
+
+```
+Minor bug fixes to improve conversion process when run as foregin language.
+Add monitor job and improve admu-discovery script.
+```
+
+#### IMPROVEMENTS:
+
+*  Improve admu-discovery script and add monitor job function
+#### BUG FIXES:
+
+* Add SID lookup to ACL function to account for foreign languages
+* Add additional wait time for unload of user registry before conversion starts
+
 ## 1.5.3
 
 Release Date: January 18, 2021
@@ -13,7 +32,6 @@ Added ADMU advanced deployment scripts for use with mass deployments, added abil
 Added mass deployment scripts for discovery and invoke-admu
 
 #### IMPROVEMENTS:
-
 
 Time required to 'Convert User' has been significantly decreased.
 
