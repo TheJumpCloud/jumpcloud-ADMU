@@ -5980,8 +5980,8 @@ Function Start-Migration {
         $userMessage = new-localUser -Name $JumpCloudUserName -password $newUserPassword *>&1
         $userExitCode = $?
         if ($userExitCode -ne $true) {
-          Write-host "$userMessage"
-          Write-host "The user: $JumpCloudUserName could not be created, exiting"
+          Write-log -Message:("$userMessage")
+          Write-log -Message:("The user: $JumpCloudUserName could not be created, exiting")
           exit
         }
         Write-Log -Message:('Spawning process for new profile')
