@@ -35,7 +35,8 @@ If (-not [System.String]::IsNullOrEmpty($NewContent))
     $Version = Select-String -Path:($FormPath) -Pattern:($VersionRegex)
     If (-not [System.String]::IsNullOrEmpty($Version))
     {
-    & 'ps2exe' -inputFile 'C:\agent\_work\1\s\Deploy\ADMU.ps1' -outputFile 'C:\agent\_work\1\s\jumpcloud-ADMU\exe\gui_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright '(c) 2020' -version $Version.Matches.Value -company 'JumpCloud' -requireAdmin -iconfile 'C:\agent\_work\1\s\Deploy\admu.ico'
+    & 'ps2exe' -inputFile 'C:\agent\_work\1\s\Deploy\ADMU.ps1' -outputFile 'C:\agent\_work\1\s\jumpcloud-ADMU\exe\gui_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright '(c) 2021' -version $Version.Matches.Value -company 'JumpCloud' -requireAdmin -iconfile 'C:\agent\_work\1\s\Deploy\admu.ico'
+    Write-Host "gui_jcadmu.exe was generated successfully"
     }
     Else
     {
@@ -48,13 +49,14 @@ Else
 }
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-(Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/Deploy/uwp_jcadmu.ps1).tostring() | Out-File -FilePath C:\windows\Temp\master.ps1
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/Deploy/uwp_jcadmu.ps1" -UseBasicParsing -OutFile 'C:\windows\Temp\master.ps1' -ErrorAction Stop
 $masteruwp = 'C:\windows\Temp\master.ps1'
 $branchuwp = 'C:\agent\_work\1\s\Deploy\uwp_jcadmu.ps1'
 $compare = (Compare-Object -ReferenceObject (Get-Content $masteruwp) -DifferenceObject (Get-Content $branchuwp))
 
 if (-not [System.String]::IsNullOrEmpty($compare)) {
-    & 'ps2exe' -inputFile 'C:\agent\_work\1\s\Deploy\uwp_jcadmu.ps1' -outputFile 'C:\agent\_work\1\s\jumpcloud-ADMU\exe\uwp_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright '(c) 2020' -company 'JumpCloud' -iconfile 'C:\agent\_work\1\s\Deploy\admu.ico'
+    & 'ps2exe' -inputFile 'C:\agent\_work\1\s\Deploy\uwp_jcadmu.ps1' -outputFile 'C:\agent\_work\1\s\jumpcloud-ADMU\exe\uwp_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright '(c) 2021' -company 'JumpCloud' -iconfile 'C:\agent\_work\1\s\Deploy\admu.ico'
+    Write-Host "upw_jcadmu.exe was generated successfully"
 } else {
     Write-Host "No changes to uwp_jcadmu.ps1 file"
 }
