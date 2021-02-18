@@ -70,7 +70,7 @@ foreach ( $i in $OnlineComputers )
     # Step 3 - Convert the Profile
     $ADMUConvertSession = New-PSSession -ComputerName $System.ComputerName
     Invoke-Command -asJob -Session $ADMUConvertSession -JobName 'ADMU-Convert' -ScriptBlock {
-        Param ($SelectedUserName, $JumpCloudUserName, $TempPassword, $JumpCloudConnectKey, $AcceptEULA, $InstallJCAgent, $LeaveDomain, $ForceReboot, $AzureADProfile, $Customxml, $ConvertProfile, $CreateRestore)
+        Param ($SelectedUserName, $JumpCloudUserName, $TempPassword, $JumpCloudConnectKey, $AcceptEULA, $InstallJCAgent, $LeaveDomain, $ForceReboot, $AzureADProfile, $Customxml, $ConvertProfile, $CreateRestore, $JcApiKey)
         # Logoff all users on the system
         $quserResult = quser
         $quserRegex = $quserResult | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
@@ -111,7 +111,9 @@ foreach ( $i in $OnlineComputers )
                 'filter' = "username:eq:$($JumpcloudUserName)"
             }
             Try{
-                $Response = Invoke-WebRequest -Method 'Get' -Uri "https://console.jumpcloud.com/api/systemusers" -Headers $Headers -Body $Form
+                Write-Host "Getting information from SystemID: $systemKey"
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                $Response = Invoke-WebRequest -Method 'Get' -Uri "https://console.jumpcloud.com/api/systemusers" -Headers $Headers -Body $Form -UseBasicParsing
                 $StatusCode = $Response.StatusCode
             }
             catch
@@ -134,7 +136,9 @@ foreach ( $i in $OnlineComputers )
                 } | ConvertTo-Json
                 Try
                 {
-                    $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JcUserId/associations" -Headers $Headers -Body $Form -ContentType 'application/json'
+                    Write-Host "Binding $JumpcloudUserName with userId: $JcUserId to SystemID: $systemKey"
+                    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                    $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JcUserId/associations" -Headers $Headers -Body $Form -ContentType 'application/json' -UseBasicParsing
                     $StatusCode = $Response.StatusCode
                 }
                 catch
@@ -149,9 +153,10 @@ foreach ( $i in $OnlineComputers )
         else{
             Write-Host "Could not find systemKey, aborting bind step"
         }
-        # TODO: Return job as successful
-        # TODO: Force reboot
-    } -ArgumentList  ($System.SelectedUserName, $System.JumpCloudUserName, $System.TempPassword, $System.JumpCloudConnectKey, $System.AcceptEULA, $System.InstallJCAgent, $System.LeaveDomain, $System.ForceReboot, $System.AzureADProfile, $System.Customxml, $System.ConvertProfile, $System.CreateRestore)
+        # Force Reboot
+        Write-Host "Rebooting as Job"
+        Restart-Computer -Force -asJob
+    } -ArgumentList  ($System.SelectedUserName, $System.JumpCloudUserName, $System.TempPassword, $System.JumpCloudConnectKey, $System.AcceptEULA, $System.InstallJCAgent, $System.LeaveDomain, $System.ForceReboot, $System.AzureADProfile, $System.Customxml, $System.ConvertProfile, $System.CreateRestore, $JcApiKey)
     ####
     # $theJob = receive-job -name "ADMU-Convert" -wait
     # $FinalLogLines = $theJob | Select-Object -Last 2
