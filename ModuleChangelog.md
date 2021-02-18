@@ -5,20 +5,12 @@ Release Date: February 18, 2021
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Updates to the Invoke Migartion script for auto binding the migration changes before reboot.
 ```
-
-#### FEATURES:
-
-{{Fill in the Features}}
-
-#### IMPROVEMENTS:
-
-{{Fill in the Improvements}}
 
 #### BUG FIXES:
 
-{{Fill in the Bug Fixes}}
+Fix for the invoke migration script where the jumpcloud user was never bound to the system after migration.
 
 ## 1.5.4
 
