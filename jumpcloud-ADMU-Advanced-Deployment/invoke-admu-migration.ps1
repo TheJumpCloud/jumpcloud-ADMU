@@ -111,7 +111,7 @@ foreach ( $i in $OnlineComputers )
                 'filter' = "username:eq:$($JumpcloudUserName)"
             }
             Try{
-                $Response = Invoke-WebRequest -Method 'Get' -Uri "https://console.jumpcloud.com/api/systemusers" -Headers $Headers -Body $Form
+                $Response = Invoke-WebRequest -Method 'Get' -Uri "https://console.jumpcloud.com/api/systemusers" -Headers $Headers -Body $Form -UseBasicParsing
                 $StatusCode = $Response.StatusCode
             }
             catch
@@ -134,7 +134,7 @@ foreach ( $i in $OnlineComputers )
                 } | ConvertTo-Json
                 Try
                 {
-                    $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JcUserId/associations" -Headers $Headers -Body $Form -ContentType 'application/json'
+                    $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JcUserId/associations" -Headers $Headers -Body $Form -ContentType 'application/json' -UseBasicParsing
                     $StatusCode = $Response.StatusCode
                 }
                 catch
@@ -150,7 +150,8 @@ foreach ( $i in $OnlineComputers )
             Write-Host "Could not find systemKey, aborting bind step"
         }
         # TODO: Return job as successful
-        # TODO: Force reboot
+        # Force Reboot
+        Restart-Computer -Force -asJob
     } -ArgumentList  ($System.SelectedUserName, $System.JumpCloudUserName, $System.TempPassword, $System.JumpCloudConnectKey, $System.AcceptEULA, $System.InstallJCAgent, $System.LeaveDomain, $System.ForceReboot, $System.AzureADProfile, $System.Customxml, $System.ConvertProfile, $System.CreateRestore)
     ####
     # $theJob = receive-job -name "ADMU-Convert" -wait
