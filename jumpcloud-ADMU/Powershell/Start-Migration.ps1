@@ -1,4 +1,113 @@
 #region Functions
+function Register-NativeMethod
+{
+  [CmdletBinding()]
+  [Alias()]
+  [OutputType([int])]
+  Param
+  (
+    # Param1 help description
+    [Parameter(Mandatory = $true,
+      ValueFromPipelineByPropertyName = $true,
+      Position = 0)]
+    [string]$dll,
+
+    # Param2 help description
+    [Parameter(Mandatory = $true,
+      ValueFromPipelineByPropertyName = $true,
+      Position = 1)]
+    [string]
+    $methodSignature
+  )
+  $script:nativeMethods += [PSCustomObject]@{ Dll = $dll; Signature = $methodSignature; }
+}
+function Add-NativeMethods
+{
+  [CmdletBinding()]
+  [Alias()]
+  [OutputType([int])]
+  Param($typeName = 'NativeMethods')
+
+  $nativeMethodsCode = $script:nativeMethods | ForEach-Object { "
+        [DllImport(`"$($_.Dll)`")]
+        public static extern $($_.Signature);
+    " }
+
+  Add-Type @"
+        using System;
+        using System.Text;
+        using System.Runtime.InteropServices;
+        public static class $typeName {
+            $nativeMethodsCode
+        }
+"@
+}
+function New-LocalUserProfile
+{
+
+  [CmdletBinding()]
+  [Alias()]
+  [OutputType([int])]
+  Param
+  (
+    # Param1 help description
+    [Parameter(Mandatory = $true,
+      ValueFromPipelineByPropertyName = $true,
+      Position = 0)]
+    [string]$UserName
+  )
+  $methodname = 'UserEnvCP2'
+  $script:nativeMethods = @();
+
+  if (-not ([System.Management.Automation.PSTypeName]$methodname).Type)
+  {
+    Register-NativeMethod "userenv.dll" "int CreateProfile([MarshalAs(UnmanagedType.LPWStr)] string pszUserSid,`
+         [MarshalAs(UnmanagedType.LPWStr)] string pszUserName,`
+         [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszProfilePath, uint cchProfilePath)";
+
+    Add-NativeMethods -typeName $methodname;
+  }
+
+  $sb = new-object System.Text.StringBuilder(260);
+  $pathLen = $sb.Capacity;
+
+  Write-Verbose "Creating user profile for $Username";
+  $objUser = New-Object System.Security.Principal.NTAccount($UserName)
+  $strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
+  $SID = $strSID.Value
+
+  Write-Verbose "$UserName SID: $SID"
+  try
+  {
+    $result = [UserEnvCP2]::CreateProfile($SID, $Username, $sb, $pathLen)
+    if ($result -eq '-2147024713')
+    {
+      $status = "$userName is an existing account"
+      write-verbose "$username Creation Result: $result"
+    }
+    elseif ($result -eq '-2147024809')
+    {
+      $status = "$username Not Found"
+      write-verbose "$username creation result: $result"
+    }
+    elseif ($result -eq 0)
+    {
+      $status = "$username Profile has been created"
+      write-verbose "$username Creation Result: $result"
+    }
+    else
+    {
+      $status = "$UserName unknown return result: $result"
+    }
+  }
+  catch
+  {
+    Write-Error $_.Exception.Message;
+    # break;
+  }
+  $status
+}
+
 function enable-privilege {
   param(
     ## The privilege to adjust. This set is taken from
@@ -5987,33 +6096,23 @@ Function Start-Migration {
     }
 
     if ($ConvertProfile -eq $true) {
-      if ($PSSenderInfo)
+      Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
+      # Create New User
+      $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
+      New-localUser -Name $JumpCloudUserName -password $newUserPassword -ErrorVariable userExitCode
+      if ($userExitCode)
       {
-        Write-Log -Message:("Running ADMU Convert User Remotely as $($PSSenderInfo.ConnectedUser)")
-        # $remoteRun = $true
+        Write-Log -Message:("$userExitCode")
+        Write-Log -Message:("The user: $JumpCloudUserName could not be created, exiting")
+        exit
       }
-      else
+      # Initalize the Profile
+      New-LocalUserProfile -username $JumpCloudUserName -ErrorVariable profileInit
+      if ($profileInit)
       {
-        Write-Log -Message:("Running ADMU Convert User locally")
-        # $remoteRun = $false
-        Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
-        #Create New User
-        $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
-        $userMessage = new-localUser -Name $JumpCloudUserName -password $newUserPassword *>&1
-        $userExitCode = $?
-        if ($userExitCode -ne $true) {
-          Write-log -Message:("$userMessage")
-          Write-log -Message:("The user: $JumpCloudUserName could not be created, exiting")
-          exit
-        }
-        Write-Log -Message:('Spawning process for new profile')
-        $user = "$env:COMPUTERNAME\$JumpCloudUserName"
-        $MyPlainTextString = $TempPassword
-        $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
-        $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
-        Start-Process Powershell.exe -Credential $Credential -WorkingDirectory "$windowsDrive\windows\System32" -ArgumentList ('-WindowStyle Hidden')
-        start-sleep 1
-        TASKKILL.exe /F /FI "USERNAME eq $JumpCloudUserName"
+        Write-Log -Message:("$profileInit")
+        Write-Log -Message:("The user: $JumpCloudUserName could not be initalized, exiting")
+        exit
       }
       Write-Log -Message:('Creating Backup of User Registry Hive')
       $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
@@ -6172,23 +6271,30 @@ Function Start-Migration {
       Start-Sleep -Seconds 1
       # Copy the profile containing the correct access and data to the destination profile
       Write-Log -Message:('Copying merged profiles to destination profile path')
+      # Copy both registry hives over and replace the existing files in the destination directory.
       Copy-Item -Path "$newuserprofileimagepath/NTUSER.DAT" -Destination "$olduserprofileimagepath/NTUSER.DAT" -Force
       Copy-Item -Path "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat" -Destination "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"-Force
       $options = [Text.RegularExpressions.RegexOptions]'IgnoreCase'
       # Test Condition for same names
-      if ([regex]::IsMatch($newuserprofileimagepath, ".$ENV:Computername", $options ))
+      # Check if the new user is named username.HOSTNAME or username.000, .001 etc.
+      # TODO: AzureAD  & exit condition
+      if ([regex]::IsMatch($newuserprofileimagepath, ".$ENV:Computername", $options ) -or [regex]::IsMatch($newuserprofileimagepath, ".\d{3}", $options ))
       {
-        if (([regex]::Equals($newuserprofileimagepath.Replace(".$ENV:Computername", ''), $olduserprofileimagepath)))
-        {
-          Write-log -Message:("Selected User Path and New User Path Match")
+          # If match & if the selected username is in the matching new user path
+          if (([regex]::Equals($newuserprofileimagepath.Replace(".$ENV:Computername", ''), $olduserprofileimagepath)) -or ([regex]::Equals(($newuserprofileimagepath -replace ".\d{3}", ''), $olduserprofileimagepath)))
+          {
+              Write-log -Message:("Selected User Path and New User Path Match")
+              # Remove the New User Profile Path, we want to just use the old Path
+              Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
+              # Set the New User Profile Image Path to Old User Profile Path (they are the same)
+              $newuserprofileimagepath = $olduserprofileimagepath
+          }
+      } else {
+          write-log -Message:("Selected User Path and New User Path Differ")
+          # Remove the New User Profile Path, in this case we will rename the home folder to the desired name
           Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
-          $newuserprofileimagepath = $olduserprofileimagepath
-        }
-      }
-      else {
-        write-log -Message:("Selected User Path and New User Path Differ")
-        Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
-        Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
+          # Rename the old user profile path to the new name
+          Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
       }
 
       Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $SelectedUserName + '.' + $NetBiosName)
