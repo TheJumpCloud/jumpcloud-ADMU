@@ -29,43 +29,6 @@ foreach ( $i in $OnlineComputers )
 {
     # Select row where the computer name matches report csv
     $System = $Rows | Where-Object ComputerName -eq $i.ComputerName
-    # $ADMUCreateSession = New-PSSession -ComputerName $System.ComputerName
-
-    # # Step 1 - create user
-    # Invoke-Command -asJob -Session $ADMUCreateSession -JobName 'ADMU-Create' -ScriptBlock {
-    #     Param ($SelectedUserName, $JumpCloudUserName, $TempPassword)
-    #     $userMessage = net user $JumpCloudUserName $TempPassword /add /Active *>&1
-    #     $userExitCode = $lastExitCode
-    #     if ($userExitCode -ne 0)
-    #     {
-    #         Write-host ("$userMessage")
-    #         Write-host ("The user: $JumpCloudUserName could not be created, exiting")
-    #         throw "The user: $JumpCloudUserName could not be created, exiting"
-    #     }
-    #     Add-LocalGroupMember -SID S-1-5-32-544 -Member $JumpCloudUserName -erroraction silentlycontinue
-    # } -ArgumentList ($System.SelectedUserName, $System.JumpCloudUserName, $System.TempPassword)
-
-    # # Step 2 - build profile
-    # # If previous job faild, break
-    # $condition = wait-job -name 'ADMU-Create'
-    # if ($condition.state -eq 'Failed')
-    # {
-    #     break
-    # }
-    # # Build the profile
-    # $user = "$($System.computername)\$($System.JumpCloudUserName)"
-    # $MyPlainTextString = $System.TempPassword
-    # $MySecureString = ConvertTo-SecureString -String $MyPlainTextString -AsPlainText -Force
-    # $Credential = New-Object System.Management.Automation.PSCredential $user, $MySecureString
-    # Invoke-Command -computerName "$($System.ComputerName).$($system.DomainName)" -Authentication CredSSP -Credential $Credential -ScriptBlock {
-    #     $PSsenderInfo
-    # } -ErrorVariable ErrorText
-    # # If credssp step failed, break
-    # if ($ErrorText)
-    # {
-    #     Write-host "The WINRM/CREDSSP command failed, exiting"
-    #     break
-    # }
 
     # Step 1 - Convert the Profile
     $ADMUConvertSession = New-PSSession -ComputerName $System.ComputerName
@@ -98,7 +61,7 @@ foreach ( $i in $OnlineComputers )
         # TODO: Deselect or don't pass in forceReboot
         Start-Migration -SelectedUserName $SelectedUserName -JumpCloudUserName $JumpCloudUserName -TempPassword $TempPassword -JumpCloudConnectKey $JumpCloudConnectKey -AcceptEULA $AcceptEULA -InstallJCAgent $InstallJCAgent -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -AZureADProfile $AzureADProfile -ConvertProfile $ConvertProfile -CreateRestore $CreateRestore
 
-        # Bind User Steps
+        # Step 2 - Bind User Steps
         # Get the JumpCloud SystemKey
         $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
         $regex = 'systemKey\":\"(\w+)\"'
