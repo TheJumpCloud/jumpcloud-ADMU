@@ -5,7 +5,7 @@ Release Date: February 24, 2021
 #### RELEASE NOTES
 
 ```
-Calling ADMU Start-Migration using WinRM no longer requires CredSSP to initalize the user profile account.
+Calling ADMU Start-Migration using WinRM no longer requires CredSSP to initialize the user profile account.
 New user profile is initialized without spinning up a new process for that user.
 ```
 
