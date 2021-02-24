@@ -1,3 +1,26 @@
+## 1.6.0
+
+Release Date: February 24, 2021
+
+#### RELEASE NOTES
+
+```
+Calling ADMU Start-Migration using WinRM no longer requires CredSSP to initialize the user profile account.
+New user profile is initialized without spinning up a new process for that user.
+```
+
+#### FEATURES:
+
+Added example scripts for invoking ADMU & discovery scripts from RMM/ Agents on systems
+
+#### IMPROVEMENTS:
+
+New local user initialization is streamlined and no longer relies on passing the user's temporary credentials.
+
+#### BUG FIXES:
+
+Fixed a bug where new user accounts with the same name as the domain user account would be named "username.000" and not convert correctly.
+
 ## 1.5.5
 
 Release Date: February 18, 2021
