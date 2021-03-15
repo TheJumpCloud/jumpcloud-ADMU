@@ -6277,24 +6277,31 @@ Function Start-Migration {
       $options = [Text.RegularExpressions.RegexOptions]'IgnoreCase'
       # Test Condition for same names
       # Check if the new user is named username.HOSTNAME or username.000, .001 etc.
-      # TODO: AzureAD  & exit condition
       if ([regex]::IsMatch($newuserprofileimagepath, ".$ENV:Computername", $options ) -or [regex]::IsMatch($newuserprofileimagepath, ".\d{3}", $options ))
       {
-          # If match & if the selected username is in the matching new user path
-          if (([regex]::Equals($newuserprofileimagepath.Replace(".$ENV:Computername", ''), $olduserprofileimagepath)) -or ([regex]::Equals(($newuserprofileimagepath -replace ".\d{3}", ''), $olduserprofileimagepath)))
-          {
-              Write-log -Message:("Selected User Path and New User Path Match")
-              # Remove the New User Profile Path, we want to just use the old Path
-              Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
-              # Set the New User Profile Image Path to Old User Profile Path (they are the same)
-              $newuserprofileimagepath = $olduserprofileimagepath
-          }
-      } else {
-          write-log -Message:("Selected User Path and New User Path Differ")
-          # Remove the New User Profile Path, in this case we will rename the home folder to the desired name
+        # If match & if the selected username is in the matching new user path
+        if ([regex]::IsMatch([regex]::Escape($newuserprofileimagepath), [regex]::Escape($olduserprofileimagepath), $options))
+        {
+          Write-log -Message:("Selected User Path and New User Path Match")
+          # Remove the New User Profile Path, we want to just use the old Path
           Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
-          # Rename the old user profile path to the new name
-          Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
+          # Set the New User Profile Image Path to Old User Profile Path (they are the same)
+          $newuserprofileimagepath = $olduserprofileimagepath
+        }
+        else
+        {
+          Write-log -Message:("Error determining whether or not the old/new paths contain a matched name")
+          Write-log -Message:("Manually revert the changes from the ADMU")
+          exit
+        }
+      }
+      else
+      {
+        write-log -Message:("Selected User Path and New User Path Differ")
+        # Remove the New User Profile Path, in this case we will rename the home folder to the desired name
+        Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
+        # Rename the old user profile path to the new name
+        Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
       }
 
       Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $SelectedUserName + '.' + $NetBiosName)
