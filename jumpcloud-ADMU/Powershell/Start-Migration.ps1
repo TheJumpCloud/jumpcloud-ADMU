@@ -5959,6 +5959,7 @@ Function Start-Migration {
 
     # Start script
     Write-Log -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
+    Write-Log -Message:('Running ADMU: ' + "v" + $admuVersion)
     Write-Log -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
     Write-Log -Message:('Gathering system & profile information')
 
@@ -5992,6 +5993,7 @@ Function Start-Migration {
     }
 
     # Define misc static variables
+    $admuVersion = '1.6.1'
     $localComputerName = $WmiComputerSystem.Name
     $windowsDrive = Get-WindowsDrive
     $adkSetupLink = "https://go.microsoft.com/fwlink/?linkid=2120254"
@@ -6274,26 +6276,16 @@ Function Start-Migration {
       # Copy both registry hives over and replace the existing files in the destination directory.
       Copy-Item -Path "$newuserprofileimagepath/NTUSER.DAT" -Destination "$olduserprofileimagepath/NTUSER.DAT" -Force
       Copy-Item -Path "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat" -Destination "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"-Force
-      $options = [Text.RegularExpressions.RegexOptions]'IgnoreCase'
       # Test Condition for same names
       # Check if the new user is named username.HOSTNAME or username.000, .001 etc.
-      if ([regex]::IsMatch($newuserprofileimagepath, ".$ENV:Computername", $options ) -or [regex]::IsMatch($newuserprofileimagepath, ".\d{3}", $options ))
+      $userCompare = $olduserprofileimagepath.Replace("$($windowsDrive)\Users\", "")
+      if ($userCompare -eq $JumpCloudUserName)
       {
-        # If match & if the selected username is in the matching new user path
-        if ([regex]::IsMatch([regex]::Escape($newuserprofileimagepath), [regex]::Escape($olduserprofileimagepath), $options))
-        {
-          Write-log -Message:("Selected User Path and New User Path Match")
-          # Remove the New User Profile Path, we want to just use the old Path
-          Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
-          # Set the New User Profile Image Path to Old User Profile Path (they are the same)
-          $newuserprofileimagepath = $olduserprofileimagepath
-        }
-        else
-        {
-          Write-log -Message:("Error determining whether or not the old/new paths contain a matched name")
-          Write-log -Message:("Manually revert the changes from the ADMU")
-          exit
-        }
+        Write-log -Message:("Selected User Path and New User Path Match")
+        # Remove the New User Profile Path, we want to just use the old Path
+        Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
+        # Set the New User Profile Image Path to Old User Profile Path (they are the same)
+        $newuserprofileimagepath = $olduserprofileimagepath
       }
       else
       {
