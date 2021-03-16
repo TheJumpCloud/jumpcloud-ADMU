@@ -1,3 +1,23 @@
+## 1.6.1
+
+Release Date: March 16, 2021
+
+#### RELEASE NOTES
+
+```
+Improve local user folder check for capitalization and other scenarios.
+Fix Discovery AD query for GT $time.
+Add ADMU version in log.
+```
+
+#### IMPROVEMENTS:
+
+Fix Discovery AD query to output correctly -gt
+
+#### BUG FIXES:
+
+Account for capitalization in AD username and local profile folder
+
 ## 1.6.0
 
 Release Date: February 24, 2021
