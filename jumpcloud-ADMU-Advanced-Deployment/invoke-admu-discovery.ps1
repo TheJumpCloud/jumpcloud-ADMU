@@ -19,7 +19,7 @@ New-Item -ItemType file -path $CSV -force | Out-Null
 #Change this AD query to return the computers required below is an example
 #Check for computers logged into AD in the last 30days, search whole AD org, exclude if in a specific OU
 $Time = (Get-Date).AddDays(-30)
-$ComputerList = GET-ADComputer -filter {lastlogon -lt $Time} -searchbase 'DC=sajumpcloud,DC=com' -resultPageSize 2000 -ResultSetSize $null | Where-Object { ($_.distinguishedName -notlike "*OU=Cleanup,*") }
+$ComputerList = GET-ADComputer -filter {lastlogon -gt $Time} -searchbase 'DC=sajumpcloud,DC=com' -resultPageSize 2000 -ResultSetSize $null | Where-Object { ($_.distinguishedName -notlike "*OU=Cleanup,*") }
 $Computers = @()
 ForEach ($member in $ComputerList) {
     $name = $($member.DistinguishedName).Substring(0, $($member.DistinguishedName).IndexOf(','))
@@ -29,7 +29,7 @@ ForEach ($member in $ComputerList) {
 
 #check network connectivity to computers
 $ConnectionTest = $Computers  | ForEach-Object { Test-Connection -ComputerName $_ -Count 1 -AsJob } | Get-Job | Receive-Job -Wait | Select-Object @{Name='ComputerName';Expression={$_.Address}},@{Name='Reachable';Expression={if ($_.StatusCode -eq 0) { $true } else { $false }}}
-$OnlineComputers = $ConnectionTest | ? { $_.Reachable -eq $True }
+$OnlineComputers = $ConnectionTest | Where-Object { $_.Reachable -eq $True }
 $OfflineComputers = $ConnectionTest | Where-Object { $_.Reachable -eq $False }
 
 #scriptblock to run on computers
