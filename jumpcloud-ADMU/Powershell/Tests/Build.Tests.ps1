@@ -31,6 +31,18 @@ Describe 'Build Tests' {
            $branchformversion | Should -BeGreaterThan $masterformversion
         }
 
+        It 'Start-Migration version' {
+            $startMigrationPath = $Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Powershell\Start-Migration.ps1'
+            # $VersionRegex = [regex]"(\$admuVersion = )\'(.*?)\'"
+            $VersionRegex = [regex]"(admuVersion = )'(.*?)'"
+            $admuversion = Select-String -Path:($startMigrationPath) -Pattern:($VersionRegex)
+            $branchStartMigrationVersion = [version]$admuversion.Matches.Groups[2].value
+            $masterStartMigration = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Start-Migration.ps1).tostring()
+            $masterVersion = Select-String -inputobject:($masterStartMigration) -Pattern:($VersionRegex)
+            $masterStartMigrationVersion = [version]$masterVersion.Matches.Groups[2].value
+            $branchStartMigrationVersion | Should -BeGreaterThan $masterStartMigrationVersion
+        }
+
         It 'gui_jcadmu.exe version' {
            $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
            $masterform = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1).tostring()
