@@ -18,7 +18,6 @@ Fix Discovery AD query to output correctly -gt
 
 Account for capitalization in AD username and local profile folder
 
-
 ## 1.6.0
 
 Release Date: February 24, 2021
