@@ -5958,8 +5958,9 @@ Function Start-Migration {
     If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) { Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent" }else {}
 
     # Start script
+    $admuVersion = '1.6.1'
     Write-Log -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
-    Write-Log -Message:('Running ADMU: ' + "v" + $admuVersion)
+    Write-Log -Message:('Running ADMU: ' + 'v' + $admuVersion)
     Write-Log -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
     Write-Log -Message:('Gathering system & profile information')
 
@@ -5993,7 +5994,6 @@ Function Start-Migration {
     }
 
     # Define misc static variables
-    $admuVersion = '1.6.1'
     $localComputerName = $WmiComputerSystem.Name
     $windowsDrive = Get-WindowsDrive
     $adkSetupLink = "https://go.microsoft.com/fwlink/?linkid=2120254"
