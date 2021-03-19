@@ -328,7 +328,75 @@ Function VerifyAccount {
     Return $false
   }
 }
-
+function Set-UserRegistryLoadState
+{
+  [CmdletBinding()]
+  param (
+    [Parameter(Mandatory = $true)]
+    [ValidateSet("Unload", "Load")]
+    [System.String]$op,
+    [Parameter(Mandatory = $true)]
+    [ValidateScript( { Test-Path $_ })]
+    [System.String]$ProfilePath,
+    # User Security Identifier
+    [Parameter(Mandatory = $true)]
+    [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
+    [System.String]$UserSid
+  )
+  process
+  {
+    switch ($op)
+    {
+      "Load"
+      {
+        Start-Sleep -Seconds 1
+        REG LOAD HKU\"$UserSid" "$ProfilePath\NTUSER.DAT"
+        if ($?)
+        {
+          Write-log -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT")
+        }
+        else
+        {
+          Write-log -Message:('Cound not load profile: ' + "$ProfilePath\NTUSER.DAT")
+        }
+        Start-Sleep -Seconds 1
+        REG LOAD HKU\"$($UserSid)_Classes" "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat"
+        if ($?)
+        {
+          Write-log -Message:('Load Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
+        }
+        else
+        {
+          Write-log -Message:('Cound not load profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
+        }
+      }
+      "Unload"
+      {
+        [gc]::collect()
+        Start-Sleep -Seconds 1
+        REG UNLOAD HKU\$UserSid
+        if ($?)
+        {
+          Write-log -Message:('Unloaded Profile: ' + "$ProfilePath\NTUSER.DAT")
+        }
+        else
+        {
+          Write-log -Message:('Could not unload profile: ' + "$ProfilePath\NTUSER.DAT")
+        }
+        Start-Sleep -Seconds 1
+        REG UNLOAD HKU\"$($UserSid)_Classes"
+        if ($?)
+        {
+          Write-log -Message:('Unloaded Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
+        }
+        else
+        {
+          Write-log -Message:('Could not unload profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
+        }
+      }
+    }
+  }
+}
 Function Get-WindowsDrive {
   $drive = (wmic OS GET SystemDrive /VALUE)
   $drive = [regex]::Match($drive, 'SystemDrive=(.\:)').Groups[1].Value
@@ -6187,37 +6255,9 @@ Function Start-Migration {
       Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath + ' New User SID: ' + $NewUserSID)
       Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath + ' Old User SID: ' + $SelectedUserSID)
       # Load New User Profile Registry Keys
-      reg load HKU\"$NewUserSID" "$newuserprofileimagepath/NTUSER.DAT"
-      if ($?){
-        Write-Log -Message:('Load Profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
-      }
-      else {
-        Write-Log -Message:('Could not load Profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
-      }
-      reg load HKU\"$($NewUserSID)_Classes" "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"
-      if ($?)
-      {
-        Write-Log -Message:('Load Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-      }
-      else {
-        Write-Log -Message:('Could not load Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-      }
+      Set-UserRegistryLoadState -op "Load" -ProfilePath $newuserprofileimagepath -UserSid $NewUserSID
       # Load Selected User Profile Keys
-      reg load HKU\"$SelectedUserSID" "$olduserprofileimagepath/NTUSER.DAT"
-      if ($?){
-        Write-Log -Message:('Load Profile: ' + "$olduserprofileimagepath/NTUSER.DAT")
-      }
-      else {
-        Write-Log -Message:('Could not load Profile: ' + "$olduserprofileimagepath/NTUSER.DAT")
-      }
-      REG LOAD HKU\"$($SelectedUserSID)_Classes" "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"
-      if ($?)
-      {
-        Write-Log -Message:('Load Profile: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-      }
-      else {
-        Write-Log -Message:('Could not load Profile: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-      }
+      Set-UserRegistryLoadState -op "Load" -ProfilePath $olduserprofileimagepath -UserSid $SelectedUserSID
       # Copy from "SelectedUser" to "NewUser"
       reg copy HKU\"$SelectedUserSID" HKU\"$NewUserSID" /s /f
       if ($?){
@@ -6235,42 +6275,8 @@ Function Start-Migration {
         Write-Log -Message:('Could not copy Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
       }
       # Unload "Selected" and "NewUser"
-      [gc]::collect()
-      Start-Sleep -Seconds 1
-      REG UNLOAD HKU\$NewUserSID
-      if ($?){
-        Write-Log -Message:('Unloaded Profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
-      }
-      else {
-        Write-Log -Message:('Could not unload profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
-      }
-      Start-Sleep -Seconds 1
-      REG UNLOAD HKU\"$($NewUserSID)_Classes"
-      if ($?)
-      {
-        Write-Log -Message:('Unloaded Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-      }
-      else {
-        Write-Log -Message:('Could not unload profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-      }
-      Start-Sleep -Seconds 1
-      REG UNLOAD HKU\$SelectedUserSID
-      if ($?){
-        Write-Log -Message:('Unloaded Profile: ' + "$olduserprofileimagepath/NTUSER.DAT")
-      }
-      else {
-        Write-Log -Message:('Could not unload profile: ' + "$olduserprofileimagepath/NTUSER.DAT")
-      }
-      Start-Sleep -Seconds 1
-      REG UNLOAD HKU\"$($SelectedUserSID)_Classes"
-      if ($?)
-      {
-        Write-Log -Message:('Unloaded Profile: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-      }
-      else {
-        Write-Log -Message:('Could not unload profile: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-      }
-      Start-Sleep -Seconds 1
+      Set-UserRegistryLoadState -op "Unload" -ProfilePath $newuserprofileimagepath -UserSid $NewUserSID
+      Set-UserRegistryLoadState -op "Unload" -ProfilePath $olduserprofileimagepath -UserSid $SelectedUserSID
       # Copy the profile containing the correct access and data to the destination profile
       Write-Log -Message:('Copying merged profiles to destination profile path')
       # Copy both registry hives over and replace the existing files in the destination directory.
@@ -6337,23 +6343,7 @@ Function Start-Migration {
       $appxList | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
 
       # load registry items back for the last time.
-      Start-Sleep -Seconds 1
-      reg load HKU\"$NewUserSID" "$newuserprofileimagepath/NTUSER.DAT"
-      if ($?){
-        Write-Log -Message:('Load Profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
-      }
-      else {
-        Write-Log -Message:('Cound not load profile: ' + + "$newuserprofileimagepath/NTUSER.DAT")
-      }
-      Start-Sleep -Seconds 1
-      reg load HKU\"$($NewUserSID)_Classes" "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat"
-      if ($?)
-      {
-        Write-Log -Message:('Load Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-      }
-      else {
-        Write-Log -Message:('Cound not load profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-      }
+      Set-UserRegistryLoadState -op "Load" -ProfilePath $newuserprofileimagepath -UserSid $NewUserSID
 
       # Set Registry Check Key for New User
       # Check that the installed components key does not exist
@@ -6392,27 +6382,7 @@ Function Start-Migration {
       }
 
       # Unload the Reg Hives
-      [gc]::collect()
-      Start-Sleep -Seconds 1
-      REG UNLOAD HKU\$newusersid
-      if ($?){
-        Write-Log -Message:('Unloaded Profile: ' + "$newuserprofileimagepath/NTUSER.DAT")
-      }
-      else
-      {
-        Write-Log -Message:('Could not unload profile:' + "$newuserprofileimagepath/NTUSER.DAT")
-      }
-      Start-Sleep -Seconds 1
-      REG UNLOAD HKU\"$($newusersid)_Classes"
-      if ($?)
-      {
-        Write-Log -Message:('Unloaded Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-      }
-      else
-      {
-        Write-Log -Message:('Could not unload profile:' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-      }
-      # $null = Remove-PSDrive -Name HKEY_USERS
+      Set-UserRegistryLoadState -op "Unload" -ProfilePath $newuserprofileimagepath -UserSid $NewUserSID
 
       Write-Log -Message:('Profile Conversion Completed')
     }
