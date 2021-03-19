@@ -8,115 +8,77 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
 <Window
      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-     Title="JumpCloud ADMU 1.6.1" Height="677.234" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
-    <Grid Margin="0,0,-0.2,0.168" RenderTransformOrigin="0.531,0.272">
-        <TabControl Name="tc_main" HorizontalAlignment="Left" Height="614" VerticalAlignment="Top" Width="1012">
-            <TabItem Name="tab_jcadmu" Header="JumpCloud ADMU">
-                <Grid Background="#FFE5E5E5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="87*"/>
-                        <ColumnDefinition Width="919*"/>
-                    </Grid.ColumnDefinitions>
-                    <GroupBox Header="Migration Steps" HorizontalAlignment="Left" Height="98" Margin="10,0,0,0" VerticalAlignment="Top" Width="993" FontWeight="Bold" Grid.ColumnSpan="2">
-                        <TextBlock HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Top" Height="70" Width="561" Margin="0,10,0,-5" FontWeight="Normal"><Run Text="1. Select the domain or AzureAD account that you want to migrate to a local account from the list below."/><LineBreak/><Run Text="2. Enter a local account username and password to migrate the selected account to. "/><LineBreak/><Run Text="3. Enter your organizations JumpCloud system connect key."/><LineBreak/><Run Text="4. Click the "/><Run Text="Migrate Profile"/><Run Text=" button."/><LineBreak/><Run/></TextBlock>
-                    </GroupBox>
-                    <ListView Name="lvProfileList" HorizontalAlignment="Left" Height="226" Margin="10,228,0,0" VerticalAlignment="Top" Width="993" Grid.ColumnSpan="2">
-                        <ListView.View>
-                            <GridView>
-                                <GridViewColumn Header="System Accounts" DisplayMemberBinding="{Binding UserName}" Width="180"/>
-                                <GridViewColumn Header="Last Login" DisplayMemberBinding="{Binding LastLogin}" Width="135"/>
-                                <GridViewColumn Header="Currently Active" DisplayMemberBinding="{Binding Loaded}" Width="105" />
-                                <GridViewColumn Header="Domain Roaming" DisplayMemberBinding="{Binding RoamingConfigured}" Width="105"/>
-                                <GridViewColumn Header="Local Admin" DisplayMemberBinding="{Binding IsLocalAdmin}" Width="105"/>
-                                <GridViewColumn Header="Local Path" DisplayMemberBinding="{Binding LocalPath}" Width="140"/>
-                                <GridViewColumn Header="Local Profile Size" DisplayMemberBinding="{Binding LocalProfileSize}" Width="105"/>
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
-                    <Button Name="bDeleteProfile" Content="Select Profile" HorizontalAlignment="Left" Margin="788,557,0,0" VerticalAlignment="Top" Width="121" Height="23" IsEnabled="False" Grid.Column="1">
-                        <Button.Effect>
-                            <DropShadowEffect/>
-                        </Button.Effect>
-                    </Button>
-                    <GroupBox Header="System Information" HorizontalAlignment="Left" Height="120" Margin="10,103,0,0" VerticalAlignment="Top" Width="341" FontWeight="Bold" Grid.ColumnSpan="2">
-                        <Grid HorizontalAlignment="Left" Height="90" VerticalAlignment="Top" Width="321" Margin="10,0,-2,0">
-                            <Label Content="Local Computer Name:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <Label Content="USMT Detected:" HorizontalAlignment="Left" Margin="10,31,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <Label Name="lbComputerName" Content="" HorizontalAlignment="Left" Margin="191,10,0,0" VerticalAlignment="Top" Width="120" FontWeight="Normal"/>
-                            <Label Name="lbUSMTStatus" Content="" HorizontalAlignment="Left" Margin="191,31,0,0" VerticalAlignment="Top" Width="120" FontWeight="Normal"/>
-                            <Label Content="C:\ Free Disk Space:" HorizontalAlignment="Left" Margin="10,57,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <Label Name="lbcfreespace" Content="" HorizontalAlignment="Left" Margin="191,57,0,0" VerticalAlignment="Top" Width="120" FontWeight="Normal"/>
-                        </Grid>
-                    </GroupBox>
-                    <GroupBox Header="Account Migration Information" HorizontalAlignment="Left" Height="92" Margin="445,459,0,0" VerticalAlignment="Top" Width="471" FontWeight="Bold" Grid.Column="1">
-                        <Grid HorizontalAlignment="Left" Height="66.859" Margin="1.212,2.564,0,0" VerticalAlignment="Top" Width="454.842">
-                            <Label Content="Local Account Username :" HorizontalAlignment="Left" Margin="7.088,8.287,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <Label Content="Local Account Password :" HorizontalAlignment="Left" Margin="7.088,36.287,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <TextBox Name="tbJumpCloudUserName" HorizontalAlignment="Left" Height="23" Margin="151.11,10.287,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="301.026" Text="Username should match JumpCloud username" Background="#FFC6CBCF" FontWeight="Bold" />
-                            <TextBox Name="tbTempPassword" HorizontalAlignment="Left" Height="23" Margin="151.11,39.287,0,0" TextWrapping="Wrap" Text="Temp123!Temp123!" VerticalAlignment="Top" Width="301.026" FontWeight="Normal"/>
-                        </Grid>
-                    </GroupBox>
-                    <GroupBox Header="System Migration Options" HorizontalAlignment="Left" Height="121" Margin="10,459,0,0" VerticalAlignment="Top" Width="517" FontWeight="Bold" Grid.ColumnSpan="2">
-                        <Grid HorizontalAlignment="Left" Height="93" Margin="2,3,0,0" VerticalAlignment="Top" Width="456">
-                            <Label Name="lbMoreInfo" Content="More Info" HorizontalAlignment="Left" Margin="91.649,38,0,-0.876" VerticalAlignment="Top" Width="65.381" FontSize="11" FontWeight="Bold" FontStyle="Italic" Foreground="#FF005DFF"/>
-                            <CheckBox Name="cb_accepteula" Content="Accept EULA" HorizontalAlignment="Left" Margin="3.649,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="True"/>
-                            <Label Content="JumpCloud Connect Key :" HorizontalAlignment="Left" Margin="3.649,7.999,0,0" VerticalAlignment="Top" AutomationProperties.HelpText="https://console.jumpcloud.com/#/systems/new" ToolTip="https://console.jumpcloud.com/#/systems/new" FontWeight="Normal"/>
-                            <TextBox Name="tbJumpCloudConnectKey" HorizontalAlignment="Left" Height="23" Margin="148.673,10,0,0" TextWrapping="Wrap" Text="Enter JumpCloud Connect Key" VerticalAlignment="Top" Width="301.026" Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False"/>
-                            <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="155.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                            <CheckBox Name="cb_leavedomain" Content="Leave Domain" HorizontalAlignment="Left" Margin="258.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                            <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="359.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                            <CheckBox Name="cb_custom_xml" Content="Use USMT Custom.XML" HorizontalAlignment="Left" Margin="4,68,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <CheckBox Name="cb_convertprofile" Content="Convert Profile" HorizontalAlignment="Left" Margin="156,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                            <CheckBox Name="cb_createrestore" Content="Create Restore Point" HorizontalAlignment="Left" Margin="258,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                        </Grid>
-                    </GroupBox>
-                    <GroupBox Header="Domain Information" HorizontalAlignment="Left" Height="120" Margin="269,103,0,0" VerticalAlignment="Top" Width="321" FontWeight="Bold" Grid.Column="1">
-                        <Grid HorizontalAlignment="Left" Height="95" Margin="10,0,0,0" VerticalAlignment="Top" Width="297">
-                            <Label Content="Domain Name:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <Label Name="lbDomainName" Content="" Margin="167,11,10,59" Foreground="Black" FontWeight="Normal"/>
-                            <Label Content="Secure Channel Healthy:" HorizontalAlignment="Left" Margin="10,62,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <Label Name="lbsecurechannel" Content="" HorizontalAlignment="Left" Margin="167,62,0,0" VerticalAlignment="Top" Width="120" FontWeight="Normal"/>
-                            <Label Content="NetBios Name:" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <Label Name="lbNetBios" Content="" Margin="167,36,10,33" Foreground="Black" FontWeight="Normal"/>
-                        </Grid>
-                    </GroupBox>
-                    <GroupBox Header="AzureAD Information" HorizontalAlignment="Left" Height="120" Margin="595,103,0,0" VerticalAlignment="Top" Width="321" FontWeight="Bold" Grid.Column="1">
-                        <Grid HorizontalAlignment="Left" Height="90" Margin="10,0,0,0" VerticalAlignment="Top" Width="297">
-                            <Label Content="AzureAD Joined:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <Label Name="lbAzureAD_Joined" Content="" Margin="168,10,10,54" Foreground="Black" FontWeight="Normal"/>
-                            <Label Content="Workplace Joined:" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <Label Name="lbWorkplace_Joined" Content="" Margin="169,36,10,28" Foreground="Black" FontWeight="Normal"/>
-                            <Label Content="Tenant Name:" HorizontalAlignment="Left" Margin="10,62,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <Label Name="lbTenantName" Content="" Margin="168,62,10,2" Foreground="Black" FontWeight="Normal"/>
-                        </Grid>
-                    </GroupBox>
-                </Grid>
-            </TabItem>
-            <TabItem Name="tab_usmtcustomxml" Header="USMT Custom.XML" IsEnabled="False">
-                <Grid Background="#FFE5E5E5">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="89*"/>
-                        <ColumnDefinition Width="917*"/>
-                    </Grid.ColumnDefinitions>
-                    <TextBox Name="tb_customxml" HorizontalAlignment="Left" Height="370" Margin="10,103,0,0" AcceptsReturn="True" VerticalScrollBarVisibility="Visible" TextWrapping="WrapWithOverflow" VerticalAlignment="Top" Width="986" Text="test" Grid.ColumnSpan="2" />
-                    <TextBox Name="tb_xmlerror" HorizontalAlignment="Left" Height="74" Margin="10,478,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="986" Grid.ColumnSpan="2" BorderBrush="Black" IsEnabled="False"/>
-                    <Label Name="lbMoreInfo_xml" Content="More Info On Customizing USMT XML" HorizontalAlignment="Left" Margin="358,48,0,0" VerticalAlignment="Top" Width="206" FontSize="11" FontWeight="Bold" FontStyle="Italic" Foreground="#FF005DFF" Grid.Column="1"/>
-                    <GroupBox Header="USMT Custom.XML" HorizontalAlignment="Left" Height="98" Margin="10,0,0,0" VerticalAlignment="Top" Width="412" FontWeight="Bold" Grid.ColumnSpan="2">
-                        <TextBlock HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Top" Height="70" Width="429" Margin="0,10,0,-5" FontWeight="Normal"><Run Text="1. Modify XML to include and exclude as required."/><LineBreak/><Run Text="2. Click 'Verify XML' button to validate the xml. "/><LineBreak/><Run Text="3. If not valid, view errors below and correct, then verify again."/><LineBreak/><Run Text="4. Click OK to return to Jumpcloud ADMU and use valid XML."/><Run/></TextBlock>
-                    </GroupBox>
-                    <Button Name="btn_custom_ok" Content="OK" HorizontalAlignment="Left" Margin="654,559,0,0" VerticalAlignment="Top" Width="121" Height="23" IsEnabled="False" Grid.Column="1">
-                        <Button.Effect>
-                            <DropShadowEffect/>
-                        </Button.Effect>
-                    </Button>
-                    <Button Name="btn_custom_cancel" Content="CANCEL" HorizontalAlignment="Left" Margin="786,559,0,0" VerticalAlignment="Top" Width="121" Height="23" IsEnabled="True" Grid.Column="1">
-                        <Button.Effect>
-                            <DropShadowEffect/>
-                        </Button.Effect>
-                    </Button>
-                </Grid>
-            </TabItem>
-        </TabControl>
+     Title="JumpCloud ADMU 2.0.0" Height="669" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
+    <Grid Margin="0,0,0,31" RenderTransformOrigin="0.531,0.272">
+        <TabControl Name="tc_main" HorizontalAlignment="Left" Height="614" VerticalAlignment="Top" Width="1012"/>
+        <GroupBox Header="Migration Steps" HorizontalAlignment="Left" Height="98" Margin="10,0,0,0" VerticalAlignment="Top" Width="993" FontWeight="Bold">
+            <TextBlock HorizontalAlignment="Left" TextWrapping="Wrap" VerticalAlignment="Top" Height="70" Width="561" Margin="0,10,0,-5" FontWeight="Normal"><Run Text="1. Select the domain or AzureAD account that you want to migrate to a local account from the list below."/><LineBreak/><Run Text="2. Enter a local account username and password to migrate the selected account to. "/><LineBreak/><Run Text="3. Enter your organizations JumpCloud system connect key."/><LineBreak/><Run Text="4. Click the "/><Run Text="Migrate Profile"/><Run Text=" button."/><LineBreak/><Run/></TextBlock>
+        </GroupBox>
+        <ListView Name="lvProfileList" HorizontalAlignment="Left" Height="226" Margin="10,228,0,0" VerticalAlignment="Top" Width="993">
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="System Accounts" DisplayMemberBinding="{Binding UserName}" Width="287"/>
+                    <GridViewColumn Header="Last Login" DisplayMemberBinding="{Binding LastLogin}" Width="135"/>
+                    <GridViewColumn Header="Currently Active" DisplayMemberBinding="{Binding Loaded}" Width="105" />
+                    <GridViewColumn Header="Domain Roaming" DisplayMemberBinding="{Binding RoamingConfigured}" Width="105"/>
+                    <GridViewColumn Header="Local Admin" DisplayMemberBinding="{Binding IsLocalAdmin}" Width="105"/>
+                    <GridViewColumn Header="Local Path" DisplayMemberBinding="{Binding LocalPath}" Width="140"/>
+                    <GridViewColumn Header="Local Profile Size" DisplayMemberBinding="{Binding LocalProfileSize}" Width="105"/>
+                </GridView>
+            </ListView.View>
+        </ListView>
+        <Button Name="bDeleteProfile" Content="Select Profile" HorizontalAlignment="Left" Margin="875,557,0,0" VerticalAlignment="Top" Width="121" Height="23" IsEnabled="False">
+            <Button.Effect>
+                <DropShadowEffect/>
+            </Button.Effect>
+        </Button>
+        <GroupBox Header="System Information" HorizontalAlignment="Left" Height="120" Margin="10,103,0,0" VerticalAlignment="Top" Width="341" FontWeight="Bold">
+            <Grid HorizontalAlignment="Left" Height="90" VerticalAlignment="Top" Width="321" Margin="10,0,-2,0">
+                <Label Content="Local Computer Name:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
+                <Label Name="lbComputerName" Content="" HorizontalAlignment="Left" Margin="191,10,0,0" VerticalAlignment="Top" Width="120" FontWeight="Normal"/>
+                <Label Content="C:\ Free Disk Space:" HorizontalAlignment="Left" Margin="10,57,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
+                <Label Name="lbcfreespace" Content="" HorizontalAlignment="Left" Margin="191,57,0,0" VerticalAlignment="Top" Width="120" FontWeight="Normal"/>
+            </Grid>
+        </GroupBox>
+        <GroupBox Header="Account Migration Information" HorizontalAlignment="Left" Height="92" Margin="532,459,0,0" VerticalAlignment="Top" Width="471" FontWeight="Bold">
+            <Grid HorizontalAlignment="Left" Height="66.859" Margin="1.212,2.564,0,0" VerticalAlignment="Top" Width="454.842">
+                <Label Content="Local Account Username :" HorizontalAlignment="Left" Margin="7.088,8.287,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
+                <Label Content="Local Account Password :" HorizontalAlignment="Left" Margin="7.088,36.287,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
+                <TextBox Name="tbJumpCloudUserName" HorizontalAlignment="Left" Height="23" Margin="151.11,10.287,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="301.026" Text="Username should match JumpCloud username" Background="#FFC6CBCF" FontWeight="Bold" />
+                <TextBox Name="tbTempPassword" HorizontalAlignment="Left" Height="23" Margin="151.11,39.287,0,0" TextWrapping="Wrap" Text="Temp123!Temp123!" VerticalAlignment="Top" Width="301.026" FontWeight="Normal"/>
+            </Grid>
+        </GroupBox>
+        <GroupBox Header="System Migration Options" HorizontalAlignment="Left" Height="121" Margin="10,459,0,0" VerticalAlignment="Top" Width="517" FontWeight="Bold">
+            <Grid HorizontalAlignment="Left" Height="93" Margin="2,3,0,0" VerticalAlignment="Top" Width="456">
+                <Label Content="JumpCloud Connect Key :" HorizontalAlignment="Left" Margin="3.649,7.999,0,0" VerticalAlignment="Top" AutomationProperties.HelpText="https://console.jumpcloud.com/#/systems/new" ToolTip="https://console.jumpcloud.com/#/systems/new" FontWeight="Normal"/>
+                <TextBox Name="tbJumpCloudConnectKey" HorizontalAlignment="Left" Height="23" Margin="148.673,10,0,0" TextWrapping="Wrap" Text="Enter JumpCloud Connect Key" VerticalAlignment="Top" Width="301.026" Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False"/>
+                <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="155.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                <CheckBox Name="cb_leavedomain" Content="Leave Domain" HorizontalAlignment="Left" Margin="258.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="359.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                <CheckBox Name="cb_convertprofile" Content="Convert Profile" HorizontalAlignment="Left" Margin="156,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                <CheckBox Name="cb_createrestore" Content="Create Restore Point" HorizontalAlignment="Left" Margin="258,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+            </Grid>
+        </GroupBox>
+        <GroupBox Header="Domain Information" HorizontalAlignment="Left" Height="120" Margin="356,103,0,0" VerticalAlignment="Top" Width="321" FontWeight="Bold">
+            <Grid HorizontalAlignment="Left" Height="95" Margin="10,0,0,0" VerticalAlignment="Top" Width="297">
+                <Label Content="Domain Name:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
+                <Label Name="lbDomainName" Content="" Margin="167,11,10,59" Foreground="Black" FontWeight="Normal"/>
+                <Label Content="Secure Channel Healthy:" HorizontalAlignment="Left" Margin="10,62,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
+                <Label Name="lbsecurechannel" Content="" HorizontalAlignment="Left" Margin="167,62,0,0" VerticalAlignment="Top" Width="120" FontWeight="Normal"/>
+                <Label Content="NetBios Name:" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
+                <Label Name="lbNetBios" Content="" Margin="167,36,10,33" Foreground="Black" FontWeight="Normal"/>
+            </Grid>
+        </GroupBox>
+        <GroupBox Header="AzureAD Information" HorizontalAlignment="Left" Height="120" Margin="682,103,0,0" VerticalAlignment="Top" Width="321" FontWeight="Bold">
+            <Grid HorizontalAlignment="Left" Height="90" Margin="10,0,0,0" VerticalAlignment="Top" Width="297">
+                <Label Content="AzureAD Joined:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
+                <Label Name="lbAzureAD_Joined" Content="" Margin="168,10,10,54" Foreground="Black" FontWeight="Normal"/>
+                <Label Content="Workplace Joined:" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
+                <Label Name="lbWorkplace_Joined" Content="" Margin="169,36,10,28" Foreground="Black" FontWeight="Normal"/>
+                <Label Content="Tenant Name:" HorizontalAlignment="Left" Margin="10,62,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
+                <Label Name="lbTenantName" Content="" Margin="168,62,10,2" Foreground="Black" FontWeight="Normal"/>
+            </Grid>
+        </GroupBox>
     </Grid>
 </Window>
 '@
@@ -138,17 +100,6 @@ Catch
 $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) -Value $Form.FindName($_.Name) }
 
 # Define misc static variables
-
-        #USMT Path
-        $UserStateMigrationToolx64Path = 'C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
-        $UserStateMigrationToolx86Path = 'C:\Program Files\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
-
-        $UserStateMigrationToolVersionPath = Switch ([System.IntPtr]::Size)
-        {
-        8 { $UserStateMigrationToolx64Path }
-        4 { $UserStateMigrationToolx86Path }
-        Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
-        }
 
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
@@ -208,75 +159,6 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         $freespace = [math]::Round($freespace / 1MB, 0)
 
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
-
-        #region custom xml
-$usmtcustom = [xml] @"
-<migration urlid="http://www.microsoft.com/migration/1.0/migxmlext/AppDataMig">
-	<component context="User" type="Application">
-        <displayName>Local AppData</displayName>
-        <paths>
-            <path type="File">%CSIDL_LOCAL_APPDATA%</path>
-        </paths>
-        <role role="Settings">
-            <rules>
-                <include filter='MigXmlHelper.IgnoreIrrelevantLinks()'>
-                    <objectSet>
-                        <pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
-						<pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
-						<pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
-                    </objectSet>
-                </include>
-                <merge script="MigXmlHelper.DestinationPriority()">
-                    <objectSet>
-                        <pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
-						<pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
-						<pattern type="File">%CSIDL_LOCAL_APPDATA%\* [*]</pattern>
-                    </objectSet>
-                </merge>
-            </rules>
-        </role>
-    </component>
-	<component context="User" type="Application">
-        <displayName>Roaming AppData</displayName>
-        <paths>
-            <path type="File">%CSIDL_LOCAL_APPDATA%</path>
-        </paths>
-        <role role="Settings">
-            <rules>
-                <include filter='MigXmlHelper.IgnoreIrrelevantLinks()'>
-                    <objectSet>
-                        <pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
-						<pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
-						<pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
-                    </objectSet>
-                </include>
-                <merge script="MigXmlHelper.DestinationPriority()">
-                    <objectSet>
-                        <pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
-						<pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
-						<pattern type="File">%CSIDL_APPDATA%\* [*]</pattern>
-                    </objectSet>
-                </merge>
-            </rules>
-        </role>
-    </component>
-
-	</migration>
-"@
-        #endregion custom xml
-
-        # Load custom xml
-        [string[]]$text = $usmtcustom.OuterXml #or use Get-Content to read an XML File
-        $data = New-Object System.Collections.ArrayList
-        [void] $data.Add($text -join "`n")
-        $tmpDoc = New-Object System.Xml.XmlDataDocument
-        $tmpDoc.LoadXml($data -join "`n")
-        $sw = New-Object System.IO.StringWriter
-        $writer = New-Object System.Xml.XmlTextWriter($sw)
-        $writer.Formatting = [System.Xml.Formatting]::Indented
-        $tmpDoc.WriteContentTo($writer)
-        $tb_customxml.Text = $sw.ToString()
-
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
         # Get Valid SIDs from the Registry and build user object
         $registyProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
@@ -350,7 +232,6 @@ $usmtcustom = [xml] @"
 
 #SystemInformation
 $lbComputerName.Content = $WmiComputerSystem.Name
-$lbUSMTStatus.Content = (($InstalledProducts -match 'User State Migration Tool').Count -eq 1)
 $lbcfreespace.Content = $freespace
 
 #DomainInformation
@@ -409,11 +290,6 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
 
 ## Form changes & interactions
 
-# EULA checkbox
-$script:AcceptEULA = $true
-$cb_accepteula.Add_Checked({$script:AcceptEULA = $true})
-$cb_accepteula.Add_Unchecked({$script:AcceptEULA = $false})
-
 # Install JCAgent checkbox
 $script:InstallJCAgent = $false
 $cb_installjcagent.Add_Checked({Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList)})
@@ -436,25 +312,14 @@ $cb_forcereboot.Add_Unchecked({$script:ForceReboot = $false})
 # Convert Profile checkbox
 $script:ConvertProfile = $false
 $cb_convertprofile.Add_Checked({$script:ConvertProfile = $true})
-$cb_convertprofile.Add_Checked({$cb_custom_xml.IsEnabled = $false})
 $cb_convertprofile.Add_Checked({$cb_accepteula.IsEnabled = $false})
 $cb_convertprofile.Add_Unchecked({$script:ConvertProfile = $false})
-$cb_convertprofile.Add_UnChecked({$cb_custom_xml.IsEnabled = $True})
 $cb_convertprofile.Add_UnChecked({$cb_accepteula.IsEnabled = $True})
-$cb_custom_xml.Add_UnChecked({$tab_usmtcustomxml.IsEnabled = $false})
 
 # Create Restore Point checkbox
 $script:CreateRestore = $false
 $cb_createrestore.Add_Checked({$script:CreateRestore = $true})
 $cb_createrestore.Add_Unchecked({$script:CreateRestore = $false})
-
-# Custom XML checkbox
-$script:Customxml = $false
-$cb_custom_xml.Add_Checked({$script:Customxml = $true})
-$cb_custom_xml.Add_Checked({$tab_usmtcustomxml.IsEnabled = $true})
-$cb_custom_xml.Add_Checked({$tab_usmtcustomxml.IsSelected = $true})
-$cb_custom_xml.Add_Unchecked({$script:Customxml = $false})
-$cb_custom_xml.Add_UnChecked({$tab_usmtcustomxml.IsEnabled = $false})
 
 $tbJumpCloudUserName.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList)
@@ -514,10 +379,6 @@ $lvProfileList.Add_SelectionChanged( {
         $script:SelectedUserName = ($lvProfileList.SelectedItem.username)
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList)
     })
-# AcceptEULA moreinfo link - Mouse button event
-$lbMoreInfo.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start('https://github.com/TheJumpCloud/support/tree/BS-ADMU-version_1.0.0/ADMU#EULA--Legal-Explanation') })
-# Custom USMT XML moreinfo link - Mouse button event
-$lbMoreInfo_xml.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start('https://docs.microsoft.com/en-us/windows/deployment/usmt/usmt-customize-xml-files') })
 
 $bDeleteProfile.Add_Click( {
         # Build FormResults object
@@ -539,55 +400,6 @@ $bDeleteProfile.Add_Click( {
         # Close form
         $Form.Close()
     })
-$tb_customxml.add_TextChanged({
-    [string[]]$text = $tb_customxml.Text #or use Get-Content to read an XML File
-    $data = New-Object System.Collections.ArrayList
-    [void] $data.Add($text -join "`n")
-    $tmpDoc = New-Object System.Xml.XmlDataDocument
-    $tmpDoc.LoadXml($data -join "`n")
-    $data | Out-File ('C:\Windows\Temp\custom.xml')
-    $verifiedxml = (Test-XMLFile -xmlFilePath ('C:\Windows\Temp\custom.xml'))
-    $tab_jcadmu.IsEnabled = $false
-
-    if ($verifiedxml -eq $true) {
-    $tb_xmlerror.Text = 'Valid XML'
-    $tb_xmlerror.BorderBrush="Black"
-    $btn_custom_ok.IsEnabled = $true
-    }
-    elseif ($verifiedxml -eq $false) {
-    $tb_xmlerror.Text = $Error[0]
-    $tb_xmlerror.BorderBrush="Red"
-    $btn_custom_ok.IsEnabled = $false
-    }
-})
-
-$tab_usmtcustomxml.add_GotFocus({
-    [string[]]$text = $tb_customxml.Text #or use Get-Content to read an XML File
-    $data = New-Object System.Collections.ArrayList
-    [void] $data.Add($text -join "`n")
-    $tmpDoc = New-Object System.Xml.XmlDataDocument
-    $tmpDoc.LoadXml($data -join "`n")
-    $data | Out-File ('C:\Windows\Temp\custom.xml')
-    $verifiedxml = (Test-XMLFile -xmlFilePath ('C:\Windows\Temp\custom.xml'))
-    $tab_jcadmu.IsEnabled = $false
-
-    if ($verifiedxml -eq $true) {
-    $tb_xmlerror.Text = 'Valid XML'
-    $tb_xmlerror.BorderBrush="Black"
-    $btn_custom_ok.IsEnabled = $true
-    }
-    elseif ($verifiedxml -eq $false) {
-    $tb_xmlerror.Text = $Error[0]
-    $tb_xmlerror.BorderBrush="Red"
-    $btn_custom_ok.IsEnabled = $false
-    }
-})
-
-$btn_custom_ok.Add_Click({$tab_jcadmu.IsSelected = $true})
-$btn_custom_cancel.Add_Click({
-    $cb_custom_xml.IsChecked = $false
-    $tab_jcadmu.IsSelected = $true
-})
 
 # Put the list of profiles in the profile box
 $Profiles | ForEach-Object { $lvProfileList.Items.Add($_) | Out-Null }
