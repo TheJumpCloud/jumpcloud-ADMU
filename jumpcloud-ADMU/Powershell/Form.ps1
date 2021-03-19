@@ -55,7 +55,6 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                 <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="155.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <CheckBox Name="cb_leavedomain" Content="Leave Domain" HorizontalAlignment="Left" Margin="258.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="359.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                <CheckBox Name="cb_convertprofile" Content="Convert Profile" HorizontalAlignment="Left" Margin="156,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <CheckBox Name="cb_createrestore" Content="Create Restore Point" HorizontalAlignment="Left" Margin="258,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
             </Grid>
         </GroupBox>
@@ -150,13 +149,6 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         }
 
         $FormResults = [PSCustomObject]@{ }
-
-        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Getting Installed Applications..'
-
-        $InstalledProducts = (Get-WmiObject -Class:('Win32_Product') | Select-Object Name)
-        $Disk = Get-WmiObject -Class Win32_logicaldisk -Filter "DeviceID = 'C:'"
-        $freespace = $Disk.FreeSpace
-        $freespace = [math]::Round($freespace / 1MB, 0)
 
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
         Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
@@ -308,13 +300,6 @@ $cb_leavedomain.Add_Unchecked({$script:LeaveDomain = $false})
 $script:ForceReboot = $false
 $cb_forcereboot.Add_Checked({$script:ForceReboot = $true})
 $cb_forcereboot.Add_Unchecked({$script:ForceReboot = $false})
-
-# Convert Profile checkbox
-$script:ConvertProfile = $false
-$cb_convertprofile.Add_Checked({$script:ConvertProfile = $true})
-$cb_convertprofile.Add_Checked({$cb_accepteula.IsEnabled = $false})
-$cb_convertprofile.Add_Unchecked({$script:ConvertProfile = $false})
-$cb_convertprofile.Add_UnChecked({$cb_accepteula.IsEnabled = $True})
 
 # Create Restore Point checkbox
 $script:CreateRestore = $false
