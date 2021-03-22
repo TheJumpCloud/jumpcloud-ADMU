@@ -1,4 +1,138 @@
 #region Functions
+function BindUsernameToJCSystem {
+  param
+  (
+      [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(40, 40)][string]$JcApiKey,
+      [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][string]$JumpCloudUserName
+  )
+  Begin
+  {
+    $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
+    $regex = 'systemKey\":\"(\w+)\"'
+    $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+  }
+  Process
+  {
+    if ($systemKey){
+      $Headers = @{
+          'Accept'       = 'application/json';
+          'Content-Type' = 'application/json';
+          'x-api-key'    = $JcApiKey;
+      }
+      $Form = @{
+          'filter' = "username:eq:$($JumpcloudUserName)"
+      }
+      Try{
+          Write-Host "Getting information from SystemID: $systemKey"
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          $Response = Invoke-WebRequest -Method 'Get' -Uri "https://console.jumpcloud.com/api/systemusers" -Headers $Headers -Body $Form -UseBasicParsing
+          $StatusCode = $Response.StatusCode
+      }
+      catch
+      {
+          $StatusCode = $_.Exception.Response.StatusCode.value__
+      }
+      # Get Results, convert from Json
+      $Results = $Response.Content | ConvertFrom-JSON
+      $JcUserId = $Results.results.id
+      # Bind Step
+      if ($JcUserId){
+          $Headers = @{
+              'Accept'    = 'application/json';
+              'x-api-key' = $JcApiKey
+          }
+          $Form = @{
+              'op'   = 'add';
+              'type' = 'system';
+              'id'   = "$systemKey"
+          } | ConvertTo-Json
+          Try
+          {
+              [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+              $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JcUserId/associations" -Headers $Headers -Body $Form -ContentType 'application/json' -UseBasicParsing
+              $StatusCode = $Response.StatusCode
+          }
+          catch
+          {
+              $StatusCode = $_.Exception.Response.StatusCode.value__
+          }
+      }
+      else {
+          Write-Host "Cound not bind user/ JumpCloudUsername did not exist in JC Directory"
+      }
+  }
+  else{
+      Write-Host "Could not find systemKey, aborting bind step"
+  }
+  }
+  End
+  {
+
+  }
+}
+function CheckUsernameorSID
+{
+    [CmdletBinding()]
+    param
+    (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+        $usernameorsid
+    )
+    Begin
+    {
+        $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+$"
+        $registyProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
+        $list = @()
+        foreach ($profile in $registyProfiles)
+        {
+            $list += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
+        }
+        if (![regex]::IsMatch($usernameorsid, $sidPattern))
+        {
+            $usernameorsid = (New-Object System.Security.Principal.NTAccount($usernameorsid)).Translate( [System.Security.Principal.SecurityIdentifier]).Value
+            write-host "Attempting to convert user to sid..."
+        }
+    }
+    process
+    {
+
+        if ($usernameorsid -in $list.PSChildName)
+        {
+            write-host "Valid SID returning SID"
+            return $usernameorsid
+        }
+        else
+        {
+            Write-host "Could not find SID on this system, exiting..."
+            exit
+        }
+    }
+}
+function DenyInteractiveLogonRight 
+{
+  param (
+    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+    $SID
+  )
+  # Add migrating user to denylogon rights
+  $secpolFile = "c:\windows\temp\ur_orig.inf"
+  if (Test-Path $secpolFile) {
+    Remove-Item $secpolFile -Force
+  }
+  secedit /export /areas USER_RIGHTS /cfg c:\windows\temp\ur_orig.inf
+  $secpol = (Get-Content $secpolFile)
+  $regvaluestring = $secpol | Where-Object {$_ -like "*SeDenyInteractiveLogonRight*"}
+  $regvaluestringID = [array]::IndexOf($secpol, $regvaluestring)
+  $oldvalue = (($secpol | Select-String -Pattern 'SeDenyInteractiveLogonRight' | Out-String).trim()).substring(30)
+  $newvalue = ('*'+$SID+','+$oldvalue.trim())
+  $secpol[$regvaluestringID] = 'SeDenyInteractiveLogonRight = ' + $newvalue
+  $secpol | out-file c:\windows\temp\ur_new.inf -force
+  secedit /configure /db secedit.sdb /cfg c:\windows\temp\ur_new.inf /areas USER_RIGHTS
+}
+function AllowInteractiveLogonRight {
+  $secpolFile = "c:\windows\temp\ur_orig.inf"
+  secedit /configure /db secedit.sdb /cfg $secpolFile /areas USER_RIGHTS
+}
 function Register-NativeMethod
 {
   [CmdletBinding()]
@@ -742,57 +876,6 @@ function ConvertUserName {
   }
 }
 
-function CheckUsernameorSID {
-  [CmdletBinding()]
-  param
-  (
-    [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-    $usernameorsid
-  )
-  Begin {
-    $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+$"
-    $localcomputersidprefix = ((Get-LocalUser | Select-Object -First 1).SID).AccountDomainSID.ToString()
-    $convertedUser = ConvertUserName $usernameorsid
-    $registyProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
-    $list = @()
-    foreach ($profile in $registyProfiles) {
-      $list += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
-    }
-    $users = @()
-    foreach ($listItem in $list) {
-      $isValidFormat = [regex]::IsMatch($($listItem.PSChildName), $sidPattern);
-      # Get Valid SIDS
-      if ($isValidFormat) {
-        $users += [PSCustomObject]@{
-          Name = ConvertSID $listItem.PSChildName
-          SID  = $listItem.PSChildName
-        }
-      }
-    }
-  }
-  process {
-    #check if sid, if valid sid and return sid
-    if ([regex]::IsMatch($usernameorsid, $sidPattern)) {
-      if (($usernameorsid -in $users.SID) -And !($users.SID.Contains($localcomputersidprefix))) {
-        # return, it's a valid SID
-        Write-Log "valid sid returning sid"
-        return $usernameorsid
-      }
-    }
-    elseif ([regex]::IsMatch($convertedUser, $sidPattern)) {
-      if (($convertedUser -in $users.SID) -And !($users.SID.Contains($localcomputersidprefix))) {
-        # return, it's a valid SID
-        Write-Log "valid user returning sid"
-        return $convertedUser
-      }
-    }
-    else {
-      Write-Log 'SID or Username is invalid'
-      exit
-    }
-  }
-}
-
 function Test-RegistryAccess {
   [CmdletBinding()]
   param (
@@ -1091,7 +1174,6 @@ Function Start-Migration {
     [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][ValidateNotNullOrEmpty()][string]$TempPassword,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$LeaveDomain = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ForceReboot = $false,
-    [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ConvertProfile = $true,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$CreateRestore = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AzureADProfile = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$Customxml = $false,
@@ -1173,12 +1255,7 @@ Function Start-Migration {
   }
   Process {
     # Start Of Console Output
-    if ($ConvertProfile -eq $true) {
       Write-Log -Message:('Windows Profile "' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
-    }
-    else {
-      Write-Log -Message:('Windows Profile "' + $SelectedUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
-    }
     # Create Restore
     if ($CreateRestore -eq $true) {
       Checkpoint-Computer -Description "ADMU Convert User" -EA silentlycontinue
@@ -1209,7 +1286,6 @@ Function Start-Migration {
       Write-Log -Message:('JumpCloud agent is already installed on the system.')
     }
 
-    if ($ConvertProfile -eq $true) {
       Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
       # Create New User
       $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
@@ -1429,10 +1505,7 @@ Function Start-Migration {
       Set-UserRegistryLoadState -op "Unload" -ProfilePath $newuserprofileimagepath -UserSid $NewUserSID
 
       Write-Log -Message:('Profile Conversion Completed')
-    }
-    else {
 
-    }
 
     #region Add To Local Users Group
     Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUserName -erroraction silentlycontinue
@@ -1481,6 +1554,6 @@ Function Start-Migration {
   }
   End {
     Write-Log -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
-    Write-Log -Message:('Tool options chosen were : ' + 'Install JC Agent = ' + $InstallJCAgent + ', Leave Domain = ' + $LeaveDomain + ', Force Reboot = ' + $ForceReboot + ', AzureADProfile = ' + $AzureADProfile + ', Convert User Profile = ' + $ConvertProfile + ', Create System Restore Point = ' + $CreateRestore)
+    Write-Log -Message:('Tool options chosen were : ' + 'Install JC Agent = ' + $InstallJCAgent + ', Leave Domain = ' + $LeaveDomain + ', Force Reboot = ' + $ForceReboot + ', AzureADProfile = ' + $AzureADProfile + ', Create System Restore Point = ' + $CreateRestore)
   }
 }
