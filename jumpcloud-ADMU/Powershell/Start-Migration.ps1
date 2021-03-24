@@ -1178,11 +1178,14 @@ Function Start-Migration {
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AzureADProfile = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$Customxml = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$InstallJCAgent = $false,
+    [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AutobindJCUser = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
+    [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudAPIKey,
     [Parameter(ParameterSetName = "form")][Object]$inputObject)
 
   Begin {
     If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) { Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent" }else {}
+    If (($AutobindJCUser -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudAPIKey))) { Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User" }else {}
 
     # Start script
     $admuVersion = '2.0.0'
@@ -1200,6 +1203,7 @@ Function Start-Migration {
         $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
       }
       $InstallJCAgent = $inputObject.InstallJCAgent
+      $AutobindJCUser = $inputObject.AutobindJCUser
       $LeaveDomain = $InputObject.LeaveDomain
       $ForceReboot = $InputObject.ForceReboot
       $CreateRestore = $inputObject.CreateRestore
