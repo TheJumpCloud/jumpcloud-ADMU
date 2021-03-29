@@ -753,7 +753,7 @@ Function DownloadAndInstallAgent(
   If (!(AgentIsOnFileSystem)) {
     Write-Log -Message:('Downloading JCAgent Installer')
     #Download Installer
-    (New-Object System.Net.WebClient).DownloadFile("${AGENT_INSTALLER_URL}", ($AGENT_INSTALLER_PATH))
+    DownloadLink -Link $AGENT_INSTALLER_URL -Path $AGENT_INSTALLER_PATH
     Write-Log -Message:('JumpCloud Agent Download Complete')
     Write-Log -Message:('Running JCAgent Installer')
     #Run Installer
