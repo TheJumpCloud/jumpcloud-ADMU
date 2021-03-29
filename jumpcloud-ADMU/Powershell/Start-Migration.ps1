@@ -1167,7 +1167,7 @@ Function AgentIsOnFileSystem() {
   Test-Path -Path:(${AGENT_PATH} + '/' + ${AGENT_BINARY_NAME})
 }
 Function InstallAgent() {
-  $params = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
+  $params = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/VERYSILENT", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
   Invoke-Expression "$params"
 }
 
