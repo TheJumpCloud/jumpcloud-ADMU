@@ -575,9 +575,9 @@ Function DownloadLink($Link, $Path) {
   While (-not $Global:IsDownloaded) {
     Start-Sleep -Seconds 3
     $Timeout += 3
-    if ($Timeout -gt 120){
+    if ($Timeout -gt 300){
       # TODO: instead of timeout, checksum download before installing.
-      write-log -Message:('Error: Download of agent installer could not complete within 120 seconds, exiting.') -Level Error
+      write-log -Message:('Error: Download of agent installer could not complete within 300 seconds, exiting.') -Level Error
       exit
     }
   } # While
