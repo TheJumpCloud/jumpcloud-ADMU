@@ -1124,195 +1124,6 @@ function Test-RegistryAccess
     $null = Remove-PSDrive -Name HKEY_USERS
   }
 }
-function Convert-UserRegistry
-{
-  [CmdletBinding()]
-  param (
-    [Parameter()]
-    [string]
-    $newUserProfileImagePath,
-    [Parameter()]
-    [System.Security.Principal.SecurityIdentifier]
-    $newUserSid,
-    [Parameter()]
-    [string]
-    $accessACL
-  )
-  begin
-  {
-    # Function Variables
-    $hiveNTUserPath = "$newuserprofileimagepath\NTUSER.DAT"
-    $hiveUsrClassPath = "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat"
-    # Track the number of ownership changes in registry to revert
-    $changeList = @()
-    # AppModel Repository Keys need sepecial permissions, regex patter to search
-    $repoKeys = "\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\AppModel\\Repository"
-    $repoKeysPackages = "$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Packages"
-    $repoKeysFamiles = "$($newusersid)_Classes\Local Settings\Software\Microsoft\Windows\CurrentVersion\AppModel\Repository\Families"
-    # Get the Administrators Group Sid
-    $adminsid = Get-AdminUserSID
-    #####################
-  }
-  # If we haven't set accessIdentity variable, set to SID
-  process
-  {
-    Write-Host "Checking for $accessACL in user hive"
-
-    # Load both the usrClass Hive + NTUser.dat into registry
-    REG LOAD HKU\$newusersid $hiveNTUserPath
-    $classes = "$($newusersid)_Classes"
-    REG LOAD HKU\$classes $hiveUsrClassPath
-
-    # Mount HKEY_USERS hives with PSDrive
-    New-PSDrive HKEY_USERS Registry HKEY_USERS
-    $HKU = Get-Acl "HKEY_USERS:\$newusersid"
-    $HKU_Classes = Get-Acl "HKEY_USERS:\$($newusersid)_Classes"
-    $HKUKeys = @($HKU, $HKU_Classes)
-
-    # Test and Set the Root keys, bail if we can't do this
-    Write-Log -Message:('Setting the Root Keys Permission')
-    # Set the root keys
-    ForEach ($rootKey in $HKUKeys.Path)
-    {
-      # Write-Host $rootKey
-      $acl = Get-Acl $rootKey
-      foreach ($al in $acl.Access)
-      {
-        if ($al.IdentityReference -eq "$accessACL")
-        {
-          Write-Host "$($acl.PSChildName)"
-          # $al.getType()
-          Set-AccessFromDomainUserToLocal -accessItem $al -user "$newusersid" -keyPath $acl.PSChildName
-          $acl | Set-Acl
-        }
-      }
-    }
-
-    # Check the Registry Keys to see if we have permission to make changes
-    # Check each key to see if we can read them, set owner to admin if not. Until
-    # no errors in while loop remain, set permissionsChecked true. Track changes if
-    # permission changes are made
-    $permssionsChecked = $false
-    while (!$permssionsChecked)
-    {
-      try
-      {
-        $registryKeys = Get-ChildItem -Recurse $HKUKeys.Path -ErrorAction Stop
-        $permssionsChecked = $true
-      }
-      catch
-      {
-        # If we cant get-childItem on a key we dont have access.
-        write-warning $_.Exception.Message
-        $aclString = $_.CategoryInfo.TargetName
-        $aclString = $aclString.replace("HKEY_USERS\", "")
-        # Take ownership
-        Write-Log "Grant user access to take ownership operations on: $aclString"
-        enable-privilege SeTakeOwnershipPrivilege
-        # If we can't read the orgional owner, set as user
-        try
-        {
-          $originalOwner = Get-RegKeyOwner -keyPath $aclString
-        }
-        catch
-        {
-          $originalOwner = $newusersid
-        }
-        Change-RegKeyOwner -keyPath $aclString -user "$adminsid"
-        Set-FullControlToUser -userName "$adminsid" -key $aclString
-        # Track changes
-        $changeList += [PSCustomObject]@{
-          Path           = $aclString
-          OrigionalOwner = $originalOwner
-          AdminToRemove  = "$adminsid"
-        }
-      }
-    }
-
-    # Continue with the permissions changes
-    Write-Host "Grant user access to take ownership operations:"
-    enable-privilege SeTakeOwnershipPrivilege
-    Write-Log -Message:("Searching $($registryKeys.Count) User Registry Keys")
-    $i = 0
-    $registryKeys | ForEach-object {
-      $i += 1
-      Write-Progress -activity "Granting $newusersid access to user hive:" -status "Verified: $i of $($registryKeys.Count) Keys" -percentComplete (($i / $registryKeys.Count) * 100)
-      $string = $_.Name
-      # $string = $string.Insert(10, ':')
-      $string = $string.Replace("HKEY_USERS\", "HKEY_USERS:\")
-      # Select parent item since we traverse each key anyways.
-      # resolves issue where wildcards are included in key names
-      $acl = Get-Acl $string | Select-Object -First 1
-      ForEach ($al in $acl.Access)
-      {
-        if ($al.IdentityReference -eq "$accessACL")
-        {
-          $aclString = $acl.path
-          $aclString = $aclString.replace("Microsoft.PowerShell.Core\Registry::HKEY_USERS\", "")
-          If ($al.IsInherited -eq $false -And $aclString -NotMatch $repoKeys)
-          {
-            # copy permissions from domain user to new user
-            Set-AccessFromDomainUserToLocal -accessItem $al -user "$newusersid" -keyPath $aclString
-            Write-Log "Set $aclString"
-            $acl | Set-Acl
-          }
-          # Repository Keys need special permission.
-          If ($aclString -Match $repoKeys)
-          {
-            $originalOwner = Get-RegKeyOwner -keyPath $aclString
-            # "original Owner to the key `"$aclString`" is: `"$originalOwner`""
-            Change-RegKeyOwner -keyPath $aclString -user "$adminsid"
-            Write-Log "Changing Owner to $adminsid on $aclString"
-            # Give Full Controll To Current Admin
-            If ($al.IsInherited -eq $false)
-            {
-              Write-Log "Granting Full Control to $adminsid on $aclString"
-              Set-FullControlToUser -userName "$adminsid" -key $aclString
-              # While Current Admin is Admin, copy permission set from domain user to new user
-              Write-Log "Granting $newusersid access on $aclString"
-              Set-AccessFromDomainUserToLocal -accessItem $al -user "$newusersid" -keyPath $aclString
-              $acl | Set-Acl
-            }
-            # Track permission changes for later
-            $changeList += [PSCustomObject]@{
-              Path           = $aclString
-              OrigionalOwner = $originalOwner
-              AdminToRemove  = "$adminsid"
-            }
-          }
-        }
-      }
-    }
-
-    # Reset ACL Inheritance on ...\Repository\Pacakges\ and ...\Repository\Familes\
-    $packages = Get-Acl "HKEY_USERS:\$($repoKeysPackages)"
-    $packages.SetAccessRuleProtection($true, $false)
-    Set-ReadToUser -userName "$adminsid" -keyPath "$($repoKeysPackages)"
-    $familes = Get-Acl "HKEY_USERS:\$($repoKeysFamiles)"
-    $familes.SetAccessRuleProtection($true, $false)
-    Set-ReadToUser -userName "$adminsid" -keyPath "$($repoKeysFamiles)"
-
-    # Revert ownership on tracked items in changeList to origional owner & access
-    # Required to perform restore operations
-    Write-Host "Grant user access to take perform restore operations:"
-    enable-privilege SeRestorePrivilege
-    $i = 0
-    ForEach ($item in $changeList)
-    {
-      $i += 1
-      Write-Progress -activity "Resetting original ownership on $($changeList.Count) modified keys:" -status "Set: $i of $($changeList.Count)" -percentComplete (($i / $changeList.Count) * 100)
-      $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
-      $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
-      $key = [Microsoft.Win32.Registry]::Users.OpenSubKey($item.Path, $permCheck, $regRights)
-      $acl = $key.GetAccessControl()
-      ForEach ($al in $acl.Access)
-      {
-        Change-RegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
-      }
-      write-log "Restoring $($item.Path)"
-    }
-  }
-}
 
 #endregion Functions
 
@@ -1509,7 +1320,7 @@ Function Start-Migration
     }
     catch
     {
-      write-log -Message("Could Not Backup Registry Hives: Exiting...")
+      write-log -Message("Could Not Backup Registry Hives in $($olduserprofileimagepath): Exiting...")
       write-log -Message($_.Exception.Message)
       exit
     }
@@ -1523,7 +1334,7 @@ Function Start-Migration
       Write-Log -Message:("The user: $JumpCloudUserName could not be created, exiting")
       exit
     }
-    # Initalize the Profile
+    # Initialize the Profile
     New-LocalUserProfile -username $JumpCloudUserName -ErrorVariable profileInit
     if ($profileInit)
     {
@@ -1553,7 +1364,7 @@ Function Start-Migration
     }
     catch
     {
-      write-log -Message("Could Not Backup Registry Hives: Exiting...")
+      write-log -Message("Could Not Backup Registry Hives in $($newuserprofileimagepath): Exiting...")
       write-log -Message($_.Exception.Message)
       exit
     }
@@ -1598,8 +1409,6 @@ Function Start-Migration
     {
       Write-Log -Message:('Could not copy Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
     }
-    #TODO: Add ADMU First Login Key steps to loaded reg before unload
-    
     # Copy the profile containing the correct access and data to the destination profile
     Write-Log -Message:('Copying merged profiles to destination profile path')
     #TODO: Check that we can unload at this state
@@ -1639,15 +1448,19 @@ Function Start-Migration
     Set-UserRegistryLoadState -op "Unload" -ProfilePath $olduserprofileimagepath -UserSid $SelectedUserSID
 
     # Copy both registry hives over and replace the existing backup files in the destination directory.
-    Copy-Item -Path "$newuserprofileimagepath/NTUSER.DAT.BAK" -Destination "$olduserprofileimagepath/NTUSER.DAT.BAK" -Force
-    Copy-Item -Path "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Destination "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak"-Force
+    try
+    {
+      Copy-Item -Path "$newuserprofileimagepath/NTUSER.DAT.BAK" -Destination "$olduserprofileimagepath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
+      Copy-Item -Path "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Destination "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Force -ErrorAction Stop
+    }
+    catch
+    {
+      write-log -Message("Could not copy backup registry hives to the destination location in $($olduserprofileimagepath): Exiting...")
+      write-log -Message($_.Exception.Message)
+      exit
+    }
 
-    # AlecBalwin
-    #  NTUSER.DAT
-    #  NTUSER.DAT.BAK
-
-    #  Copy orig. NTUSER_DATEofbackup.dat
-    #  copy ntuser.dat.bak to ntuser.dat (replace step)
+    # Rename original ntuser & usrclass .dat files to ntuser_original.dat & usrclass_original.dat for backup and reversal if needed
     Write-Log -Message:('Copy orig. ntuser.dat to ntuser_original.dat (backup reg step)')
     try
     {
@@ -1656,11 +1469,11 @@ Function Start-Migration
     }
     catch
     {
-      write-log -Message("Could Not create last backup copy of Backup Registry Hives: Exiting...")
+      write-log -Message("Could not rename origional registry files for backup purposes: Exiting...")
       write-log -Message($_.Exception.Message)
       exit
     }
-    # finally set copid values to the .dat files in the profileimagepath
+    # finally set .dat.back registry files to the .dat in the profileimagepath
     Write-Log -Message:('rename ntuser.dat.bak to ntuser.dat (replace step)')
     try
     {
@@ -1669,7 +1482,7 @@ Function Start-Migration
     }
     catch
     {
-      write-log -Message("Could Not complete rename step on Registry Hives: Exiting...")
+      write-log -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
       write-log -Message($_.Exception.Message)
       exit
     }
@@ -1710,9 +1523,6 @@ Function Start-Migration
     $Acl | Set-Acl -Path $newuserprofileimagepath
     #TODO: reverse track this if we fail later
 
-    # Registry Permisions
-    # TODO: remove convert-UserRegistry functions
-    # Convert-UserRegistry -newUserProfileImagePath $newUserProfileImagePath -newUserSid $newUserSid -accessACL $identityAccessACL
     ## End Regedit Block ##
 
     ### Active Setup Registry Entry ###
