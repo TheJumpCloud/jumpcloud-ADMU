@@ -571,12 +571,18 @@ Function DownloadLink($Link, $Path) {
   }
   $DownloadCompletedEventSubscriber = Register-ObjectEvent @SplatArgs
   $WebClient.DownloadFileAsync("$Link", "$Path")
+  $Timeout = 0
   While (-not $Global:IsDownloaded) {
     Start-Sleep -Seconds 3
+    $Timeout += 3
+    if ($Timeout -gt 120){
+      # TODO: instead of timeout, checksum download before installing.
+      write-log -Message:('Error: Download of agent installer could not complete within 120 seconds, exiting.') -Level Error
+      exit
+    }
   } # While
   $DownloadCompletedEventSubscriber.Dispose()
   $WebClient.Dispose()
-
 }
 
 #Check if program is on system
