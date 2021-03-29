@@ -5,20 +5,13 @@ Release Date: March 29, 2021
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Improve registry load, copy and unload steps.
+Added a 5 min timeout to the JumpCloud Agent Download function
 ```
-
-#### FEATURES:
-
-{{Fill in the Features}}
 
 #### IMPROVEMENTS:
 
-{{Fill in the Improvements}}
-
-#### BUG FIXES:
-
-{{Fill in the Bug Fixes}}
+Registry load, copy and unload steps have been streamlined. Before modifying a user's registry, the files are first checked to unsure they can be loaded and unloaded without error. After loading the profiles for modification the copy step will only modify the backup registry file. Once all modifications are complete, the registry files recognized by windows are renamed for backup and the backup files are renamed so windows recognizes those files on profile login. This should prevent profiles being left in a half-migrated state if some step in the process fails.
 
 ## 1.6.1
 
