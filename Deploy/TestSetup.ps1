@@ -21,6 +21,12 @@ $msvc2013x86Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4
 $msvc2013x64Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x64.exe'
 $msvc2013x86Install = "$usmtTempPath$msvc2013x86File /install /quiet /norestart"
 $msvc2013x64Install = "$usmtTempPath$msvc2013x64File /install /quiet /norestart"
+$msvc2015x86File = 'vc_redist.x86.exe'
+$msvc2015x64File = 'vc_redist.x64.exe'
+$msvc2015x86Link = 'https://aka.ms/vs/16/release/vc_redist.x86.exe'
+$msvc2015x64Link = 'https://aka.ms/vs/16/release/vc_redist.x64.exe'
+$msvc2015x86Install = "$usmtTempPath$msvc2015x86File /install /quiet /norestart"
+$msvc2015x64Install = "$usmtTempPath$msvc2015x64File /install /quiet /norestart"
 
 # JumpCloud Agent Installation Variables
 $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
@@ -72,4 +78,4 @@ if (!(Test-path $jcAdmuTempPath)) {
   if (!(Test-path $usmtTempPath)){
     new-item -ItemType Directory -Force -Path $usmtTempPath
   }
-    DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
+DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -msvc2015x64link:($msvc2015x64Link) -msvc2015path:($jcAdmuTempPath) -msvc2015x64file:($msvc2015x64File) -msvc2015x64install:($msvc2015x64Install) -msvc2015x86link:($msvc2015x86Link) -msvc2015x86file:($msvc2015x86File) -msvc2015x86install:($msvc2015x86Install)
