@@ -6,7 +6,6 @@ Release Date: March 29, 2021
 
 ```
 Improve registry load, copy and unload steps.
-Added a 5 min timeout to the JumpCloud Agent Download function
 ```
 
 #### IMPROVEMENTS:
