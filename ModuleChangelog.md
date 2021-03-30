@@ -1,3 +1,17 @@
+## 1.6.2
+
+Release Date: March 29, 2021
+
+#### RELEASE NOTES
+
+```
+Improve registry load, copy and unload steps.
+```
+
+#### IMPROVEMENTS:
+
+Registry load, copy and unload steps have been streamlined. Before modifying a user's registry, the files are first checked to unsure they can be loaded and unloaded without error. After loading the profiles for modification the copy step will only modify the backup registry file. Once all modifications are complete, the registry files recognized by windows are renamed for backup and the backup files are renamed so windows recognizes those files on profile login. This should prevent profiles being left in a half-migrated state if some step in the process fails.
+
 ## 1.6.1
 
 Release Date: March 16, 2021
