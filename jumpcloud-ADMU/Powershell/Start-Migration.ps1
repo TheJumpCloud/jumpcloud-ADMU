@@ -562,7 +562,8 @@ Function Remove-ItemIfExists {
 }
 
 #Download $Link to $Path
-Function DownloadLink($Link, $Path) {
+Function DownloadLink($Link, $Path)
+{
   $WebClient = New-Object -TypeName:('System.Net.WebClient')
   $Global:IsDownloaded = $false
   $SplatArgs = @{ InputObject = $WebClient
@@ -571,15 +572,9 @@ Function DownloadLink($Link, $Path) {
   }
   $DownloadCompletedEventSubscriber = Register-ObjectEvent @SplatArgs
   $WebClient.DownloadFileAsync("$Link", "$Path")
-  $Timeout = 0
-  While (-not $Global:IsDownloaded) {
+  While (-not $Global:IsDownloaded)
+  {
     Start-Sleep -Seconds 3
-    $Timeout += 3
-    if ($Timeout -gt 300){
-      # TODO: instead of timeout, checksum download before installing.
-      write-log -Message:('Error: Download of agent installer could not complete within 300 seconds, exiting.') -Level Error
-      exit
-    }
   } # While
   $DownloadCompletedEventSubscriber.Dispose()
   $WebClient.Dispose()
@@ -721,18 +716,12 @@ Function DownloadAndInstallAgent(
   , [System.String]$msvc2013x86Link
   , [System.String]$msvc2013x86File
   , [System.String]$msvc2013x86Install
-  , [System.String]$msvc2015x64Link
-  , [System.String]$msvc2015Path
-  , [System.String]$msvc2015x64File
-  , [System.String]$msvc2015x64Install
-  , [System.String]$msvc2015x86Link
-  , [System.String]$msvc2015x86File
-  , [System.String]$msvc2015x86Install
 ) {
   If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64")))
   {
     Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x64')
-    DownloadLink -Link $msvc2013x64Link -Path ($usmtTempPath + $msvc2013x64File)
+    (New-Object System.Net.WebClient).DownloadFile("${msvc2013x64Link}", ($usmtTempPath + $msvc2013x64File))
+    # DownloadLink -Link $msvc2013x64Link -Path ($usmtTempPath + $msvc2013x64File)
     Invoke-Expression -Command:($msvc2013x64Install)
     $timeout = 0
     While (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64")))
@@ -749,7 +738,8 @@ Function DownloadAndInstallAgent(
   If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86")))
   {
     Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x86')
-    DownloadLink -Link $msvc2013x86Link -Path ($usmtTempPath + $msvc2013x86File)
+    (New-Object System.Net.WebClient).DownloadFile("${msvc2013x86Link}", ($usmtTempPath + $msvc2013x86File))
+    # DownloadLink -Link $msvc2013x86Link -Path ($usmtTempPath + $msvc2013x86File)
     Invoke-Expression -Command:($msvc2013x86Install)
     $timeout = 0
     While (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86")))
@@ -763,44 +753,11 @@ Function DownloadAndInstallAgent(
       }
     }
   }
-  If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2015 x64"))) {
-    Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2015 x64')
-    DownloadLink -Link $msvc2015x64Link -Path ($usmtTempPath + $msvc2015x64File)
-    Invoke-Expression -Command:($msvc2015x64Install)
-    $timeout = 0
-    While (!(Check_Program_Installed("Microsoft Visual C\+\+ 2015 x64")))
-    {
-      Start-Sleep 5
-      Write-Log -Message:("Waiting for Visual C++ 2015 x64 to finish installing")
-      $timeout += 1
-      if ($timeout -eq 10)
-      {
-        break
-      }
-    }
-    Write-Log -Message:('JCAgent prereq installed')
-  }
-  If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2015 x86"))) {
-    Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2015 x86')
-    DownloadLink -Link $msvc2015x86Link -Path ($usmtTempPath + $msvc2015x86File)
-    Invoke-Expression -Command:($msvc2015x86Install)
-    $timeout=0
-    While (!(Check_Program_Installed("Microsoft Visual C\+\+ 2015 x86")))
-    {
-      Start-Sleep 5
-      Write-Log -Message:("Waiting for Visual C++ 2015 x86 to finish installing")
-      $timeout+=1
-      if ($timeout -eq 10)
-      {
-        break
-      }
-    }
-    Write-Log -Message:('JCAgent prereq installed')
-  }
   If (!(AgentIsOnFileSystem)) {
     Write-Log -Message:('Downloading JCAgent Installer')
     #Download Installer
-    DownloadLink -Link $AGENT_INSTALLER_URL -Path $AGENT_INSTALLER_PATH
+    (New-Object System.Net.WebClient).DownloadFile("${AGENT_INSTALLER_URL}", ($AGENT_INSTALLER_PATH))
+    # DownloadLink -Link $AGENT_INSTALLER_URL -Path $AGENT_INSTALLER_PATH
     Write-Log -Message:('JumpCloud Agent Download Complete')
     Write-Log -Message:('Running JCAgent Installer')
     #Run Installer
@@ -808,7 +765,7 @@ Function DownloadAndInstallAgent(
     InstallAgent
     Start-Sleep -s 5
   }
-  If (Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64") -and Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86") -and Check_Program_Installed("Microsoft Visual C\+\+ 2015 x64") -and Check_Program_Installed("Microsoft Visual C\+\+ 2015 x86") -and Check_Program_Installed("jumpcloud")) {
+  If (Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64") -and Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86") -and Check_Program_Installed("jumpcloud")) {
     Return $true
   }
   Else {
@@ -6195,14 +6152,6 @@ Function Start-Migration {
     $msvc2013x64Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x64.exe'
     $msvc2013x86Install = "$usmtTempPath$msvc2013x86File /install /quiet /norestart"
     $msvc2013x64Install = "$usmtTempPath$msvc2013x64File /install /quiet /norestart"
-    $msvc2015x86File = 'vc_redist.x86.exe'
-    $msvc2015x64File = 'vc_redist.x64.exe'
-    $msvc2015x86Name = "Microsoft Visual C\+\+ 2015 x86"
-    $msvc2015x64Name = "Microsoft Visual C\+\+ 2015 x64"
-    $msvc2015x86Link = 'https://aka.ms/vs/16/release/vc_redist.x86.exe'
-    $msvc2015x64Link = 'https://aka.ms/vs/16/release/vc_redist.x64.exe'
-    $msvc2015x86Install = "$usmtTempPath$msvc2015x86File /install /quiet /norestart"
-    $msvc2015x64Install = "$usmtTempPath$msvc2015x64File /install /quiet /norestart"
 
     write-log -Message("The Selected Migration user is: $SelectedUserName")
     $SelectedUserSid = CheckUsernameorSID $SelectedUserName
@@ -6270,7 +6219,7 @@ Function Start-Migration {
         Remove-ItemIfExists -Path "$windowsDrive\Program Files\Jumpcloud\" -Recurse
       }
       # Agent Installer
-      DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -msvc2015x64link:($msvc2015x64Link) -msvc2015path:($jcAdmuTempPath) -msvc2015x64file:($msvc2015x64File) -msvc2015x64install:($msvc2015x64Install) -msvc2015x86link:($msvc2015x86Link) -msvc2015x86file:($msvc2015x86File) -msvc2015x86install:($msvc2015x86Install)
+      DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
       start-sleep -seconds 20
       if ((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=1') {
         Write-Log -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
