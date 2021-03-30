@@ -482,7 +482,7 @@ Function Get-WindowsDrive {
      Modified: 11/24/2015 09:30:19 AM
   .PARAMETER Message
      Message is the content that you wish to add to the log file.
-  .PARAMETER Pathf
+  .PARAMETER Path
      The path to the log file to which you would like to write. By default the function will
      create the path and file if it does not exist.
   .PARAMETER Level
