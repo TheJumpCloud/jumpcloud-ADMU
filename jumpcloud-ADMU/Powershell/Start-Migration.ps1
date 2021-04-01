@@ -8,7 +8,7 @@ function BindUsernameToJCSystem
   )
   Begin
   {
-    $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
+    $config = get-content "$WindowsDrive\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
     $regex = 'systemKey\":\"(\w+)\"'
     $systemKey = [regex]::Match($config, $regex).Groups[1].Value
   }
@@ -114,31 +114,31 @@ function CheckUsernameorSID
     }
   }
 }
-function DenyInteractiveLogonRight 
+function DenyInteractiveLogonRight
 {
   param (
     [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
     $SID
   )
   # Add migrating user to denylogon rights
-  $secpolFile = "c:\windows\temp\ur_orig.inf"
+  $secpolFile = "$WindowsDrive\Windows\temp\ur_orig.inf"
   if (Test-Path $secpolFile)
   {
     Remove-Item $secpolFile -Force
   }
-  secedit /export /areas USER_RIGHTS /cfg c:\windows\temp\ur_orig.inf
+  secedit /export /areas USER_RIGHTS /cfg $windowsDrive\Windows\temp\ur_orig.inf
   $secpol = (Get-Content $secpolFile)
   $regvaluestring = $secpol | Where-Object { $_ -like "*SeDenyInteractiveLogonRight*" }
   $regvaluestringID = [array]::IndexOf($secpol, $regvaluestring)
   $oldvalue = (($secpol | Select-String -Pattern 'SeDenyInteractiveLogonRight' | Out-String).trim()).substring(30)
   $newvalue = ('*' + $SID + ',' + $oldvalue.trim())
   $secpol[$regvaluestringID] = 'SeDenyInteractiveLogonRight = ' + $newvalue
-  $secpol | out-file c:\windows\temp\ur_new.inf -force
-  secedit /configure /db secedit.sdb /cfg c:\windows\temp\ur_new.inf /areas USER_RIGHTS
+  $secpol | out-file $windowsDrive\Windows\temp\ur_new.inf -force
+  secedit /configure /db secedit.sdb /cfg $windowsDrive\Windows\temp\ur_new.inf /areas USER_RIGHTS
 }
 function AllowInteractiveLogonRight
 {
-  $secpolFile = "c:\windows\temp\ur_orig.inf"
+  $secpolFile = "$windowsDrive\Windows\temp\ur_orig.inf"
   secedit /configure /db secedit.sdb /cfg $secpolFile /areas USER_RIGHTS
 }
 function Register-NativeMethod
@@ -597,6 +597,49 @@ Function Test-UserRegistryLoadState
     }
   }
 
+}
+
+Function Backup-RegistryHive
+{
+  [CmdletBinding()]
+  param (
+    [Parameter(Mandatory = $true)]
+    [System.String]
+    $profileImagePath
+  )
+
+  try
+  {
+    Copy-Item -Path "$profileImagePath\NTUSER.DAT" -Destination "$profileImagePath\NTUSER.DAT.BAK" -ErrorAction Stop
+    Copy-Item -Path "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -ErrorAction Stop
+  }
+  catch
+  {
+    write-log -Message("Could Not Backup Registry Hives in $($profileImagePath): Exiting...")
+    write-log -Message($_.Exception.Message)
+    exit
+  }
+}
+
+Function Get-ProfileImagePath
+{
+  [CmdletBinding()]
+  param (
+    [Parameter(Mandatory = $true)]
+    [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
+    [System.String]
+    $UserSid
+  )
+  $profileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $UserSid) -Name 'ProfileImagePath'
+  if ([System.String]::IsNullOrEmpty($profileImagePath))
+  {
+    Write-log -Message("Could not get the profile path for $UserSid exiting...") -Level Error
+    exit
+  }
+  else
+  {
+    return $profileImagePath
+  }
 }
 Function Get-WindowsDrive
 {
@@ -1249,6 +1292,16 @@ Function Start-Migration
     $EVENT_LOGGER_KEY_NAME = "hklm:\SYSTEM\CurrentControlSet\services\eventlog\Application\JumpCloud-agent"
     $INSTALLER_BINARY_NAMES = "JumpCloudInstaller.exe,JumpCloudInstaller.tmp"
 
+    # Track migration steps
+    $admuTracker = @{
+      newUser = $false;
+      copyRegistry = $false;
+      renameOrginal = $false;
+      renameBackup = $false;
+      ntfsAccess = $false;
+      ntfsPermissions = $false;
+    }
+
     Write-Log -Message:('Creating JCADMU Temporary Path in ' + $jcAdmuTempPath)
     if (!(Test-path $jcAdmuTempPath))
     {
@@ -1311,21 +1364,16 @@ Function Start-Migration
       Write-Log -Message:('JumpCloud agent is already installed on the system.')
     }
 
+    ### Begin Backup Registry for Selected User ###
     Write-Log -Message:('Creating Backup of User Registry Hive')
-    $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
-    try
-    {
-      Copy-Item -Path "$olduserprofileimagepath\NTUSER.DAT" -Destination "$olduserprofileimagepath\NTUSER.DAT.BAK" -ErrorAction Stop
-      Copy-Item -Path "$olduserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$olduserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -ErrorAction Stop
-    }
-    catch
-    {
-      write-log -Message("Could Not Backup Registry Hives in $($olduserprofileimagepath): Exiting...")
-      write-log -Message($_.Exception.Message)
-      exit
-    }
-    Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
+    # Get Profile Image Path from Registry
+    $oldUserProfileImagePath = Get-ProfileImagePath -UserSid $SelectedUserSID
+    # Backup Registry NTUSER.DAT and UsrClass.dat files
+    Backup-RegistryHive -profileImagePath $olduserprofileimagepath
+    ### End Backup Registry for Selected User ###
+
     ### Begin Create New User Region ###
+    Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
     $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
     New-localUser -Name $JumpCloudUserName -password $newUserPassword -ErrorVariable userExitCode
     if ($userExitCode)
@@ -1343,6 +1391,7 @@ Function Start-Migration
       exit
     }
     # TODO: If success, Track user creation for reversal step
+    # $admuTracker.newUser = $true
     ### End Create New User Region ###
 
     ### Begin Regedit Block ###
@@ -1350,29 +1399,17 @@ Function Start-Migration
     # Set the New User Profile Path
     # Now get NewUserSID
     $NewUserSID = Get-SID -User $JumpCloudUserName
-    $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
-    if ([System.String]::IsNullOrEmpty($newUserProfileImagePath))
-    {
-      Write-Log -Message("Could not get the profile path for $jumpcloudusername exiting...")
-      exit
-    }
-    # backup new user registry hives
-    try
-    {
-      Copy-Item -Path "$newuserprofileimagepath\NTUSER.DAT" -Destination "$newuserprofileimagepath\NTUSER.DAT.BAK" -ErrorAction Stop
-      Copy-Item -Path "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$newuserprofileimagepath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -ErrorAction Stop
-    }
-    catch
-    {
-      write-log -Message("Could Not Backup Registry Hives in $($newuserprofileimagepath): Exiting...")
-      write-log -Message($_.Exception.Message)
-      exit
-    }
+    # Get profile image path for new user
+    $newUserProfileImagePath = Get-ProfileImagePath -UserSid $NewUserSID
+    ### Begin backup user registry for new user
+    Backup-RegistryHive -profileImagePath $newuserprofileimagepath
+    ### End backup user registry for new user
 
     # Test Registry Access before edits
     Write-Log -Message:('Verifying Registry Hives can be loaded and unloaded')
     Test-UserRegistryLoadState -ProfilePath $newuserprofileimagepath -UserSid $newUserSid
     Test-UserRegistryLoadState -ProfilePath $olduserprofileimagepath -UserSid $SelectedUserSID
+    # End Test Registry
 
     Write-Log -Message:('Begin new local user registry copy')
     # Give us admin rights to modify
@@ -1391,6 +1428,8 @@ Function Start-Migration
     # Load Selected User Profile Keys
     Set-UserRegistryLoadState -op "Load" -ProfilePath $olduserprofileimagepath -UserSid $SelectedUserSID
     # Copy from "SelectedUser" to "NewUser"
+
+    # TODO: Turn this into a function
     reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
     if ($?)
     {
@@ -1414,6 +1453,7 @@ Function Start-Migration
     #TODO: Check that we can unload at this state
     #TODO: Reverse if we fail at this state
 
+    #TODO: Turn this into a function
     # Set Registry Check Key for New User
     # Check that the installed components key does not exist
     if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS")
@@ -1442,6 +1482,7 @@ Function Start-Migration
       Set-ValueToKey -registryRoot Users -keyPath "$($newusersid)_admu\SOFTWARE\JCADMU" -Name "previousSID" -value "$SelectedUserSID" -regValueKind String
       Set-ValueToKey -registryRoot Users -keyPath "$($newusersid)_admu\SOFTWARE\JCADMU" -Name "previousProfilePath" -value "$olduserprofileimagepath" -regValueKind String
     }
+    ### End reg key check for new user
 
     # Unload "Selected" and "NewUser"
     Set-UserRegistryLoadState -op "Unload" -ProfilePath $newuserprofileimagepath -UserSid $NewUserSID
@@ -1457,6 +1498,7 @@ Function Start-Migration
     {
       write-log -Message("Could not copy backup registry hives to the destination location in $($olduserprofileimagepath): Exiting...")
       write-log -Message($_.Exception.Message)
+      #TODO: split into function + reverse step
       exit
     }
 
@@ -1471,6 +1513,7 @@ Function Start-Migration
     {
       write-log -Message("Could not rename origional registry files for backup purposes: Exiting...")
       write-log -Message($_.Exception.Message)
+      #TODO: split into function + reverse step
       exit
     }
     # finally set .dat.back registry files to the .dat in the profileimagepath
@@ -1484,6 +1527,7 @@ Function Start-Migration
     {
       write-log -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
       write-log -Message($_.Exception.Message)
+      #TODO: split into function + reverse step
       exit
     }
 
@@ -1508,13 +1552,15 @@ Function Start-Migration
     }
     # TODO: reverse track this if we fail later
 
+    # Set profile image path of new and selected user
     Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $SelectedUserName + '.' + $NetBiosName)
     Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUserName)
 
+    # logging
     Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath + ' New User SID: ' + $NewUserSID)
     Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath + ' Old User SID: ' + $SelectedUserSID)
-    Write-Log -Message:("NTFS ACLs on domain $windowsDrive\users\ dir")
 
+    Write-Log -Message:("NTFS ACLs on domain $windowsDrive\users\ dir")
     #ntfs acls on domain $windowsDrive\users\ dir
     $NewSPN_Name = $env:COMPUTERNAME + '\' + $JumpCloudUserName
     $Acl = Get-Acl $newuserprofileimagepath
@@ -1567,8 +1613,8 @@ Function Start-Migration
     }
     ### End Active Setup Registry Entry Region ###
 
+    # Get UWP apps from selected user
     Write-Log -Message:('Updating UWP Apps for new user')
-    $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
     $path = $newuserprofileimagepath + '\AppData\Local\JumpCloudADMU'
     If (!(test-path $path))
     {
@@ -1600,7 +1646,7 @@ Function Start-Migration
 
     # Download the appx register exe
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest -Uri 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -OutFile 'C:\windows\uwp_jcadmu.exe'
+    Invoke-WebRequest -Uri "https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe" -OutFile "$windowsDrive\Windows\uwp_jcadmu.exe"
     Start-Sleep -Seconds 5
     try
     {
