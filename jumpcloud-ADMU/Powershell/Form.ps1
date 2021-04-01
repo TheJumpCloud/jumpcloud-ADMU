@@ -36,8 +36,6 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
             <Grid HorizontalAlignment="Left" Height="90" VerticalAlignment="Top" Width="321" Margin="10,0,-2,0">
                 <Label Content="Local Computer Name:" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
                 <Label Name="lbComputerName" Content="" HorizontalAlignment="Left" Margin="191,10,0,0" VerticalAlignment="Top" Width="120" FontWeight="Normal"/>
-                <Label Content="C:\ Free Disk Space:" HorizontalAlignment="Left" Margin="10,57,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                <Label Name="lbcfreespace" Content="" HorizontalAlignment="Left" Margin="191,57,0,0" VerticalAlignment="Top" Width="120" FontWeight="Normal"/>
             </Grid>
         </GroupBox>
         <GroupBox Header="Account Migration Information" HorizontalAlignment="Left" Height="92" Margin="532,459,0,0" VerticalAlignment="Top" Width="471" FontWeight="Bold">
@@ -227,7 +225,6 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
 
 #SystemInformation
 $lbComputerName.Content = $WmiComputerSystem.Name
-$lbcfreespace.Content = $freespace
 
 #DomainInformation
 $lbDomainName.Content = $DomainName
@@ -414,7 +411,25 @@ $tbTempPassword.add_TextChanged( {
 # Change button when profile selected
 $lvProfileList.Add_SelectionChanged( {
         $script:SelectedUserName = ($lvProfileList.SelectedItem.username)
+        New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
+            try {
+                $SelectedUserSID = ((New-Object System.Security.Principal.NTAccount($script:SelectedUserName)).Translate( [System.Security.Principal.SecurityIdentifier]).Value)
+            }
+            catch {
+                $SelectedUserSID = $script:SelectedUserName
+            }
+        $hku = ('HKU:\'+$SelectedUserSID)
+        if (Test-Path -Path $hku) {
+            $script:bDeleteProfile.Content = "User Registry Loaded"
+            $script:bDeleteProfile.IsEnabled = $false
+            $script:tbJumpCloudUserName.IsEnabled = $false
+            $script:tbTempPassword.IsEnabled = $false
+        }
+        else {
+            $script:tbJumpCloudUserName.IsEnabled = $true
+            $script:tbTempPassword.IsEnabled = $true
+        }
     })
 
 $bDeleteProfile.Add_Click( {
