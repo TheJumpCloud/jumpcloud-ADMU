@@ -6248,7 +6248,7 @@ Function Start-Migration {
       {
         write-log -Message("Could Not Backup Registry Hives: Exiting...")
         write-log -Message($_.Exception.Message)
-        exit
+        exit 1
       }
       Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
       # Create New User
@@ -6258,7 +6258,7 @@ Function Start-Migration {
       {
         Write-Log -Message:("$userExitCode")
         Write-Log -Message:("The user: $JumpCloudUserName could not be created, exiting")
-        exit
+        exit 1
       }
       # Initalize the Profile
       New-LocalUserProfile -username $JumpCloudUserName -ErrorVariable profileInit
@@ -6266,7 +6266,7 @@ Function Start-Migration {
       {
         Write-Log -Message:("$profileInit")
         Write-Log -Message:("The user: $JumpCloudUserName could not be initalized, exiting")
-        exit
+        exit 1
       }
       # TODO: If success, Track user creation for reversal step
 
@@ -6279,7 +6279,7 @@ Function Start-Migration {
         if ([System.String]::IsNullOrEmpty($newUserProfileImagePath))
         {
             Write-Log -Message("Could not get the profile path for $jumpcloudusername exiting...")
-            exit
+            exit 1
         }
         # backup new user registry hives
         try
@@ -6291,13 +6291,19 @@ Function Start-Migration {
         {
             write-log -Message("Could Not Backup Registry Hives in $($newuserprofileimagepath): Exiting...")
             write-log -Message($_.Exception.Message)
-            exit
+            exit 1
         }
 
         # Test Registry Access before edits
         Write-Log -Message:('Verifying Registry Hives can be loaded and unloaded')
-        Test-UserRegistryLoadState -ProfilePath $newuserprofileimagepath -UserSid $newUserSid
-        Test-UserRegistryLoadState -ProfilePath $olduserprofileimagepath -UserSid $SelectedUserSID
+        try{
+          Test-UserRegistryLoadState -ProfilePath $newuserprofileimagepath -UserSid $newUserSid
+          Test-UserRegistryLoadState -ProfilePath $olduserprofileimagepath -UserSid $SelectedUserSID
+        }
+        catch{
+          Write-Log -Message:('Count not load and unload registry of migration user, exiting')
+          exit 1
+        }
 
         Write-Log -Message:('Begin new local user registry copy')
         # Give us admin rights to modify
@@ -6382,7 +6388,7 @@ Function Start-Migration {
         {
             write-log -Message("Could not copy backup registry hives to the destination location in $($olduserprofileimagepath): Exiting...")
             write-log -Message($_.Exception.Message)
-            exit
+            exit 1
         }
 
         # Rename original ntuser & usrclass .dat files to ntuser_original.dat & usrclass_original.dat for backup and reversal if needed
@@ -6396,7 +6402,7 @@ Function Start-Migration {
         {
             write-log -Message("Could not rename origional registry files for backup purposes: Exiting...")
             write-log -Message($_.Exception.Message)
-            exit
+            exit 1
         }
         # finally set .dat.back registry files to the .dat in the profileimagepath
         Write-Log -Message:('rename ntuser.dat.bak to ntuser.dat (replace step)')
@@ -6409,7 +6415,7 @@ Function Start-Migration {
         {
             write-log -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
             write-log -Message($_.Exception.Message)
-            exit
+            exit 1
         }
 
         # Test Condition for same names
@@ -6419,17 +6425,50 @@ Function Start-Migration {
         {
             Write-log -Message:("Selected User Path and New User Path Match")
             # Remove the New User Profile Path, we want to just use the old Path
-            Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
+            try{
+              Write-Log -Message:("Attempting to remove newly created $newUserProfileImagePath")
+              start-sleep 1
+              icacls $newUserProfileImagePath /reset /t /c /l *> $null
+              start-sleep 1
+              # Reset permissions on NewUserProfileImagePath
+              # -ErrorAction Stop; Remove-Item doesn't throw terminating errors
+              Remove-Item -Path ($newUserProfileImagePath) -Force -Recurse -ErrorAction Stop
+            }
+            catch{
+              Write-Log -Message:("Remove $newUserProfileImagePath failed, renaming to unusedADMUProfilere")
+              Rename-Item -Path $newUserProfileImagePath -NewName "unusedADMUProfilere" -ErrorAction Stop
+            }
             # Set the New User Profile Image Path to Old User Profile Path (they are the same)
             $newuserprofileimagepath = $olduserprofileimagepath
         }
         else
         {
             write-log -Message:("Selected User Path and New User Path Differ")
-            # Remove the New User Profile Path, in this case we will rename the home folder to the desired name
-            Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
-            # Rename the old user profile path to the new name
-            Rename-Item -Path $olduserprofileimagepath -NewName $JumpCloudUserName
+            try{
+              Write-Log -Message:("Attempting to remove newly created $newUserProfileImagePath")
+              start-sleep 1
+              icacls $newUserProfileImagePath /reset /t /c /l *> $null
+              start-sleep 1
+              # Reset permissions on NewUserProfileImagePath
+              # -ErrorAction Stop; Remove-Item doesn't throw terminating errors
+              Remove-Item -Path ($newUserProfileImagePath) -Force -Recurse -ErrorAction Stop
+            }
+            catch{
+              Write-Log -Message:("Remove $newUserProfileImagePath failed, renaming to unusedADMUProfilere")
+              Rename-Item -Path $newUserProfileImagePath -NewName "unusedADMUProfilere" -ErrorAction Stop
+            }
+            try
+            {
+              Write-Log -Message:("Attempting to rename newly $oldUserProfileImagePath to $JumpcloudUserName")
+              # Rename the old user profile path to the new name
+              # -ErrorAction Stop; Rename-Item doesn't throw terminating errors
+              Rename-Item -Path $oldUserProfileImagePath -NewName $JumpCloudUserName -ErrorAction Stop
+            }
+            catch
+            {
+              Write-Log -Message:("Unable to rename user profile path to new name - $JumpCloudUserName.")
+              exit 1
+            }
         }
         # TODO: reverse track this if we fail later
 
