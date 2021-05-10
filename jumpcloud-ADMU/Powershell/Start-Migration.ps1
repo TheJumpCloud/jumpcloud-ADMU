@@ -6425,7 +6425,19 @@ Function Start-Migration {
         {
             Write-log -Message:("Selected User Path and New User Path Match")
             # Remove the New User Profile Path, we want to just use the old Path
-            Remove-Item -Path ($newuserprofileimagepath) -Force -Recurse
+            try{
+              Write-Log -Message:("Attempting to remove newly created $newUserProfileImagePath")
+              start-sleep 1
+              $resetPermissions = icacls $newUserProfileImagePath /reset /t /c /l | Out-Null
+              start-sleep 1
+              # Reset permissions on NewUserProfileImagePath
+              # -ErrorAction Stop; Remove-Item doesn't throw terminating errors
+              Remove-Item -Path ($newUserProfileImagePath) -Force -Recurse -ErrorAction Stop
+            }
+            catch{
+              Write-Log -Message:("Remove $newUserProfileImagePath failed, renaming to unusedADMUProfilere")
+              Rename-Item -Path $newUserProfileImagePath -NewName "unusedADMUProfilere" -ErrorAction Stop
+            }
             # Set the New User Profile Image Path to Old User Profile Path (they are the same)
             $newuserprofileimagepath = $olduserprofileimagepath
         }
@@ -6434,8 +6446,10 @@ Function Start-Migration {
             write-log -Message:("Selected User Path and New User Path Differ")
             try{
               Write-Log -Message:("Attempting to remove newly created $newUserProfileImagePath")
+              start-sleep 1
+              $resetPermissions = icacls $newUserProfileImagePath /reset /t /c /l | Out-Null
+              start-sleep 1
               # Reset permissions on NewUserProfileImagePath
-              icacls $newUserProfileImagePath /reset /c /l | Out-Null
               # -ErrorAction Stop; Remove-Item doesn't throw terminating errors
               Remove-Item -Path ($newUserProfileImagePath) -Force -Recurse -ErrorAction Stop
             }
@@ -6445,6 +6459,7 @@ Function Start-Migration {
             }
             try
             {
+              Write-Log -Message:("Attempting to rename newly $oldUserProfileImagePath to $JumpcloudUserName")
               # Rename the old user profile path to the new name
               # -ErrorAction Stop; Rename-Item doesn't throw terminating errors
               Rename-Item -Path $oldUserProfileImagePath -NewName $JumpCloudUserName -ErrorAction Stop
