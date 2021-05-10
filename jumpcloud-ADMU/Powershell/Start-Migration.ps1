@@ -6428,7 +6428,7 @@ Function Start-Migration {
             try{
               Write-Log -Message:("Attempting to remove newly created $newUserProfileImagePath")
               start-sleep 1
-              $resetPermissions = icacls $newUserProfileImagePath /reset /t /c /l | Out-Null
+              icacls $newUserProfileImagePath /reset /t /c /l *> $null
               start-sleep 1
               # Reset permissions on NewUserProfileImagePath
               # -ErrorAction Stop; Remove-Item doesn't throw terminating errors
@@ -6447,7 +6447,7 @@ Function Start-Migration {
             try{
               Write-Log -Message:("Attempting to remove newly created $newUserProfileImagePath")
               start-sleep 1
-              $resetPermissions = icacls $newUserProfileImagePath /reset /t /c /l | Out-Null
+              icacls $newUserProfileImagePath /reset /t /c /l *> $null
               start-sleep 1
               # Reset permissions on NewUserProfileImagePath
               # -ErrorAction Stop; Remove-Item doesn't throw terminating errors

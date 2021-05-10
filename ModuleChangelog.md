@@ -5,20 +5,16 @@ Release Date: April 13, 2021
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Some remote agents or RMM tools may invoke commands as NT Authority\System. If the ADMU is remotely invoked with those tools and run as the  NT Authority\System account, previous versions of the ADMU would fail to migrate sucessfully. v1.6.3 addresses this and resets permissions of the blank profile so that NT Authority\System can delete the blank profile after it's NTUSER.DAT & UsrClass.dat files have been copied back to the user-to-migrate's profile.
 ```
-
-#### FEATURES:
-
-{{Fill in the Features}}
 
 #### IMPROVEMENTS:
 
-{{Fill in the Improvements}}
+Exit 1 (error) conditions explicitly defined when the tool fails to complete migration.
 
 #### BUG FIXES:
 
-{{Fill in the Bug Fixes}}
+Fixes a bug for some remote agent or RMM tools which would cause the ADMU tool to fail migration.
 
 ## 1.6.2
 
