@@ -20,4 +20,4 @@ jobs:
           shell: pwsh.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Build.ps1
+            ./Deploy/Build.ps1
