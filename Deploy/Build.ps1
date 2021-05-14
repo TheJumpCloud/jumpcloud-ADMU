@@ -36,7 +36,7 @@ If (-not [System.String]::IsNullOrEmpty($NewContent))
     If (-not [System.String]::IsNullOrEmpty($Version))
     {
     cd 'c:\Users\circleci\project\Deploy'
-    Invoke-ps2exe -inputFile '.\ADMU.ps1' -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright '(c) 2021' -version $Version.Matches.Value -company 'JumpCloud' -requireAdmin -iconfile '.\admu.ico'
+    Invoke-ps2exe -inputFile '.\ADMU.ps1'
     Write-Host "gui_jcadmu.exe was generated successfully"
     }
     Else
