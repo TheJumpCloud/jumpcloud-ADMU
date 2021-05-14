@@ -38,7 +38,8 @@ If (-not [System.String]::IsNullOrEmpty($NewContent))
     get-installedmodule -name ps2exe
     Start-Sleep -s 15
     cd 'c:\Users\circleci\project\Deploy'
-    Invoke-ps2exe -inputFile '.\ADMU.ps1'
+    Invoke-ps2exe 
+    #-inputFile '.\ADMU.ps1'
     Write-Host "gui_jcadmu.exe was generated successfully"
     }
     Else
