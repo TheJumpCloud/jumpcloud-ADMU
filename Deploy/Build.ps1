@@ -7,7 +7,7 @@ else
     Write-Host "Installing ps2exe"
     Install-Module -Name:('ps2exe') -Force -Scope:('CurrentUser') -SkipPublisherCheck
 }
-$RootPath = "C:\Users\circleci\project\"
+$RootPath = "C:\Users\circleci\project"
 $Output = $RootPath + '\Deploy\ADMU.ps1'
 $FormPath = $RootPath + '\jumpcloud-ADMU\Powershell\Form.ps1'
 $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
