@@ -5,7 +5,7 @@ if (Get-Module -ListAvailable -Name ps2exe)
 else
 {
     Write-Host "Installing ps2exe"
-    Install-Module -Name:('ps2exe') -RequiredVersion 1.0.3 -Force -SkipPublisherCheck
+    Install-Module -Name:('ps2exe') -RequiredVersion 1.0.8 -Force -SkipPublisherCheck
 }
 $RootPath = "C:\Users\circleci\project"
 $Output = $RootPath + '\Deploy\ADMU.ps1'
