@@ -14,3 +14,10 @@ jobs:
       # virtual machine environment
       - checkout
       - run: Write-Host 'Hello, Windows'
+      
+      - run:
+          name: Build
+          shell: pwsh.exe
+          command: |
+            $ErrorActionPreference = 'Stop'
+            ./Build.ps1
