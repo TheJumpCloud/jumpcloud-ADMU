@@ -36,6 +36,7 @@ If (-not [System.String]::IsNullOrEmpty($NewContent))
     If (-not [System.String]::IsNullOrEmpty($Version))
     {
     cd 'c:\Users\circleci\project\Deploy'
+    pwd
     Invoke-ps2exe -inputFile '.\ADMU.ps1'
     Write-Host "gui_jcadmu.exe was generated successfully"
     }
