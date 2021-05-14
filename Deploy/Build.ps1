@@ -35,7 +35,7 @@ If (-not [System.String]::IsNullOrEmpty($NewContent))
     $Version = Select-String -Path:($FormPath) -Pattern:($VersionRegex)
     If (-not [System.String]::IsNullOrEmpty($Version))
     {
-    'ps2exe' -inputFile ($RootPath + '\Deploy\ADMU.ps1') -outputFile ($RootPath + '\jumpcloud-ADMU\exe\gui_jcadmu.exe') -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright '(c) 2021' -version $Version.Matches.Value -company 'JumpCloud' -requireAdmin -iconfile ($RootPath + '\Deploy\admu.ico')
+    ps2exe -inputFile ($RootPath + '\Deploy\ADMU.ps1') -outputFile ($RootPath + '\jumpcloud-ADMU\exe\gui_jcadmu.exe') -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright '(c) 2021' -version $Version.Matches.Value -company 'JumpCloud' -requireAdmin -iconfile ($RootPath + '\Deploy\admu.ico')
     Write-Host "gui_jcadmu.exe was generated successfully"
     }
     Else
@@ -55,7 +55,7 @@ $branchuwp = ($RootPath + '\Deploy\uwp_jcadmu.ps1')
 $compare = (Compare-Object -ReferenceObject (Get-Content $masteruwp) -DifferenceObject (Get-Content $branchuwp))
 
 if (-not [System.String]::IsNullOrEmpty($compare)) {
-    'ps2exe' -inputFile ($RootPath + '\Deploy\uwp_jcadmu.ps1') -outputFile ($RootPath + '\jumpcloud-ADMU\exe\uwp_jcadmu.exe') -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright '(c) 2021' -company 'JumpCloud' -iconfile ($RootPath + '\Deploy\admu.ico')
+    ps2exe -inputFile ($RootPath + '\Deploy\uwp_jcadmu.ps1') -outputFile ($RootPath + '\jumpcloud-ADMU\exe\uwp_jcadmu.exe') -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright '(c) 2021' -company 'JumpCloud' -iconfile ($RootPath + '\Deploy\admu.ico')
     Write-Host "upw_jcadmu.exe was generated successfully"
 } else {
     Write-Host "No changes to uwp_jcadmu.ps1 file"
