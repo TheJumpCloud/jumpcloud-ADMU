@@ -5,7 +5,7 @@ if (Get-Module -ListAvailable -Name ps2exe)
 else
 {
     Write-Host "Installing ps2exe"
-    Install-Module -Name:('ps2exe') -Force -SkipPublisherCheck
+    Install-Module -Name:('ps2exe') -Force -SkipPublisherCheck 
 }
 $RootPath = "C:\Users\circleci\project"
 $Output = $RootPath + '\Deploy\ADMU.ps1'
@@ -36,7 +36,7 @@ If (-not [System.String]::IsNullOrEmpty($NewContent))
     If (-not [System.String]::IsNullOrEmpty($Version))
     {
     pwd;
-    ps2exe 'C:\Users\circleci\project\Deploy\ADMU.ps1'
+    ps2exe
     Write-Host "gui_jcadmu.exe was generated successfully"
     }
     Else
