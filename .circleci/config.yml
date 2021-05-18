@@ -35,7 +35,7 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Pester Tests
         - Sign Executable
         - Build Module
-        - Build Help Fles
+        - Build Help Files
 workflows:
   version: 2
   ci:
@@ -74,7 +74,7 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
+            . ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
   Pester Tests:
     executor: win/default
     steps:
