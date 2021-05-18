@@ -10,7 +10,7 @@ Param(
 #}
 
 # Load functions
-. '\jumpcloud-ADMU\Powershell\Start-Migration.ps1'
+. './jumpcloud-ADMU/Powershell/Start-Migration.ps1'
 
 #USMT & VC Variables
 $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
