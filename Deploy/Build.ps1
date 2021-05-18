@@ -36,6 +36,8 @@ If (-not [System.String]::IsNullOrEmpty($NewContent))
     If (-not [System.String]::IsNullOrEmpty($Version))
     {
     pwd;
+    Get-InstalledModule
+    Write-Host "Attempting to build..."
     ps2exe 'C:\Users\circleci\project\Deploy\ADMU.ps1'
     Write-Host "gui_jcadmu.exe was generated successfully"
     }
