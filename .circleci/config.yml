@@ -53,6 +53,10 @@ jobs:
           shell: powershell.exe
           command: |
             Install-Module -Name:('ps2exe') -Force
+            Write-Host "dir ./"
+            dir ./
+            Write-Host "dir ./Deploy"
+            dir ./Deploy
       - run:
           name: Build
           shell: powershell.exe
