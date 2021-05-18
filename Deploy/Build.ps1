@@ -35,6 +35,7 @@ If (-not [System.String]::IsNullOrEmpty($NewContent))
     $Version = Select-String -Path:($FormPath) -Pattern:($VersionRegex)
     If (-not [System.String]::IsNullOrEmpty($Version))
     {
+    pwd;
     ps2exe 'C:\Users\circleci\project\Deploy\ADMU.ps1'
     Write-Host "gui_jcadmu.exe was generated successfully"
     }
