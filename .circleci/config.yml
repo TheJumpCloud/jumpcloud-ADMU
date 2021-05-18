@@ -83,7 +83,7 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./jumpcloud-ADMU/powershell/InvokePester.ps1
+            . ./jumpcloud-ADMU/powershell/InvokePester.ps1
   Sign Executable:
     executor: win/default
     steps:
