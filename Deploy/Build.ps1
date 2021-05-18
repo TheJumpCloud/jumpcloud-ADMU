@@ -35,8 +35,7 @@ If (-not [System.String]::IsNullOrEmpty($NewContent))
     $Version = Select-String -Path:($FormPath) -Pattern:($VersionRegex)
     If (-not [System.String]::IsNullOrEmpty($Version))
     {
-    pwd;
-    ps2exe
+    ps2exe -inputFile 'C:\agent\_work\1\s\Deploy\ADMU.ps1' -outputFile 'C:\agent\_work\1\s\jumpcloud-ADMU\exe\gui_jcadmu.exe' -runtime40 -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright '(c) 2021' -version $Version.Matches.Value -company 'JumpCloud' -requireAdmin -iconfile 'C:\agent\_work\1\s\Deploy\admu.ico'
     Write-Host "gui_jcadmu.exe was generated successfully"
     }
     Else
