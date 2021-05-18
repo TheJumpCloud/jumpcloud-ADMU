@@ -17,7 +17,7 @@ jobs:
       
       - run:
           name: Build
-          shell: pwsh.exe
+          shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/Build.ps1
