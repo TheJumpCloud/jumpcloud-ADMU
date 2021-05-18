@@ -13,8 +13,11 @@ jobs:
       # Commands are run in a Windows
       # virtual machine environment
       - checkout
-      - run: Write-Host 'Hello, Windows'
-      
+      - run:
+          name: Install Required Modules
+          shell: pwsh.exe
+          command: |
+            Install-Module -Name:('ps2exe') -Force
       - run:
           name: Build
           shell: pwsh.exe
