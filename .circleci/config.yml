@@ -7,8 +7,9 @@ orbs:
 
 jobs:
   build: # name of your job
-    executor: win/default # executor type
-    size: small
+    executor: 
+      name: win/default # executor type
+      size: small
     steps:
       # Commands are run in a Windows
       # virtual machine environment
