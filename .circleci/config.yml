@@ -59,7 +59,7 @@ jobs:
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/Build.ps1
-      -persist_to_workspace:
+      - persist_to_workspace:
           root: .
           paths:
             - .
