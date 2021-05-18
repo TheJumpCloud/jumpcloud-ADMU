@@ -35,7 +35,7 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Pester Tests
         - Sign Executable
         - Build Module
-        - Build Help Fles
+        - Build Help Files
 workflows:
   version: 2
   ci:
