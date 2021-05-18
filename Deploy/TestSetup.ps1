@@ -2,15 +2,15 @@ Param(
 [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateNotNullOrEmpty()][System.String]$TestOrgConnectKey
 )
 
-if (Get-Module -ListAvailable -Name pester) {
-    Write-Host "pester module installed"
-    } else {
-    Write-Host "Installing pester"
-    Install-Module -Name:('Pester') -Force -Scope:('CurrentUser') -SkipPublisherCheck
-}
+#if (Get-Module -ListAvailable -Name pester) {
+#    Write-Host "pester module installed"
+#    } else {
+#    Write-Host "Installing pester"
+#    Install-Module -Name:('Pester') -Force -Scope:('CurrentUser') -SkipPublisherCheck
+#}
 
 # Load functions
-. (($Env:BUILD_SOURCESDIRECTORY) + '\jumpcloud-ADMU\Powershell\Start-Migration.ps1')
+. '\jumpcloud-ADMU\Powershell\Start-Migration.ps1'
 
 #USMT & VC Variables
 $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
