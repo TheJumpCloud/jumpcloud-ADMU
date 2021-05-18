@@ -35,11 +35,7 @@ If (-not [System.String]::IsNullOrEmpty($NewContent))
     $Version = Select-String -Path:($FormPath) -Pattern:($VersionRegex)
     If (-not [System.String]::IsNullOrEmpty($Version))
     {
-    get-installedmodule -name ps2exe
-    Start-Sleep -s 15
-    cd 'c:\Users\circleci\project\Deploy'
-    Invoke-ps2exe 
-    #-inputFile '.\ADMU.ps1'
+    ps2exe 'C:\Users\circleci\project\Deploy\ADMU.ps1'
     Write-Host "gui_jcadmu.exe was generated successfully"
     }
     Else
