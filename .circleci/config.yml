@@ -53,13 +53,14 @@ jobs:
           shell: powershell.exe
           command: |
             Install-Module -Name:('ps2exe') -Force
+            Install-Module -Name:('Pester') -Force
       - run:
           name: Build
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/Build.ps1
-      - persist_to_workspace:
+      -persist_to_workspace:
           root: .
           paths:
             - .
@@ -68,13 +69,6 @@ jobs:
     steps:
       - attach_workspace:
           at: .
-      - run:
-          name: Check directory
-          command: |
-            Write-Host "dir ./"
-            dir ./
-            Write-Host "dir ./Deploy"
-            dir ./Deploy
       - run:
           name: Test Setup
           shell: powershell.exe
