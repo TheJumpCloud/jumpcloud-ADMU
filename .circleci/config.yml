@@ -28,8 +28,3 @@ jobs:
           shell: powershell.exe
           command: |
             ./jumpcloud-ADMU/powershell/InvokePester.ps1
-      - run:
-          name: Build
-          shell: powershell.exe
-          command: |
-            ./Deploy/Build.ps1
