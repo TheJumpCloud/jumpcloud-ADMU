@@ -15,13 +15,13 @@ jobs:
       - checkout
       - run:
           name: Install Required Modules
-          shell: pwsh.exe
+          shell: powershell.exe
           command: |
             Install-Module -Name:('ps2exe') -Force
             Get-Command -Module ps2exe
       - run:
           name: Build
-          shell: pwsh.exe
+          shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/Build.ps1
