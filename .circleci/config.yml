@@ -63,6 +63,13 @@ jobs:
     executor: win/default
     steps:
       - run:
+          name: Check directory
+          command: |
+            Write-Host "dir ./"
+            dir ./
+            Write-Host "dir ./Deploy"
+            dir ./Deploy
+      - run:
           name: Test Setup
           shell: powershell.exe
           command: |
