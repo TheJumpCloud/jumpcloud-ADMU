@@ -67,7 +67,7 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
+            . ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
   Pester Tests:
     executor: win/default
     steps:
