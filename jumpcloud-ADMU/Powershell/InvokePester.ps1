@@ -5,7 +5,7 @@
 Import-Module -Name Pester
 
 # Run Pester tests
-$PesterResults = Invoke-Pester -Script:(@{ Path = $PSScriptRoot + '/Tests/'; }) -PassThru
+$PesterResults = Invoke-Pester -Script ($PSScriptRoot + '/Tests/')
 $FailedTests = $PesterResults.TestResult | Where-Object { $_.Passed -eq $false }
 If ($FailedTests)
 {
