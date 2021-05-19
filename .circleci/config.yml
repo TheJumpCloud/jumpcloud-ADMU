@@ -81,10 +81,10 @@ jobs:
       - attach_workspace:
           at: .
       - run:
-        name: Install Required Modules
-        shell: powershell.exe
-        command: |
-          Install-Module -Name:('PSScriptAnalyzer') -Force
+          name: Install Required Modules
+          shell: powershell.exe
+          command: |
+            Install-Module -Name:('PSScriptAnalyzer') -Force
       - run:
           name: Invoke Pester
           shell: powershell.exe
