@@ -1,30 +1,125 @@
-version: 2.1 # Use v2.1 to enable orb usage.
-
-# The Windows orb gives you everything you
-# need to start using the Windows executor.
+version: 2.1
 orbs:
   win: circleci/windows@2.2.0
+build-and-sign-ADMU: &build-and-sign-ADMU
+  - Build
+  - Test Setup:
+      requires:
+        - Build
+  - Pester Tests:
+      requires:
+        - Build
+        - Test Setup
+  - Sign Executable:
+      requires:
+        - Build
+        - Test Setup
+        - Pester Tests
+  - Build Module:
+      requires:
+        - Build
+        - Test Setup
+        - Pester Tests
+        - Sign Executable
+  - Build Help Files:
+      requires:
+        - Build
+        - Test Setup
+        - Pester Tests
+        - Sign Executable
+        - Build Module
+  - Build Nuspec:
+      requires:
+        - Build
+        - Test Setup
+        - Pester Tests
+        - Sign Executable
+        - Build Module
+        - Build Help Files
+workflows:
+  version: 2
+  ci:
+    jobs: *build-and-sign-ADMU
 
 jobs:
-  build: # name of your job
+  Build: # name of your job
     executor: win/default # executor type
-
     steps:
       # Commands are run in a Windows
       # virtual machine environment
       - checkout
       - run:
+          name: Install Required Modules
+          shell: powershell.exe
+          command: |
+            Install-Module -Name:('ps2exe') -Force
+            Install-Module -Name:('Pester') -Force
+      - run:
           name: Build
           shell: powershell.exe
           command: |
+            $ErrorActionPreference = 'Stop'
             ./Deploy/Build.ps1
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+  Test Setup:
+    executor: win/default
+    steps:
+      - attach_workspace:
+          at: .
       - run:
           name: Test Setup
           shell: powershell.exe
           command: |
-            ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:JCApiKey)
+            $ErrorActionPreference = 'Stop'
+            . ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
+  Pester Tests:
+    executor: win/default
+    steps:
       - run:
           name: Invoke Pester
           shell: powershell.exe
           command: |
-            ./jumpcloud-ADMU/powershell/InvokePester.ps1
+            $ErrorActionPreference = 'Stop'
+            ./jumpcloud-ADMU/Powershell/InvokePester.ps1
+  Sign Executable:
+    executor: win/default
+    steps:
+      - run:
+          name: Sign .exe
+          shell: powershell.exe
+          command: |
+            $ErrorActionPreference = 'Stop'
+            ./Deploy/Sign.ps1 -cert_pw_key <TODO: Cert Key in secret valut>
+  Build Module:
+    executor: win/default
+    steps:
+      - run:
+          name: Build Module
+          shell: powershell.exe
+          command: |
+            $ErrorActionPreference = 'Stop'
+            ./Deploy/Build-Module.ps1
+  Build Help Files:
+    executor: win/default
+    steps:
+      - run:
+          name: Build Help Files
+          shell: powershell.exe
+          command: |
+            $ErrorActionPreference = 'Stop'
+            ./Deploy/Build-HelpFiles.ps1
+  Build Nuspec:
+    executor: win/default
+    steps:
+      - run:
+          name: Build .nuspec
+          shell: powershell.exe
+          command: |
+            $ErrorActionPreference = 'Stop'
+            ./Deploy/BuildNuspecFromPsd1.ps1
+  
+
+  
