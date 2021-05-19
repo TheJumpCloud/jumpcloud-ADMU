@@ -19,7 +19,9 @@ function Register-NativeMethod
     [string]
     $methodSignature
   )
-  $script:nativeMethods += [PSCustomObject]@{ Dll = $dll; Signature = $methodSignature; }
+  process{
+    $script:nativeMethods += [PSCustomObject]@{ Dll = $dll; Signature = $methodSignature; }
+  }
 }
 function Add-NativeMethods
 {
@@ -28,19 +30,21 @@ function Add-NativeMethods
   [OutputType([int])]
   Param($typeName = 'NativeMethods')
 
-  $nativeMethodsCode = $script:nativeMethods | ForEach-Object { "
-        [DllImport(`"$($_.Dll)`")]
-        public static extern $($_.Signature);
-    " }
+  process{
+    $nativeMethodsCode = $script:nativeMethods | ForEach-Object { "
+          [DllImport(`"$($_.Dll)`")]
+          public static extern $($_.Signature);
+      " }
 
-  Add-Type @"
-        using System;
-        using System.Text;
-        using System.Runtime.InteropServices;
-        public static class $typeName {
-            $nativeMethodsCode
-        }
+    Add-Type @"
+          using System;
+          using System.Text;
+          using System.Runtime.InteropServices;
+          public static class $typeName {
+              $nativeMethodsCode
+          }
 "@
+  }
 }
 function New-LocalUserProfile
 {
@@ -56,56 +60,58 @@ function New-LocalUserProfile
       Position = 0)]
     [string]$UserName
   )
-  $methodname = 'UserEnvCP2'
-  $script:nativeMethods = @();
+  process{
+    $methodname = 'UserEnvCP2'
+    $script:nativeMethods = @();
 
-  if (-not ([System.Management.Automation.PSTypeName]$methodname).Type)
-  {
-    Register-NativeMethod "userenv.dll" "int CreateProfile([MarshalAs(UnmanagedType.LPWStr)] string pszUserSid,`
-         [MarshalAs(UnmanagedType.LPWStr)] string pszUserName,`
-         [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszProfilePath, uint cchProfilePath)";
+    if (-not ([System.Management.Automation.PSTypeName]$methodname).Type)
+    {
+      Register-NativeMethod "userenv.dll" "int CreateProfile([MarshalAs(UnmanagedType.LPWStr)] string pszUserSid,`
+           [MarshalAs(UnmanagedType.LPWStr)] string pszUserName,`
+           [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszProfilePath, uint cchProfilePath)";
 
-    Add-NativeMethods -typeName $methodname;
+      Add-NativeMethods -typeName $methodname;
+    }
+
+    $sb = new-object System.Text.StringBuilder(260);
+    $pathLen = $sb.Capacity;
+
+    Write-Verbose "Creating user profile for $Username";
+    $objUser = New-Object System.Security.Principal.NTAccount($UserName)
+    $strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
+    $SID = $strSID.Value
+
+    Write-Verbose "$UserName SID: $SID"
+    try
+    {
+      $result = [UserEnvCP2]::CreateProfile($SID, $Username, $sb, $pathLen)
+      if ($result -eq '-2147024713')
+      {
+        $status = "$userName is an existing account"
+        write-verbose "$username Creation Result: $result"
+      }
+      elseif ($result -eq '-2147024809')
+      {
+        $status = "$username Not Found"
+        write-verbose "$username creation result: $result"
+      }
+      elseif ($result -eq 0)
+      {
+        $status = "$username Profile has been created"
+        write-verbose "$username Creation Result: $result"
+      }
+      else
+      {
+        $status = "$UserName unknown return result: $result"
+      }
+    }
+    catch
+    {
+      Write-Error $_.Exception.Message;
+      # break;
+    }
+    $status
   }
-
-  $sb = new-object System.Text.StringBuilder(260);
-  $pathLen = $sb.Capacity;
-
-  Write-Verbose "Creating user profile for $Username";
-  $objUser = New-Object System.Security.Principal.NTAccount($UserName)
-  $strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
-  $SID = $strSID.Value
-
-  Write-Verbose "$UserName SID: $SID"
-  try
-  {
-    $result = [UserEnvCP2]::CreateProfile($SID, $Username, $sb, $pathLen)
-    if ($result -eq '-2147024713')
-    {
-      $status = "$userName is an existing account"
-      write-verbose "$username Creation Result: $result"
-    }
-    elseif ($result -eq '-2147024809')
-    {
-      $status = "$username Not Found"
-      write-verbose "$username creation result: $result"
-    }
-    elseif ($result -eq 0)
-    {
-      $status = "$username Profile has been created"
-      write-verbose "$username Creation Result: $result"
-    }
-    else
-    {
-      $status = "$UserName unknown return result: $result"
-    }
-  }
-  catch
-  {
-    Write-Error $_.Exception.Message;
-    # break;
-  }
-  $status
 }
 
 function enable-privilege {
