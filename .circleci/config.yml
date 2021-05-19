@@ -13,11 +13,18 @@ jobs:
       # Commands are run in a Windows
       # virtual machine environment
       - checkout
-      - run: Write-Host 'Hello, Windows'
-      
       - run:
           name: Build
-          shell: pwsh.exe
+          shell: powershell.exe
           command: |
-            $ErrorActionPreference = 'Stop'
             ./Deploy/Build.ps1
+      - run:
+          name: Test Setup
+          shell: powershell.exe
+          command: |
+            ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:JCApiKey)
+      - run:
+          name: Invoke Pester
+          shell: powershell.exe
+          command: |
+            ./jumpcloud-ADMU/powershell/InvokePester.ps1
