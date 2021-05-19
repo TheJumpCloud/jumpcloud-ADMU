@@ -113,7 +113,56 @@ function New-LocalUserProfile
     $status
   }
 }
-
+function Remove-LocalUserProfile {
+  [CmdletBinding()]
+  param (
+      [Parameter(Mandatory = $true)]
+      [System.String]
+      $UserName
+  )
+  Begin{
+    # Validate that the user was just created by the ADMU
+    $removeUser = $false
+    $users = Get-LocalUser
+    foreach ($user in $users)
+    {
+      if ( $user.name -match $UserName -And $user.description -eq "Created By JumpCloud ADMU" )
+      {
+        $UserSid = Get-SID -User $UserName
+        $UserPath = Get-ProfileImagePath -UserSid $UserSid
+        # Set RemoveUser bool to true
+        $removeUser = $true
+      }
+    }
+    if (!$removeUser) {
+      throw " Username match not found, not reversing"
+    }
+  }
+  Process{
+    # Remove the profile
+    if ($removeUser){
+      # Remove the User
+      Remove-LocalUser -Name $UserName
+      # Remove the User Profile
+      if (Test-Path -Path $UserPath)
+      {
+        Remove-Item -Path $($UserPath) -Force -Recurse
+      }
+      # Remove the User SID
+      # TODO: if the profile SID is loaded in registry skip this and note in log
+      # Match the user SID
+      $matchedKey = get-childitem -path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object { $_.Name -match $UserSid }
+      # Set the Matched Key Path to PSPath so PowerShell can use the path
+      $matchedKeyPath = $($matchedKey.Name) -replace "HKEY_LOCAL_MACHINE", "HKLM:"
+      # Remove the UserSid Key from the ProfileList
+      Remove-Item -Path "$matchedKeyPath" -Recurse
+    }
+  }
+  End{
+    # Output some info
+    write-log -message:("$UserName's account, profile and Registry Key SID were removed")
+  }
+}
 function enable-privilege {
   param(
     ## The privilege to adjust. This set is taken from
@@ -468,7 +517,32 @@ Function Test-UserRegistryLoadState
   }
 
 }
-
+Function Get-ProfileImagePath
+{
+  [CmdletBinding()]
+  param (
+    [Parameter(Mandatory = $true)]
+    [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
+    [System.String]
+    $UserSid
+  )
+  $profileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $UserSid) -Name 'ProfileImagePath'
+  if ([System.String]::IsNullOrEmpty($profileImagePath))
+  {
+    Write-log -Message("Could not get the profile path for $UserSid exiting...") -Level Error
+    exit
+  }
+  else
+  {
+    return $profileImagePath
+  }
+}
+Function Get-WindowsDrive
+{
+  $drive = (wmic OS GET SystemDrive /VALUE)
+  $drive = [regex]::Match($drive, 'SystemDrive=(.\:)').Groups[1].Value
+  return $drive
+}
 Function Get-WindowsDrive {
   $drive = (wmic OS GET SystemDrive /VALUE)
   $drive = [regex]::Match($drive, 'SystemDrive=(.\:)').Groups[1].Value
