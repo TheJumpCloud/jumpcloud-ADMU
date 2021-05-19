@@ -44,7 +44,7 @@ $JumpCloudConnectKey = $TestOrgConnectKey
 # }
 # if (![System.String]::IsNullOrEmpty($process2)){
 #     $process2.kill()
-}
+# }
 #Clear Temp\JCADMU folder
 if ((Test-Path 'C:\Windows\Temp\JCADMU') -eq $true){
     remove-item -Path 'C:\windows\Temp\JCADMU' -Force -Recurse
