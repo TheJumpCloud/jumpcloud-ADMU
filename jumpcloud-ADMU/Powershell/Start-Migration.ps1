@@ -6528,6 +6528,7 @@ Function Start-Migration {
               Write-Log -Message:("Attempting to remove newly created $newUserProfileImagePath")
               start-sleep 1
               icacls $newUserProfileImagePath /reset /t /c /l *> $null
+              takeown /a /r /d Y /f $newUserProfileImagePath
               start-sleep 1
               # Reset permissions on NewUserProfileImagePath
               # -ErrorAction Stop; Remove-Item doesn't throw terminating errors
@@ -6535,7 +6536,7 @@ Function Start-Migration {
             }
             catch{
               Write-Log -Message:("Remove $newUserProfileImagePath failed, renaming to unusedADMUProfilere")
-              Rename-Item -Path $newUserProfileImagePath -NewName "unusedADMUProfilere" -ErrorAction Stop
+              Rename-Item -Path $newUserProfileImagePath -NewName "unusedADMUProfile" -ErrorAction Stop
             }
             try
             {
