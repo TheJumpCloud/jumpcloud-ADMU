@@ -54,7 +54,6 @@ jobs:
           command: |
             Install-Module -Name:('ps2exe') -Force
             Install-Module -Name:('Pester') -Force
-            Install-Module -Name:('PSScriptAnalyzer') -Force
       - run:
           name: Build
           shell: powershell.exe
@@ -81,6 +80,11 @@ jobs:
     steps:
       - attach_workspace:
           at: .
+      - run:
+        name: Install Required Modules
+        shell: powershell.exe
+        command: |
+          Install-Module -Name:('PSScriptAnalyzer') -Force
       - run:
           name: Invoke Pester
           shell: powershell.exe
