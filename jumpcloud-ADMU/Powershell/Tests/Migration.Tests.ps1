@@ -1,10 +1,10 @@
 # Dotsouce Variables for Testing:
-. $PSScriptRoot/BuildVariables.ps1
+. $PSScriptRoot\BuildVariables.ps1
+. $PSScriptRoot\..\Start-Migration.ps1
 
 Describe 'Migration Test Scenarios'{
     BeforeAll{
         .\SetupAgent.ps1
-        . ..\Start-Migration.ps1
     }
     Context 'Start-Migration on local accounts (Test Functionallity)' {
         It "username extists for testing" {
