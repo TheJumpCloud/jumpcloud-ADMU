@@ -53,7 +53,7 @@ jobs:
           shell: powershell.exe
           command: |
             Install-Module -Name:('ps2exe') -Force
-            Install-Module -Name:('Pester') -Force
+            # Install-Module -Name:('Pester') -Force # Not needed until test step
       - run:
           name: Build
           shell: powershell.exe
@@ -86,6 +86,11 @@ jobs:
           command: |
             Install-Module -Name:('PSScriptAnalyzer') -Force
             Install-Module -Name:('Pester') -Force
+      - run:
+          name: Setup Tests
+          shell: powershell.exe
+          command: |
+            ./jumpcloud-ADMU/Powershell/Tests/SetupAgent.ps1
       - run:
           name: Invoke Pester
           shell: powershell.exe
