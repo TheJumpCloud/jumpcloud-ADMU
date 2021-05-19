@@ -15,7 +15,7 @@ forEach ($User in $userTestingHash.Values)
     {
         Write-Log -Message:("$userExitCode")
         Write-Log -Message:("The user: $($User.Username) could not be created, exiting")
-        exit 1 #TODO: error instead
+        # exit 1 #TODO: error instead
     }
     # Initialize the Profile
     New-LocalUserProfile -username "$($User.Username)" -ErrorVariable profileInit
@@ -23,7 +23,7 @@ forEach ($User in $userTestingHash.Values)
     {
         Write-Log -Message:("$profileInit")
         Write-Log -Message:("The user: $($User.Username) could not be initalized, exiting")
-        exit 1 #TODO: error instead
+        # exit 1 #TODO: error instead
     }
     # Remove the profile
     # Remove-LocalUserProfile -username "$($User.Username)" -ErrorVariable profileDel

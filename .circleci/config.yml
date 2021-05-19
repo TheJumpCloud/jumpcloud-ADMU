@@ -85,6 +85,7 @@ jobs:
           shell: powershell.exe
           command: |
             Install-Module -Name:('PSScriptAnalyzer') -Force
+            Install-Module -Name:('Pester') -Force
       - run:
           name: Invoke Pester
           shell: powershell.exe
