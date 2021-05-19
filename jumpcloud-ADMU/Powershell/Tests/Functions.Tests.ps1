@@ -1,13 +1,13 @@
 BeforeAll {
-    if (Test-Path -Path 'C:\Windows\Temp\custom.xml') {
-        remove-item -Path 'C:\Windows\Temp\custom.xml' -Force}
+#     if (Test-Path -Path 'C:\Windows\Temp\custom.xml') {
+#         remove-item -Path 'C:\Windows\Temp\custom.xml' -Force}
 
-$usmtcustom = [xml] @"
-<migration urlid="http://www.microsoft.com/migration/1.0/migxmlext/AppDataMig">
-</migration>
-"@
+# $usmtcustom = [xml] @"
+# <migration urlid="http://www.microsoft.com/migration/1.0/migxmlext/AppDataMig">
+# </migration>
+# "@
 
-$usmtcustom.save('C:\Windows\Temp\custom.xml')
+# $usmtcustom.save('C:\Windows\Temp\custom.xml')
 
 }
 
@@ -15,23 +15,23 @@ Describe 'Functions' {
 
     Context 'VerifyAccount Function'{
 
-       It 'VerifyAccount - Real domain account bob.lazar@JCADB2.local' {
+       It 'VerifyAccount - Real domain account bob.lazar@JCADB2.local' -Skip {
            VerifyAccount -username bob.lazar -domain JCADB2.local | Should -Be $true
        }
 
-       It 'VerifyAccount - Wrong account bobby.lazar@JCADB2.local' {
+       It 'VerifyAccount - Wrong account bobby.lazar@JCADB2.local' -Skip {
            VerifyAccount -username bobby.lazar -domain JCADB2.local | Should -Be $false
        }
 
-       It 'VerifyAccount - Real account with wrong domain bob.lazar@JCADB2.localw' {
+       It 'VerifyAccount - Real account with wrong domain bob.lazar@JCADB2.localw' -Skip {
            VerifyAccount -username bob.lazar -domain JCADB2.localw | Should -Be $false
        }
 
-       It 'VerifyAccount - Real local account with no domain' {
+       It 'VerifyAccount - Real local account with no domain' -Skip {
            VerifyAccount -username testuser | Should -Be $true
        }
 
-       It 'VerifyAccount - Wrong local account with no domain' {
+       It 'VerifyAccount - Wrong local account with no domain' -Skip {
            VerifyAccount -username testuserq | Should -Be $false
        }
 
@@ -124,11 +124,11 @@ Describe 'Functions' {
 
     Context 'Check_Program_Installed Function'{
 
-        It 'Check_Program_Installed x64 - Google Chrome' {
+        It 'Check_Program_Installed x64 - Google Chrome' -Skip {
             Check_Program_Installed -programName 'Google Chrome' | Should -Be $true
         }
 
-        It 'Check_Program_Installed x32 - TeamViewer 14' {
+        It 'Check_Program_Installed x32 - TeamViewer 14' -Skip {
             Check_Program_Installed -programName 'TeamViewer 14' | Should -Be $true
         }
 
@@ -140,7 +140,7 @@ Describe 'Functions' {
 
     Context 'Uninstall_Program Function'{
 
-        It 'Install & Uninstall - x32 filezilla' {
+        It 'Install & Uninstall - x32 filezilla' -Skip {
             $app = 'C:\FileZilla_3.46.3_win32.exe'
             $arg = '/S'
             Start-Process $app $arg
@@ -307,19 +307,19 @@ Describe 'Functions' {
 
     }
 
-    Context 'Test-XMLFile Function'{
+    # Context 'Test-XMLFile Function'{
 
-        It 'Test-XMLFile - Valid XML' {
+    #     It 'Test-XMLFile - Valid XML' {
 
-           Test-XMLFile -xmlFilePath 'C:\Windows\Temp\custom.xml' | Should -Be $true
-        }
+    #        Test-XMLFile -xmlFilePath 'C:\Windows\Temp\custom.xml' | Should -Be $true
+    #     }
 
-        $invalidxml = Get-Content 'C:\Windows\Temp\custom.xml'
-        $invalidxml | ForEach-Object { $_.Replace("`>", " ") } | Set-Content 'C:\Windows\Temp\custom.xml'
+    #     $invalidxml = Get-Content 'C:\Windows\Temp\custom.xml'
+    #     $invalidxml | ForEach-Object { $_.Replace("`>", " ") } | Set-Content 'C:\Windows\Temp\custom.xml'
 
-        It 'Test-XMLFile - InValid XML' {
+    #     It 'Test-XMLFile - InValid XML' {
 
-            Test-XMLFile -xmlFilePath 'C:\Windows\Temp\custom.xml' | Should -Be $false
-        }
-    }
+    #         Test-XMLFile -xmlFilePath 'C:\Windows\Temp\custom.xml' | Should -Be $false
+    #     }
+    # }
 }
