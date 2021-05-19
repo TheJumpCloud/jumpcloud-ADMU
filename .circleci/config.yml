@@ -53,7 +53,7 @@ jobs:
           shell: powershell.exe
           command: |
             Install-Module -Name:('ps2exe') -Force
-            Install-Module -Name:('Pester') -Force
+            # Install-Module -Name:('Pester') -Force # Not needed until test step
       - run:
           name: Build
           shell: powershell.exe
@@ -64,17 +64,17 @@ jobs:
           root: .
           paths:
             - .
-  Test Setup:
-    executor: win/default
-    steps:
-      - attach_workspace:
-          at: .
-      - run:
-          name: Test Setup
-          shell: powershell.exe
-          command: |
-            $ErrorActionPreference = 'Stop'
-            . ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
+  # Test Setup:
+  #   executor: win/default
+  #   steps:
+  #     - attach_workspace:
+  #         at: .
+  #     - run:
+  #         name: Test Setup
+  #         shell: powershell.exe
+  #         command: |
+  #           $ErrorActionPreference = 'Stop'
+  #           . ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
   Pester Tests:
     executor: win/default
     steps:
@@ -85,6 +85,11 @@ jobs:
           shell: powershell.exe
           command: |
             Install-Module -Name:('PSScriptAnalyzer') -Force
+      - run:
+          name: Setup Tests
+          shell: powershell.exe
+          command: |
+            ./jumpcloud-ADMU/Powershell/Tests/SetupAgent.ps1
       - run:
           name: Invoke Pester
           shell: powershell.exe

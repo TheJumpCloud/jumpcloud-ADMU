@@ -37,13 +37,13 @@ $JumpCloudConnectKey = $TestOrgConnectKey
 
 #Prechecks
 #check if installer is stuck running and kill
-$process = get-process JumpCloudInstaller -ErrorAction SilentlyContinue
-$process2 = get-process JumpCloudInstaller.tmp -ErrorAction SilentlyContinue
-if (![System.String]::IsNullOrEmpty($process)){
-    $process.kill()
-}
-if (![System.String]::IsNullOrEmpty($process2)){
-    $process2.kill()
+# $process = get-process JumpCloudInstaller -ErrorAction SilentlyContinue
+# $process2 = get-process JumpCloudInstaller.tmp -ErrorAction SilentlyContinue
+# if (![System.String]::IsNullOrEmpty($process)){
+#     $process.kill()
+# }
+# if (![System.String]::IsNullOrEmpty($process2)){
+#     $process2.kill()
 }
 #Clear Temp\JCADMU folder
 if ((Test-Path 'C:\Windows\Temp\JCADMU') -eq $true){

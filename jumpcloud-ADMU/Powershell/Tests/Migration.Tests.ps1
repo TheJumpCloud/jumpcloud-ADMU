@@ -3,7 +3,7 @@
 
 Describe 'Migration Test Scenarios'{
     BeforeAll{
-        .\SetupAgent.ps1
+        # .\SetupAgent.ps1
         . ..\Start-Migration.ps1
     }
     Context 'Start-Migration on local accounts (Test Functionallity)' {
