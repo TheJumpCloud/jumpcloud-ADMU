@@ -18,7 +18,7 @@ $userTestingHash = @{
         JCUsername  = 'newUsername';
         JCUserSID   = '';
     }
-    testCase2 = @{
+    testCase3 = @{
         Description = 'Test that user can be converted with same name'
         Username    = 'sameUsername';
         UserSID     = '';
