@@ -5,7 +5,7 @@ if (Get-Module -ListAvailable -Name ps2exe)
 else
 {
     Write-Host "Installing ps2exe"
-    Install-Module -Name:('ps2exe') -Force -SkipPublisherCheck
+    Install-Module -Name:('ps2exe') -Force -SkipPublisherCheck 
 }
 $RootPath = "C:\Users\circleci\project"
 $Output = $RootPath + '\Deploy\ADMU.ps1'
@@ -35,10 +35,7 @@ If (-not [System.String]::IsNullOrEmpty($NewContent))
     $Version = Select-String -Path:($FormPath) -Pattern:($VersionRegex)
     If (-not [System.String]::IsNullOrEmpty($Version))
     {
-    pwd;
-    Get-InstalledModule
-    Write-Host "Attempting to build..."
-    ps2exe 'C:\Users\circleci\project\Deploy\ADMU.ps1'
+    ps2exe -inputFile $Output -outputFile ($RootPath  + '\jumpcloud-ADMU\exe\gui_jcadmu.exe') -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright '(c) 2021' -version $Version.Matches.Value -company 'JumpCloud' -requireAdmin -iconfile '.\Deploy\admu.ico'
     Write-Host "gui_jcadmu.exe was generated successfully"
     }
     Else
