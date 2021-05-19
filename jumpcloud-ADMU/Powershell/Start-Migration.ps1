@@ -6556,7 +6556,7 @@ Function Start-Migration {
         }
         $appxList | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
 
-        # load registry items back for the last time. 
+        # load registry items back for the last time.
         # TODO: remove load step
         # Set-UserRegistryLoadState -op "Load" -ProfilePath $newuserprofileimagepath -UserSid $NewUserSID
         # Unload the Reg Hives
