@@ -22,7 +22,7 @@ jobs:
           name: Test Setup
           shell: powershell.exe
           command: |
-            ./Deploy/TestSetup.ps1 -$TestOrgConnectKey:($env:JCApiKey)
+            ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:JCApiKey)
       - run:
           name: Invoke Pester
           shell: powershell.exe
