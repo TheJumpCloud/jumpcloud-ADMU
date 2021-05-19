@@ -10,7 +10,7 @@ if (Get-Module -ListAvailable -Name pester) {
 }
 
 # Load functions
-. (($Env:HOME+ '\project\jumpcloud-ADMU\Powershell\Start-Migration.ps1'))
+. (($HOME+ '\project\jumpcloud-ADMU\Powershell\Start-Migration.ps1'))
 
 #USMT & VC Variables
 $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
