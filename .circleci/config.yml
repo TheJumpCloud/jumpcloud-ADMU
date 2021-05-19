@@ -21,3 +21,17 @@ jobs:
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/Build.ps1
+
+      - run:
+          name: Test Setup
+          shell: powershell.exe
+          command: |
+            $ErrorActionPreference = 'Stop'
+            ./Deploy/TestSetup.ps1
+
+      - run:
+          name: Invoke Pester
+          shell: powershell.exe
+          command: |
+            $ErrorActionPreference = 'Stop'
+            ./jumpcloud-ADMU/powershell/InvokePester.ps1
