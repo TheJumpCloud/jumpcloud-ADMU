@@ -1,8 +1,11 @@
 # Dotsouce Variables for Testing:
 
 BeforeAll{
+    # import build variables for test cases
     . $PSScriptRoot\BuildVariables.ps1
+    # import functions from start migration
     . $PSScriptRoot\..\Start-Migration.ps1
+    # setup tests (This creates any of the users in the build vars dictionary)
     . $PSScriptRoot\SetupAgent.ps1
 }
 Describe 'Migration Test Scenarios'{
@@ -26,17 +29,8 @@ Describe 'Migration Test Scenarios'{
 }
 
 
-# Tests TODO:
-# Test start migration on local user
-# Start-Migration | Should -Not Throw
-
-
 # New User SID should have the correct profile path
 # User proflie should be named correctly
-# Test multiple scenarios
-# user.name -> user.name
-# username.localhost -> username
-# newUser -> new.User
 
 
 # user -> username where username exists should fail and revert
