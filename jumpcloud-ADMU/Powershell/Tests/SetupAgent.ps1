@@ -15,7 +15,7 @@ forEach ($User in $userTestingHash.Values)
     {
         Write-Log -Message:("$userExitCode")
         Write-Log -Message:("The user: $($User.Username) could not be created, exiting")
-        # exit 1 #TODO: error instead
+        exit 1
     }
     # Initialize the Profile
     New-LocalUserProfile -username "$($User.Username)" -ErrorVariable profileInit
@@ -23,16 +23,29 @@ forEach ($User in $userTestingHash.Values)
     {
         Write-Log -Message:("$profileInit")
         Write-Log -Message:("The user: $($User.Username) could not be initalized, exiting")
-        # exit 1 #TODO: error instead
+        exit 1
     }
-    # Remove the profile
-    # Remove-LocalUserProfile -username "$($User.Username)" -ErrorVariable profileDel
-    # if ($profileDel)
-    # {
-    #     Write-Log -Message:("$profileDel")
-    #     Write-Log -Message:("The user: $($User.Username) could not be deleted, exiting")
-    #     # exit 1 #TODO: error instead
-    # }
 }
 
+# init users in second test group
+forEach ($User in $JCCommandTestingHash.Values)
+{
+    "Testing Case for $($User.Username)"
+    $newUserPassword = ConvertTo-SecureString -String "$($User.Password)" -AsPlainText -Force
+    New-localUser -Name "$($User.Username)" -password $newUserPassword -ErrorVariable userExitCode -Description "Created By JumpCloud ADMU"
+    if ($userExitCode)
+    {
+        Write-Log -Message:("$userExitCode")
+        Write-Log -Message:("The user: $($User.Username) could not be created, exiting")
+        exit 1
+    }
+    # Initialize the Profile
+    New-LocalUserProfile -username "$($User.Username)" -ErrorVariable profileInit
+    if ($profileInit)
+    {
+        Write-Log -Message:("$profileInit")
+        Write-Log -Message:("The user: $($User.Username) could not be initalized, exiting")
+        exit 1
+    }
+}
 # End region for test user generation

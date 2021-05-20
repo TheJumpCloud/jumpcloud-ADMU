@@ -3,35 +3,27 @@ orbs:
   win: circleci/windows@2.2.0
 build-and-sign-ADMU: &build-and-sign-ADMU
   - Build
-  - Test Setup:
-      requires:
-        - Build
   - Pester Tests:
       requires:
         - Build
-        - Test Setup
   - Sign Executable:
       requires:
         - Build
-        - Test Setup
         - Pester Tests
   - Build Module:
       requires:
         - Build
-        - Test Setup
         - Pester Tests
         - Sign Executable
   - Build Help Files:
       requires:
         - Build
-        - Test Setup
         - Pester Tests
         - Sign Executable
         - Build Module
   - Build Nuspec:
       requires:
         - Build
-        - Test Setup
         - Pester Tests
         - Sign Executable
         - Build Module
@@ -64,7 +56,7 @@ jobs:
           root: .
           paths:
             - .
-  Test Setup:
+  Pester Tests:
     executor: win/default
     steps:
       - attach_workspace:
@@ -75,17 +67,15 @@ jobs:
           command: |
             $ErrorActionPreference = 'Stop'
             . ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
-  Pester Tests:
-    executor: win/default
-    steps:
-      - attach_workspace:
-          at: .
       - run:
-          name: Install Required Modules
+          name: Install Required Modules & Set Env Variables for testing
           shell: powershell.exe
           command: |
             Install-Module -Name:('PSScriptAnalyzer') -Force
-            Install-Module -Name:('Pester') -Force
+            Install-Module -Name:('Pester') -Force -RequiredVersion 4.10.1
+            Install-Module -Nmae:('JumpCloud') -Force
+            $env:JCApiKey = $JCApiKey
+            $env:JCOrgId = $JCOrgId
       - run:
           name: Invoke Pester
           shell: powershell.exe
