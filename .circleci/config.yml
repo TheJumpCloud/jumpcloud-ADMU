@@ -92,6 +92,8 @@ jobs:
           command: |
             $ErrorActionPreference = 'Stop'
             ./jumpcloud-ADMU/Powershell/InvokePester.ps1
+      - store_test_results:
+          path: test-results
   Sign Executable:
     executor: win/default
     steps:
