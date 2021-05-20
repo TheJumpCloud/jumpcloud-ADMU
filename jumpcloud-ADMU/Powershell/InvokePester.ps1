@@ -1,11 +1,11 @@
 # Load functions
-. ($PSScriptRoot + '/Start-Migration.ps1')
+. ($HOME + 'project/jumpcloud-ADMU/Powershell/Start-Migration.ps1')
 
-# Import
+# Import pester module
 Import-Module -Name Pester
 
 # Run Pester tests
-$PesterResults = Invoke-Pester -Script ($PSScriptRoot + '/Tests/') -PassThru
+$PesterResults = Invoke-Pester -Script ($HOME + 'project/jumpcloud-ADMU/Powershell/Tests/') -PassThru
 $FailedTests = $PesterResults.TestResult | Where-Object { $_.Passed -eq $false }
 If ($FailedTests)
 {
@@ -19,6 +19,6 @@ If ($FailedTests)
 }
 
 # Run Pester tests
-# $PesterResultsFileXml = $PSScriptRoot + '/Pester.Tests.Results.xml'
-# Invoke-Pester -Script ($PSScriptRoot + '/Tests/')
+$PesterResultsFileXml = $HOME + '/test-results/pester/results.xml'
+Invoke-Pester -Script ($PSScriptRoot + '/Tests/') -OutputFile $PesterResultsFileXml
 Write-Host -ForegroundColor Green '-------------Done-------------'
