@@ -74,8 +74,6 @@ jobs:
             Install-Module -Name:('PSScriptAnalyzer') -Force
             Install-Module -Name:('Pester') -Force -RequiredVersion 4.10.1
             Install-Module -Name:('JumpCloud') -Force
-            $env:JCApiKey = $JCApiKey
-            $env:JCOrgId = $JCOrgId
       - run:
           name: Invoke Pester
           shell: powershell.exe
