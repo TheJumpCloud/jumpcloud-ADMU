@@ -6387,13 +6387,22 @@ Function Start-Migration {
 
         Write-Log -Message:('Begin new local user registry copy')
         # Give us admin rights to modify
+        Write-Log -Message:("Take Ownership of $($newuserprofilepath)")
         $path = takeown /F $newuserprofileimagepath /a /r /d y
+        Write-Log -Message:("Get ACLs for $($newuserprofilepath)")
         $acl = Get-Acl ($newuserprofileimagepath)
+        Write-Log -Message:("Current ACLs: $acl")
+        Write-Log -Message:("Setting Administrator Group Access Rule on: $($newuserprofilepath)")
         $AdministratorsGroupSIDName = ([wmi]"Win32_SID.SID='S-1-5-32-544'").AccountName
         $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($AdministratorsGroupSIDName, "FullControl", "Allow")
+        Write-Log -Message:("Set ACL Access Protection Rules")
         $acl.SetAccessRuleProtection($false, $true)
+        Write-Log -Message:("Set ACL Access Rules")
         $acl.SetAccessRule($AccessRule)
+        Write-Log -Message:("Applying ACL...")
         $acl | Set-Acl $newuserprofileimagepath
+        $acl_updated = Get-Acl ($newuserprofileimagepath)
+        Write-Log -Message:("Updated ACLs: $acl_updated")
 
         Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath + ' New User SID: ' + $NewUserSID)
         Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath + ' Old User SID: ' + $SelectedUserSID)
