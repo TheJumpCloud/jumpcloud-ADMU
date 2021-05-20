@@ -1,5 +1,5 @@
 # Load functions
-. ($HOME + 'project/jumpcloud-ADMU/Powershell/Start-Migration.ps1')
+. ($HOME + '/project/jumpcloud-ADMU/Powershell/Start-Migration.ps1')
 
 # Import pester module
 Import-Module -Name Pester
