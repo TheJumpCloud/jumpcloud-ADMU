@@ -19,6 +19,7 @@ If ($FailedTests)
 }
 
 # Run Pester tests
-$PesterResultsFileXml = $HOME + '/project/test-results/pester/results.xml'
-Invoke-Pester -Script ($PSScriptRoot + '/Tests/') -OutputFile $PesterResultsFileXml
+$PesterResultsFileXmldir = $HOME + '/project/jumpcloud-ADMU/test-results/pester/'
+new-item -path $PesterResultsFileXmldir
+Invoke-Pester -Script ($PSScriptRoot + '/Tests/') -OutputFile ($PesterResultsFileXmldir + 'results.xml')
 Write-Host -ForegroundColor Green '-------------Done-------------'
