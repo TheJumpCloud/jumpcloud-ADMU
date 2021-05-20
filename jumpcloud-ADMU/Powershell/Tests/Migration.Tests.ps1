@@ -8,14 +8,14 @@ BeforeAll{
 }
 Describe 'Migration Test Scenarios'{
     Context 'Start-Migration on local accounts (Test Functionallity)' {
-        It "username extists for testing" {
+        It "username extists for testing" -skip {
             foreach ($user in $userTestingHash.Values){
                 $user.username | Should -Not -BeNullOrEmpty
                 $user.JCusername | Should -Not -BeNullOrEmpty
                 Get-LocalUser $user.username | Should -Not -BeNullOrEmpty
             }
         }
-        It "Test Convert profile migration for Local users" {
+        It "Test Convert profile migration for Local users" -skip{
             foreach ($user in $userTestingHash.Values)
             {
                 write-host "Running: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)"
@@ -32,10 +32,10 @@ Describe 'Migration Test Scenarios'{
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
 
             # variables for test
-            $CommandBody = 'write-host " -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$SelectedUserName} -TempPassword ${ENV:$TempPassword} -ConvertProfile $true"'
+            $CommandBody = 'start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$SelectedUserName} -TempPassword ${ENV:$TempPassword} -ConvertProfile $true'
             $CommandTrigger = 'ADMU'
             $CommandName = 'RemoteADMU'
-
+            Connect-JCOnline -JumpCloudApiKey $ENV:JCApiKey -JumpCloudOrgId $ENV:JCOrgID
             # clear command results
             $results = Get-JcSdkCommandResult
             foreach ($result in $results)
