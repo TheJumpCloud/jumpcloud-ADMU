@@ -59,7 +59,7 @@ Describe 'Migration Test Scenarios'{
         It 'Test that system key exists'{
             $systemKey | Should -Not -BeNullOrEmpty
         }
-        It 'Invoke ADMYU from JumpCloud Command'{
+        It 'Invoke ADMU from JumpCloud Command'{
             # clear results
             $results = Get-JcSdkCommandResult
             foreach ($result in $results)
@@ -84,7 +84,7 @@ Describe 'Migration Test Scenarios'{
                 {
                     $invokeResults = Get-JcSdkCommandResult
                 } until ($invokeResults)
-                
+
             }
 
         }

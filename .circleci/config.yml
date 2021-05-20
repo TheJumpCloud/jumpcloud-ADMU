@@ -73,7 +73,7 @@ jobs:
           command: |
             Install-Module -Name:('PSScriptAnalyzer') -Force
             Install-Module -Name:('Pester') -Force -RequiredVersion 4.10.1
-            Install-Module -Nmae:('JumpCloud') -Force
+            Install-Module -Name:('JumpCloud') -Force
             $env:JCApiKey = $JCApiKey
             $env:JCOrgId = $JCOrgId
       - run:
