@@ -19,6 +19,6 @@ If ($FailedTests)
 }
 
 # Run Pester tests
-$PesterResultsFileXml = $HOME + '/test-results/pester/results.xml'
+$PesterResultsFileXml = $HOME + '/project/test-results/pester/results.xml'
 Invoke-Pester -Script ($PSScriptRoot + '/Tests/') -OutputFile $PesterResultsFileXml
 Write-Host -ForegroundColor Green '-------------Done-------------'
