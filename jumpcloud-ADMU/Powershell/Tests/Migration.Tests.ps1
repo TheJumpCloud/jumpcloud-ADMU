@@ -30,7 +30,7 @@ Describe 'Migration Test Scenarios'{
             $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
             $regex = 'systemKey\":\"(\w+)\"'
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
-
+            
             # variables for test
             $CommandBody = 'start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$SelectedUserName} -TempPassword ${ENV:$TempPassword} -ConvertProfile $true'
             $CommandTrigger = 'ADMU'
@@ -44,7 +44,7 @@ Describe 'Migration Test Scenarios'{
                 remove-jcsdkcommandresult -id $result.id
             }
             # Clear previous commands matching the name
-            $RemoteADMUCommands = Get-JcSdkCommand | Where-Object { $_name -eq $CommandName }
+            $RemoteADMUCommands = Get-JcSdkCommand | Where-Object { $_.name -eq $CommandName }
             foreach ($result in $RemoteADMUCommands)
             {
                 # Delete Command Results
