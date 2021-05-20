@@ -5,7 +5,9 @@
 Import-Module -Name Pester
 
 # Run Pester tests
-$PesterResults = Invoke-Pester -Script ($HOME + 'project/jumpcloud-ADMU/Powershell/Tests/') -PassThru
+$PesterResultsFileXmldir = $HOME + '/project/jumpcloud-ADMU/test-results/'
+new-item -path $PesterResultsFileXmldir -ItemType Directory
+$PesterResults = Invoke-Pester -Script ($HOME + 'project/jumpcloud-ADMU/Powershell/Tests/') -PassThru -OutputFile ($PesterResultsFileXmldir + 'results.xml')
 $FailedTests = $PesterResults.TestResult | Where-Object { $_.Passed -eq $false }
 If ($FailedTests)
 {
@@ -18,8 +20,4 @@ If ($FailedTests)
     Write-Error -Message:('Tests Failed: ' + [string]($FailedTests | Measure-Object).Count)
 }
 
-# Run Pester tests
-$PesterResultsFileXmldir = $HOME + '/project/jumpcloud-ADMU/test-results/'
-new-item -path $PesterResultsFileXmldir -ItemType Directory
-Invoke-Pester -Script ($PSScriptRoot + '/Tests/') -OutputFile ($PesterResultsFileXmldir + 'results.xml')
 Write-Host -ForegroundColor Green '-------------Done-------------'
