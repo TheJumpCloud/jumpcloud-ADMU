@@ -94,6 +94,8 @@ jobs:
             ./jumpcloud-ADMU/Powershell/InvokePester.ps1
       - store_test_results:
           path: test-results
+          name: Uploading test results for ADMU'
+          path: ./test_results
   Sign Executable:
     executor: win/default
     steps:
