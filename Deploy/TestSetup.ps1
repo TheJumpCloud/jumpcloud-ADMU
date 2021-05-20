@@ -2,15 +2,15 @@ Param(
 [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateNotNullOrEmpty()][System.String]$TestOrgConnectKey
 )
 
-if (Get-Module -ListAvailable -Name pester) {
-    Write-Host "pester module installed"
-    } else {
-    Write-Host "Installing pester"
-    Install-Module -Name:('Pester') -Force -Scope:('CurrentUser') -SkipPublisherCheck
-}
+#if (Get-Module -ListAvailable -Name pester) {
+#    Write-Host "pester module installed"
+#    } else {
+#    Write-Host "Installing pester"
+#    Install-Module -Name:('Pester') -Force -Scope:('CurrentUser') -SkipPublisherCheck
+#}
 
 # Load functions
-. (($HOME+ '\project\jumpcloud-ADMU\Powershell\Start-Migration.ps1'))
+. './jumpcloud-ADMU/Powershell/Start-Migration.ps1'
 
 #USMT & VC Variables
 $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
@@ -37,14 +37,14 @@ $JumpCloudConnectKey = $TestOrgConnectKey
 
 #Prechecks
 #check if installer is stuck running and kill
-$process = get-process JumpCloudInstaller -ErrorAction SilentlyContinue
-$process2 = get-process JumpCloudInstaller.tmp -ErrorAction SilentlyContinue
-if (![System.String]::IsNullOrEmpty($process)){
-    $process.kill()
-}
-if (![System.String]::IsNullOrEmpty($process2)){
-    $process2.kill()
-}
+# $process = get-process JumpCloudInstaller -ErrorAction SilentlyContinue
+# $process2 = get-process JumpCloudInstaller.tmp -ErrorAction SilentlyContinue
+# if (![System.String]::IsNullOrEmpty($process)){
+#     $process.kill()
+# }
+# if (![System.String]::IsNullOrEmpty($process2)){
+#     $process2.kill()
+# }
 #Clear Temp\JCADMU folder
 if ((Test-Path 'C:\Windows\Temp\JCADMU') -eq $true){
     remove-item -Path 'C:\windows\Temp\JCADMU' -Force -Recurse

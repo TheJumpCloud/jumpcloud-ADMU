@@ -19,7 +19,9 @@ function Register-NativeMethod
     [string]
     $methodSignature
   )
-  $script:nativeMethods += [PSCustomObject]@{ Dll = $dll; Signature = $methodSignature; }
+  process{
+    $script:nativeMethods += [PSCustomObject]@{ Dll = $dll; Signature = $methodSignature; }
+  }
 }
 function Add-NativeMethods
 {
@@ -28,19 +30,21 @@ function Add-NativeMethods
   [OutputType([int])]
   Param($typeName = 'NativeMethods')
 
-  $nativeMethodsCode = $script:nativeMethods | ForEach-Object { "
-        [DllImport(`"$($_.Dll)`")]
-        public static extern $($_.Signature);
-    " }
+  process{
+    $nativeMethodsCode = $script:nativeMethods | ForEach-Object { "
+          [DllImport(`"$($_.Dll)`")]
+          public static extern $($_.Signature);
+      " }
 
-  Add-Type @"
-        using System;
-        using System.Text;
-        using System.Runtime.InteropServices;
-        public static class $typeName {
-            $nativeMethodsCode
-        }
+    Add-Type @"
+          using System;
+          using System.Text;
+          using System.Runtime.InteropServices;
+          public static class $typeName {
+              $nativeMethodsCode
+          }
 "@
+  }
 }
 function New-LocalUserProfile
 {
@@ -56,58 +60,109 @@ function New-LocalUserProfile
       Position = 0)]
     [string]$UserName
   )
-  $methodname = 'UserEnvCP2'
-  $script:nativeMethods = @();
+  process{
+    $methodname = 'UserEnvCP2'
+    $script:nativeMethods = @();
 
-  if (-not ([System.Management.Automation.PSTypeName]$methodname).Type)
-  {
-    Register-NativeMethod "userenv.dll" "int CreateProfile([MarshalAs(UnmanagedType.LPWStr)] string pszUserSid,`
-         [MarshalAs(UnmanagedType.LPWStr)] string pszUserName,`
-         [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszProfilePath, uint cchProfilePath)";
+    if (-not ([System.Management.Automation.PSTypeName]$methodname).Type)
+    {
+      Register-NativeMethod "userenv.dll" "int CreateProfile([MarshalAs(UnmanagedType.LPWStr)] string pszUserSid,`
+           [MarshalAs(UnmanagedType.LPWStr)] string pszUserName,`
+           [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszProfilePath, uint cchProfilePath)";
 
-    Add-NativeMethods -typeName $methodname;
+      Add-NativeMethods -typeName $methodname;
+    }
+
+    $sb = new-object System.Text.StringBuilder(260);
+    $pathLen = $sb.Capacity;
+
+    Write-Verbose "Creating user profile for $Username";
+    $objUser = New-Object System.Security.Principal.NTAccount($UserName)
+    $strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
+    $SID = $strSID.Value
+
+    Write-Verbose "$UserName SID: $SID"
+    try
+    {
+      $result = [UserEnvCP2]::CreateProfile($SID, $Username, $sb, $pathLen)
+      if ($result -eq '-2147024713')
+      {
+        $status = "$userName is an existing account"
+        write-verbose "$username Creation Result: $result"
+      }
+      elseif ($result -eq '-2147024809')
+      {
+        $status = "$username Not Found"
+        write-verbose "$username creation result: $result"
+      }
+      elseif ($result -eq 0)
+      {
+        $status = "$username Profile has been created"
+        write-verbose "$username Creation Result: $result"
+      }
+      else
+      {
+        $status = "$UserName unknown return result: $result"
+      }
+    }
+    catch
+    {
+      Write-Error $_.Exception.Message;
+      # break;
+    }
+    $status
   }
-
-  $sb = new-object System.Text.StringBuilder(260);
-  $pathLen = $sb.Capacity;
-
-  Write-Verbose "Creating user profile for $Username";
-  $objUser = New-Object System.Security.Principal.NTAccount($UserName)
-  $strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
-  $SID = $strSID.Value
-
-  Write-Verbose "$UserName SID: $SID"
-  try
-  {
-    $result = [UserEnvCP2]::CreateProfile($SID, $Username, $sb, $pathLen)
-    if ($result -eq '-2147024713')
-    {
-      $status = "$userName is an existing account"
-      write-verbose "$username Creation Result: $result"
-    }
-    elseif ($result -eq '-2147024809')
-    {
-      $status = "$username Not Found"
-      write-verbose "$username creation result: $result"
-    }
-    elseif ($result -eq 0)
-    {
-      $status = "$username Profile has been created"
-      write-verbose "$username Creation Result: $result"
-    }
-    else
-    {
-      $status = "$UserName unknown return result: $result"
-    }
-  }
-  catch
-  {
-    Write-Error $_.Exception.Message;
-    # break;
-  }
-  $status
 }
-
+function Remove-LocalUserProfile {
+  [CmdletBinding()]
+  param (
+      [Parameter(Mandatory = $true)]
+      [System.String]
+      $UserName
+  )
+  Begin{
+    # Validate that the user was just created by the ADMU
+    $removeUser = $false
+    $users = Get-LocalUser
+    foreach ($user in $users)
+    {
+      if ( $user.name -match $UserName -And $user.description -eq "Created By JumpCloud ADMU" )
+      {
+        $UserSid = Get-SID -User $UserName
+        $UserPath = Get-ProfileImagePath -UserSid $UserSid
+        # Set RemoveUser bool to true
+        $removeUser = $true
+      }
+    }
+    if (!$removeUser) {
+      throw " Username match not found, not reversing"
+    }
+  }
+  Process{
+    # Remove the profile
+    if ($removeUser){
+      # Remove the User
+      Remove-LocalUser -Name $UserName
+      # Remove the User Profile
+      if (Test-Path -Path $UserPath)
+      {
+        Remove-Item -Path $($UserPath) -Force -Recurse
+      }
+      # Remove the User SID
+      # TODO: if the profile SID is loaded in registry skip this and note in log
+      # Match the user SID
+      $matchedKey = get-childitem -path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object { $_.Name -match $UserSid }
+      # Set the Matched Key Path to PSPath so PowerShell can use the path
+      $matchedKeyPath = $($matchedKey.Name) -replace "HKEY_LOCAL_MACHINE", "HKLM:"
+      # Remove the UserSid Key from the ProfileList
+      Remove-Item -Path "$matchedKeyPath" -Recurse
+    }
+  }
+  End{
+    # Output some info
+    write-log -message:("$UserName's account, profile and Registry Key SID were removed")
+  }
+}
 function enable-privilege {
   param(
     ## The privilege to adjust. This set is taken from
@@ -462,7 +517,32 @@ Function Test-UserRegistryLoadState
   }
 
 }
-
+Function Get-ProfileImagePath
+{
+  [CmdletBinding()]
+  param (
+    [Parameter(Mandatory = $true)]
+    [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
+    [System.String]
+    $UserSid
+  )
+  $profileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $UserSid) -Name 'ProfileImagePath'
+  if ([System.String]::IsNullOrEmpty($profileImagePath))
+  {
+    Write-log -Message("Could not get the profile path for $UserSid exiting...") -Level Error
+    exit
+  }
+  else
+  {
+    return $profileImagePath
+  }
+}
+Function Get-WindowsDrive
+{
+  $drive = (wmic OS GET SystemDrive /VALUE)
+  $drive = [regex]::Match($drive, 'SystemDrive=(.\:)').Groups[1].Value
+  return $drive
+}
 Function Get-WindowsDrive {
   $drive = (wmic OS GET SystemDrive /VALUE)
   $drive = [regex]::Match($drive, 'SystemDrive=(.\:)').Groups[1].Value
@@ -6446,16 +6526,20 @@ Function Start-Migration {
             write-log -Message:("Selected User Path and New User Path Differ")
             try{
               Write-Log -Message:("Attempting to remove newly created $newUserProfileImagePath")
-              start-sleep 1
-              icacls $newUserProfileImagePath /reset /t /c /l *> $null
-              start-sleep 1
+              # start-sleep 1
+              $systemAccount = whoami
+              Write-Log -Message:("ADMU running as $systemAccount")
+              if ($systemAccount -eq "NT AUTHORITY\SYSTEM"){
+                icacls $newUserProfileImagePath /reset /t /c /l *> $null
+                takeown /a /r /d Y /f $newUserProfileImagePath
+              }
               # Reset permissions on NewUserProfileImagePath
               # -ErrorAction Stop; Remove-Item doesn't throw terminating errors
               Remove-Item -Path ($newUserProfileImagePath) -Force -Recurse -ErrorAction Stop
             }
             catch{
-              Write-Log -Message:("Remove $newUserProfileImagePath failed, renaming to unusedADMUProfilere")
-              Rename-Item -Path $newUserProfileImagePath -NewName "unusedADMUProfilere" -ErrorAction Stop
+              Write-Log -Message:("Remove $newUserProfileImagePath failed, renaming to unusedADMUProfile")
+              Rename-Item -Path $newUserProfileImagePath -NewName "unusedADMUProfile" -ErrorAction Stop
             }
             try
             {
@@ -6556,7 +6640,7 @@ Function Start-Migration {
         }
         $appxList | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
 
-        # load registry items back for the last time. 
+        # load registry items back for the last time.
         # TODO: remove load step
         # Set-UserRegistryLoadState -op "Load" -ProfilePath $newuserprofileimagepath -UserSid $NewUserSID
         # Unload the Reg Hives
