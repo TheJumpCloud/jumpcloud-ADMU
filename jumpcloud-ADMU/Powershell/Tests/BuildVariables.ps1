@@ -4,18 +4,18 @@ $testUserPassword = '$T#st1234'
 $userTestingHash = @{
     testCase1 = @{
         Description = 'Test that user can be converted with different name'
-        Username    = 'user.name';
+        Username    = 'test_case_1';
         UserSID     = '';
         Password    = $testUserPassword;
-        JCUsername  = 'Username.username';
+        JCUsername  = 'test_case_1_migrated';
         JCUserSID   = '';
     }
     testCase2 = @{
-        Description = 'Test that user can be converted twthedifrerentomaer x2s'
-        Username    = 'username';
+        Description = 'Test that user can be converted with different name x2s'
+        Username    = 'test_case_2';
         UserSID     = '';
         Password    = $testUserPassword;
-        JCUsername  = 'newUsername';
+        JCUsername  = 'test_case_2_migrated';
         JCUserSID   = '';
     }
     #estCase3 = @{

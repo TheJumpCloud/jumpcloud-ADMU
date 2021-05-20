@@ -8,14 +8,14 @@ BeforeAll{
 }
 Describe 'Migration Test Scenarios'{
     Context 'Start-Migration on local accounts (Test Functionallity)' {
-        It "username extists for testing" -skip {
+        It "username extists for testing" {
             foreach ($user in $userTestingHash.Values){
                 $user.username | Should -Not -BeNullOrEmpty
                 $user.JCusername | Should -Not -BeNullOrEmpty
                 Get-LocalUser $user.username | Should -Not -BeNullOrEmpty
             }
         }
-        It "Test Convert profile migration for Local users" -skip{
+        It "Test Convert profile migration for Local users" {
             foreach ($user in $userTestingHash.Values)
             {
                 write-host "Running: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)"
@@ -83,6 +83,7 @@ Describe 'Migration Test Scenarios'{
                 do
                 {
                     $invokeResults = Get-JcSdkCommandResult
+                    start-sleep 5
                 } until ($invokeResults)
 
             }
