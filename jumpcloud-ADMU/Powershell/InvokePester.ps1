@@ -5,7 +5,7 @@
 Import-Module -Name Pester
 
 # Run Pester tests
-$PesterResultsFileXmldir = ($HOME + '\project\jumpcloud-ADMU\test-results\')
+$PesterResultsFileXmldir = ($HOME + '\project\jumpcloud-ADMU\test_results\')
 new-item -path $PesterResultsFileXmldir -ItemType Directory
 
 $configuration = [PesterConfiguration]::Default
