@@ -104,7 +104,7 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/Sign.ps1 -cert_pw_key <TODO: Cert Key in secret valut>
+           # ./Deploy/Sign.ps1 -cert_pw_key <TODO: Cert Key in secret valut>
   Build Module:
     executor: win/default
     steps:
