@@ -94,7 +94,7 @@ jobs:
             ./jumpcloud-ADMU/Powershell/InvokePester.ps1
       - store_test_results:
           name: Uploading test results for ADMU'
-          path: ./jumpcloud-ADMU/test_results\results.xml
+          path: ./jumpcloud-ADMU/test_results/
 
   Sign Executable:
     executor: win/default
@@ -108,12 +108,14 @@ jobs:
   Build Module:
     executor: win/default
     steps:
+      - attach_workspace:
+          at: .
       - run:
           name: Build Module
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            . ./Deploy/Build-Module.ps1
+            ./Deploy/Build-Module.ps1
   Build Help Files:
     executor: win/default
     steps:
