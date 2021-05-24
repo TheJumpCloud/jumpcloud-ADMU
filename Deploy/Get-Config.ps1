@@ -1,7 +1,8 @@
 # Populate variables
 $ModuleName = $env:MODULENAME
 $ModuleFolderName = $env:MODULEFOLDERNAME
-$DEPLOYFOLDER = $env:DEPLOYFOLDER
+$RootPath = "C:\Users\circleci\project"
+$DEPLOYFOLDER = $RootPath + '\Deploy\'
 $RELEASETYPE = $env:RELEASETYPE
 $GitHubWikiUrl = 'https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/'
 $ScriptRoot = Switch ($env:DEPLOYFOLDER) { $true { $env:DEPLOYFOLDER } Default { $PSScriptRoot } }
