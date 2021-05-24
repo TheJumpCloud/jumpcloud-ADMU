@@ -118,6 +118,8 @@ jobs:
             ./Deploy/Build-Module.ps1
   Build Help Files:
     executor: win/default
+          - attach_workspace:
+          at: .
     steps:
       - run:
           name: Build Help Files
