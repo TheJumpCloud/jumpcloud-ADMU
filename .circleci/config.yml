@@ -129,6 +129,8 @@ jobs:
             ./Deploy/Build-HelpFiles.ps1
   Build Nuspec:
     executor: win/default
+          - attach_workspace:
+          at: .
     steps:
       - run:
           name: Build .nuspec
@@ -136,6 +138,4 @@ jobs:
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/BuildNuspecFromPsd1.ps1
-  
-
   
