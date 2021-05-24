@@ -118,9 +118,9 @@ jobs:
             ./Deploy/Build-Module.ps1
   Build Help Files:
     executor: win/default
-          - attach_workspace:
-          at: .
     steps:
+      - attach_workspace:
+          at: .
       - run:
           name: Build Help Files
           shell: powershell.exe
@@ -129,9 +129,9 @@ jobs:
             ./Deploy/Build-HelpFiles.ps1
   Build Nuspec:
     executor: win/default
-          - attach_workspace:
-          at: .
     steps:
+      - attach_workspace:
+          at: .
       - run:
           name: Build .nuspec
           shell: powershell.exe
