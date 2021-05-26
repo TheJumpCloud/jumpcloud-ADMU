@@ -30,7 +30,7 @@ Describe 'Migration Test Scenarios'{
             $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
             $regex = 'systemKey\":\"(\w+)\"'
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
-
+            Write-Host "Running Tests on SystemID: $systemKey"
             # variables for test
             $CommandBody = 'start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$SelectedUserName} -TempPassword ${ENV:$TempPassword} -ConvertProfile $true'
             $CommandTrigger = 'ADMU'
@@ -54,6 +54,7 @@ Describe 'Migration Test Scenarios'{
             # Create command & association to command
             New-JcSdkCommand -Command $CommandBody -CommandType "windows" -Name $CommandName -Trigger $CommandTrigger -Shell powershell
             $CommandID = (Get-JcSdkCommand | Where-Object { $_.Name -eq $CommandName }).Id
+            Write-Host "Setting CommandID: $CommandID associations"
             Set-JcSdkCommandAssociation -CommandId $CommandID -Id $systemKey -Op add -Type system
         }
         It 'Test that system key exists'{
