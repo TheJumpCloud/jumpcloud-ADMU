@@ -1,5 +1,6 @@
 BeforeAll{
     # import build variables for test cases
+    write-host "importing"
     . $PSScriptRoot\BuildVariables.ps1
     # import functions from start migration
     . $PSScriptRoot\..\Start-Migration.ps1
@@ -63,7 +64,7 @@ Describe 'Migration Test Scenarios'{
         It 'Test that system key exists'{
             $systemKey | Should -Not -BeNullOrEmpty
         }
-        It 'Invoke ADMU from JumpCloud Command'{
+        It 'Invoke ADMU from JumpCloud Command' -skip {
             # clear results
             $results = Get-JcSdkCommandResult
             foreach ($result in $results)

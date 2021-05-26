@@ -6,28 +6,29 @@ Import-Module -Name Pester
 
 # Run Pester tests
 $PesterResultsFileXmldir = ($HOME + '\project\jumpcloud-ADMU\test_results\')
+$PesterResultsFileXml = $PesterResultsFileXmldir + "results.xml"
 new-item -path $PesterResultsFileXmldir -ItemType Directory
 
-$configuration = [PesterConfiguration]::Default
-$configuration.Run.Path = ($HOME + '\project\jumpcloud-ADMU\Powershell\Tests\')
-$configuration.Should.ErrorAction = 'Continue'
-$configuration.CodeCoverage.Enabled = $true
-$configuration.testresult.Enabled = $true
-$configuration.testresult.OutputPath = ($PesterResultsFileXmldir + 'results.xml')
+# $configuration = [PesterConfiguration]::Default
+# $configuration.Run.Path = ($HOME + '\project\jumpcloud-ADMU\Powershell\Tests\')
+# $configuration.Should.ErrorAction = 'Continue'
+# $configuration.CodeCoverage.Enabled = $true
+# $configuration.testresult.Enabled = $true
+# $configuration.testresult.OutputPath = ($PesterResultsFileXmldir + 'results.xml')
 
-Invoke-Pester -configuration $configuration
+Invoke-Pester -outputFile:("$($PesterResultsFileXml)")
 
-$PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmldir.Directory.FullName)")).FullName
+$PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmldir)")).FullName
     If (Test-Path -Path:($PesterTestResultPath))
     {
         [xml]$PesterResults = Get-Content -Path:($PesterTestResultPath)
-        If ([int]$PesterResults.'testsuites'.failures -gt 0)
+        If ($PesterResults.ChildNodes.failures -gt 0)
         {
-            Write-Error ("Test Failures: $($PesterResults.'testsuites'.failures)")
+            Write-Error ("Test Failures: $($PesterResults.ChildNodes.failures)")
         }
-        If ([int]$PesterResults.'testsuites'.errors -gt 0)
+        If ($PesterResults.ChildNodes.errors -gt 0)
         {
-            Write-Error ("Test Errors: $($PesterResults.'testsuites'.errors)")
+            Write-Error ("Test Errors: $($PesterResults.ChildNodes.errors)")
         }
     }
     Else
