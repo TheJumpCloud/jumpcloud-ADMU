@@ -32,12 +32,6 @@ Describe 'Migration Test Scenarios'{
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
             Write-Host "Running Tests on SystemID: $systemKey"
             # Connect-JCOnline
-            $env:JCApiKey = $JCApiKey
-            $env:JCOrgId = $JCOrgId
-            If (-not [System.String]::IsNullOrEmpty($env:JCApiKey) -and -not [System.String]::IsNullOrEmpty($env:JCOrgId))
-            {
-                Write-Host ('[VALIDATION] JCApiKey AND JCOrgId have been populated.') -BackgroundColor:('Black') -ForegroundColor:('Magenta')
-            }
 
             # variables for test
             $CommandBody = 'start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$SelectedUserName} -TempPassword ${ENV:$TempPassword} -ConvertProfile $true'
