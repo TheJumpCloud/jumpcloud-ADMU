@@ -31,16 +31,20 @@ Describe 'Migration Test Scenarios'{
             $regex = 'systemKey\":\"(\w+)\"'
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
             Write-Host "Running Tests on SystemID: $systemKey"
+            # Connect-JCOnline
+            Connect-JCOnline -JumpCloudApiKey $ENV:JCApiKey -JumpCloudOrgId $ENV:JCOrgID
+            Import-Module JumpCloud.SDK.V1
+            Import-Module JumpCloud.SDK.V2
             # variables for test
             $CommandBody = 'start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$SelectedUserName} -TempPassword ${ENV:$TempPassword} -ConvertProfile $true'
             $CommandTrigger = 'ADMU'
             $CommandName = 'RemoteADMU'
-            Connect-JCOnline -JumpCloudApiKey $ENV:JCApiKey -JumpCloudOrgId $ENV:JCOrgID
             # clear command results
             $results = Get-JcSdkCommandResult
             foreach ($result in $results)
             {
                 # Delete Command Results
+                Write-Host "Found Command Results: $($result.id) removing..."
                 remove-jcsdkcommandresult -id $result.id
             }
             # Clear previous commands matching the name
@@ -48,6 +52,7 @@ Describe 'Migration Test Scenarios'{
             foreach ($result in $RemoteADMUCommands)
             {
                 # Delete Command Results
+                Write-Host "Found existing Command: $($result.id) removing..."
                 Remove-JcSdkCommand -id $result.id
             }
 
@@ -55,8 +60,6 @@ Describe 'Migration Test Scenarios'{
             New-JcSdkCommand -Command $CommandBody -CommandType "windows" -Name $CommandName -Trigger $CommandTrigger -Shell powershell
             $CommandID = (Get-JcSdkCommand | Where-Object { $_.Name -eq $CommandName }).Id
             Write-Host "Setting CommandID: $CommandID associations"
-            # wait before association
-            start-sleep 5
             Set-JcSdkCommandAssociation -CommandId $CommandID -Id $systemKey -Op add -Type system
         }
         It 'Test that system key exists'{

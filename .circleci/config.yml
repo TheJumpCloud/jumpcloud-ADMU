@@ -45,7 +45,6 @@ jobs:
           shell: powershell.exe
           command: |
             Install-Module -Name:('ps2exe') -Force
-            # Install-Module -Name:('Pester') -Force # Not needed until test step
       - run:
           name: Build
           shell: powershell.exe
