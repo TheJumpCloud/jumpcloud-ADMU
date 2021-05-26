@@ -15,18 +15,36 @@ $configuration.CodeCoverage.Enabled = $true
 $configuration.testresult.Enabled = $true
 $configuration.testresult.OutputPath = ($PesterResultsFileXmldir + 'results.xml')
 
-$PesterResults = Invoke-Pester -configuration $configuration
-$FailedTests = $PesterResults.TestResult | Where-Object { $_.Passed -eq $false }
-If ($FailedTests)
-{
-    Write-Output ('')
-    Write-Output ('###########################################################')
-    Write-Output ('#################### Error Description ####################')
-    Write-Output ('###########################################################')
-    Write-Output ('')
-    $FailedTests | ForEach-Object { $_.Name + '; ' + $_.FailureMessage + '; ' }
-    Write-Error -Message:('Tests Failed: ' + [string]($FailedTests | Measure-Object).Count)
-}
+Invoke-Pester -configuration $configuration
+
+$PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmldir.Directory.FullName)")).FullName
+    If (Test-Path -Path:($PesterTestResultPath))
+    {
+        [xml]$PesterResults = Get-Content -Path:($PesterTestResultPath)
+        If ([int]$PesterResults.'testsuites'.failures -gt 0)
+        {
+            Write-Error ("Test Failures: $($PesterResults.'testsuites'.failures)")
+        }
+        If ([int]$PesterResults.'testsuites'.errors -gt 0)
+        {
+            Write-Error ("Test Errors: $($PesterResults.'testsuites'.errors)")
+        }
+    }
+    Else
+    {
+        Write-Error ("Unable to find file path: $PesterTestResultPath")
+    }
+# $FailedTests = $PesterResults.TestResult | Where-Object { $_.Passed -eq $false }
+# If ($FailedTests)
+# {
+#     Write-Output ('')
+#     Write-Output ('###########################################################')
+#     Write-Output ('#################### Error Description ####################')
+#     Write-Output ('###########################################################')
+#     Write-Output ('')
+#     $FailedTests | ForEach-Object { $_.Name + '; ' + $_.FailureMessage + '; ' }
+#     Write-Error -Message:('Tests Failed: ' + [string]($FailedTests | Measure-Object).Count)
+# }
 
 Write-Host -ForegroundColor Green '-------------Done-------------'
 
