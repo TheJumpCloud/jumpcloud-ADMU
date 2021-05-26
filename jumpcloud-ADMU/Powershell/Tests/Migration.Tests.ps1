@@ -15,7 +15,7 @@ Describe 'Migration Test Scenarios'{
                 Get-LocalUser $user.username | Should -Not -BeNullOrEmpty
             }
         }
-        It "Test Convert profile migration for Local users" {
+        It "Test Convert profile migration for Local users" -skip {
             foreach ($user in $userTestingHash.Values)
             {
                 write-host "Running: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)"
@@ -32,9 +32,13 @@ Describe 'Migration Test Scenarios'{
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
             Write-Host "Running Tests on SystemID: $systemKey"
             # Connect-JCOnline
-            Connect-JCOnline -JumpCloudApiKey $ENV:JCApiKey -JumpCloudOrgId $ENV:JCOrgID
-            Import-Module JumpCloud.SDK.V1
-            Import-Module JumpCloud.SDK.V2
+            $env:JCApiKey = $JCApiKey
+            $env:JCOrgId = $JCOrgId
+            If (-not [System.String]::IsNullOrEmpty($env:JCApiKey) -and -not [System.String]::IsNullOrEmpty($env:JCOrgId))
+            {
+                Write-Host ('[VALIDATION] JCApiKey AND JCOrgId have been populated.') -BackgroundColor:('Black') -ForegroundColor:('Magenta')
+            }
+
             # variables for test
             $CommandBody = 'start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$SelectedUserName} -TempPassword ${ENV:$TempPassword} -ConvertProfile $true'
             $CommandTrigger = 'ADMU'
