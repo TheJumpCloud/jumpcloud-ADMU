@@ -55,6 +55,8 @@ Describe 'Migration Test Scenarios'{
             New-JcSdkCommand -Command $CommandBody -CommandType "windows" -Name $CommandName -Trigger $CommandTrigger -Shell powershell
             $CommandID = (Get-JcSdkCommand | Where-Object { $_.Name -eq $CommandName }).Id
             Write-Host "Setting CommandID: $CommandID associations"
+            # wait before association
+            start-sleep 5
             Set-JcSdkCommandAssociation -CommandId $CommandID -Id $systemKey -Op add -Type system
         }
         It 'Test that system key exists'{
