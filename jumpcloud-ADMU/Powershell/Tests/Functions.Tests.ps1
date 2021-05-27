@@ -1,9 +1,9 @@
 Describe 'Functions' {
 
     BeforeAll{
-        . ..\Start-Migration.ps1
+        . .\Start-Migration.ps1
     }
-    Context 'VerifyAccount Function'{
+    Context 'VerifyAccount Functions'{
 
        It 'VerifyAccount - Real domain account bob.lazar@JCADB2.local' -Skip {
            VerifyAccount -username bob.lazar -domain JCADB2.local | Should -Be $true
@@ -219,14 +219,16 @@ Describe 'Functions' {
             net user testuser Temp123! /add
             Remove-LocalGroupMember -Group "Users" -Member "testuser"
             Add-LocalGroupMember -SID S-1-5-32-545 -Member 'testuser'
-            ((Get-LocalGroupMember -SID S-1-5-32-545 | Select-Object Name).name -match 'testuser') -ne $null | Should -Be $true
+            # ((Get-LocalGroupMember -SID S-1-5-32-545 | Select-Object Name).name -match 'testuser') -ne $null | Should -Be $true
+            # ASDI seems to work when Get-LocalGroupMember errors
+            (([ADSI]"WinNT://./Users").psbase.Invoke('Members') | % { ([ADSI]$_).InvokeGet('AdsPath') } ) -match 'testuser' | Should -Be $true
         }
 
     }
 
     Context 'Test-Localusername Function'{
 
-        It 'Test-Localusername - exists' {
+        It 'Test-Localusername - exists' -skip {
 
             Test-Localusername -field 'blazar' | Should -Be $true
         }
@@ -240,7 +242,7 @@ Describe 'Functions' {
 
     Context 'Test-Domainusername Function'{
 
-        It 'Test-Domainusername - exists' {
+        It 'Test-Domainusername - exists' -skip {
 
             Test-Domainusername -field 'bob.lazar' | Should -Be $true
         }
@@ -283,8 +285,9 @@ Describe 'Functions' {
 
     Context 'GetNetBiosName Function'{
 
-        It 'GetNetBiosName - JCADB2' {
+        It 'GetNetBiosName - JCADB2' -Skip {
             GetNetBiosName | Should -Be 'JCADB2'
+            #TODO: bind & test
         }
     }
 
