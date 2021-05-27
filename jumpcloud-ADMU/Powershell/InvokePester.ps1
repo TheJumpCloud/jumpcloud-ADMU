@@ -3,11 +3,14 @@
 
 # Import pester module
 Import-Module -Name Pester
-
+$PesterVersion = Get-Module pester
+Write-host "Running Pester Tests using Pester Version: $($PesterVersion.Version)"
 # Run Pester tests
 $PesterResultsFileXmldir = ($HOME + '\project\jumpcloud-ADMU\test_results\')
 $PesterResultsFileXml = $PesterResultsFileXmldir + "results.xml"
-new-item -path $PesterResultsFileXmldir -ItemType Directory
+if (-not (Test-Path $PesterResultsFileXmldir)){
+    new-item -path $PesterResultsFileXmldir -ItemType Directory
+}
 
 # $configuration = [PesterConfiguration]::Default
 # $configuration.Run.Path = ($HOME + '\project\jumpcloud-ADMU\Powershell\Tests\')
@@ -35,17 +38,5 @@ $PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmldir)")).Fu
     {
         Write-Error ("Unable to find file path: $PesterTestResultPath")
     }
-# $FailedTests = $PesterResults.TestResult | Where-Object { $_.Passed -eq $false }
-# If ($FailedTests)
-# {
-#     Write-Output ('')
-#     Write-Output ('###########################################################')
-#     Write-Output ('#################### Error Description ####################')
-#     Write-Output ('###########################################################')
-#     Write-Output ('')
-#     $FailedTests | ForEach-Object { $_.Name + '; ' + $_.FailureMessage + '; ' }
-#     Write-Error -Message:('Tests Failed: ' + [string]($FailedTests | Measure-Object).Count)
-# }
-
 Write-Host -ForegroundColor Green '-------------Done-------------'
 
