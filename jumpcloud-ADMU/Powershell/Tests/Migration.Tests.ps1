@@ -29,6 +29,9 @@ Describe 'Migration Test Scenarios'{
     }
     Context 'Start-Migration kicked off through JumpCloud agent'{
         BeforeAll{
+            # test connection to Org
+            $Org = Get-JcSdkOrganization
+            Write-Host "Connected to: $($Org.Id) ($($Org.DisplayName))"
             # Get System Key
             $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
             $regex = 'systemKey\":\"(\w+)\"'
