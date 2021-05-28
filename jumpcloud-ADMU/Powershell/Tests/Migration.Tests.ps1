@@ -40,7 +40,10 @@ Describe 'Migration Test Scenarios'{
             # Connect-JCOnline
 
             # variables for test
-            $CommandBody = 'start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$SelectedUserName} -TempPassword ${ENV:$TempPassword} -ConvertProfile $true'
+            $CommandBody = '
+. C:\Users\circleci\project\jumpcloud-ADMU\Powershell\Start-Migration.ps1
+start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$SelectedUserName} -TempPassword ${ENV:$TempPassword} -ConvertProfile $true
+'
             $CommandTrigger = 'ADMU'
             $CommandName = 'RemoteADMU'
             # clear command results
@@ -89,13 +92,21 @@ Describe 'Migration Test Scenarios'{
                     '$TempPassword'     = $user.Password
                 } | ConvertTo-Json
                 Invoke-RestMethod -Method POST -Uri "https://console.jumpcloud.com/api/command/trigger/$($CommandTrigger)" -ContentType 'application/json' -Headers $headers -Body $Form
-
+                Write-Host "Invoke Command ADMU:"
                 do
                 {
+                    Write-Host "Waiting on system to receive command..."
                     $invokeResults = Get-JcSdkCommandResult
                     start-sleep 5
                 } until ($invokeResults)
+                Write-Host "Command pushed to system, waiting on results"
+                do{
+                    Write-host "Waiting on results..."
+                    $invokeResults = Get-JcSdkCommandResult
+                    start-sleep 5
+                } until ($invokeResults.ExitCode)
 
+                $invokeResults.ExitCode | Should -Be 0
             }
 
         }
