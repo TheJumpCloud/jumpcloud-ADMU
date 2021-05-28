@@ -1,3 +1,9 @@
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [System.string]
+    $ModuleVersionType
+)
 # Load functions
 . ($HOME + '/project/jumpcloud-ADMU/Powershell/Start-Migration.ps1')
 
