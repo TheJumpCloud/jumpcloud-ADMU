@@ -90,7 +90,7 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./jumpcloud-ADMU/Powershell/InvokePester.ps1
+            ./jumpcloud-ADMU/Powershell/InvokePester.ps1 << pipeline.parameters.buildReleaseType >>
       - store_test_results:
           name: Uploading test results for ADMU'
           path: ./jumpcloud-ADMU/test_results/

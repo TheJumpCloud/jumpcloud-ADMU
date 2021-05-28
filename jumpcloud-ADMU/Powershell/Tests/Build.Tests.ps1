@@ -31,8 +31,7 @@ Describe 'Build Tests' {
             $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
             $masterformversion = [version]$masterversion.Matches.value
             $branchformversion | Should -BeGreaterThan $masterformversion
-            $buildReleaseType = << pipeline.parameters.buildReleaseType >>
-            $branchformversion.$($buildReleaseType) | Should -Be ($masterformversion.$($buildReleaseType) + 1)
+            $branchformversion.$($env:ModuleVersionType) | Should -Be ($masterformversion.$($env:ModuleVersionType) + 1)
         }
 
         It 'Start-Migration version' {

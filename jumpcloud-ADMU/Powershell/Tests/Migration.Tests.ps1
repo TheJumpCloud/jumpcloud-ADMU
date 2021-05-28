@@ -95,18 +95,17 @@ start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$S
                 Write-Host "Invoke Command ADMU:"
                 do
                 {
-                    Write-Host "Waiting on system to receive command..."
+                    Write-Host "Waiting 5 seconds for system to receive command..."
                     $invokeResults = Get-JcSdkCommandResult
                     start-sleep 5
                 } until ($invokeResults)
                 Write-Host "Command pushed to system, waiting on results"
                 do{
-                    Write-host "Waiting on results..."
-                    $invokeResults = Get-JcSdkCommandResult
+                    Write-host "Waiting 5 seconds on results..."
+                    $CommandResults = Get-JcSdkCommandResult -id $invokeResults.Id
                     start-sleep 5
-                } until ($invokeResults.ExitCode)
-
-                $invokeResults.ExitCode | Should -Be 0
+                } until ($CommandResults.DataExitCode)
+                $CommandResults.DataExitCode | Should -Be 0
             }
 
         }
@@ -116,7 +115,7 @@ start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$S
 
 
 # New User SID should have the correct profile path
-# User proflie should be named correctly
+# User profile should be named correctly
 
 
 # user -> username where username exists should fail and revert
