@@ -17,6 +17,7 @@ $configuration.Run.Path = ($HOME + '\project\jumpcloud-ADMU\Powershell\Tests\')
 $configuration.Should.ErrorAction = 'Continue'
 $configuration.CodeCoverage.Enabled = $true
 $configuration.testresult.Enabled = $true
+$configuration.testresult.OutputFormat = 'JUnitXml'
 $configuration.testresult.OutputPath = ($PesterResultsFileXmldir + 'results.xml')
 
 Invoke-Pester -configuration $configuration
