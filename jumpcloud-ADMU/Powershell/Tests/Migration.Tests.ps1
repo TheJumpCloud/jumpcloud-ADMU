@@ -94,12 +94,14 @@ start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName $ENV:COM
                 } | ConvertTo-Json
                 Invoke-RestMethod -Method POST -Uri "https://console.jumpcloud.com/api/command/trigger/$($CommandTrigger)" -ContentType 'application/json' -Headers $headers -Body $Form
                 Write-Host "Invoke Command ADMU:"
+                $count = 0
                 do
                 {
                     Write-Host "Waiting 5 seconds for system to receive command..."
                     $invokeResults = Get-JcSdkCommandResult
+                    count += 1
                     start-sleep 5
-                } until ($invokeResults)
+                } until (($invokeResults) -or ($count -eq 24))
                 Write-Host "Command pushed to system, waiting on results"
                 $count = 0
                 do{
