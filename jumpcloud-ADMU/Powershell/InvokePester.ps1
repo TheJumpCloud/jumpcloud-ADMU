@@ -7,19 +7,19 @@ $PesterVersion = Get-Module pester
 Write-host "Running Pester Tests using Pester Version: $($PesterVersion.Version)"
 # Run Pester tests
 $PesterResultsFileXmldir = ($HOME + '\project\jumpcloud-ADMU\test_results\')
-$PesterResultsFileXml = $PesterResultsFileXmldir + "results.xml"
+# $PesterResultsFileXml = $PesterResultsFileXmldir + "results.xml"
 if (-not (Test-Path $PesterResultsFileXmldir)){
     new-item -path $PesterResultsFileXmldir -ItemType Directory
 }
 
-# $configuration = [PesterConfiguration]::Default
-# $configuration.Run.Path = ($HOME + '\project\jumpcloud-ADMU\Powershell\Tests\')
-# $configuration.Should.ErrorAction = 'Continue'
-# $configuration.CodeCoverage.Enabled = $true
-# $configuration.testresult.Enabled = $true
-# $configuration.testresult.OutputPath = ($PesterResultsFileXmldir + 'results.xml')
+$configuration = [PesterConfiguration]::Default
+$configuration.Run.Path = ($HOME + '\project\jumpcloud-ADMU\Powershell\Tests\')
+$configuration.Should.ErrorAction = 'Continue'
+$configuration.CodeCoverage.Enabled = $true
+$configuration.testresult.Enabled = $true
+$configuration.testresult.OutputPath = ($PesterResultsFileXmldir + 'results.xml')
 
-Invoke-Pester -outputFile:("$($PesterResultsFileXml)")
+Invoke-Pester -configuration $configuration
 
 $PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmldir)")).FullName
     If (Test-Path -Path:($PesterTestResultPath))

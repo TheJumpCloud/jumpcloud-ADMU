@@ -11,7 +11,7 @@ Describe 'Build Tests' {
         It 'uwp_jcadmu.exe exists' {
             (Test-Path -Path ('..\exe\uwp_jcadmu.exe')) | Should -Be $true
         }
-        It 'ADMU.ps1 writen to in last 2mins' {
+        It 'ADMU.ps1 writen to in last 2mins' -skip {
             if((@(Get-ChildItem ('..\..\Deploy\ADMU.ps1')|Where-Object LastWriteTime -gt (Get-Date).AddMinutes(-2)).LastWriteTime).length -ge 1){$lessthan2 = $true}else{$lessthan2 = $false}
             $lessthan2| Should -Be $true
             #TODO: why this test?

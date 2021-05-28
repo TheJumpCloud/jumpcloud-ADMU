@@ -9,6 +9,9 @@
 forEach ($User in $userTestingHash.Values)
 {
     "Testing Case for $($User.Username)"
+    if ((Get-LocalUser | Select-Object Name) -match $($User.Username)){
+        Remove-LocalUserProfile $($User.Username)
+    }
     $newUserPassword = ConvertTo-SecureString -String "$($User.Password)" -AsPlainText -Force
     New-localUser -Name "$($User.Username)" -password $newUserPassword -ErrorVariable userExitCode -Description "Created By JumpCloud ADMU"
     if ($userExitCode)
@@ -31,6 +34,10 @@ forEach ($User in $userTestingHash.Values)
 forEach ($User in $JCCommandTestingHash.Values)
 {
     "Testing Case for $($User.Username)"
+    if ((Get-LocalUser | Select-Object Name) -match $($User.Username))
+    {
+        Remove-LocalUserProfile $($User.Username)
+    }
     $newUserPassword = ConvertTo-SecureString -String "$($User.Password)" -AsPlainText -Force
     New-localUser -Name "$($User.Username)" -password $newUserPassword -ErrorVariable userExitCode -Description "Created By JumpCloud ADMU"
     if ($userExitCode)
