@@ -42,7 +42,7 @@ Describe 'Migration Test Scenarios'{
             # variables for test
             $CommandBody = '
 . C:\Users\circleci\project\jumpcloud-ADMU\Powershell\Start-Migration.ps1
-start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$SelectedUserName} -TempPassword ${ENV:$TempPassword} -ConvertProfile $true
+start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName $ENV:COMPUTERNAME\${ENV:$SelectedUserName} -TempPassword ${ENV:$TempPassword} -ConvertProfile $true
 '
             $CommandTrigger = 'ADMU'
             $CommandName = 'RemoteADMU'
@@ -82,6 +82,7 @@ start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$S
             }
             # begin tests
             foreach ($user in $JCCommandTestingHash.Values) {
+                write-host "Running: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)"
                 $headers = @{
                     'Accept'    = "application/json"
                     'x-api-key' = $env:JCApiKey
