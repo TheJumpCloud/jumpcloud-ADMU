@@ -44,6 +44,7 @@ Describe 'Build Tests' {
             $masterVersion = Select-String -inputobject:($masterStartMigration) -Pattern:($VersionRegex)
             $masterStartMigrationVersion = [version]$masterVersion.Matches.Groups[2].value
             $branchStartMigrationVersion | Should -BeGreaterThan $masterStartMigrationVersion
+            $branchStartMigrationVersion.$($env:ModuleVersionType) | Should -Be ($masterStartMigrationVersion.$($env:ModuleVersionType) + 1)
         }
 
         It 'gui_jcadmu.exe version' {
@@ -53,6 +54,7 @@ Describe 'Build Tests' {
             $masterformversion = [version]$masterversion.Matches.value
             $exeversion = [version](Get-Item ("$PSScriptRoot\..\..\exe\gui_jcadmu.exe")).VersionInfo.FileVersion
             $exeversion | Should -BeGreaterThan $masterformversion
+            $exeversion.$($env:ModuleVersionType) | Should -Be ($masterformversion.$($env:ModuleVersionType) + 1)
         }
 
         It 'gui_jcadmu.exe signature valid' -skip {

@@ -104,7 +104,7 @@ start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName ${ENV:$S
                 do{
                     Write-host "Waiting 5 seconds on results..."
                     $CommandResults = Get-JcSdkCommandResult -id $invokeResults.Id
-                    count += 1
+                    $count += 1
                     start-sleep 5
                 } until (($CommandResults.DataExitCode) -or ($count -eq 24))
                 $CommandResults.DataExitCode | Should -Be 0
