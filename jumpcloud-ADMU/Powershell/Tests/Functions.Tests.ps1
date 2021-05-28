@@ -1,8 +1,9 @@
+BeforeAll {
+    Write-Host "Script Location: $PSScriptRoot"
+    Write-Host "Dot-Sourceing Start-Migration Script"
+    . $PSScriptRoot\..\Start-Migration.ps1
+}
 Describe 'Functions' {
-
-    BeforeAll{
-        . .\Start-Migration.ps1
-    }
     Context 'VerifyAccount Functions'{
 
        It 'VerifyAccount - Real domain account bob.lazar@JCADB2.local' -Skip {
