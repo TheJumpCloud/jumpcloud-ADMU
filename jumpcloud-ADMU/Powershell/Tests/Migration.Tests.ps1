@@ -42,7 +42,11 @@ Describe 'Migration Test Scenarios'{
             # variables for test
             $CommandBody = '
 . C:\Users\circleci\project\jumpcloud-ADMU\Powershell\Start-Migration.ps1
-start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName $ENV:COMPUTERNAME\${ENV:$SelectedUserName} -TempPassword ${ENV:$TempPassword} -ConvertProfile $true
+# Trim env vars with hardcoded ""
+$JCU = ${ENV:$JcUserName}.Trim([char]0x0022)
+$SU = ${ENV:$SelectedUserName}.Trim([char]0x0022)
+$PW = ${ENV:$TempPassword}.Trim([char]0x0022)
+Start-Migration -JumpCloudUserName $JCU -SelectedUserName $ENV:COMPUTERNAME\$SU -TempPassword $PW -ConvertProfile $true
 '
             $CommandTrigger = 'ADMU'
             $CommandName = 'RemoteADMU'
