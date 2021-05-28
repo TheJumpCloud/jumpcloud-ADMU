@@ -6393,7 +6393,7 @@ Function Start-Migration {
         }
         # Give us admin rights to modify
         Write-Log -Message:("Take Ownership of $($newuserprofileimagepath)")
-        $path = takeown /F "$($newuserprofileimagepath)" /a /r /d Y
+        $path = takeown /F "$($newuserprofileimagepath)" /r /d Y
         Write-Log -Message:("Get ACLs for $($newuserprofileimagepath)")
         $acl = Get-Acl ($newuserprofileimagepath)
         Write-Log -Message:("Current ACLs: $($acl.access)")
@@ -6545,7 +6545,7 @@ Function Start-Migration {
               Write-Log -Message:("ADMU running as $systemAccount")
               if ($systemAccount -eq "NT AUTHORITY\SYSTEM"){
                 icacls $newUserProfileImagePath /reset /t /c /l *> $null
-                takeown /a /r /d Y /f $newUserProfileImagePath
+                takeown /r /d Y /f $newUserProfileImagePath
               }
               # Reset permissions on NewUserProfileImagePath
               # -ErrorAction Stop; Remove-Item doesn't throw terminating errors
