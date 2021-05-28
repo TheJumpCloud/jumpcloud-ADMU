@@ -101,19 +101,19 @@ Start-Migration -JumpCloudUserName $JCU -SelectedUserName $ENV:COMPUTERNAME\$SU 
                 $count = 0
                 do
                 {
-                    Write-Host "Waiting 5 seconds for system to receive command..."
                     $invokeResults = Get-JcSdkCommandResult
+                    Write-Host "Waiting 5 seconds for system to receive command..."
                     $count += 1
                     start-sleep 5
                 } until (($invokeResults) -or ($count -eq 24))
                 Write-Host "Command pushed to system, waiting on results"
                 $count = 0
                 do{
-                    Write-host "Waiting 5 seconds on results..."
                     $CommandResults = Get-JcSdkCommandResult -id $invokeResults.Id
+                    Write-host "Waiting 5 seconds on results..."
                     $count += 1
                     start-sleep 5
-                } until (($CommandResults.DataExitCode) -or ($count -eq 24))
+                } until ((($CommandResults.DataExitCode) -is [int]) -or ($count -eq 24))
                 $CommandResults.DataExitCode | Should -Be 0
             }
 
