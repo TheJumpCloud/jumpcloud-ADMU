@@ -6390,7 +6390,7 @@ Function Start-Migration {
         Write-Log -Message:('Begin new local user registry copy')
         # Give us admin rights to modify
         Write-Log -Message:("Take Ownership of $($newuserprofileimagepath)")
-        $path = takeown /F $newuserprofileimagepath /a /r /d y
+        $path = takeown /F "$($newuserprofileimagepath)" /a /r /d Y
         Write-Log -Message:("Get ACLs for $($newuserprofileimagepath)")
         $acl = Get-Acl ($newuserprofileimagepath)
         Write-Log -Message:("Current ACLs: $($acl.access)")

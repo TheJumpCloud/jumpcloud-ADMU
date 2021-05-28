@@ -99,7 +99,7 @@ start-migration -JumpCloudUserName ${ENV:$JcUserName} -SelectedUserName $ENV:COM
                 {
                     Write-Host "Waiting 5 seconds for system to receive command..."
                     $invokeResults = Get-JcSdkCommandResult
-                    count += 1
+                    $count += 1
                     start-sleep 5
                 } until (($invokeResults) -or ($count -eq 24))
                 Write-Host "Command pushed to system, waiting on results"
