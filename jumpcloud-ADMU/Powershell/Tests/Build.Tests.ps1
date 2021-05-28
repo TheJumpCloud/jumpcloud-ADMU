@@ -24,13 +24,15 @@ Describe 'Build Tests' {
 
         It 'XAML Form version' {
             $FormPath = "$PSScriptRoot\..\Form.ps1"
-           $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
-           $formversion = Select-String -Path:($formpath) -Pattern:($VersionRegex)
-           $branchformversion = [version]$formversion.Matches.value
-           $masterform = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1 -useBasicParsing).tostring()
-           $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
-           $masterformversion = [version]$masterversion.Matches.value
-           $branchformversion | Should -BeGreaterThan $masterformversion
+            $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
+            $formversion = Select-String -Path:($formpath) -Pattern:($VersionRegex)
+            $branchformversion = [version]$formversion.Matches.value
+            $masterform = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1 -useBasicParsing).tostring()
+            $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
+            $masterformversion = [version]$masterversion.Matches.value
+            $branchformversion | Should -BeGreaterThan $masterformversion
+            $buildReleaseType = << pipeline.parameters.buildReleaseType >>
+            $branchformversion.$($buildReleaseType) | Should -Be ($masterformversion.$($buildReleaseType) + 1)
         }
 
         It 'Start-Migration version' {
@@ -46,17 +48,17 @@ Describe 'Build Tests' {
         }
 
         It 'gui_jcadmu.exe version' {
-           $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
-           $masterform = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1 -useBasicParsing).tostring()
-           $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
-           $masterformversion = [version]$masterversion.Matches.value
+            $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
+            $masterform = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1 -useBasicParsing).tostring()
+            $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
+            $masterformversion = [version]$masterversion.Matches.value
             $exeversion = [version](Get-Item ("$PSScriptRoot\..\..\exe\gui_jcadmu.exe")).VersionInfo.FileVersion
-           $exeversion | Should -BeGreaterThan $masterformversion
+            $exeversion | Should -BeGreaterThan $masterformversion
         }
 
         It 'gui_jcadmu.exe signature valid' -skip {
             #(Get-AuthenticodeSignature ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\exe\gui_jcadmu.exe')).Status  | Should -Be 'Valid'
             #TODO: why this test?
-         }
+        }
     }
 }
