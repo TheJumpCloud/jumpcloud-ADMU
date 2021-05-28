@@ -221,7 +221,7 @@ Describe 'Functions' {
             Add-LocalGroupMember -SID S-1-5-32-545 -Member 'testuser'
             # ((Get-LocalGroupMember -SID S-1-5-32-545 | Select-Object Name).name -match 'testuser') -ne $null | Should -Be $true
             # ASDI seems to work when Get-LocalGroupMember errors
-            (([ADSI]"WinNT://./Users").psbase.Invoke('Members') | % { ([ADSI]$_).InvokeGet('AdsPath') } ) -match 'testuser' | Should -Be $true
+            (([ADSI]"WinNT://./Users").psbase.Invoke('Members') | ForEach-Object { ([ADSI]$_).InvokeGet('AdsPath') } ) -match 'testuser' | Should -Be $true
         }
 
     }
@@ -255,7 +255,6 @@ Describe 'Functions' {
     }
 
     Context 'DownloadAndInstallAgent Function'{
-
         It 'DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x64' {
             Test-path 'C:\Windows\Temp\JCADMU\vc_redist.x64.exe' | Should -Be $true
         }

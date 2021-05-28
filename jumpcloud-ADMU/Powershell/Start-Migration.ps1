@@ -146,6 +146,8 @@ function Remove-LocalUserProfile {
       # Remove the User Profile
       if (Test-Path -Path $UserPath)
       {
+        icacls $($UserPath) /grant administrators:F /T
+        takeown /f $($UserPath) /r /d y
         Remove-Item -Path $($UserPath) -Force -Recurse
       }
       # Remove the User SID
@@ -6340,7 +6342,7 @@ Function Start-Migration {
         Write-Log -Message:("The user: $JumpCloudUserName could not be created, exiting")
         exit 1
       }
-      # Initalize the Profile
+      # Initialize the Profile
       New-LocalUserProfile -username $JumpCloudUserName -ErrorVariable profileInit
       if ($profileInit)
       {

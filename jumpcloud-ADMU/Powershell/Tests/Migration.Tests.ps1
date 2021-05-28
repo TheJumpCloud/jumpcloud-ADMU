@@ -1,10 +1,12 @@
 BeforeAll{
     # import build variables for test cases
-    write-host "importing"
+    write-host "Importing Build Variables"
     . $PSScriptRoot\BuildVariables.ps1
     # import functions from start migration
+    write-host "Importing Start-Migration Script"
     . $PSScriptRoot\..\Start-Migration.ps1
     # setup tests (This creates any of the users in the build vars dictionary)
+    write-host "Running SetupAgent Script"
     . $PSScriptRoot\SetupAgent.ps1
 }
 Describe 'Migration Test Scenarios'{
