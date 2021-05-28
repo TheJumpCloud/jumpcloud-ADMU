@@ -71,10 +71,7 @@ jobs:
           shell: powershell.exe
           command: |
             Install-Module -Name:('PSScriptAnalyzer') -Force
-            Install-Module -Name:('Pester') -Force -RequiredVersion 4.10.1
             Install-Module -Name:('JumpCloud') -Force
-            # $env:JCApiKey = $JCApiKey
-            # $env:JCOrgId = $JCOrgId
             If (-not [System.String]::IsNullOrEmpty($env:JCApiKey) -and -not [System.String]::IsNullOrEmpty($env:JCOrgId))
             {
                 Write-Host ('[VALIDATION] JCApiKey AND JCOrgId have been populated.')

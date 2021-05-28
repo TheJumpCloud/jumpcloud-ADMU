@@ -1,6 +1,6 @@
 BeforeAll {
     Write-Host "Script Location: $PSScriptRoot"
-    Write-Host "Dot-Sourceing Start-Migration Script"
+    Write-Host "Dot-Sourcing Start-Migration Script"
     . $PSScriptRoot\..\Start-Migration.ps1
 }
 Describe 'Functions' {
