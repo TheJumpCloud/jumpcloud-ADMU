@@ -960,7 +960,7 @@ function CheckUsernameorSID {
     }
     else {
       Write-Log 'SID or Username is invalid'
-      exit
+      exit 1
     }
   }
 }

@@ -2,8 +2,9 @@ version: 2.1
 parameters:
   buildReleaseType:
     description: 'Semantic Version increment type of the release. Valid values: major, minor, build'
-    type: string
-    default: build
+    default: "build"
+    type: enum
+    enum: ["major", "minor", "build"]
 orbs:
   win: circleci/windows@2.2.0
 build-and-sign-ADMU: &build-and-sign-ADMU
