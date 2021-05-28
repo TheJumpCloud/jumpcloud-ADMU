@@ -1,18 +1,19 @@
-$psfolder = Split-Path -Path:($MyInvocation)
-Write-Output $psfolder
+BeforeAll{
+    Write-Host "Script Location: $PSScriptRoot"
+}
 Describe 'Build Tests' {
 
     Context 'Check Files Exist' {
 
         It 'gui_jcadmu.exe exists' {
-            (Test-Path -Path ('..\exe\gui_jcadmu.exe')) | Should -Be $true
+            (Test-Path -Path ("$PSScriptRoot\..\..\exe\gui_jcadmu.exe")) | Should -Be $true
         }
 
         It 'uwp_jcadmu.exe exists' {
-            (Test-Path -Path ('..\exe\uwp_jcadmu.exe')) | Should -Be $true
+            (Test-Path -Path ("$PSScriptRoot\..\..\exe\uwp_jcadmu.exe")) | Should -Be $true
         }
         It 'ADMU.ps1 writen to in last 2mins' -skip {
-            if((@(Get-ChildItem ('..\..\Deploy\ADMU.ps1')|Where-Object LastWriteTime -gt (Get-Date).AddMinutes(-2)).LastWriteTime).length -ge 1){$lessthan2 = $true}else{$lessthan2 = $false}
+            if ((@(Get-ChildItem ("$PSScriptRoot\..\..\..\Deploy\ADMU.ps1")|Where-Object LastWriteTime -gt (Get-Date).AddMinutes(-2)).LastWriteTime).length -ge 1){$lessthan2 = $true}else{$lessthan2 = $false}
             $lessthan2| Should -Be $true
             #TODO: why this test?
         }
@@ -22,7 +23,7 @@ Describe 'Build Tests' {
     Context 'Check Versioning & Signature' {
 
         It 'XAML Form version' {
-           $FormPath = '.\Form.ps1'
+            $FormPath = "$PSScriptRoot\..\Form.ps1"
            $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
            $formversion = Select-String -Path:($formpath) -Pattern:($VersionRegex)
            $branchformversion = [version]$formversion.Matches.value
@@ -33,7 +34,7 @@ Describe 'Build Tests' {
         }
 
         It 'Start-Migration version' {
-            $startMigrationPath = '.\Start-Migration.ps1'
+            $startMigrationPath = "$PSScriptRoot\..\Start-Migration.ps1"
             # $VersionRegex = [regex]"(\$admuVersion = )\'(.*?)\'"
             $VersionRegex = [regex]"(admuVersion = )'(.*?)'"
             $admuversion = Select-String -Path:($startMigrationPath) -Pattern:($VersionRegex)
@@ -49,7 +50,7 @@ Describe 'Build Tests' {
            $masterform = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1 -useBasicParsing).tostring()
            $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
            $masterformversion = [version]$masterversion.Matches.value
-           $exeversion = [version](Get-Item ('..\exe\gui_jcadmu.exe')).VersionInfo.FileVersion
+            $exeversion = [version](Get-Item ("$PSScriptRoot\..\..\exe\gui_jcadmu.exe")).VersionInfo.FileVersion
            $exeversion | Should -BeGreaterThan $masterformversion
         }
 
