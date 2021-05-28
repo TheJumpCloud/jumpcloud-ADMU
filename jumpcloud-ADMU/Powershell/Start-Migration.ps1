@@ -6388,6 +6388,9 @@ Function Start-Migration {
         }
 
         Write-Log -Message:('Begin new local user registry copy')
+        if (test-path -path $newuserprofileimagepath){
+          Write-Log -Message:('new profile path looks good continue testing')
+        }
         # Give us admin rights to modify
         Write-Log -Message:("Take Ownership of $($newuserprofileimagepath)")
         $path = takeown /F "$($newuserprofileimagepath)" /a /r /d Y
@@ -6404,7 +6407,7 @@ Function Start-Migration {
         Write-Log -Message:("Applying ACL...")
         $acl | Set-Acl $newuserprofileimagepath
         $acl_updated = Get-Acl ($newuserprofileimagepath)
-        Write-Log -Message:("Updated ACLs: $($acl_updated.access)")
+        # Write-Log -Message:("Updated ACLs: $($acl_updated.access)")
 
         Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath + ' New User SID: ' + $NewUserSID)
         Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath + ' Old User SID: ' + $SelectedUserSID)
@@ -6643,12 +6646,19 @@ Function Start-Migration {
         {
             $appxList = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
         }
-        if ($appxList.Count -eq 0)
+      if ($appxList.Count -eq 0)
+      {
+        # Get Common Apps in edge case:
+        try
         {
-            # Get Common Apps in edge case:
-            $appxList = Get-AppXpackage -AllUsers | Select-Object InstallLocation
-
+          $appxList = Get-AppXpackage -AllUsers | Select-Object InstallLocation
         }
+        catch
+        {
+          # if the primary trust relationship fails (needed for local conversion)
+          $appxList = Get-AppXpackage | Select-Object InstallLocation
+        }
+      }
         $appxList | Export-CSV ($newuserprofileimagepath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
 
         # load registry items back for the last time.
