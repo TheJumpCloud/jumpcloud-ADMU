@@ -6552,8 +6552,8 @@ Function Start-Migration {
               Remove-Item -Path ($newUserProfileImagePath) -Force -Recurse -ErrorAction Stop
             }
             catch{
-              Write-Log -Message:("Remove $newUserProfileImagePath failed, renaming to unusedADMUProfile")
-              Rename-Item -Path $newUserProfileImagePath -NewName "unusedADMUProfile" -ErrorAction Stop
+              Write-Log -Message:("Remove $newUserProfileImagePath failed, renaming to ADMU_unusedProfile_$JumpCloudUserName")
+              Rename-Item -Path $newUserProfileImagePath -NewName "ADMU_unusedProfile_$JumpCloudUserName" -ErrorAction Stop
             }
             try
             {
