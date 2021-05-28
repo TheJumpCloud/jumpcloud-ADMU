@@ -18,7 +18,7 @@ Describe 'Migration Test Scenarios'{
                 Get-LocalUser $user.username | Should -Not -BeNullOrEmpty
             }
         }
-        It "Test Convert profile migration for Local users" -skip {
+        It "Test Convert profile migration for Local users" {
             foreach ($user in $userTestingHash.Values)
             {
                 write-host "Running: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)"
@@ -31,7 +31,7 @@ Describe 'Migration Test Scenarios'{
         BeforeAll{
             # test connection to Org
             $Org = Get-JcSdkOrganization
-            Write-Host "Connected to: $($Org.Id) ($($Org.DisplayName))"
+            Write-Host "Connected to Pester Org: $($Org.DisplayName)"
             # Get System Key
             $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
             $regex = 'systemKey\":\"(\w+)\"'
@@ -69,7 +69,7 @@ Describe 'Migration Test Scenarios'{
         It 'Test that system key exists'{
             $systemKey | Should -Not -BeNullOrEmpty
         }
-        It 'Invoke ADMU from JumpCloud Command' -skip {
+        It 'Invoke ADMU from JumpCloud Command' {
             # clear results
             $results = Get-JcSdkCommandResult
             foreach ($result in $results)

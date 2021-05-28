@@ -256,12 +256,14 @@ Describe 'Functions' {
     }
 
     Context 'DownloadAndInstallAgent Function'{
-        It 'DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x64' {
+        It 'DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x64' -skip {
             Test-path 'C:\Windows\Temp\JCADMU\vc_redist.x64.exe' | Should -Be $true
+            #TODO: why test this?
         }
 
-        It 'DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x86' {
+        It 'DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x86' -skip {
             Test-path 'C:\Windows\Temp\JCADMU\vc_redist.x86.exe' | Should -Be $true
+            #TODO: why test this?
         }
 
         It 'DownloadAndInstallAgent - Verify Download JCAgent' {
