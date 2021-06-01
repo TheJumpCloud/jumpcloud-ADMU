@@ -143,7 +143,7 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         $UserStateMigrationToolx64Path = 'C:\Program Files (x86)\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
         $UserStateMigrationToolx86Path = 'C:\Program Files\Windows Kits\10\Assessment and Deployment Kit\User State Migration Tool\'
 
-        $UserStateMigrationToolVersionPath = Switch ([System.IntPtr]::Size)
+        Switch ([System.IntPtr]::Size)
         {
         8 { $UserStateMigrationToolx64Path }
         4 { $UserStateMigrationToolx86Path }

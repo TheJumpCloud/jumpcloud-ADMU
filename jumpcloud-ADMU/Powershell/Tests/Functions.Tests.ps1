@@ -279,7 +279,7 @@ Describe 'Functions' {
         }
 
         It 'Install-JumpCloudAgent - Verify Install JCAgent' {
-        Start-Sleep -Seconds 10
+        # Start-Sleep -Seconds 10
             (Test-ProgramInstalled("JumpCloud")) | Should -Be $true
         }
 

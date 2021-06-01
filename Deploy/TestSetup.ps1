@@ -28,7 +28,7 @@ process{
   # $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
   # $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
   # $AGENT_SERVICE_NAME = "JumpCloud-agent"
-  # $AGENT_INSTALLER_URL = "https://s3.amazonaws.com/jumpcloud-windows-agent/production/JumpCloudInstaller.exe"
+  $AGENT_INSTALLER_URL = "https://s3.amazonaws.com/jumpcloud-windows-agent/production/JumpCloudInstaller.exe"
   $AGENT_INSTALLER_PATH = "C:\windows\Temp\JCADMU\JumpCloudInstaller.exe"
   # $OLD_AGENT_INSTALLER_PATH = "C:\tools\jcagent-0.10.80.exe"
   # $AGENT_UNINSTALLER_NAME = "unins000.exe"
@@ -73,5 +73,5 @@ process{
     if (!(Test-path $usmtTempPath)){
       new-item -ItemType Directory -Force -Path $usmtTempPath
     }
-  Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AgentPath:($AGENT_INSTALLER_PATH) -ConnectKey:($JumpCloudConnectKey)
+  Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey)
 }
