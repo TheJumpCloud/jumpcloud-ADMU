@@ -650,7 +650,7 @@ Function DownloadLink($Link, $Path)
   $IsDownloaded = $false
   $SplatArgs = @{ InputObject = $WebClient
     EventName                 = 'DownloadFileCompleted'
-    Action                    = { $IsDownloaded = $true; }
+    Action                    = @{ $IsDownloaded = $true; }
   }
   $DownloadCompletedEventSubscriber = Register-ObjectEvent @SplatArgs
   $WebClient.DownloadFileAsync("$Link", "$Path")
@@ -809,6 +809,8 @@ Function DownloadAndInstallAgent(
   , [System.String]$msvc2013x86Link
   , [System.String]$msvc2013x86File
   , [System.String]$msvc2013x86Install
+  , [System.Srting]$AGENT_INSTALLER_PATH
+  , [System.String]$JumpCloudConnectKey
 ) {
   If (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x64")))
   {
@@ -855,7 +857,7 @@ Function DownloadAndInstallAgent(
     Write-ToLog -Message:('Running JCAgent Installer')
     #Run Installer
     Start-Sleep -s 20
-    Install-JumpCloudAgent
+    Install-JumpCloudAgent -AgentPath $AGENT_INSTALLER_PATH -ConnectKey $JumpCloudConnectKey
     Start-Sleep -s 5
   }
   If ((Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x64")) -and (Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x86")) -and (Test-ProgramInstalled -programName:("jumpcloud"))) {
