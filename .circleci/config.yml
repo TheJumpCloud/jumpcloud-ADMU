@@ -102,11 +102,7 @@ jobs:
           name: Sign .exe
           shell: powershell.exe
           command: |
-            iwr https://get.secrethub.io/windows | iex
-            secrethub --version
-            secrethub credential ls
-            secrethub read --out-file godaddy_windows_signing_cert.pfx JumpCloud/github/godaddy-windows-signing-cert-pfx
-            ./Deploy/Sign.ps1 -cert_pw_key #TODO: Cert Key in secret vault
+            ./Deploy/Sign.ps1
   Build Module:
     executor: win/default
     steps:
