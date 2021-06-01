@@ -9,28 +9,29 @@ orbs:
   win: circleci/windows@2.2.0
 build-and-sign-ADMU: &build-and-sign-ADMU
   - Build
-  - Pester Tests:
-      requires:
-        - Build
+  # - Pester Tests:
+  #     requires:
+  #       - Build
   - Sign Executable:
       requires:
         - Build
-        - Pester Tests
+        # - Pester Tests
+      context: secrethub-credentials
   - Build Module:
       requires:
         - Build
-        - Pester Tests
+        # - Pester Tests
         - Sign Executable
   - Build Help Files:
       requires:
         - Build
-        - Pester Tests
+        # - Pester Tests
         - Sign Executable
         - Build Module
   - Build Nuspec:
       requires:
         - Build
-        - Pester Tests
+        # - Pester Tests
         - Sign Executable
         - Build Module
         - Build Help Files
@@ -55,7 +56,6 @@ jobs:
           name: Build
           shell: powershell.exe
           command: |
-            $ErrorActionPreference = 'Stop'
             ./Deploy/Build.ps1
       - persist_to_workspace:
           root: .
@@ -70,7 +70,6 @@ jobs:
           name: Test Setup
           shell: powershell.exe
           command: |
-            $ErrorActionPreference = 'Stop'
             . ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
       - run:
           name: Install Required Modules & Set Env Variables for testing
@@ -90,7 +89,6 @@ jobs:
           name: Invoke Pester
           shell: powershell.exe
           command: |
-            $ErrorActionPreference = 'Stop'
             ./jumpcloud-ADMU/Powershell/InvokePester.ps1 << pipeline.parameters.buildReleaseType >>
       - store_test_results:
           name: Uploading test results for ADMU'
@@ -98,12 +96,17 @@ jobs:
   Sign Executable:
     executor: win/default
     steps:
+      - attach_workspace:
+          at: .
       - run:
           name: Sign .exe
           shell: powershell.exe
           command: |
-            $ErrorActionPreference = 'Stop'
-            ./Deploy/Sign.ps1 -cert_pw_key <TODO: Cert Key in secret valut>
+            iwr https://get.secrethub.io/windows | iex
+            secrethub --version
+            secrethub credential ls
+            secrethub read --out-file godaddy_windows_signing_cert.pfx JumpCloud/github/godaddy-windows-signing-cert-pfx
+            ./Deploy/Sign.ps1 -cert_pw_key #TODO: Cert Key in secret vault
   Build Module:
     executor: win/default
     steps:
