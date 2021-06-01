@@ -811,6 +811,8 @@ Function Install-JumpCloudAgent(
   , [System.String]$msvc2013x86Install
   , [System.String]$AGENT_INSTALLER_URL
   , [System.String]$AGENT_INSTALLER_PATH
+  , [System.String]$AGENT_PATH
+  , [System.String]$AGENT_BINARY_NAME
   , [System.String]$JumpCloudConnectKey
 ) {
   If (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x64")))
@@ -849,7 +851,7 @@ Function Install-JumpCloudAgent(
       }
     }
   }
-  If (!(Test-AgentIsOnFileSystem)) {
+  If (!(Test-Path -Path:(${AGENT_PATH} + '/' + ${AGENT_BINARY_NAME}))) {
     Write-ToLog -Message:('Downloading JCAgent Installer')
     #Download Installer
     (New-Object System.Net.WebClient).DownloadFile("${AGENT_INSTALLER_URL}", ($AGENT_INSTALLER_PATH))
@@ -858,7 +860,9 @@ Function Install-JumpCloudAgent(
     Write-ToLog -Message:('Running JCAgent Installer')
     #Run Installer
     Start-Sleep -s 20
-    Invoke-JumpCloudAgentInstall -AgentPath $AGENT_INSTALLER_PATH -ConnectKey $JumpCloudConnectKey
+    # Invoke-JumpCloudAgentInstall -AgentPath $AGENT_INSTALLER_PATH -ConnectKey $JumpCloudConnectKey
+    $installJCParams = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/VERYSILENT", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
+    Invoke-Expression "$installJCParams"
     Start-Sleep -s 5
   }
   If ((Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x64")) -and (Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x86")) -and (Test-ProgramInstalled -programName:("jumpcloud"))) {
@@ -6262,9 +6266,9 @@ Function Start-Migration {
     }
 
     # JumpCloud Agent Installation Variables
-    # $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
+    $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
     # $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
-    # $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
+    $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
     # $AGENT_SERVICE_NAME = "JumpCloud-agent"
     $AGENT_INSTALLER_URL = "https://s3.amazonaws.com/jumpcloud-windows-agent/production/JumpCloudInstaller.exe"
     $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\JumpCloudInstaller.exe"
@@ -6315,7 +6319,7 @@ Function Start-Migration {
         Remove-ItemIfExists -Path "$windowsDrive\Program Files\Jumpcloud\" -Recurse
       }
       # Agent Installer
-      Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey)
+      Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
       start-sleep -seconds 20
       if ((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=1') {
         Write-ToLog -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
