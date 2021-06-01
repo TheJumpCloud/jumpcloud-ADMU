@@ -865,7 +865,7 @@ Function Install-JumpCloudAgent(
     Invoke-Expression "$installJCParams"
     Start-Sleep -s 5
   }
-  If ((Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x64")) -and (Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x86")) -and (Test-ProgramInstalled -programName:("jumpcloud"))) {
+  If ((Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x64")) -and (Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x86")) -and (Test-ProgramInstalled -programName:("JumpCloud"))) {
     Return $true
   }
   Else {

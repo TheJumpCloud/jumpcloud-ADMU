@@ -1,4 +1,11 @@
 $FolderPath_Module = (Get-Item -Path($PSScriptRoot)).Parent.FullName
+$SettingsFile = "/Users/jworkman/Documents/GitHub/jumpcloud-ADMU/jumpcloud-ADMU/Powershell/Tests/PSScriptAnalyzerSettings.psd1"
+# Import Settings:
+$SettingsFromFile = Import-PowerShellDataFile $SettingsFile
+$settingsObject = @{
+    Severity = $SettingsFromFile.Severity
+    ExcludeRules = $SettingsFromFile.ExcludeRules
+}
 
 ################################################################################
 # Rules Skipped:
@@ -12,7 +19,9 @@ $FolderPath_Module = (Get-Item -Path($PSScriptRoot)).Parent.FullName
 ################################################################################
 
 Write-Host ('[status]Running PSScriptAnalyzer on: ' + $FolderPath_Module)
-$ScriptAnalyzerResults = Invoke-ScriptAnalyzer -Path:($FolderPath_Module) -Recurse -Settings $PSScriptRoot\PSScriptAnalyzerSettings.psd1 # -ExcludeRule PSAvoidUsingPlainTextForPassword, PSAvoidOverwritingBuiltInCmdlets, PSAvoidUsingConvertToSecureStringWithPlainText
+Write-Host ('[status]PSScriptAnalyzer Settings File: ' + $SettingsFile)
+
+$ScriptAnalyzerResults = Invoke-ScriptAnalyzer -Path:($FolderPath_Module) -Recurse -Settings $settingsObject # -ExcludeRule PSAvoidUsingPlainTextForPassword, PSAvoidOverwritingBuiltInCmdlets, PSAvoidUsingConvertToSecureStringWithPlainText
 If (-not [System.String]::IsNullOrEmpty($ScriptAnalyzerResults))
 {
     $ScriptAnalyzerResults | ForEach-Object {
