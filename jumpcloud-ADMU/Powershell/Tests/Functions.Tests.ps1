@@ -4,26 +4,26 @@ BeforeAll {
     . $PSScriptRoot\..\Start-Migration.ps1
 }
 Describe 'Functions' {
-    Context 'VerifyAccount Functions'{
+    Context 'Test-Account Functions'{
 
-       It 'VerifyAccount - Real domain account bob.lazar@JCADB2.local' -Skip {
-           VerifyAccount -username bob.lazar -domain JCADB2.local | Should -Be $true
+       It 'Test-Account - Real domain account bob.lazar@JCADB2.local' -Skip {
+           Test-Account -username bob.lazar -domain JCADB2.local | Should -Be $true
        }
 
-       It 'VerifyAccount - Wrong account bobby.lazar@JCADB2.local' -Skip {
-           VerifyAccount -username bobby.lazar -domain JCADB2.local | Should -Be $false
+       It 'Test-Account - Wrong account bobby.lazar@JCADB2.local' -Skip {
+           Test-Account -username bobby.lazar -domain JCADB2.local | Should -Be $false
        }
 
-       It 'VerifyAccount - Real account with wrong domain bob.lazar@JCADB2.localw' -Skip {
-           VerifyAccount -username bob.lazar -domain JCADB2.localw | Should -Be $false
+       It 'Test-Account - Real account with wrong domain bob.lazar@JCADB2.localw' -Skip {
+           Test-Account -username bob.lazar -domain JCADB2.localw | Should -Be $false
        }
 
-       It 'VerifyAccount - Real local account with no domain' -Skip {
-           VerifyAccount -username testuser | Should -Be $true
+       It 'Test-Account - Real local account with no domain' -Skip {
+           Test-Account -username testuser | Should -Be $true
        }
 
-       It 'VerifyAccount - Wrong local account with no domain' -Skip {
-           VerifyAccount -username testuserq | Should -Be $false
+       It 'Test-Account - Wrong local account with no domain' -Skip {
+           Test-Account -username testuserq | Should -Be $false
        }
 
     }
@@ -102,12 +102,12 @@ Describe 'Functions' {
 
     }
 
-    Context 'DownloadLink Function'{
+    Context 'Invoke-DownloadFile Function'{
 
-        # It 'DownloadLink - ' {
+        # It 'Invoke-DownloadFile - ' {
         #     if(Test-Path 'c:\windows\Temp\test\') {Remove-Item 'c:\windows\Temp\test' -Recurse -Force}
         #     New-Item -ItemType directory -path 'c:\windows\Temp\test\'
-        #     #DownloadLink -Link:('http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x86.exe') -Path:('c:\windows\Temp\Test\vcredist_x86.exe')
+        #     #Invoke-DownloadFile -Link:('http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x86.exe') -Path:('c:\windows\Temp\Test\vcredist_x86.exe')
         #     test-path ('c:\windows\Temp\test\vcredist_x86.exe')  | Should -Be $true
         # }
 
@@ -129,14 +129,14 @@ Describe 'Functions' {
 
     }
 
-    Context 'Uninstall_Program Function'{
+    Context 'Uninstall-Program Function'{
 
         It 'Install & Uninstall - x32 filezilla' -Skip {
             $app = 'C:\FileZilla_3.46.3_win32.exe'
             $arg = '/S'
             Start-Process $app $arg
             start-sleep -Seconds 5
-            Uninstall_Program -programName 'FileZilla Client 3.46.3'
+            Uninstall-Program -programName 'FileZilla Client 3.46.3'
             start-sleep -Seconds 5
             Test-ProgramInstalled -programName 'FileZilla' | Should -Be $false
         }
@@ -255,30 +255,30 @@ Describe 'Functions' {
 
     }
 
-    Context 'DownloadAndInstallAgent Function'{
-        It 'DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x64' -skip {
+    Context 'Install-JumpCloudAgent Function'{
+        It 'Install-JumpCloudAgent - Verify Download JCAgent prereq Visual C++ 2013 x64' -skip {
             Test-path 'C:\Windows\Temp\JCADMU\vc_redist.x64.exe' | Should -Be $true
             #TODO: why test this?
         }
 
-        It 'DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x86' -skip {
+        It 'Install-JumpCloudAgent - Verify Download JCAgent prereq Visual C++ 2013 x86' -skip {
             Test-path 'C:\Windows\Temp\JCADMU\vc_redist.x86.exe' | Should -Be $true
             #TODO: why test this?
         }
 
-        It 'DownloadAndInstallAgent - Verify Download JCAgent' {
+        It 'Install-JumpCloudAgent - Verify Download JCAgent' {
             Test-path 'C:\Windows\Temp\JCADMU\JumpCloudInstaller.exe' | Should -Be $true
         }
 
-        It 'DownloadAndInstallAgent - Verify Install JCAgent prereq Visual C++ 2013 x64' {
+        It 'Install-JumpCloudAgent - Verify Install JCAgent prereq Visual C++ 2013 x64' {
             (Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x64")) | Should -Be $true
         }
 
-        It 'DownloadAndInstallAgent - Verify Install JCAgent prereq Visual C++ 2013 x86' {
+        It 'Install-JumpCloudAgent - Verify Install JCAgent prereq Visual C++ 2013 x86' {
             (Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x86")) | Should -Be $true
         }
 
-        It 'DownloadAndInstallAgent - Verify Install JCAgent' {
+        It 'Install-JumpCloudAgent - Verify Install JCAgent' {
         Start-Sleep -Seconds 10
             (Test-ProgramInstalled("JumpCloud")) | Should -Be $true
         }

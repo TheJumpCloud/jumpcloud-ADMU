@@ -363,7 +363,7 @@ function Get-SID ([string]$User) {
 }
 
 #Verify Domain Account Function
-Function VerifyAccount {
+Function Test-Account {
   Param (
     [Parameter(Mandatory = $true)][System.String]$userName, [System.String]$domain = $null
   )
@@ -644,7 +644,7 @@ Function Remove-ItemIfExists {
 }
 
 #Download $Link to $Path
-Function DownloadLink($Link, $Path)
+Function Invoke-DownloadFile($Link, $Path)
 {
   $WebClient = New-Object -TypeName:('System.Net.WebClient')
   $IsDownloaded = $false
@@ -686,7 +686,7 @@ function Test-ProgramInstalled {
 }
 
 # Check reg for program uninstall string and silently uninstall
-function Uninstall_Program($programName) {
+function Uninstall-Program($programName) {
   $Ver = Get-ChildItem -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall, HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall |
   Get-ItemProperty |
   Where-Object { $_.DisplayName -match $programName } |
@@ -801,7 +801,7 @@ function Test-Domainusername {
   }
 }
 
-Function DownloadAndInstallAgent(
+Function Install-JumpCloudAgent(
   [System.String]$msvc2013x64Link
   , [System.String]$msvc2013Path
   , [System.String]$msvc2013x64File
@@ -809,14 +809,14 @@ Function DownloadAndInstallAgent(
   , [System.String]$msvc2013x86Link
   , [System.String]$msvc2013x86File
   , [System.String]$msvc2013x86Install
-  , [System.Srting]$AGENT_INSTALLER_PATH
+  , [System.String]$AGENT_INSTALLER_PATH
   , [System.String]$JumpCloudConnectKey
 ) {
   If (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x64")))
   {
     Write-ToLog -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x64')
     (New-Object System.Net.WebClient).DownloadFile("${msvc2013x64Link}", ($usmtTempPath + $msvc2013x64File))
-    # DownloadLink -Link $msvc2013x64Link -Path ($usmtTempPath + $msvc2013x64File)
+    # Invoke-DownloadFile -Link $msvc2013x64Link -Path ($usmtTempPath + $msvc2013x64File)
     Invoke-Expression -Command:($msvc2013x64Install)
     $timeout = 0
     While (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x64")))
@@ -834,7 +834,7 @@ Function DownloadAndInstallAgent(
   {
     Write-ToLog -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x86')
     (New-Object System.Net.WebClient).DownloadFile("${msvc2013x86Link}", ($usmtTempPath + $msvc2013x86File))
-    # DownloadLink -Link $msvc2013x86Link -Path ($usmtTempPath + $msvc2013x86File)
+    # Invoke-DownloadFile -Link $msvc2013x86Link -Path ($usmtTempPath + $msvc2013x86File)
     Invoke-Expression -Command:($msvc2013x86Install)
     $timeout = 0
     While (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x86")))
@@ -852,12 +852,12 @@ Function DownloadAndInstallAgent(
     Write-ToLog -Message:('Downloading JCAgent Installer')
     #Download Installer
     (New-Object System.Net.WebClient).DownloadFile("${AGENT_INSTALLER_URL}", ($AGENT_INSTALLER_PATH))
-    # DownloadLink -Link $AGENT_INSTALLER_URL -Path $AGENT_INSTALLER_PATH
+    # Invoke-DownloadFile -Link $AGENT_INSTALLER_URL -Path $AGENT_INSTALLER_PATH
     Write-ToLog -Message:('JumpCloud Agent Download Complete')
     Write-ToLog -Message:('Running JCAgent Installer')
     #Run Installer
     Start-Sleep -s 20
-    Install-JumpCloudAgent -AgentPath $AGENT_INSTALLER_PATH -ConnectKey $JumpCloudConnectKey
+    Invoke-JumpCloudAgentInstall -AgentPath $AGENT_INSTALLER_PATH -ConnectKey $JumpCloudConnectKey
     Start-Sleep -s 5
   }
   If ((Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x64")) -and (Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x86")) -and (Test-ProgramInstalled -programName:("jumpcloud"))) {
@@ -1259,12 +1259,12 @@ function Test-XMLFile {
 Function Test-AgentIsOnFileSystem() {
   Test-Path -Path:(${AGENT_PATH} + '/' + ${AGENT_BINARY_NAME})
 }
-Function Install-JumpCloudAgent() {
+Function Invoke-JumpCloudAgentInstall() {
   $params = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/VERYSILENT", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
   Invoke-Expression "$params"
 }
 
-Function ForceRebootComputerWithDelay {
+Function Restart-ComputerWithDelay {
   Param(
     [int]$TimeOut = 10
   )
@@ -6314,7 +6314,7 @@ Function Start-Migration {
         Remove-ItemIfExists -Path "$windowsDrive\Program Files\Jumpcloud\" -Recurse
       }
       # Agent Installer
-      DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
+      Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
       start-sleep -seconds 20
       if ((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=1') {
         Write-ToLog -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
@@ -6710,7 +6710,7 @@ Function Start-Migration {
         }
 
         # Download WindowsADK
-        DownloadLink -Link:($adkSetupLink) -Path:($adkSetupPath)
+        Invoke-DownloadFile -Link:($adkSetupLink) -Path:($adkSetupPath)
         # Test Path
         If (Test-Path -Path:($adkSetupPath)) {
           Write-ToLog -Message:('Download of Windows ADK Setup file completed successfully')
