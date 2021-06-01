@@ -26,6 +26,21 @@ Describe 'Migration Test Scenarios'{
                 { Start-Migration -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -ConvertProfile $true } | Should -Not -Throw
             }
         }
+        It "Test UWP_JCADMU was downloaded & exists"{
+            Test-Path "C:\Windows\uwp_jcadmu.exe" | Should -Be $true
+        }
+        It "Test Converted User Home Attribues"{
+            foreach ($user in $userTestingHash.Values){
+                $UserHome = "C:\Users\$($user.JCUsername)"
+                # User Home Directory Should Exist
+                Test-Path "$UserHome" | Should -Be $true
+                # Backup Registry & Registry Files Should Exist
+                Test-Path "$UserHome/NTUSER_original.DAT" | Should -Be $true
+                Test-Path "$UserHome/NTUSER.DAT" | Should -Be $true
+                Test-Path "$UserHome/AppData/Local/Microsoft/Windows/UsrClass.DAT" | Should -Be $true
+                Test-Path "$UserHome/AppData/Local/Microsoft/Windows/UsrClass_original.DAT" | Should -Be $true
+            }
+        }
     }
     Context 'Start-Migration kicked off through JumpCloud agent'{
         BeforeAll{
