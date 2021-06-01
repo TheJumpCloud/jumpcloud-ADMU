@@ -162,10 +162,10 @@ function Remove-LocalUserProfile {
   }
   End{
     # Output some info
-    write-log -message:("$UserName's account, profile and Registry Key SID were removed")
+    Write-ToLog -message:("$UserName's account, profile and Registry Key SID were removed")
   }
 }
-function enable-privilege {
+function Enable-Privilege {
   param(
     ## The privilege to adjust. This set is taken from
     ## http://msdn.microsoft.com/en-us/library/bb530716(VS.85).aspx
@@ -260,18 +260,18 @@ function Set-ValueToKey([Microsoft.Win32.RegistryHive]$registryRoot, [string]$ke
   $regRights = [System.Security.AccessControl.RegistryRights]::SetValue
   $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
   $Key = [Microsoft.Win32.Registry]::$registryRoot.OpenSubKey($keyPath, $permCheck, $regRights)
-  Write-log -Message:("Setting value with properties [name:$name, value:$value, value type:$regValueKind]")
+  Write-ToLog -Message:("Setting value with properties [name:$name, value:$value, value type:$regValueKind]")
   $Key.SetValue($name, $value, $regValueKind)
   $key.Close()
 }
 
 function New-RegKey([string]$keyPath, [Microsoft.Win32.RegistryHive]$registryRoot) {
   $Key = [Microsoft.Win32.Registry]::$registryRoot.CreateSubKey($keyPath)
-  write-log -Message:("Setting key at [KeyPath:$keyPath]")
+  Write-ToLog -Message:("Setting key at [KeyPath:$keyPath]")
   $key.Close()
 }
 
-function Change-RegKeyOwner([string]$keyPath, [System.Security.Principal.SecurityIdentifier]$user) {
+function Update-RegKeyOwner([string]$keyPath, [System.Security.Principal.SecurityIdentifier]$user) {
   try {
     $regRights = [System.Security.AccessControl.RegistryRights]::takeownership
     $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
@@ -411,21 +411,21 @@ function Set-UserRegistryLoadState
         REG LOAD HKU\$($UserSid)_admu "$ProfilePath\NTUSER.DAT.BAK"
         if ($?)
         {
-          Write-log -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
+          Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
         }
         else
         {
-          Write-log -Message:('Cound not load profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
+          Write-ToLog -Message:('Cound not load profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
         }
         Start-Sleep -Seconds 1
         REG LOAD HKU\"$($UserSid)_Classes_admu" "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
         if ($?)
         {
-          Write-log -Message:('Load Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
+          Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
         }
         else
         {
-          Write-log -Message:('Cound not load profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
+          Write-ToLog -Message:('Cound not load profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
         }
       }
       "Unload"
@@ -435,21 +435,21 @@ function Set-UserRegistryLoadState
         REG UNLOAD HKU\$($UserSid)_admu
         if ($?)
         {
-          Write-log -Message:('Unloaded Profile: ' + "$ProfilePath\NTUSER.DAT.bak")
+          Write-ToLog -Message:('Unloaded Profile: ' + "$ProfilePath\NTUSER.DAT.bak")
         }
         else
         {
-          Write-log -Message:('Could not unload profile: ' + "$ProfilePath\NTUSER.DAT.bak")
+          Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\NTUSER.DAT.bak")
         }
         Start-Sleep -Seconds 1
         REG UNLOAD HKU\$($UserSid)_Classes_admu
         if ($?)
         {
-          Write-log -Message:('Unloaded Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
+          Write-ToLog -Message:('Unloaded Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
         }
         else
         {
-          Write-log -Message:('Could not unload profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
+          Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
         }
       }
     }
@@ -474,7 +474,7 @@ Function Test-UserRegistryLoadState
     # Tests to check that the reg items are not loaded
     If ($results -match $UserSid)
     {
-      Write-log "REG Keys are loaded, attempting to unload"
+      Write-ToLog "REG Keys are loaded, attempting to unload"
       Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
     }
   }
@@ -506,14 +506,14 @@ Function Test-UserRegistryLoadState
     # Tests to check that the reg items are not loaded
     If ($results -match $UserSid)
     {
-      Write-log "REG Keys are loaded, attempting to unload"
+      Write-ToLog "REG Keys are loaded, attempting to unload"
       Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
     }
     $results = REG QUERY HKU *>&1
     # Tests to check that the reg items are not loaded
     If ($results -match $UserSid)
     {
-      Write-log "REG Keys are loaded at the end of testing, exiting..."
+      Write-ToLog "REG Keys are loaded at the end of testing, exiting..."
       exit
     }
   }
@@ -531,7 +531,7 @@ Function Get-ProfileImagePath
   $profileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $UserSid) -Name 'ProfileImagePath'
   if ([System.String]::IsNullOrEmpty($profileImagePath))
   {
-    Write-log -Message("Could not get the profile path for $UserSid exiting...") -Level Error
+    Write-ToLog -Message("Could not get the profile path for $UserSid exiting...") -Level Error
     exit
   }
   else
@@ -554,9 +554,9 @@ Function Get-WindowsDrive {
 #Logging function
 <#
   .Synopsis
-     Write-Log writes a message to a specified log file with the current time stamp.
+     Write-ToLog writes a message to a specified log file with the current time stamp.
   .DESCRIPTION
-     The Write-Log function is designed to add logging capability to other scripts.
+     The Write-ToLog function is designed to add logging capability to other scripts.
      In addition to writing output and/or verbose you can write to a log file for
      later debugging.
   .NOTES
@@ -570,18 +570,18 @@ Function Get-WindowsDrive {
   .PARAMETER Level
      Specify the criticality of the log information being written to the log (i.e. Error, Warning, Informational)
   .EXAMPLE
-     Write-Log -Message 'Log message'
+     Write-ToLog -Message 'Log message'
      Writes the message to c:\Logs\PowerShellLog.log.
   .EXAMPLE
-     Write-Log -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log
+     Write-ToLog -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log
      Writes the content to the specified log file and creates the path and file specified.
   .EXAMPLE
-     Write-Log -Message 'Folder does not exist.' -Path c:\Logs\Script.log -Level Error
+     Write-ToLog -Message 'Folder does not exist.' -Path c:\Logs\Script.log -Level Error
      Writes the message to the specified log file as an error message, and writes the message to the error pipeline.
   .LINK
-     https://gallery.technet.microsoft.com/scriptcenter/Write-Log-PowerShell-999c32d0
+     https://gallery.technet.microsoft.com/scriptcenter/Write-ToLog-PowerShell-999c32d0
   #>
-Function Write-Log {
+Function Write-ToLog {
   [CmdletBinding()]
   Param
   (
@@ -597,7 +597,7 @@ Function Write-Log {
     # If attempting to write to a log file in a folder/path that doesn't exist create the file including the path.
     If (!(Test-Path $Path)) {
       Write-Verbose "Creating $Path."
-      $NewLogFile = New-Item $Path -Force -ItemType File
+      New-Item $Path -Force -ItemType File
     }
     Else {
       # Nothing to see here yet.
@@ -638,7 +638,7 @@ Function Remove-ItemIfExists {
       }
     }
     Catch {
-      Write-Log -Message ('Removal Of Temp Files & Folders Failed') -Level Warn
+      Write-ToLog -Message ('Removal Of Temp Files & Folders Failed') -Level Warn
     }
   }
 }
@@ -647,14 +647,14 @@ Function Remove-ItemIfExists {
 Function DownloadLink($Link, $Path)
 {
   $WebClient = New-Object -TypeName:('System.Net.WebClient')
-  $Global:IsDownloaded = $false
+  $IsDownloaded = $false
   $SplatArgs = @{ InputObject = $WebClient
     EventName                 = 'DownloadFileCompleted'
-    Action                    = { $Global:IsDownloaded = $true; }
+    Action                    = { $IsDownloaded = $true; }
   }
   $DownloadCompletedEventSubscriber = Register-ObjectEvent @SplatArgs
   $WebClient.DownloadFileAsync("$Link", "$Path")
-  While (-not $Global:IsDownloaded)
+  While (-not $IsDownloaded)
   {
     Start-Sleep -Seconds 3
   } # While
@@ -663,18 +663,29 @@ Function DownloadLink($Link, $Path)
 }
 
 #Check if program is on system
-function Check_Program_Installed($programName) {
-  $installed = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object { $_.DisplayName -match $programName })
-  $installed32 = (Get-ItemProperty HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object { $_.DisplayName -match $programName })
-  if ((-not [System.String]::IsNullOrEmpty($installed)) -or (-not [System.String]::IsNullOrEmpty($installed32))) {
-    return $true
-  }
-  else {
-    return $false
+function Test-ProgramInstalled {
+  [OutputType([Boolean])]
+  [CmdletBinding()]
+  param (
+      [Parameter()]
+      [String]
+      $programName
+  )
+  process{
+    if ($programName){
+      $installed = (Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object { $_.DisplayName -match $programName })
+      $installed32 = (Get-ItemProperty HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object { $_.DisplayName -match $programName })
+    }
+    if ((-not [System.String]::IsNullOrEmpty($installed)) -or (-not [System.String]::IsNullOrEmpty($installed32))) {
+      return $true
+    }
+    else {
+      return $false
+    }
   }
 }
 
-#Check reg for program uninstallstring and silently uninstall
+# Check reg for program uninstall string and silently uninstall
 function Uninstall_Program($programName) {
   $Ver = Get-ChildItem -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall, HKLM:\SOFTWARE\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall |
   Get-ItemProperty |
@@ -703,7 +714,7 @@ Function Start-NewProcess([string]$pfile, [string]$arguments, [int32]$Timeout = 
   $p.StartInfo.Arguments = $arguments
   [void]$p.Start();
   If (! $p.WaitForExit($Timeout)) {
-    Write-Log -Message "Windows ADK Setup did not complete after 5mins";
+    Write-ToLog -Message "Windows ADK Setup did not complete after 5mins";
     Get-Process | Where-Object { $_.Name -like "adksetup*" } | Stop-Process
   }
 }
@@ -741,7 +752,7 @@ function Test-Localusername {
   )
   begin {
     $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-    $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
+    $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | Convert-Sid
     $localusers = new-object system.collections.arraylist
     foreach ($username in $users) {
       if ($username -match $env:computername) {
@@ -769,10 +780,10 @@ function Test-Domainusername {
   )
   begin {
     $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-    $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | ConvertSID
+    $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | Convert-Sid
     $domainusers = new-object system.collections.arraylist
     foreach ($username in $users) {
-      if ($username -match (GetNetBiosName) -or ($username -match 'AZUREAD')) {
+      if ($username -match (Get-NetBiosName) -or ($username -match 'AZUREAD')) {
         $domainusertrim = $username -creplace '^[^\\]*\\', ''
         $domainusers.Add($domainusertrim) | Out-Null
       }
@@ -799,17 +810,17 @@ Function DownloadAndInstallAgent(
   , [System.String]$msvc2013x86File
   , [System.String]$msvc2013x86Install
 ) {
-  If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64")))
+  If (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x64")))
   {
-    Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x64')
+    Write-ToLog -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x64')
     (New-Object System.Net.WebClient).DownloadFile("${msvc2013x64Link}", ($usmtTempPath + $msvc2013x64File))
     # DownloadLink -Link $msvc2013x64Link -Path ($usmtTempPath + $msvc2013x64File)
     Invoke-Expression -Command:($msvc2013x64Install)
     $timeout = 0
-    While (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64")))
+    While (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x64")))
     {
       Start-Sleep 5
-      Write-Log -Message:("Waiting for Visual C++ 2013 x64 to finish installing")
+      Write-ToLog -Message:("Waiting for Visual C++ 2013 x64 to finish installing")
       $timeout += 1
       if ($timeout -eq 10)
       {
@@ -817,17 +828,17 @@ Function DownloadAndInstallAgent(
       }
     }
   }
-  If (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86")))
+  If (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x86")))
   {
-    Write-Log -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x86')
+    Write-ToLog -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x86')
     (New-Object System.Net.WebClient).DownloadFile("${msvc2013x86Link}", ($usmtTempPath + $msvc2013x86File))
     # DownloadLink -Link $msvc2013x86Link -Path ($usmtTempPath + $msvc2013x86File)
     Invoke-Expression -Command:($msvc2013x86Install)
     $timeout = 0
-    While (!(Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86")))
+    While (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x86")))
     {
       Start-Sleep 5
-      Write-Log -Message:("Waiting for Visual C++ 2013 x86 to finish installing")
+      Write-ToLog -Message:("Waiting for Visual C++ 2013 x86 to finish installing")
       $timeout += 1
       if ($timeout -eq 10)
       {
@@ -835,19 +846,19 @@ Function DownloadAndInstallAgent(
       }
     }
   }
-  If (!(AgentIsOnFileSystem)) {
-    Write-Log -Message:('Downloading JCAgent Installer')
+  If (!(Test-AgentIsOnFileSystem)) {
+    Write-ToLog -Message:('Downloading JCAgent Installer')
     #Download Installer
     (New-Object System.Net.WebClient).DownloadFile("${AGENT_INSTALLER_URL}", ($AGENT_INSTALLER_PATH))
     # DownloadLink -Link $AGENT_INSTALLER_URL -Path $AGENT_INSTALLER_PATH
-    Write-Log -Message:('JumpCloud Agent Download Complete')
-    Write-Log -Message:('Running JCAgent Installer')
+    Write-ToLog -Message:('JumpCloud Agent Download Complete')
+    Write-ToLog -Message:('Running JCAgent Installer')
     #Run Installer
     Start-Sleep -s 20
-    InstallAgent
+    Install-JumpCloudAgent
     Start-Sleep -s 5
   }
-  If (Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64") -and Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86") -and Check_Program_Installed("jumpcloud")) {
+  If ((Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x64")) -and (Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x86")) -and (Test-ProgramInstalled -programName:("jumpcloud"))) {
     Return $true
   }
   Else {
@@ -866,7 +877,7 @@ public static extern int NetGetJoinInformation(
  out int BufferType);
 "@ -Namespace Win32Api -Name NetApi32
 
-function GetNetBiosName {
+function Get-NetBiosName {
   $pNameBuffer = [IntPtr]::Zero
   $joinStatus = 0
   $apiResult = [Win32Api.NetApi32]::NetGetJoinInformation(
@@ -880,7 +891,7 @@ function GetNetBiosName {
   }
 }
 
-function ConvertSID {
+function Convert-Sid {
   [CmdletBinding()]
   param
   (
@@ -897,7 +908,7 @@ function ConvertSID {
   }
 }
 
-function ConvertUserName {
+function Convert-UserName {
   [CmdletBinding()]
   param
   (
@@ -914,7 +925,7 @@ function ConvertUserName {
   }
 }
 
-function CheckUsernameorSID {
+function Test-UsernameOrSID {
   [CmdletBinding()]
   param
   (
@@ -924,7 +935,7 @@ function CheckUsernameorSID {
   Begin {
     $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+$"
     $localcomputersidprefix = ((Get-LocalUser | Select-Object -First 1).SID).AccountDomainSID.ToString()
-    $convertedUser = ConvertUserName $usernameorsid
+    $convertedUser = Convert-UserName $usernameorsid
     $registyProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
     $list = @()
     foreach ($profile in $registyProfiles) {
@@ -936,7 +947,7 @@ function CheckUsernameorSID {
       # Get Valid SIDS
       if ($isValidFormat) {
         $users += [PSCustomObject]@{
-          Name = ConvertSID $listItem.PSChildName
+          Name = Convert-Sid $listItem.PSChildName
           SID  = $listItem.PSChildName
         }
       }
@@ -947,19 +958,19 @@ function CheckUsernameorSID {
     if ([regex]::IsMatch($usernameorsid, $sidPattern)) {
       if (($usernameorsid -in $users.SID) -And !($users.SID.Contains($localcomputersidprefix))) {
         # return, it's a valid SID
-        Write-Log "valid sid returning sid"
+        Write-ToLog "valid sid returning sid"
         return $usernameorsid
       }
     }
     elseif ([regex]::IsMatch($convertedUser, $sidPattern)) {
       if (($convertedUser -in $users.SID) -And !($users.SID.Contains($localcomputersidprefix))) {
         # return, it's a valid SID
-        Write-Log "valid user returning sid"
+        Write-ToLog "valid user returning sid"
         return $convertedUser
       }
     }
     else {
-      Write-Log 'SID or Username is invalid'
+      Write-ToLog 'SID or Username is invalid'
       exit 1
     }
   }
@@ -982,14 +993,14 @@ function Test-RegistryAccess {
     # wait just a moment mountng can take a moment
     Start-Sleep 1
     REG LOAD HKU\$classes "$profilePath\AppData\Local\Microsoft\Windows\UsrClass.dat" *>6
-    New-PSDrive HKEY_USERS Registry HKEY_USERS *>6
+    New-PSDrive -Name:(HKEY_USERS) -PSProvider:(Registry) -Root:(HKEY_USERS) *>6
     $HKU = Get-Acl "HKEY_USERS:\testUserAccess"
     $HKU_Classes = Get-Acl "HKEY_USERS:\testUserAccess_Classes"
     $HKUKeys = @($HKU, $HKU_Classes)
 
-    # $convertedSID = ConvertSID "$userSID" -ErrorAction SilentlyContinue
+    # $convertedSID = Convert-Sid "$userSID" -ErrorAction SilentlyContinue
     try {
-      $convertedSID = ConvertSID "$userSID" -ErrorAction SilentlyContinue
+      $convertedSID = Convert-Sid "$userSID" -ErrorAction SilentlyContinue
     }
     catch {
       write-information "Could not convert user SID, testing ACLs for SID access" -InformationAction Continue
@@ -1072,7 +1083,7 @@ function Convert-UserRegistry {
   }
   # If we haven't set accessIdentity variable, set to SID
   process {
-    Write-Host "Checking for $accessACL in user hive"
+    Write-ToLog "Checking for $accessACL in user hive"
 
     # Load both the usrClass Hive + NTUser.dat into registry
     REG LOAD HKU\$newusersid $hiveNTUserPath
@@ -1080,20 +1091,20 @@ function Convert-UserRegistry {
     REG LOAD HKU\$classes $hiveUsrClassPath
 
     # Mount HKEY_USERS hives with PSDrive
-    New-PSDrive HKEY_USERS Registry HKEY_USERS
+    New-PSDrive -Name:(HKEY_USERS) -PSProvider:(Registry) -Root:(HKEY_USERS)
     $HKU = Get-Acl "HKEY_USERS:\$newusersid"
     $HKU_Classes = Get-Acl "HKEY_USERS:\$($newusersid)_Classes"
     $HKUKeys = @($HKU, $HKU_Classes)
 
     # Test and Set the Root keys, bail if we can't do this
-    Write-Log -Message:('Setting the Root Keys Permission')
+    Write-ToLog -Message:('Setting the Root Keys Permission')
     # Set the root keys
     ForEach ($rootKey in $HKUKeys.Path) {
       # Write-Host $rootKey
       $acl = Get-Acl $rootKey
       foreach ($al in $acl.Access) {
         if ($al.IdentityReference -eq "$accessACL") {
-          Write-Host "$($acl.PSChildName)"
+          Write-ToLog "$($acl.PSChildName)"
           # $al.getType()
           Set-AccessFromDomainUserToLocal -accessItem $al -user "$newusersid" -keyPath $acl.PSChildName
           $acl | Set-Acl
@@ -1117,7 +1128,7 @@ function Convert-UserRegistry {
         $aclString = $_.CategoryInfo.TargetName
         $aclString = $aclString.replace("HKEY_USERS\", "")
         # Take ownership
-        Write-Log "Grant user access to take ownership operations on: $aclString"
+        Write-ToLog "Grant user access to take ownership operations on: $aclString"
         enable-privilege SeTakeOwnershipPrivilege
         # If we can't read the orgional owner, set as user
         try {
@@ -1138,9 +1149,9 @@ function Convert-UserRegistry {
     }
 
     # Continue with the permissions changes
-    Write-Host "Grant user access to take ownership operations:"
+    Write-ToLog "Grant user access to take ownership operations:"
     enable-privilege SeTakeOwnershipPrivilege
-    Write-Log -Message:("Searching $($registryKeys.Count) User Registry Keys")
+    Write-ToLog -Message:("Searching $($registryKeys.Count) User Registry Keys")
     $i = 0
     $registryKeys | ForEach-object {
       $i += 1
@@ -1158,7 +1169,7 @@ function Convert-UserRegistry {
           If ($al.IsInherited -eq $false -And $aclString -NotMatch $repoKeys) {
             # copy permissions from domain user to new user
             Set-AccessFromDomainUserToLocal -accessItem $al -user "$newusersid" -keyPath $aclString
-            Write-Log "Set $aclString"
+            Write-ToLog "Set $aclString"
             $acl | Set-Acl
           }
           # Repository Keys need special permission.
@@ -1166,13 +1177,13 @@ function Convert-UserRegistry {
             $originalOwner = Get-RegKeyOwner -keyPath $aclString
             # "original Owner to the key `"$aclString`" is: `"$originalOwner`""
             Change-RegKeyOwner -keyPath $aclString -user "$adminsid"
-            Write-Log "Changing Owner to $adminsid on $aclString"
+            Write-ToLog "Changing Owner to $adminsid on $aclString"
             # Give Full Controll To Current Admin
             If ($al.IsInherited -eq $false) {
-              Write-Log "Granting Full Control to $adminsid on $aclString"
+              Write-ToLog "Granting Full Control to $adminsid on $aclString"
               Set-FullControlToUser -userName "$adminsid" -key $aclString
               # While Current Admin is Admin, copy permission set from domain user to new user
-              Write-Log "Granting $newusersid access on $aclString"
+              Write-ToLog "Granting $newusersid access on $aclString"
               Set-AccessFromDomainUserToLocal -accessItem $al -user "$newusersid" -keyPath $aclString
               $acl | Set-Acl
             }
@@ -1197,7 +1208,7 @@ function Convert-UserRegistry {
 
     # Revert ownership on tracked items in changeList to origional owner & access
     # Required to perform restore operations
-    Write-Host "Grant user access to take perform restore operations:"
+    Write-ToLog "Grant user access to take perform restore operations:"
     enable-privilege SeRestorePrivilege
     $i = 0
     ForEach ($item in $changeList) {
@@ -1210,7 +1221,7 @@ function Convert-UserRegistry {
       ForEach ($al in $acl.Access) {
         Change-RegKeyOwner -keyPath $item.Path -user $item.OrigionalOwner
       }
-      write-log "Restoring $($item.Path)"
+      Write-ToLog "Restoring $($item.Path)"
     }
   }
 }
@@ -1243,10 +1254,10 @@ function Test-XMLFile {
 #endregion Functions
 
 #region Agent Install Helper Functions
-Function AgentIsOnFileSystem() {
+Function Test-AgentIsOnFileSystem() {
   Test-Path -Path:(${AGENT_PATH} + '/' + ${AGENT_BINARY_NAME})
 }
-Function InstallAgent() {
+Function Install-JumpCloudAgent() {
   $params = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/VERYSILENT", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
   Invoke-Expression "$params"
 }
@@ -6179,17 +6190,17 @@ Function Start-Migration {
 
     # Start script
     $admuVersion = '1.6.4'
-    Write-Log -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
-    Write-Log -Message:('Running ADMU: ' + 'v' + $admuVersion)
-    Write-Log -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
-    Write-Log -Message:('Gathering system & profile information')
+    Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
+    Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
+    Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
+    Write-ToLog -Message:('Gathering system & profile information')
 
     $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
     $WmiProduct = Get-WmiObject -Class:('Win32_Product') | Where-Object -FilterScript { $_.Name -like "User State Migration Tool*" }
     $UserStateMigrationToolVersionPath = Switch ([System.IntPtr]::Size) {
       8 { $UserStateMigrationToolx64Path }
       4 { $UserStateMigrationToolx86Path }
-      Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
+      Default { Write-ToLog -Message:('Unknown OSArchitecture') -Level:('Error') }
     }
 
     # Conditional ParameterSet logic
@@ -6210,7 +6221,7 @@ Function Start-Migration {
       $Customxml = $inputObject.Customxml
     }
     else {
-      $netBiosName = GetNetBiosname
+      $netBiosName = Get-NetBiosName
     }
 
     # Define misc static variables
@@ -6235,8 +6246,8 @@ Function Start-Migration {
     $msvc2013x86Install = "$usmtTempPath$msvc2013x86File /install /quiet /norestart"
     $msvc2013x64Install = "$usmtTempPath$msvc2013x64File /install /quiet /norestart"
 
-    write-log -Message("The Selected Migration user is: $SelectedUserName")
-    $SelectedUserSid = CheckUsernameorSID $SelectedUserName
+    Write-ToLog -Message("The Selected Migration user is: $SelectedUserName")
+    $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
     if (!$ConvertProfile){
       # Since we are not converting we require the username
       $SelectedUserName = $SelectedUserName.Substring($SelectedUserName.IndexOf('\') + 1)
@@ -6248,17 +6259,17 @@ Function Start-Migration {
     }
 
     # JumpCloud Agent Installation Variables
-    $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
-    $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
-    $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
-    $AGENT_SERVICE_NAME = "JumpCloud-agent"
-    $AGENT_INSTALLER_URL = "https://s3.amazonaws.com/jumpcloud-windows-agent/production/JumpCloudInstaller.exe"
-    $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\JumpCloudInstaller.exe"
-    $AGENT_UNINSTALLER_NAME = "unins000.exe"
-    $EVENT_LOGGER_KEY_NAME = "hklm:\SYSTEM\CurrentControlSet\services\eventlog\Application\JumpCloud-agent"
-    $INSTALLER_BINARY_NAMES = "JumpCloudInstaller.exe,JumpCloudInstaller.tmp"
+    # $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
+    # $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
+    # $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
+    # $AGENT_SERVICE_NAME = "JumpCloud-agent"
+    # $AGENT_INSTALLER_URL = "https://s3.amazonaws.com/jumpcloud-windows-agent/production/JumpCloudInstaller.exe"
+    # $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\JumpCloudInstaller.exe"
+    # $AGENT_UNINSTALLER_NAME = "unins000.exe"
+    # $EVENT_LOGGER_KEY_NAME = "hklm:\SYSTEM\CurrentControlSet\services\eventlog\Application\JumpCloud-agent"
+    # $INSTALLER_BINARY_NAMES = "JumpCloudInstaller.exe,JumpCloudInstaller.tmp"
 
-    Write-Log -Message:('Creating JCADMU Temporary Path in ' + $jcAdmuTempPath)
+    Write-ToLog -Message:('Creating JCADMU Temporary Path in ' + $jcAdmuTempPath)
     if (!(Test-path $jcAdmuTempPath)) {
       new-item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
     }
@@ -6270,12 +6281,12 @@ Function Start-Migration {
     if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD') {
       $DomainName = 'AzureAD'
       $netBiosName = 'AzureAD'
-      Write-Log -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
+      Write-ToLog -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
     }
     elseif ($AzureADProfile -eq $false) {
       $DomainName = $WmiComputerSystem.Domain
-      $netBiosName = GetNetBiosName
-      Write-Log -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + ' NetBiosName is ' + $netBiosName)
+      $netBiosName = Get-NetBiosName
+      Write-ToLog -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + ' NetBiosName is ' + $netBiosName)
     }
     #endregion Test checks
 
@@ -6283,19 +6294,19 @@ Function Start-Migration {
   Process {
     # Start Of Console Output
     if ($ConvertProfile -eq $true) {
-      Write-Log -Message:('Windows Profile "' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+      Write-ToLog -Message:('Windows Profile "' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
     }
     else {
-      Write-Log -Message:('Windows Profile "' + $SelectedUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+      Write-ToLog -Message:('Windows Profile "' + $SelectedUserName + '" is going to be duplicated to profile "' + $localComputerName + '\' + $JumpCloudUserName + '"')
     }
     # Create Restore
     if ($CreateRestore -eq $true) {
       Checkpoint-Computer -Description "ADMU Convert User" -EA silentlycontinue
-      Write-host "The following restore points were found on this system:"
+      Write-ToLog "The following restore points were found on this system:"
       Get-ComputerRestorePoint
     }
     #region SilentAgentInstall
-    if ($InstallJCAgent -eq $true -and (!(Check_Program_Installed("Jumpcloud")))) {
+    if ($InstallJCAgent -eq $true -and (!(Test-ProgramInstalled("Jumpcloud")))) {
       #check if jc is not installed and clear folder
       if (Test-Path "$windowsDrive\Program Files\Jumpcloud\") {
         Remove-ItemIfExists -Path "$windowsDrive\Program Files\Jumpcloud\" -Recurse
@@ -6304,22 +6315,22 @@ Function Start-Migration {
       DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install)
       start-sleep -seconds 20
       if ((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=1') {
-        Write-Log -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
+        Write-ToLog -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
         taskkill /IM "JumpCloudInstaller.exe" /F
         taskkill /IM "JumpCloudInstaller.tmp" /F
         Read-Host -Prompt "Press Enter to exit"
         exit
       }
       elseif (((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=0')) {
-        Write-Log -Message:('JC Agent installed - Must be off domain to start jc agent service')
+        Write-ToLog -Message:('JC Agent installed - Must be off domain to start jc agent service')
       }
     }
-    elseif ($InstallJCAgent -eq $true -and (Check_Program_Installed("Jumpcloud"))) {
-      Write-Log -Message:('JumpCloud agent is already installed on the system.')
+    elseif ($InstallJCAgent -eq $true -and (Test-ProgramInstalled("Jumpcloud"))) {
+      Write-ToLog -Message:('JumpCloud agent is already installed on the system.')
     }
 
     if ($ConvertProfile -eq $true) {
-      Write-Log -Message:('Creating Backup of User Registry Hive')
+      Write-ToLog -Message:('Creating Backup of User Registry Hive')
       $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
       try
       {
@@ -6328,39 +6339,39 @@ Function Start-Migration {
       }
       catch
       {
-        write-log -Message("Could Not Backup Registry Hives: Exiting...")
-        write-log -Message($_.Exception.Message)
+        Write-ToLog -Message("Could Not Backup Registry Hives: Exiting...")
+        Write-ToLog -Message($_.Exception.Message)
         exit 1
       }
-      Write-Log -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
+      Write-ToLog -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
       # Create New User
       $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
       New-localUser -Name $JumpCloudUserName -password $newUserPassword -ErrorVariable userExitCode
       if ($userExitCode)
       {
-        Write-Log -Message:("$userExitCode")
-        Write-Log -Message:("The user: $JumpCloudUserName could not be created, exiting")
+        Write-ToLog -Message:("$userExitCode")
+        Write-ToLog -Message:("The user: $JumpCloudUserName could not be created, exiting")
         exit 1
       }
       # Initialize the Profile
       New-LocalUserProfile -username $JumpCloudUserName -ErrorVariable profileInit
       if ($profileInit)
       {
-        Write-Log -Message:("$profileInit")
-        Write-Log -Message:("The user: $JumpCloudUserName could not be initalized, exiting")
+        Write-ToLog -Message:("$profileInit")
+        Write-ToLog -Message:("The user: $JumpCloudUserName could not be initalized, exiting")
         exit 1
       }
       # TODO: If success, Track user creation for reversal step
 
       ### Begin Regedit Block ###
-        Write-Log -Message:('Getting new profile image path')
+        Write-ToLog -Message:('Getting new profile image path')
         # Set the New User Profile Path
         # Now get NewUserSID
         $NewUserSID = Get-SID -User $JumpCloudUserName
         $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
         if ([System.String]::IsNullOrEmpty($newUserProfileImagePath))
         {
-            Write-Log -Message("Could not get the profile path for $jumpcloudusername exiting...")
+            Write-ToLog -Message("Could not get the profile path for $jumpcloudusername exiting...")
             exit 1
         }
         # backup new user registry hives
@@ -6371,46 +6382,46 @@ Function Start-Migration {
         }
         catch
         {
-            write-log -Message("Could Not Backup Registry Hives in $($newuserprofileimagepath): Exiting...")
-            write-log -Message($_.Exception.Message)
+            Write-ToLog -Message("Could Not Backup Registry Hives in $($newuserprofileimagepath): Exiting...")
+            Write-ToLog -Message($_.Exception.Message)
             exit 1
         }
 
         # Test Registry Access before edits
-        Write-Log -Message:('Verifying Registry Hives can be loaded and unloaded')
+        Write-ToLog -Message:('Verifying Registry Hives can be loaded and unloaded')
         try{
           Test-UserRegistryLoadState -ProfilePath $newuserprofileimagepath -UserSid $newUserSid
           Test-UserRegistryLoadState -ProfilePath $olduserprofileimagepath -UserSid $SelectedUserSID
         }
         catch{
-          Write-Log -Message:('Count not load and unload registry of migration user, exiting')
+          Write-ToLog -Message:('Count not load and unload registry of migration user, exiting')
           exit 1
         }
 
-        Write-Log -Message:('Begin new local user registry copy')
+        Write-ToLog -Message:('Begin new local user registry copy')
         if (test-path -path $newuserprofileimagepath){
-          Write-Log -Message:('new profile path looks good continue testing')
+          Write-ToLog -Message:('new profile path looks good continue testing')
         }
         # Give us admin rights to modify
-        Write-Log -Message:("Take Ownership of $($newuserprofileimagepath)")
+        Write-ToLog -Message:("Take Ownership of $($newuserprofileimagepath)")
         $path = takeown /F "$($newuserprofileimagepath)" /r /d Y
-        Write-Log -Message:("Get ACLs for $($newuserprofileimagepath)")
+        Write-ToLog -Message:("Get ACLs for $($newuserprofileimagepath)")
         $acl = Get-Acl ($newuserprofileimagepath)
-        Write-Log -Message:("Current ACLs: $($acl.access)")
-        Write-Log -Message:("Setting Administrator Group Access Rule on: $($newuserprofileimagepath)")
+        Write-ToLog -Message:("Current ACLs: $($acl.access)")
+        Write-ToLog -Message:("Setting Administrator Group Access Rule on: $($newuserprofileimagepath)")
         $AdministratorsGroupSIDName = ([wmi]"Win32_SID.SID='S-1-5-32-544'").AccountName
         $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($AdministratorsGroupSIDName, "FullControl", "Allow")
-        Write-Log -Message:("Set ACL Access Protection Rules")
+        Write-ToLog -Message:("Set ACL Access Protection Rules")
         $acl.SetAccessRuleProtection($false, $true)
-        Write-Log -Message:("Set ACL Access Rules")
+        Write-ToLog -Message:("Set ACL Access Rules")
         $acl.SetAccessRule($AccessRule)
-        Write-Log -Message:("Applying ACL...")
+        Write-ToLog -Message:("Applying ACL...")
         $acl | Set-Acl $newuserprofileimagepath
-        $acl_updated = Get-Acl ($newuserprofileimagepath)
-        # Write-Log -Message:("Updated ACLs: $($acl_updated.access)")
+        # $acl_updated = Get-Acl ($newuserprofileimagepath)
+        # Write-ToLog -Message:("Updated ACLs: $($acl_updated.access)")
 
-        Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath + ' New User SID: ' + $NewUserSID)
-        Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath + ' Old User SID: ' + $SelectedUserSID)
+        Write-ToLog -Message:('New User Profile Path: ' + $newuserprofileimagepath + ' New User SID: ' + $NewUserSID)
+        Write-ToLog -Message:('Old User Profile Path: ' + $olduserprofileimagepath + ' Old User SID: ' + $SelectedUserSID)
         # Load New User Profile Registry Keys
         Set-UserRegistryLoadState -op "Load" -ProfilePath $newuserprofileimagepath -UserSid $NewUserSID
         # Load Selected User Profile Keys
@@ -6419,23 +6430,23 @@ Function Start-Migration {
         reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
         if ($?)
         {
-            Write-Log -Message:('Copy Profile: ' + "$newuserprofileimagepath/NTUSER.DAT.BAK" + ' To: ' + "$olduserprofileimagepath/NTUSER.DAT.BAK")
+            Write-ToLog -Message:('Copy Profile: ' + "$newuserprofileimagepath/NTUSER.DAT.BAK" + ' To: ' + "$olduserprofileimagepath/NTUSER.DAT.BAK")
         }
         else
         {
-            Write-Log -Message:('Could not copy Profile: ' + "$newuserprofileimagepath/NTUSER.DAT.BAK" + ' To: ' + "$olduserprofileimagepath/NTUSER.DAT.BAK")
+            Write-ToLog -Message:('Could not copy Profile: ' + "$newuserprofileimagepath/NTUSER.DAT.BAK" + ' To: ' + "$olduserprofileimagepath/NTUSER.DAT.BAK")
         }
         reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
         if ($?)
         {
-            Write-Log -Message:('Copy Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+            Write-ToLog -Message:('Copy Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
         }
         else
         {
-            Write-Log -Message:('Could not copy Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+            Write-ToLog -Message:('Could not copy Profile: ' + "$newuserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$olduserprofileimagepath/AppData/Local/Microsoft/Windows/UsrClass.dat")
         }
         # Copy the profile containing the correct access and data to the destination profile
-        Write-Log -Message:('Copying merged profiles to destination profile path')
+        Write-ToLog -Message:('Copying merged profiles to destination profile path')
         #TODO: Check that we can unload at this state
         #TODO: Reverse if we fail at this state
 
@@ -6443,8 +6454,8 @@ Function Start-Migration {
         # Check that the installed components key does not exist
         if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS")
         {
-            Write-Host "Mounting HKEY_USERS to check USER UWP keys"
-            New-PSDrive HKEY_USERS Registry HKEY_USERS
+            Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
+            New-PSDrive -Name:(HKEY_USERS) -PSProvider:(Registry) -Root:(HKEY_USERS)
         }
         $ADMU_PackageKey = "HKEY_USERS:\$($newusersid)_admu\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
         if (Get-Item $ADMU_PackageKey -ErrorAction SilentlyContinue)
@@ -6458,7 +6469,7 @@ Function Start-Migration {
         if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue)
         {
             # If the registry Key exists (it wont)
-            Write-Host "The Key Already Exists"
+            Write-ToLog "The Key Already Exists"
         }
         else
         {
@@ -6480,13 +6491,13 @@ Function Start-Migration {
         }
         catch
         {
-            write-log -Message("Could not copy backup registry hives to the destination location in $($olduserprofileimagepath): Exiting...")
-            write-log -Message($_.Exception.Message)
+            Write-ToLog -Message("Could not copy backup registry hives to the destination location in $($olduserprofileimagepath): Exiting...")
+            Write-ToLog -Message($_.Exception.Message)
             exit 1
         }
 
         # Rename original ntuser & usrclass .dat files to ntuser_original.dat & usrclass_original.dat for backup and reversal if needed
-        Write-Log -Message:('Copy orig. ntuser.dat to ntuser_original.dat (backup reg step)')
+        Write-ToLog -Message:('Copy orig. ntuser.dat to ntuser_original.dat (backup reg step)')
         try
         {
             Rename-Item -Path "$olduserprofileimagepath\NTUSER.DAT" -NewName "$olduserprofileimagepath\NTUSER_original.DAT" -Force -ErrorAction Stop
@@ -6494,12 +6505,12 @@ Function Start-Migration {
         }
         catch
         {
-            write-log -Message("Could not rename origional registry files for backup purposes: Exiting...")
-            write-log -Message($_.Exception.Message)
+            Write-ToLog -Message("Could not rename origional registry files for backup purposes: Exiting...")
+            Write-ToLog -Message($_.Exception.Message)
             exit 1
         }
         # finally set .dat.back registry files to the .dat in the profileimagepath
-        Write-Log -Message:('rename ntuser.dat.bak to ntuser.dat (replace step)')
+        Write-ToLog -Message:('rename ntuser.dat.bak to ntuser.dat (replace step)')
         try
         {
             Rename-Item -Path "$olduserprofileimagepath\NTUSER.DAT.BAK" -NewName "$olduserprofileimagepath\NTUSER.DAT" -Force -ErrorAction Stop
@@ -6507,8 +6518,8 @@ Function Start-Migration {
         }
         catch
         {
-            write-log -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
-            write-log -Message($_.Exception.Message)
+            Write-ToLog -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
+            Write-ToLog -Message($_.Exception.Message)
             exit 1
         }
 
@@ -6517,10 +6528,10 @@ Function Start-Migration {
         $userCompare = $olduserprofileimagepath.Replace("$($windowsDrive)\Users\", "")
         if ($userCompare -eq $JumpCloudUserName)
         {
-            Write-log -Message:("Selected User Path and New User Path Match")
+            Write-ToLog -Message:("Selected User Path and New User Path Match")
             # Remove the New User Profile Path, we want to just use the old Path
             try{
-              Write-Log -Message:("Attempting to remove newly created $newUserProfileImagePath")
+              Write-ToLog -Message:("Attempting to remove newly created $newUserProfileImagePath")
               start-sleep 1
               icacls $newUserProfileImagePath /reset /t /c /l *> $null
               start-sleep 1
@@ -6529,7 +6540,7 @@ Function Start-Migration {
               Remove-Item -Path ($newUserProfileImagePath) -Force -Recurse -ErrorAction Stop
             }
             catch{
-              Write-Log -Message:("Remove $newUserProfileImagePath failed, renaming to unusedADMUProfilere")
+              Write-ToLog -Message:("Remove $newUserProfileImagePath failed, renaming to unusedADMUProfilere")
               Rename-Item -Path $newUserProfileImagePath -NewName "unusedADMUProfilere" -ErrorAction Stop
             }
             # Set the New User Profile Image Path to Old User Profile Path (they are the same)
@@ -6537,12 +6548,12 @@ Function Start-Migration {
         }
         else
         {
-            write-log -Message:("Selected User Path and New User Path Differ")
+            Write-ToLog -Message:("Selected User Path and New User Path Differ")
             try{
-              Write-Log -Message:("Attempting to remove newly created $newUserProfileImagePath")
+              Write-ToLog -Message:("Attempting to remove newly created $newUserProfileImagePath")
               # start-sleep 1
               $systemAccount = whoami
-              Write-Log -Message:("ADMU running as $systemAccount")
+              Write-ToLog -Message:("ADMU running as $systemAccount")
               if ($systemAccount -eq "NT AUTHORITY\SYSTEM"){
                 icacls $newUserProfileImagePath /reset /t /c /l *> $null
                 takeown /r /d Y /f $newUserProfileImagePath
@@ -6552,19 +6563,19 @@ Function Start-Migration {
               Remove-Item -Path ($newUserProfileImagePath) -Force -Recurse -ErrorAction Stop
             }
             catch{
-              Write-Log -Message:("Remove $newUserProfileImagePath failed, renaming to ADMU_unusedProfile_$JumpCloudUserName")
+              Write-ToLog -Message:("Remove $newUserProfileImagePath failed, renaming to ADMU_unusedProfile_$JumpCloudUserName")
               Rename-Item -Path $newUserProfileImagePath -NewName "ADMU_unusedProfile_$JumpCloudUserName" -ErrorAction Stop
             }
             try
             {
-              Write-Log -Message:("Attempting to rename newly $oldUserProfileImagePath to $JumpcloudUserName")
+              Write-ToLog -Message:("Attempting to rename newly $oldUserProfileImagePath to $JumpcloudUserName")
               # Rename the old user profile path to the new name
               # -ErrorAction Stop; Rename-Item doesn't throw terminating errors
               Rename-Item -Path $oldUserProfileImagePath -NewName $JumpCloudUserName -ErrorAction Stop
             }
             catch
             {
-              Write-Log -Message:("Unable to rename user profile path to new name - $JumpCloudUserName.")
+              Write-ToLog -Message:("Unable to rename user profile path to new name - $JumpCloudUserName.")
               exit 1
             }
         }
@@ -6573,9 +6584,9 @@ Function Start-Migration {
         Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $SelectedUserName + '.' + $NetBiosName)
         Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUserName)
 
-        Write-Log -Message:('New User Profile Path: ' + $newuserprofileimagepath + ' New User SID: ' + $NewUserSID)
-        Write-Log -Message:('Old User Profile Path: ' + $olduserprofileimagepath + ' Old User SID: ' + $SelectedUserSID)
-        Write-Log -Message:("NTFS ACLs on domain $windowsDrive\users\ dir")
+        Write-ToLog -Message:('New User Profile Path: ' + $newuserprofileimagepath + ' New User SID: ' + $NewUserSID)
+        Write-ToLog -Message:('Old User Profile Path: ' + $olduserprofileimagepath + ' Old User SID: ' + $SelectedUserSID)
+        Write-ToLog -Message:("NTFS ACLs on domain $windowsDrive\users\ dir")
 
         #ntfs acls on domain $windowsDrive\users\ dir
         $NewSPN_Name = $env:COMPUTERNAME + '\' + $JumpCloudUserName
@@ -6588,7 +6599,7 @@ Function Start-Migration {
         ## End Regedit Block ##
 
         ### Active Setup Registry Entry ###
-        Write-Log -Message:('Creating HKLM Registry Entries')
+        Write-ToLog -Message:('Creating HKLM Registry Entries')
         # Root Key Path
         $ADMUKEY = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
         # Remove Root from key to pass into functions
@@ -6602,11 +6613,11 @@ Function Start-Migration {
         }
         if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue)
         {
-            write-log -message:("The ADMU Registry Key exits")
+            Write-ToLog -message:("The ADMU Registry Key exits")
             $properties = Get-ItemProperty -Path "$ADMUKEY"
             foreach ($item in $propertyHash.Keys)
             {
-                Write-log -message:("Property: $($item) Value: $($properties.$item)")
+                Write-ToLog -message:("Property: $($item) Value: $($properties.$item)")
             }
         }
         else
@@ -6629,7 +6640,7 @@ Function Start-Migration {
         }
         ### End Active Setup Registry Entry Region ###
 
-        Write-Log -Message:('Updating UWP Apps for new user')
+        Write-ToLog -Message:('Updating UWP Apps for new user')
         $newuserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
         $path = $newuserprofileimagepath + '\AppData\Local\JumpCloudADMU'
         If (!(test-path $path))
@@ -6640,7 +6651,7 @@ Function Start-Migration {
         if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD')
         {
             # Find Appx User Apps by Username
-            $appxList = Get-AppXpackage -user (ConvertSID $SelectedUserSID) | Select-Object InstallLocation
+            $appxList = Get-AppXpackage -user (Convert-Sid $SelectedUserSID) | Select-Object InstallLocation
         }
         else
         {
@@ -6677,10 +6688,10 @@ Function Start-Migration {
         }
         catch
         {
-            write-Log -Message("Could not find uwp_jcadmu.exe in $windowsDrive\Windows\ UWP Apps will not migrate")
-            write-Log -Message($_.Exception.Message)
+            Write-ToLog -Message("Could not find uwp_jcadmu.exe in $windowsDrive\Windows\ UWP Apps will not migrate")
+            Write-ToLog -Message($_.Exception.Message)
         }
-        Write-Log -Message:('Profile Conversion Completed')
+        Write-ToLog -Message:('Profile Conversion Completed')
     }
     else {
 
@@ -6688,7 +6699,7 @@ Function Start-Migration {
       If (-not $WmiProduct -and -not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64'))) {
         # Remove existing jcAdmu folder
         If (Test-Path -Path:($usmtTempPath)) {
-          Write-Log -Message:('Removing USMT Temp Files & Folders')
+          Write-ToLog -Message:('Removing USMT Temp Files & Folders')
           Remove-ItemIfExists -Path:($usmtTempPath) -Recurse
         }
         # Create usmt temp folder
@@ -6700,30 +6711,30 @@ Function Start-Migration {
         DownloadLink -Link:($adkSetupLink) -Path:($adkSetupPath)
         # Test Path
         If (Test-Path -Path:($adkSetupPath)) {
-          Write-Log -Message:('Download of Windows ADK Setup file completed successfully')
+          Write-ToLog -Message:('Download of Windows ADK Setup file completed successfully')
         }
         Else {
-          Write-Log -Message:('Failed To Download Windows ADK Setup') -Level:('Error')
+          Write-ToLog -Message:('Failed To Download Windows ADK Setup') -Level:('Error')
           Exit;
         }
         # Not Installed & Not In Right Dir
         If ($AcceptEULA -eq $false) {
-          Write-Log -Message:('Installing Windows ADK, please complete GUI prompts & accept EULA within 5 mins or it will Exit.')
+          Write-ToLog -Message:('Installing Windows ADK, please complete GUI prompts & accept EULA within 5 mins or it will Exit.')
           Start-NewProcess -pfile:($adkSetupPath) -arguments:($adkSetupArguments)
         }
         ElseIf ($AcceptEULA -eq $true) {
-          Write-Log -Message:('Installing Windows ADK, silently. By using "$AcceptEULA = "true" you are accepting the "Microsoft Windows ADK EULA". This process could take up to 3 mins if .net is required to be installed, it will timeout if it takes longer than 5 mins.')
+          Write-ToLog -Message:('Installing Windows ADK, silently. By using "$AcceptEULA = "true" you are accepting the "Microsoft Windows ADK EULA". This process could take up to 3 mins if .net is required to be installed, it will timeout if it takes longer than 5 mins.')
           Start-NewProcess -pfile:($adkSetupPath) -arguments:($adkSetupArgumentsQuiet)
         }
       }
       ElseIf ($WmiProduct -and (-not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64')))) {
         # Installed But Not In Right Dir
-        Write-Log -Message:('Microsoft Windows ADK is installed but User State Migration Tool cant be found - Please correct and Try again.') -Level:('Error')
+        Write-ToLog -Message:('Microsoft Windows ADK is installed but User State Migration Tool cant be found - Please correct and Try again.') -Level:('Error')
         Exit;
       }
       # Test User State Migration Tool install path & build config.xml
       If (Test-Path -Path:($UserStateMigrationToolVersionPath + '\amd64')) {
-        Write-Log -Message:('Microsoft Windows ADK - User State Migration Tool ready to be used.')
+        Write-ToLog -Message:('Microsoft Windows ADK - User State Migration Tool ready to be used.')
 
         if (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\config.xml')) -or (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\MigUser.xml')) -or (-Not (Test-Path -Path:($UserStateMigrationToolVersionPath + '\MigApp.xml'))))) {
           try {
@@ -6735,13 +6746,13 @@ Function Start-Migration {
             }
           }
           catch {
-            Write-Log -Message:('Unable to create custom USMT xml files') -Level:('Error')
+            Write-ToLog -Message:('Unable to create custom USMT xml files') -Level:('Error')
             Exit;
           }
         }
       }
       Else {
-        Write-Log -Message:('Microsoft Windows ADK - User State Migration Tool not found. Make sure it is installed correctly and in the required location.') -Level:('Error')
+        Write-ToLog -Message:('Microsoft Windows ADK - User State Migration Tool not found. Make sure it is installed correctly and in the required location.') -Level:('Error')
         Exit;
       }
       #endregion User State Migration Tool Install & EULA Check
@@ -6752,13 +6763,13 @@ Function Start-Migration {
       }
       Try {
         $CommandScanState = $CommandScanStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $windowsDrive
-        Write-Log -Message:('Starting ScanState tool on user "' + $netBiosName + '\' + $SelectedUserName + '"')
-        Write-Log -Message:('ScanState tool is in progress. Command: ' + $CommandScanState)
+        Write-ToLog -Message:('Starting ScanState tool on user "' + $netBiosName + '\' + $SelectedUserName + '"')
+        Write-ToLog -Message:('ScanState tool is in progress. Command: ' + $CommandScanState)
         Invoke-Expression -command:($CommandScanState)
-        Write-Log -Message:('ScanState tool completed for user "' + $netBiosName + '\' + $SelectedUserName + '"')
+        Write-ToLog -Message:('ScanState tool completed for user "' + $netBiosName + '\' + $SelectedUserName + '"')
       }
       Catch {
-        Write-Log -Message:('ScanState tool failed for user "' + $netBiosName + '\' + $SelectedUserName + '"') -Level:('Error')
+        Write-ToLog -Message:('ScanState tool failed for user "' + $netBiosName + '\' + $SelectedUserName + '"') -Level:('Error')
         Exit;
       }
       #endregion ScanState Step
@@ -6769,13 +6780,13 @@ Function Start-Migration {
       }
       Try {
         $CommandLoadState = $CommandLoadStateTemplate -f $UserStateMigrationToolVersionPath, $profileStorePath, $netBiosName, $SelectedUserName, $TempPassword, $localComputerName, $JumpCloudUserName, $windowsDrive
-        Write-Log -Message:('Starting LoadState tool on user "' + $netBiosName + '\' + $SelectedUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
-        Write-Log -Message:('LoadState tool is in progress. Command: ' + $CommandLoadState)
+        Write-ToLog -Message:('Starting LoadState tool on user "' + $netBiosName + '\' + $SelectedUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+        Write-ToLog -Message:('LoadState tool is in progress. Command: ' + $CommandLoadState)
         Invoke-Expression -Command:($CommandLoadState)
-        Write-Log -Message:('LoadState tool completed for user "' + $netBiosName + '\' + $SelectedUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+        Write-ToLog -Message:('LoadState tool completed for user "' + $netBiosName + '\' + $SelectedUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
       }
       Catch {
-        Write-Log -Message:('LoadState tool failed for user "' + $netBiosName + '\' + $SelectedUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"') -Level:('Error')
+        Write-ToLog -Message:('LoadState tool failed for user "' + $netBiosName + '\' + $SelectedUserName + '"' + ' converting to "' + $localComputerName + '\' + $JumpCloudUserName + '"') -Level:('Error')
         Exit;
       }
       #endregion LoadState Step
@@ -6791,44 +6802,44 @@ Function Start-Migration {
     if ($LeaveDomain -eq $true) {
       if ($netBiosName -match 'AzureAD') {
         try {
-          Write-Log -Message:('Leaving AzureAD')
+          Write-ToLog -Message:('Leaving AzureAD')
           dsregcmd.exe /leave
         }
         catch {
-          Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
+          Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
           Exit;
         }
       }
       else {
         Try {
-          Write-Log -Message:('Leaving Domain')
+          Write-ToLog -Message:('Leaving Domain')
           $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
         }
         Catch {
-          Write-Log -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
+          Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
           Exit;
         }
       }
     }
 
     # Cleanup Folders Again Before Reboot
-    Write-Log -Message:('Removing Temp Files & Folders.')
+    Write-ToLog -Message:('Removing Temp Files & Folders.')
     Start-Sleep -s 10
     try {
       Remove-ItemIfExists -Path:($jcAdmuTempPath) -Recurse
     }
     catch {
-      Write-Log -Message:('Failed to remove Temp Files & Folders.' + $jcAdmuTempPath)
+      Write-ToLog -Message:('Failed to remove Temp Files & Folders.' + $jcAdmuTempPath)
     }
 
     if ($ForceReboot -eq $true) {
-      Write-Log -Message:('Forcing reboot of the PC now')
+      Write-ToLog -Message:('Forcing reboot of the PC now')
       Restart-Computer -ComputerName $env:COMPUTERNAME -Force
     }
     #endregion SilentAgentInstall
   }
   End {
-    Write-Log -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
-    Write-Log -Message:('Tool options chosen were : ' + 'Install JC Agent = ' + $InstallJCAgent + ', Leave Domain = ' + $LeaveDomain + ', Force Reboot = ' + $ForceReboot + ', AzureADProfile = ' + $AzureADProfile + ', Convert User Profile = ' + $ConvertProfile + ', Create System Restore Point = ' + $CreateRestore)
+    Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
+    Write-ToLog -Message:('Tool options chosen were : ' + 'Install JC Agent = ' + $InstallJCAgent + ', Leave Domain = ' + $LeaveDomain + ', Force Reboot = ' + $ForceReboot + ', AzureADProfile = ' + $AzureADProfile + ', Convert User Profile = ' + $ConvertProfile + ', Create System Restore Point = ' + $CreateRestore)
   }
 }
