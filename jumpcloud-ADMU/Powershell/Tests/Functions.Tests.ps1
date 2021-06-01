@@ -82,20 +82,20 @@ Describe 'Functions' {
 
     }
 
-    Context 'Remove-ItemIfExists Function'{
+    Context 'Remove-ItemIfExist Function'{
 
-        It 'Remove-ItemIfExists - Does Exist c:\windows\temp\test\' {
+        It 'Remove-ItemIfExist - Does Exist c:\windows\temp\test\' {
             if(Test-Path 'c:\windows\Temp\test\') {Remove-Item 'c:\windows\Temp\test' -Recurse -Force}
             New-Item -ItemType directory -path 'c:\windows\Temp\test\'
             New-Item 'c:\windows\Temp\test\test.txt'
-            Remove-ItemIfExists -Path 'c:\windows\Temp\test\' -Recurse
+            Remove-ItemIfExist -Path 'c:\windows\Temp\test\' -Recurse
             Test-Path 'c:\windows\Temp\test\' | Should -Be $false
         }
 
-        It 'Remove-ItemIfExists - Fails c:\windows\temp\test\' {
+        It 'Remove-ItemIfExist - Fails c:\windows\temp\test\' {
             if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force}
-            Mock Remove-ItemIfExists {Write-ToLog -Message ('Removal Of Temp Files & Folders Failed') -Level Warn}
-            Remove-ItemIfExists -Path 'c:\windows\Temp\test\'
+            Mock Remove-ItemIfExist {Write-ToLog -Message ('Removal Of Temp Files & Folders Failed') -Level Warn}
+            Remove-ItemIfExist -Path 'c:\windows\Temp\test\'
             $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
             $Log.Contains('Removal Of Temp Files & Folders Failed') | Should -Be $true
         }
@@ -197,18 +197,18 @@ Describe 'Functions' {
 
     }
 
-    Context 'Test-HasNoSpaces Function'{
+    Context 'Test-HasNoSpace Function'{
 
-        It 'Test-HasNoSpaces - $null' {
-            Test-HasNoSpaces -field $null | Should -Be $true
+        It 'Test-HasNoSpace - $null' {
+            Test-HasNoSpace -field $null | Should -Be $true
         }
 
-        It 'Test-HasNoSpaces - no spaces' {
-            Test-HasNoSpaces -field 'testwithnospaces' | Should -Be $true
+        It 'Test-HasNoSpace - no spaces' {
+            Test-HasNoSpace -field 'testwithnospaces' | Should -Be $true
         }
 
-        It 'Test-HasNoSpaces - spaces' {
-            Test-HasNoSpaces -field 'test with spaces' | Should -Be $false
+        It 'Test-HasNoSpace - spaces' {
+            Test-HasNoSpace -field 'test with spaces' | Should -Be $false
         }
 
     }

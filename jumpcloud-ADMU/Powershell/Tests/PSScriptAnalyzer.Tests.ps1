@@ -1,5 +1,5 @@
 $FolderPath_Module = (Get-Item -Path($PSScriptRoot)).Parent.FullName
-$SettingsFile = "$PSScriptRoot/PSScriptAnalyzerSettings.psd1"
+$SettingsFile = "$PSScriptRoot\PSScriptAnalyzerSettings.psd1"
 # Import Settings:
 $SettingsFromFile = Import-PowerShellDataFile $SettingsFile
 $settingsObject = @{
