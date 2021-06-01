@@ -25,11 +25,12 @@ $configuration.Should.ErrorAction = 'Continue'
 $configuration.CodeCoverage.Enabled = $true
 $configuration.testresult.Enabled = $true
 $configuration.testresult.OutputFormat = 'JUnitXml'
+$configuration.CodeCoverage.OutputPath = ($PesterResultsFileXmldir + 'coverage.xml')
 $configuration.testresult.OutputPath = ($PesterResultsFileXmldir + 'results.xml')
 
 Invoke-Pester -configuration $configuration
 
-$PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmldir)")).FullName
+$PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmldir)")).FullName | Where-Object { $_ -match "results.xml"}
     If (Test-Path -Path:($PesterTestResultPath))
     {
         [xml]$PesterResults = Get-Content -Path:($PesterTestResultPath)
