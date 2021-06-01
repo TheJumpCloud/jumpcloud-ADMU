@@ -23,7 +23,7 @@ function Register-NativeMethod
     $script:nativeMethods += [PSCustomObject]@{ Dll = $dll; Signature = $methodSignature; }
   }
 }
-function Add-NativeMethods
+function Add-NativeMethod
 {
   [CmdletBinding()]
   [Alias()]
@@ -70,7 +70,7 @@ function New-LocalUserProfile
            [MarshalAs(UnmanagedType.LPWStr)] string pszUserName,`
            [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszProfilePath, uint cchProfilePath)";
 
-      Add-NativeMethods -typeName $methodname;
+      Add-NativeMethod -typeName $methodname;
     }
 
     $sb = new-object System.Text.StringBuilder(260);
@@ -625,7 +625,7 @@ Function Write-ToLog {
   End {
   }
 }
-Function Remove-ItemIfExists {
+Function Remove-ItemIfExist {
   [CmdletBinding(SupportsShouldProcess = $true)]
   Param(
     [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][String[]]$Path
@@ -736,7 +736,7 @@ Function Test-Is40chars ([System.String] $field) {
     Return $false
   }
 }
-Function Test-HasNoSpaces ([System.String] $field) {
+Function Test-HasNoSpace ([System.String] $field) {
   If ($field -like "* *") {
     Return $false
   }
@@ -859,11 +859,18 @@ Function Install-JumpCloudAgent(
     Write-ToLog -Message:('JumpCloud Agent Download Complete')
     Write-ToLog -Message:('Running JCAgent Installer')
     #Run Installer
-    Start-Sleep -s 20
     # Invoke-JumpCloudAgentInstall -AgentPath $AGENT_INSTALLER_PATH -ConnectKey $JumpCloudConnectKey
     $installJCParams = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/VERYSILENT", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
-    Invoke-Expression "$installJCParams"
-    Start-Sleep -s 5
+    $counter = 0
+    while (!(Test-ProgramInstalled -programName:("JumpCloud"))) {
+      Start-Sleep 5
+      $counter += 1
+      Write-ToLog -Message:('Waiting on JCAgent Installer...')
+      if ($counter -eq 20){
+        Write-ToLog -Message:('JCAgent did not install in the expected window')
+        break
+      }
+    }
   }
   If ((Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x64")) -and (Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x86")) -and (Test-ProgramInstalled -programName:("JumpCloud"))) {
     Return $true
@@ -6316,7 +6323,7 @@ Function Start-Migration {
     if ($InstallJCAgent -eq $true -and (!(Test-ProgramInstalled("Jumpcloud")))) {
       #check if jc is not installed and clear folder
       if (Test-Path "$windowsDrive\Program Files\Jumpcloud\") {
-        Remove-ItemIfExists -Path "$windowsDrive\Program Files\Jumpcloud\" -Recurse
+        Remove-ItemIfExist -Path "$windowsDrive\Program Files\Jumpcloud\" -Recurse
       }
       # Agent Installer
       Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
@@ -6707,7 +6714,7 @@ Function Start-Migration {
         # Remove existing jcAdmu folder
         If (Test-Path -Path:($usmtTempPath)) {
           Write-ToLog -Message:('Removing USMT Temp Files & Folders')
-          Remove-ItemIfExists -Path:($usmtTempPath) -Recurse
+          Remove-ItemIfExist -Path:($usmtTempPath) -Recurse
         }
         # Create usmt temp folder
         If (!(Test-Path -Path:($usmtTempPath))) {
@@ -6833,7 +6840,7 @@ Function Start-Migration {
     Write-ToLog -Message:('Removing Temp Files & Folders.')
     Start-Sleep -s 10
     try {
-      Remove-ItemIfExists -Path:($jcAdmuTempPath) -Recurse
+      Remove-ItemIfExist -Path:($jcAdmuTempPath) -Recurse
     }
     catch {
       Write-ToLog -Message:('Failed to remove Temp Files & Folders.' + $jcAdmuTempPath)
