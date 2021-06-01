@@ -11,7 +11,7 @@ process{
   #}
 
   # Load functions
-  . './jumpcloud-ADMU/Powershell/Start-Migration.ps1'
+  . $PSScriptRoot\..\jumpcloud-ADMU\Powershell\Start-Migration.ps1
 
   #USMT & VC Variables
   $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
@@ -53,12 +53,12 @@ process{
   #Recreate JCADMU folder
   New-Item -ItemType Directory -Path 'C:\windows\Temp\JCADMU' -Force
   #Is agent installed? If so uninstall it
-  if (Test-ProgramInstalled('Jumpcloud')){
+  if (Test-ProgramInstalled -programName:('Jumpcloud')) {
   #TODO: if uninstall doesn't exist, check service and stop & delete folder & regkeys
   & cmd /C 'C:\Program Files\JumpCloud\unins000.exe' /Silent
   }
   #Is vcredistx86 & vcredistx64 installed? If so uninstall it
-  if(Test-ProgramInstalled('Microsoft Visual C\+\+ 2013 x64') -or (Test-ProgramInstalled([Regex]'(Microsoft Visual C\+\+ 2013 Redistributable \(x86\))(.*?)'))){
+  if ((Test-ProgramInstalled -programName('Microsoft Visual C\+\+ 2013 x64')) -or ((Test-ProgramInstalled -programName:([Regex]'(Microsoft Visual C\+\+ 2013 Redistributable \(x86\))(.*?)')))) {
       Uninstall_Program -programName 'Microsoft Visual C'
   }
   #If JC directory still exists delete it
