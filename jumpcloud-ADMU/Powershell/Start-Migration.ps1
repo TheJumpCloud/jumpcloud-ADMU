@@ -993,7 +993,7 @@ function Test-RegistryAccess {
     # wait just a moment mountng can take a moment
     Start-Sleep 1
     REG LOAD HKU\$classes "$profilePath\AppData\Local\Microsoft\Windows\UsrClass.dat" *>6
-    New-PSDrive -Name:(HKEY_USERS) -PSProvider:(Registry) -Root:(HKEY_USERS) *>6
+    New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") *>6
     $HKU = Get-Acl "HKEY_USERS:\testUserAccess"
     $HKU_Classes = Get-Acl "HKEY_USERS:\testUserAccess_Classes"
     $HKUKeys = @($HKU, $HKU_Classes)
@@ -1091,7 +1091,7 @@ function Convert-UserRegistry {
     REG LOAD HKU\$classes $hiveUsrClassPath
 
     # Mount HKEY_USERS hives with PSDrive
-    New-PSDrive -Name:(HKEY_USERS) -PSProvider:(Registry) -Root:(HKEY_USERS)
+    New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
     $HKU = Get-Acl "HKEY_USERS:\$newusersid"
     $HKU_Classes = Get-Acl "HKEY_USERS:\$($newusersid)_Classes"
     $HKUKeys = @($HKU, $HKU_Classes)
@@ -6455,7 +6455,7 @@ Function Start-Migration {
         if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS")
         {
             Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
-            New-PSDrive -Name:(HKEY_USERS) -PSProvider:(Registry) -Root:(HKEY_USERS)
+            New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
         }
         $ADMU_PackageKey = "HKEY_USERS:\$($newusersid)_admu\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
         if (Get-Item $ADMU_PackageKey -ErrorAction SilentlyContinue)
