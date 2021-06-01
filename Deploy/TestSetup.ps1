@@ -59,7 +59,7 @@ process{
   }
   #Is vcredistx86 & vcredistx64 installed? If so uninstall it
   if ((Test-ProgramInstalled -programName('Microsoft Visual C\+\+ 2013 x64')) -or ((Test-ProgramInstalled -programName:([Regex]'(Microsoft Visual C\+\+ 2013 Redistributable \(x86\))(.*?)')))) {
-      Uninstall_Program -programName 'Microsoft Visual C'
+      Uninstall-Program -programName 'Microsoft Visual C'
   }
   #If JC directory still exists delete it
   if (Test-Path 'C:\Program Files\JumpCloud') {
@@ -73,5 +73,5 @@ process{
     if (!(Test-path $usmtTempPath)){
       new-item -ItemType Directory -Force -Path $usmtTempPath
     }
-  DownloadAndInstallAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AgentPath:($AGENT_INSTALLER_PATH) -ConnectKey:($JumpCloudConnectKey)
+  Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AgentPath:($AGENT_INSTALLER_PATH) -ConnectKey:($JumpCloudConnectKey)
 }
