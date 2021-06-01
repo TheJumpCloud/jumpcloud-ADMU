@@ -6,21 +6,21 @@ param (
 )
 $env:ModuleVersionType = $ModuleVersionType
 # Load functions
-. ($HOME + '/project/jumpcloud-ADMU/Powershell/Start-Migration.ps1')
+. "$PSScriptRoot/Start-Migration.ps1"
 
 # Import pester module
 Import-Module -Name Pester
 $PesterVersion = Get-Module pester
 Write-host "Running Pester Tests using Pester Version: $($PesterVersion.Version)"
 # Run Pester tests
-$PesterResultsFileXmldir = ($HOME + '\project\jumpcloud-ADMU\test_results\')
+$PesterResultsFileXmldir = "$PSScriptRoot/../test_results/"
 # $PesterResultsFileXml = $PesterResultsFileXmldir + "results.xml"
 if (-not (Test-Path $PesterResultsFileXmldir)){
     new-item -path $PesterResultsFileXmldir -ItemType Directory
 }
 
 $configuration = [PesterConfiguration]::Default
-$configuration.Run.Path = ($HOME + '\project\jumpcloud-ADMU\Powershell\Tests\')
+$configuration.Run.Path = "$PSScriptRoot/Tests/"
 $configuration.Should.ErrorAction = 'Continue'
 $configuration.CodeCoverage.Enabled = $true
 $configuration.testresult.Enabled = $true
