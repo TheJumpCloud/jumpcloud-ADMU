@@ -23,7 +23,7 @@ process{
   $msvc2013x86Install = "$usmtTempPath$msvc2013x86File /install /quiet /norestart"
   $msvc2013x64Install = "$usmtTempPath$msvc2013x64File /install /quiet /norestart"
 
-  JumpCloud Agent Installation Variables
+  # JumpCloud Agent Installation Variables
   $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
   $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
   $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
