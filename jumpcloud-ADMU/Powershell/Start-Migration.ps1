@@ -861,12 +861,13 @@ Function Install-JumpCloudAgent(
     #Run Installer
     # Invoke-JumpCloudAgentInstall -AgentPath $AGENT_INSTALLER_PATH -ConnectKey $JumpCloudConnectKey
     $installJCParams = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/VERYSILENT", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
-    $counter = 0
+    Invoke-Expression "$installJCParams"
+    $timeout = 0
     while (!(Test-ProgramInstalled -programName:("JumpCloud"))) {
       Start-Sleep 5
-      $counter += 1
+      $timeout += 1
       Write-ToLog -Message:('Waiting on JCAgent Installer...')
-      if ($counter -eq 20){
+      if ($timeout -eq 20){
         Write-ToLog -Message:('JCAgent did not install in the expected window')
         break
       }
