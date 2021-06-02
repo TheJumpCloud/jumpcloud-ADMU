@@ -40,8 +40,8 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build
         - Pester Tests
         # - Sign Executable
-        # - Build Module
-        # - Build Help Files
+        - Build Module
+        - Build Help Files
         - Build Nuspec
       context: aws-credentials
 workflows:
@@ -60,11 +60,13 @@ jobs:
           name: Install Required Modules
           shell: powershell.exe
           command: |
+            $ErrorActionPreference = 'Stop'
             Install-Module -Name:('ps2exe') -Force
       - run:
           name: Build
           shell: powershell.exe
           command: |
+            $ErrorActionPreference = 'Stop'
             ./Deploy/Build.ps1
       - persist_to_workspace:
           root: .
@@ -79,6 +81,7 @@ jobs:
           name: Test Setup
           shell: powershell.exe
           command: |
+            $ErrorActionPreference = 'Stop'
             . ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
       - run:
           name: Install Required Modules & Set Env Variables for testing
@@ -98,6 +101,7 @@ jobs:
           name: Invoke Pester
           shell: powershell.exe
           command: |
+            $ErrorActionPreference = 'Stop'
             ./jumpcloud-ADMU/Powershell/InvokePester.ps1 << pipeline.parameters.buildReleaseType >>
       - store_test_results:
           name: Uploading test results for ADMU'
@@ -152,7 +156,7 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/BuildNuspecFromPsd1.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU')
+            ./Deploy/BuildNuspecFromPsd1.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU') -buildNumber:("$CIRCLE_BUILD_NUM")
   Publish:
     executor: win/default
     steps:
