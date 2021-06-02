@@ -1,8 +1,14 @@
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [System.string]
+    $ModuleVersionType
+)
+$env:ModuleVersionType = $ModuleVersionType
 # Populate variables
-$ModuleName = $env:MODULENAME
-$ModuleFolderName = $env:MODULEFOLDERNAME
-$DEPLOYFOLDER = $env:DEPLOYFOLDER
-$RELEASETYPE = $env:RELEASETYPE
+$ModuleFolderName = "$PSScriptroot/../JumpCloud-ADMU"
+$DEPLOYFOLDER = "$PSScriptroot"
+$RELEASETYPE = $ModuleVersionType
 $GitHubWikiUrl = 'https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/'
 $ScriptRoot = Switch ($env:DEPLOYFOLDER) { $true { $env:DEPLOYFOLDER } Default { $PSScriptRoot } }
 $FolderPath_ModuleRootPath = (Get-Item -Path:($ScriptRoot)).Parent.FullName

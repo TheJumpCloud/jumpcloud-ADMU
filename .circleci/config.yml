@@ -12,27 +12,27 @@ build-and-sign-ADMU: &build-and-sign-ADMU
   # - Pester Tests:
   #     requires:
   #       - Build
-  - Sign Executable:
-      requires:
-        - Build
-        # - Pester Tests
-      context: secrethub-credentials
+  # - Sign Executable:
+  #     requires:
+  #       - Build
+  #       # - Pester Tests
+  #     context: secrethub-credentials
   - Build Module:
       requires:
         - Build
         # - Pester Tests
-        - Sign Executable
+        # - Sign Executable
   - Build Help Files:
       requires:
         - Build
         # - Pester Tests
-        - Sign Executable
+        # - Sign Executable
         - Build Module
   - Build Nuspec:
       requires:
         - Build
         # - Pester Tests
-        - Sign Executable
+        # - Sign Executable
         - Build Module
         - Build Help Files
 workflows:
@@ -111,7 +111,7 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/Build-Module.ps1
+            ./Deploy/Build-Module.ps1 << pipeline.parameters.buildReleaseType >>
   Build Help Files:
     executor: win/default
     steps:
