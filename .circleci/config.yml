@@ -106,21 +106,33 @@ jobs:
   Build Module:
     executor: win/default
     steps:
+      - attach_workspace:
+          at: .
       - run:
           name: Build Module
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/Build-Module.ps1 << pipeline.parameters.buildReleaseType >>
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
   Build Help Files:
     executor: win/default
     steps:
+      - attach_workspace:
+          at: .
       - run:
           name: Build Help Files
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/Build-HelpFiles.ps1
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
   Build Nuspec:
     executor: win/default
     steps:
