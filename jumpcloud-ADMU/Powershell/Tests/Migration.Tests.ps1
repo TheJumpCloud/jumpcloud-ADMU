@@ -23,7 +23,7 @@ Describe 'Migration Test Scenarios'{
             {
                 write-host "Running: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)"
                 # Invoke-Command -ScriptBlock { Start-Migration -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -ConvertProfile $true} | Should -Not -Throw
-                { Start-Migration -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -ConvertProfile $true } | Should -Not -Throw
+                { Start-Migration -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -ConvertProfile $true -UpdateHomePath $user.UpdateHomePath} | Should -Not -Throw
             }
         }
         It "Test UWP_JCADMU was downloaded & exists"{
@@ -31,7 +31,12 @@ Describe 'Migration Test Scenarios'{
         }
         It "Test Converted User Home Attribues"{
             foreach ($user in $userTestingHash.Values){
-                $UserHome = "C:\Users\$($user.JCUsername)"
+                if ($user.UpdateHomePath){
+                    $UserHome = "C:\Users\$($user.JCUsername)"
+                }
+                else {
+                    $UserHome = "C:\Users\$($user.Username)"
+                }
                 # User Home Directory Should Exist
                 Test-Path "$UserHome" | Should -Be $true
                 # Backup Registry & Registry Files Should Exist
