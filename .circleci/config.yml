@@ -113,7 +113,7 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/Build-Module.ps1 << pipeline.parameters.buildReleaseType >>
+            ./Deploy/Build-Module.ps1 -ModuleVersionType:(<< pipeline.parameters.buildReleaseType >>) -ModuleName:('JumpCloud.ADMU')
       - persist_to_workspace:
           root: .
           paths:
