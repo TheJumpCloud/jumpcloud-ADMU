@@ -1,4 +1,13 @@
-. ($PSScriptRoot + '/' + 'Get-Config.ps1')
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [System.string]
+    $ModuleVersionType,
+    [Parameter()]
+    [System.string]
+    $ModuleName
+)
+. $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 
 # Set Variables for New-NuspecFile
 $ManifestPath = "$($FilePath_psd1)"
