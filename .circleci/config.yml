@@ -157,6 +157,10 @@ jobs:
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/BuildNuspecFromPsd1.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU') -buildNumber:("$CIRCLE_BUILD_NUM")
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
   Publish:
     executor: win/default
     steps:
