@@ -12,11 +12,11 @@ build-and-sign-ADMU: &build-and-sign-ADMU
   # - Pester Tests:
   #     requires:
   #       - Build
-  # - Sign Executable:
-  #     requires:
-  #       - Build
-  #       # - Pester Tests
-  #     context: secrethub-credentials
+  #- Sign Executable:
+  #    requires:
+  #      - Build
+  #      # - Pester Tests
+  #    context: secrethub-credentials
   - Build Module:
       requires:
         - Build
@@ -35,6 +35,15 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         # - Sign Executable
         - Build Module
         - Build Help Files
+  - Publish:
+      requires:
+        - Build
+        # - Pester Tests
+        # - Sign Executable
+        # - Build Module
+        # - Build Help Files
+        - Build Nuspec
+      context: aws-credentials
 workflows:
   version: 2
   ci:
@@ -144,6 +153,43 @@ jobs:
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/BuildNuspecFromPsd1.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU')
-  
-
-  
+  Publish:
+    executor: win/default
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install Dependencies
+          command: |
+            Install-Module -Name PowerShellGet -AllowPrerelease -RequiredVersion '3.0.0-beta10' -Force
+            Install-Module -Name AWS.Tools.Common -Force
+            Install-Module -Name AWS.Tools.CodeArtifact -Force
+      - run:
+          name: Add nuget sources
+          command: |
+            Set-AWSCredential -AccessKey:($env:AWS_ACCESS_KEY_ID) -SecretKey:($env:AWS_SECRET_ACCESS_KEY)
+            $CARepoEndpoint = "$(Get-CARepositoryEndpoint -Domain jumpcloud-artifacts -Region us-east-1 -Repository jumpcloud-nuget-modules -Format nuget)v3/index.json"
+            dotnet nuget add source $CARepoEndpoint --name CodeArtifact --username aws --password (Get-CAAuthorizationToken -Domain:("jumpcloud-artifacts") -Region:("us-east-1")).AuthorizationToken
+            dotnet nuget add source "https://www.powershellgallery.com/api/v2" --name PSGallery
+      - deploy-nupkg:
+          source: CodeArtifact
+commands:
+  deploy-nupkg:
+    parameters:
+      source:
+        description: Name of the source to deploy to
+        type: string
+    steps:
+      - run:
+          name: Pack nuspec
+          command: |
+            ./Deploy/utils/nuget.exe pack ./jumpcloud-ADMU/JumpCloud.ADMU.nuspec
+      - run:
+          name: Publishing to "<< parameters.source >>" repo
+          shell: pwsh.exe
+          command: |
+            $NupkgPath = (Get-ChildItem -Path:("./*.nupkg")).FullName
+            Write-Host $NupkgPath
+            If('<< parameters.source >>' -eq 'CodeArtifact'){dotnet nuget push $NupkgPath --source << parameters.source >>}
+            ElseIf('<< parameters.source >>' -eq 'PSGallery'){dotnet nuget push $NupkgPath --source << parameters.source >> --api-key $env:NuGetApiKey}
+            Else {Write-Error "Unknown source value: << parameters.source >>"}
