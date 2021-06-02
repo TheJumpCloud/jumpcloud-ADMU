@@ -9,9 +9,9 @@ orbs:
   win: circleci/windows@2.2.0
 build-and-sign-ADMU: &build-and-sign-ADMU
   - Build
-  # - Pester Tests:
-  #     requires:
-  #       - Build
+  - Pester Tests:
+      requires:
+        - Build
   #- Sign Executable:
   #    requires:
   #      - Build
@@ -20,25 +20,25 @@ build-and-sign-ADMU: &build-and-sign-ADMU
   - Build Module:
       requires:
         - Build
-        # - Pester Tests
+        - Pester Tests
         # - Sign Executable
   - Build Help Files:
       requires:
         - Build
-        # - Pester Tests
+        - Pester Tests
         # - Sign Executable
         - Build Module
   - Build Nuspec:
       requires:
         - Build
-        # - Pester Tests
+        - Pester Tests
         # - Sign Executable
         - Build Module
         - Build Help Files
   - Publish:
       requires:
         - Build
-        # - Pester Tests
+        - Pester Tests
         # - Sign Executable
         # - Build Module
         # - Build Help Files

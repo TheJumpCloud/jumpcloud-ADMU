@@ -6193,6 +6193,7 @@ Function Start-Migration {
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$LeaveDomain = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ForceReboot = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ConvertProfile = $false,
+    [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$UpdateHomePath = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$CreateRestore = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AzureADProfile = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$Customxml = $false,
@@ -6537,15 +6538,19 @@ Function Start-Migration {
             Write-ToLog -Message($_.Exception.Message)
             exit 1
         }
-
-        # Test Condition for same names
-        # Check if the new user is named username.HOSTNAME or username.000, .001 etc.
-        $userCompare = $olduserprofileimagepath.Replace("$($windowsDrive)\Users\", "")
-        if ($userCompare -eq $JumpCloudUserName)
+        if ($UpdateHomePath)
         {
+          Write-ToLog -Message:("Parameter to Update Home Path was set.")
+          Write-ToLog -Message:("Attempting to rename $olduserprofileimagepath to: $($windowsDrive)\Users\$JumpCloudUserName.")
+          # Test Condition for same names
+          # Check if the new user is named username.HOSTNAME or username.000, .001 etc.
+          $userCompare = $olduserprofileimagepath.Replace("$($windowsDrive)\Users\", "")
+          if ($userCompare -eq $JumpCloudUserName)
+          {
             Write-ToLog -Message:("Selected User Path and New User Path Match")
             # Remove the New User Profile Path, we want to just use the old Path
-            try{
+            try
+            {
               Write-ToLog -Message:("Attempting to remove newly created $newUserProfileImagePath")
               start-sleep 1
               icacls $newUserProfileImagePath /reset /t /c /l *> $null
@@ -6554,22 +6559,25 @@ Function Start-Migration {
               # -ErrorAction Stop; Remove-Item doesn't throw terminating errors
               Remove-Item -Path ($newUserProfileImagePath) -Force -Recurse -ErrorAction Stop
             }
-            catch{
+            catch
+            {
               Write-ToLog -Message:("Remove $newUserProfileImagePath failed, renaming to unusedADMUProfilere")
               Rename-Item -Path $newUserProfileImagePath -NewName "unusedADMUProfilere" -ErrorAction Stop
             }
             # Set the New User Profile Image Path to Old User Profile Path (they are the same)
             $newuserprofileimagepath = $olduserprofileimagepath
-        }
-        else
-        {
+          }
+          else
+          {
             Write-ToLog -Message:("Selected User Path and New User Path Differ")
-            try{
+            try
+            {
               Write-ToLog -Message:("Attempting to remove newly created $newUserProfileImagePath")
               # start-sleep 1
               $systemAccount = whoami
               Write-ToLog -Message:("ADMU running as $systemAccount")
-              if ($systemAccount -eq "NT AUTHORITY\SYSTEM"){
+              if ($systemAccount -eq "NT AUTHORITY\SYSTEM")
+              {
                 icacls $newUserProfileImagePath /reset /t /c /l *> $null
                 takeown /r /d Y /f $newUserProfileImagePath
               }
@@ -6577,7 +6585,8 @@ Function Start-Migration {
               # -ErrorAction Stop; Remove-Item doesn't throw terminating errors
               Remove-Item -Path ($newUserProfileImagePath) -Force -Recurse -ErrorAction Stop
             }
-            catch{
+            catch
+            {
               Write-ToLog -Message:("Remove $newUserProfileImagePath failed, renaming to ADMU_unusedProfile_$JumpCloudUserName")
               Rename-Item -Path $newUserProfileImagePath -NewName "ADMU_unusedProfile_$JumpCloudUserName" -ErrorAction Stop
             }
@@ -6593,8 +6602,30 @@ Function Start-Migration {
               Write-ToLog -Message:("Unable to rename user profile path to new name - $JumpCloudUserName.")
               exit 1
             }
-        }
+          }
         # TODO: reverse track this if we fail later
+        }
+        else{
+          Write-ToLog -Message:("Parameter to Update Home Path was not set.")
+          Write-ToLog -Message:("The $JumpCloudUserName account will point to $olduserprofileimagepath profile path")
+          try
+            {
+              Write-ToLog -Message:("Attempting to remove newly created $newUserProfileImagePath")
+              start-sleep 1
+              icacls $newUserProfileImagePath /reset /t /c /l *> $null
+              start-sleep 1
+              # Reset permissions on NewUserProfileImagePath
+              # -ErrorAction Stop; Remove-Item doesn't throw terminating errors
+              Remove-Item -Path ($newUserProfileImagePath) -Force -Recurse -ErrorAction Stop
+            }
+            catch
+            {
+              Write-ToLog -Message:("Remove $newUserProfileImagePath failed, renaming to unusedADMUProfilere")
+              Rename-Item -Path $newUserProfileImagePath -NewName "unusedADMUProfilere" -ErrorAction Stop
+            }
+            # Set the New User Profile Image Path to Old User Profile Path (they are the same)
+            $newuserprofileimagepath = $olduserprofileimagepath
+        }
 
         Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $SelectedUserName + '.' + $NetBiosName)
         Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUserName)
