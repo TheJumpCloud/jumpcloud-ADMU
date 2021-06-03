@@ -8,10 +8,6 @@ param (
     $ModuleName
 )
 
-# translate $ModuleVersionType for Get-PSGalleryModuleVersion module
-if ($ModuleVersionType -eq "build"){
-    $ModuleVersionType = "patch"
-}
 . $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 ###########################################################################
 # Region Checking PowerShell Gallery module version
