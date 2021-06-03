@@ -49,7 +49,7 @@ workflows:
   version: 2
   ci:
     jobs: *build-and-sign-ADMU
-
+    
 jobs:
   Build: # name of your job
     executor: win/default # executor type
