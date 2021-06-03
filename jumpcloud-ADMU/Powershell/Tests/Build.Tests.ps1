@@ -1,5 +1,10 @@
 BeforeAll{
     Write-Host "Script Location: $PSScriptRoot"
+    # translate $ModuleVersionType for [version] string matching module
+    if ($env:ModuleVersionType -eq "build")
+    {
+        $env:ModuleVersionType = "patch"
+    }
 }
 Describe 'Build Tests' {
 
