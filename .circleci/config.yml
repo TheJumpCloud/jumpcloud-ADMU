@@ -164,7 +164,6 @@ jobs:
           at: .
       - run:
           name: Install Dependencies
-          shell: pwsh.exe
           command: |
             Install-Module -Name PowerShellGet -AllowPrerelease -RequiredVersion '3.0.0-beta10' -Force
             Install-Module -Name AWS.Tools.Common -Force
