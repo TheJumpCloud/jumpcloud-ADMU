@@ -36,6 +36,7 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build Module
         - Build Help Files
   - Publish:
+      source: CodeArtifact
       requires:
         - Build
         - Pester Tests
@@ -163,6 +164,10 @@ jobs:
             - .
   Publish:
     executor: win/default
+    parameters:
+      source:
+        description: Name of the source to deploy to
+        type: string
     steps:
       - attach_workspace:
           at: .
@@ -174,7 +179,7 @@ jobs:
             Install-Module -Name AWS.Tools.CodeArtifact -Force
             if ( -not ( Test-Path -Path ./Deploy/utils ) ) {
               mkdir ./Deploy/utils
-              wget https://dist.nuget.org/win-x86-commandline/v3.3.0/nuget.exe -Outfile ./Download_Test/nuget.exe
+              wget https://dist.nuget.org/win-x86-commandline/v3.3.0/nuget.exe -Outfile ./Deploy/utils/nuget.exe
             }
       - run:
           name: Add nuget sources
@@ -183,15 +188,6 @@ jobs:
             $CARepoEndpoint = "$(Get-CARepositoryEndpoint -Domain jumpcloud-artifacts -Region us-east-1 -Repository jumpcloud-nuget-modules -Format nuget)v3/index.json"
             dotnet nuget add source $CARepoEndpoint --name CodeArtifact --username aws --password (Get-CAAuthorizationToken -Domain:("jumpcloud-artifacts") -Region:("us-east-1")).AuthorizationToken
             dotnet nuget add source "https://www.powershellgallery.com/api/v2" --name PSGallery
-      - deploy-nupkg:
-          source: CodeArtifact
-commands:
-  deploy-nupkg:
-    parameters:
-      source:
-        description: Name of the source to deploy to
-        type: string
-    steps:
       - run:
           name: Pack nuspec
           command: |
