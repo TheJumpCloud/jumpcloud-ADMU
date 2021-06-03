@@ -164,6 +164,7 @@ jobs:
           at: .
       - run:
           name: Install Dependencies
+          shell: pwsh.exe
           command: |
             Install-Module -Name PowerShellGet -AllowPrerelease -RequiredVersion '3.0.0-beta10' -Force
             Install-Module -Name AWS.Tools.Common -Force
@@ -174,6 +175,7 @@ jobs:
             }
       - run:
           name: Add nuget sources
+          shell: pwsh.exe
           command: |
             Set-AWSCredential -AccessKey:($env:AWS_ACCESS_KEY_ID) -SecretKey:($env:AWS_SECRET_ACCESS_KEY)
             $CARepoEndpoint = "$(Get-CARepositoryEndpoint -Domain jumpcloud-artifacts -Region us-east-1 -Repository jumpcloud-nuget-modules -Format nuget)v3/index.json"
