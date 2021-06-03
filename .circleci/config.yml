@@ -9,9 +9,9 @@ orbs:
   win: circleci/windows@2.2.0
 build-and-sign-ADMU: &build-and-sign-ADMU
   - Build
-  - Pester Tests:
-      requires:
-        - Build
+  # - Pester Tests:
+  #     requires:
+  #       - Build
   #- Sign Executable:
   #    requires:
   #      - Build
@@ -20,36 +20,35 @@ build-and-sign-ADMU: &build-and-sign-ADMU
   - Build Module:
       requires:
         - Build
-        - Pester Tests
+        # - Pester Tests
         # - Sign Executable
   - Build Help Files:
       requires:
         - Build
-        - Pester Tests
+        # - Pester Tests
         # - Sign Executable
         - Build Module
   - Build Nuspec:
       requires:
         - Build
-        - Pester Tests
+        # - Pester Tests
         # - Sign Executable
         - Build Module
         - Build Help Files
   - Publish:
-      source: CodeArtifact
       requires:
         - Build
-        - Pester Tests
+        # - Pester Tests
         # - Sign Executable
-        - Build Module
-        - Build Help Files
+        # - Build Module
+        # - Build Help Files
         - Build Nuspec
       context: aws-credentials
 workflows:
   version: 2
   ci:
     jobs: *build-and-sign-ADMU
-    
+
 jobs:
   Build: # name of your job
     executor: win/default # executor type
@@ -61,13 +60,11 @@ jobs:
           name: Install Required Modules
           shell: powershell.exe
           command: |
-            $ErrorActionPreference = 'Stop'
             Install-Module -Name:('ps2exe') -Force
       - run:
           name: Build
           shell: powershell.exe
           command: |
-            $ErrorActionPreference = 'Stop'
             ./Deploy/Build.ps1
       - persist_to_workspace:
           root: .
@@ -82,7 +79,6 @@ jobs:
           name: Test Setup
           shell: powershell.exe
           command: |
-            $ErrorActionPreference = 'Stop'
             . ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
       - run:
           name: Install Required Modules & Set Env Variables for testing
@@ -102,7 +98,6 @@ jobs:
           name: Invoke Pester
           shell: powershell.exe
           command: |
-            $ErrorActionPreference = 'Stop'
             ./jumpcloud-ADMU/Powershell/InvokePester.ps1 << pipeline.parameters.buildReleaseType >>
       - store_test_results:
           name: Uploading test results for ADMU'
@@ -157,17 +152,9 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/BuildNuspecFromPsd1.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU') -buildNumber:("$env:CIRCLE_BUILD_NUM")
-      - persist_to_workspace:
-          root: .
-          paths:
-            - .
+            ./Deploy/BuildNuspecFromPsd1.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU')
   Publish:
     executor: win/default
-    parameters:
-      source:
-        description: Name of the source to deploy to
-        type: string
     steps:
       - attach_workspace:
           at: .
@@ -177,10 +164,6 @@ jobs:
             Install-Module -Name PowerShellGet -AllowPrerelease -RequiredVersion '3.0.0-beta10' -Force
             Install-Module -Name AWS.Tools.Common -Force
             Install-Module -Name AWS.Tools.CodeArtifact -Force
-            if ( -not ( Test-Path -Path ./Deploy/utils ) ) {
-              mkdir ./Deploy/utils
-              wget https://dist.nuget.org/win-x86-commandline/v3.3.0/nuget.exe -Outfile ./Deploy/utils/nuget.exe
-            }
       - run:
           name: Add nuget sources
           command: |
@@ -188,6 +171,15 @@ jobs:
             $CARepoEndpoint = "$(Get-CARepositoryEndpoint -Domain jumpcloud-artifacts -Region us-east-1 -Repository jumpcloud-nuget-modules -Format nuget)v3/index.json"
             dotnet nuget add source $CARepoEndpoint --name CodeArtifact --username aws --password (Get-CAAuthorizationToken -Domain:("jumpcloud-artifacts") -Region:("us-east-1")).AuthorizationToken
             dotnet nuget add source "https://www.powershellgallery.com/api/v2" --name PSGallery
+      - deploy-nupkg:
+          source: CodeArtifact
+commands:
+  deploy-nupkg:
+    parameters:
+      source:
+        description: Name of the source to deploy to
+        type: string
+    steps:
       - run:
           name: Pack nuspec
           command: |
@@ -196,7 +188,7 @@ jobs:
           name: Publishing to "<< parameters.source >>" repo
           shell: pwsh.exe
           command: |
-            $NupkgPath = (Get-ChildItem -Path:("./*.nupkg")).FullName
+            $NupkgPath = (Get-ChildItem -Path:("./Deploy/utils/*.nupkg")).FullName
             If('<< parameters.source >>' -eq 'CodeArtifact'){dotnet nuget push $NupkgPath --source << parameters.source >>}
             ElseIf('<< parameters.source >>' -eq 'PSGallery'){dotnet nuget push $NupkgPath --source << parameters.source >> --api-key $env:NuGetApiKey}
             Else {Write-Error "Unknown source value: << parameters.source >>"}
