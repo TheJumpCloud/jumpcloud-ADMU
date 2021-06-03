@@ -10,7 +10,7 @@ if (!(Test-Path "$CertDirectory"))
 Invoke-WebRequest https://get.secrethub.io/windows | Invoke-Expression
 secrethub --version
 secrethub credential ls
-secrethub read --out-file $CertDirectory/godaddy_windows_signing_cert.pfx JumpCloud/github/godaddy-win-signcert-cert-pfx
+secrethub read --out-file $CertDirectory/godaddy_windows_signing_cert.pfx JumpCloud/github/godaddy-win-signcert-pfx
 secrethub read --out-file $CertDirectory/godaddy_windows_signing_cert_notrim.pfx JumpCloud/github/godaddy-win-signcert-pfx-notrim
 
 
