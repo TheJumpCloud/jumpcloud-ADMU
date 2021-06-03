@@ -1,3 +1,22 @@
+## 1.6.4
+
+Release Date: June 02, 2021
+
+#### RELEASE NOTES
+
+```
+Completed migration to Circle CI which innvolved a number of product improvements. The pipeline for deploying ADMU has changed significantly to include a number of end to end tests. The Start-Migration scrips better conform to PSScriptAnalyzer linting rules with fewer exceptions than before.
+
+The ADMU has a new parameter and default behavior. When migrating a domain user 'bob' to local account 'bob.jumpcloud' the ADMU used to update C:\Users\bob to: C:\Users\bob.jumpcloud. This behavior could cause issues with programs with hardcoded file paths which expect C:\Users\bob\somefile.txt to exist after migration.
+
+The default behavior is to simply point the user account 'bob.jumpcoud' to C:\Users\bob home directory, this should address some of the issues seen when a user's home directory changes. If you wish to update the home directory path, please set UpdateHomePath to $true when calling the ADMU.
+```
+
+#### FEATURES:
+
+Home Path default behavior changed
+New Tests Written
+
 ## 1.6.3
 
 Release Date: April 13, 2021
