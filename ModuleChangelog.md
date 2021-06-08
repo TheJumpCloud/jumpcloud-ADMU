@@ -5,20 +5,15 @@ Release Date: June 08, 2021
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Added ability to change the rename step in the profile home path step. This defaults to not renaming to better account for systems where the folder is in use or can't be renamed.
+
 ```
-
-#### FEATURES:
-
-{{Fill in the Features}}
 
 #### IMPROVEMENTS:
 
-{{Fill in the Improvements}}
-
-#### BUG FIXES:
-
-{{Fill in the Bug Fixes}}
+```
+Adds 'Update Home Path' paramater and checkbox
+```
 
 ## 1.6.3
 
