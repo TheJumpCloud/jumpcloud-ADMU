@@ -1,4 +1,4 @@
-Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
+Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
 
 #==============================================================================================
 # XAML Code - Imported from Visual Studio WPF Application
@@ -148,11 +148,11 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         {
         8 { $UserStateMigrationToolx64Path }
         4 { $UserStateMigrationToolx86Path }
-        Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
+        Default { Write-ToLog -Message:('Unknown OSArchitecture') -Level:('Error') }
         }
 
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
+        Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
         if ($WmiComputerSystem.PartOfDomain) {
             $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
             $securechannelstatus = Test-ComputerSecureChannel
@@ -201,14 +201,14 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
 
         $FormResults = [PSCustomObject]@{ }
 
-        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Getting Installed Applications..'
+        Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Getting Installed Applications..'
 
         $InstalledProducts = (Get-WmiObject -Class:('Win32_Product') | Select-Object Name)
         $Disk = Get-WmiObject -Class Win32_logicaldisk -Filter "DeviceID = 'C:'"
         $freespace = $Disk.FreeSpace
         $freespace = [math]::Round($freespace / 1MB, 0)
 
-        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
+        Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
 
         #region custom xml
 $usmtcustom = [xml] @"
@@ -278,7 +278,7 @@ $usmtcustom = [xml] @"
         $tmpDoc.WriteContentTo($writer)
         $tb_customxml.Text = $sw.ToString()
 
-        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
+        Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
         # Get Valid SIDs from the Registry and build user object
         $registyProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
         $profileList = @()
@@ -341,11 +341,11 @@ $usmtcustom = [xml] @"
             $user.LocalProfileSize = $largeprofile
         }
 
-        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Building Profile Group Box Query..'
+        Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Building Profile Group Box Query..'
 
         $Profiles = $users | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, LastLogin, @{Name = "UserName"; EXPRESSION = { $_.Name } }
 
-        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Done!'
+        Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Done!'
 
 #load UI Labels
 
