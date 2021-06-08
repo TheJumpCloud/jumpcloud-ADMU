@@ -52,12 +52,12 @@ if ((Test-Path 'C:\Windows\Temp\JCADMU') -eq $true){
 #Recreate JCADMU folder
 New-Item -ItemType Directory -Path 'C:\windows\Temp\JCADMU' -Force
 #Is agent installed? If so uninstall it
-if (Check_Program_Installed('Jumpcloud')){
+if (Test-ProgramInstalled('Jumpcloud')){
 #TODO: if uninstall doesn't exist, check service and stop & delete folder & regkeys
 & cmd /C 'C:\Program Files\JumpCloud\unins000.exe' /Silent
 }
 #Is vcredistx86 & vcredistx64 installed? If so uninstall it
-if(Check_Program_Installed('Microsoft Visual C\+\+ 2013 x64') -or (Check_Program_Installed([Regex]'(Microsoft Visual C\+\+ 2013 Redistributable \(x86\))(.*?)'))){
+if(Test-ProgramInstalled('Microsoft Visual C\+\+ 2013 x64') -or (Test-ProgramInstalled([Regex]'(Microsoft Visual C\+\+ 2013 Redistributable \(x86\))(.*?)'))){
     Uninstall_Program -programName 'Microsoft Visual C'
 }
 #If JC directory still exists delete it
