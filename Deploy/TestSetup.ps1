@@ -58,7 +58,7 @@ if (Test-ProgramInstalled('Jumpcloud')){
 }
 #Is vcredistx86 & vcredistx64 installed? If so uninstall it
 if((Test-ProgramInstalled('Microsoft Visual C\+\+ 2013 x64')) -or (Test-ProgramInstalled([Regex]'(Microsoft Visual C\+\+ 2013 Redistributable \(x86\))(.*?)'))){
-    Uninstall_Program -programName 'Microsoft Visual C'
+    Uninstall-Program -programName 'Microsoft Visual C'
 }
 #If JC directory still exists delete it
 if (Test-Path 'C:\Program Files\JumpCloud') {
