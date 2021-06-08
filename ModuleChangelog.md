@@ -1,3 +1,25 @@
+## 1.6.4
+
+Release Date: June 08, 2021
+
+#### RELEASE NOTES
+
+```
+{{Fill in the Release Notes}}
+```
+
+#### FEATURES:
+
+{{Fill in the Features}}
+
+#### IMPROVEMENTS:
+
+{{Fill in the Improvements}}
+
+#### BUG FIXES:
+
+{{Fill in the Bug Fixes}}
+
 ## 1.6.3
 
 Release Date: April 13, 2021
