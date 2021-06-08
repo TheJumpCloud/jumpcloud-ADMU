@@ -16,8 +16,8 @@ Starts the JumpCloud Active Directory Migration process.
 ```
 Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPassword <String>
  [-AcceptEULA <Boolean>] [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-ConvertProfile <Boolean>]
- [-CreateRestore <Boolean>] [-AzureADProfile <Boolean>] [-Customxml <Boolean>] [-InstallJCAgent <Boolean>]
- [-JumpCloudConnectKey <String>] [<CommonParameters>]
+ [-UpdateHomePath <Boolean>] [-CreateRestore <Boolean>] [-AzureADProfile <Boolean>] [-Customxml <Boolean>]
+ [-InstallJCAgent <Boolean>] [-JumpCloudConnectKey <String>] [<CommonParameters>]
 ```
 
 ### form
@@ -238,6 +238,21 @@ Accept wildcard characters: False
 
 ### -CreateRestore
 If set, the ADMU will attempt to invoke Checkpoint-Computer and make a system restore checkpoint before any migration actions are taken. By default in Windows 10, only one system restore point can be set per day.
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -UpdateHomePath
+{{ Fill UpdateHomePath Description }}
 
 ```yaml
 Type: System.Boolean
