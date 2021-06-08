@@ -206,18 +206,18 @@ Describe 'Functions' {
 
     }
 
-    Context 'Test-HasNoSpaces Function'{
+    Context 'Test-HasNoSpace Function'{
 
-        It 'Test-HasNoSpaces - $null' {
-            Test-HasNoSpaces -field $null | Should -Be $true
+        It 'Test-HasNoSpace - $null' {
+            Test-HasNoSpace -field $null | Should -Be $true
         }
 
-        It 'Test-HasNoSpaces - no spaces' {
-            Test-HasNoSpaces -field 'testwithnospaces' | Should -Be $true
+        It 'Test-HasNoSpace - no spaces' {
+            Test-HasNoSpace -field 'testwithnospaces' | Should -Be $true
         }
 
-        It 'Test-HasNoSpaces - spaces' {
-            Test-HasNoSpaces -field 'test with spaces' | Should -Be $false
+        It 'Test-HasNoSpace - spaces' {
+            Test-HasNoSpace -field 'test with spaces' | Should -Be $false
         }
 
     }
