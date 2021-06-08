@@ -294,7 +294,7 @@ $usmtcustom = [xml] @"
             if ($isValidFormat) {
                 # Populate Users List
                 $users += [PSCustomObject]@{
-                    Name              = ConvertSID $listItem.PSChildName
+                    Name              = Convert-Sid $listItem.PSChildName
                     LocalPath         = $listItem.ProfileImagePath
                     SID               = $listItem.PSChildName
                     IsLocalAdmin      = $null

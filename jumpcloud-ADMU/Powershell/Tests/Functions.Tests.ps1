@@ -298,11 +298,11 @@ Describe 'Functions' {
         }
     }
 
-    Context 'ConvertSID Function'{
+    Context 'Convert-Sid Function'{
 
-        It 'ConvertSID - Built In Administrator SID' {
+        It 'Convert-Sid - Built In Administrator SID' {
         $testusersid = (Get-WmiObject Win32_UserAccount -Filter "Name = 'testuser'").SID
-            (ConvertSID -Sid $testusersid) | Should -match 'testuser'
+            (Convert-Sid -Sid $testusersid) | Should -match 'testuser'
         }
 
     }
