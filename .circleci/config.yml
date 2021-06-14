@@ -16,7 +16,7 @@ build-and-sign-ADMU: &build-and-sign-ADMU
   #    requires:
   #      - Build
   #      - Pester Tests
-     context: secrethub-credentials
+    #  context: secrethub-credentials
   - Build Module:
       requires:
         - Build
