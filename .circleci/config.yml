@@ -193,6 +193,7 @@ jobs:
       - deploy-nupkg:
           source: CodeArtifact
   Invoke Git Commit:
+    executor: win/default
     steps:
       - checkout
       - add_ssh_keys:
