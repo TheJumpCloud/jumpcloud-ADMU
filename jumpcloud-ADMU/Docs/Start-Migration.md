@@ -252,7 +252,7 @@ Accept wildcard characters: False
 ```
 
 ### -UpdateHomePath
-{{ Fill UpdateHomePath Description }}
+If set to $true, the ADMU will attempt to rename the selected username's homepath to the jumpcloud username. Note, this could break any applications that rely on a hard coded homepath. By default this is not set and will not rename the homepath.
 
 ```yaml
 Type: System.Boolean
