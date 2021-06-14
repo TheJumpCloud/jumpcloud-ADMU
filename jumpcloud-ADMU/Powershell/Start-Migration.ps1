@@ -6232,6 +6232,7 @@ Function Start-Migration {
       $LeaveDomain = $InputObject.LeaveDomain
       $ForceReboot = $InputObject.ForceReboot
       $ConvertProfile = $inputObject.ConvertProfile
+      $UpdateHomePath = $inputObject.UpdateHomePath
       $CreateRestore = $inputObject.CreateRestore
       $netBiosName = $inputObject.NetBiosName
       $Customxml = $inputObject.Customxml
@@ -6883,6 +6884,6 @@ Function Start-Migration {
   }
   End {
     Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
-    Write-ToLog -Message:('Tool options chosen were : ' + 'Install JC Agent = ' + $InstallJCAgent + ', Leave Domain = ' + $LeaveDomain + ', Force Reboot = ' + $ForceReboot + ', AzureADProfile = ' + $AzureADProfile + ', Convert User Profile = ' + $ConvertProfile + ', Create System Restore Point = ' + $CreateRestore)
+    Write-ToLog -Message:('Tool options chosen were : ' + 'Install JC Agent = ' + $InstallJCAgent + ', Leave Domain = ' + $LeaveDomain + ', Force Reboot = ' + $ForceReboot + ', AzureADProfile = ' + $AzureADProfile + ', Convert User Profile = ' + $ConvertProfile + ', Create System Restore Point = ' + $CreateRestore + ', Update Home Path = ' + $UpdateHomePath)
   }
 }
