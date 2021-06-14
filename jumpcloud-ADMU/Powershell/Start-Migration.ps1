@@ -6415,9 +6415,6 @@ Function Start-Migration {
         }
 
         Write-ToLog -Message:('Begin new local user registry copy')
-        if (test-path -path $newuserprofileimagepath){
-          Write-ToLog -Message:('new profile path looks good continue testing')
-        }
         # Give us admin rights to modify
         Write-ToLog -Message:("Take Ownership of $($newuserprofileimagepath)")
         $path = takeown /F "$($newuserprofileimagepath)" /r /d Y
