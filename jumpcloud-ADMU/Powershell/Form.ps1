@@ -435,7 +435,7 @@ $cb_forcereboot.Add_Checked({$script:ForceReboot = $true})
 $cb_forcereboot.Add_Unchecked({$script:ForceReboot = $false})
 
 # Convert Profile checkbox
-$script:ConvertProfile = $false
+$script:ConvertProfile = $true
 $cb_convertprofile.Add_Checked({$script:ConvertProfile = $true})
 $cb_convertprofile.Add_Checked({$cb_custom_xml.IsEnabled = $false})
 $cb_convertprofile.Add_Checked({$cb_accepteula.IsEnabled = $false})
