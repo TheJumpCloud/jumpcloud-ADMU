@@ -1,4 +1,4 @@
-Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
+Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
 
 #==============================================================================================
 # XAML Code - Imported from Visual Studio WPF Application
@@ -57,17 +57,18 @@ Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                         </Grid>
                     </GroupBox>
                     <GroupBox Header="System Migration Options" HorizontalAlignment="Left" Height="121" Margin="10,459,0,0" VerticalAlignment="Top" Width="517" FontWeight="Bold" Grid.ColumnSpan="2">
-                        <Grid HorizontalAlignment="Left" Height="93" Margin="2,3,0,0" VerticalAlignment="Top" Width="456">
+                        <Grid HorizontalAlignment="Left" Height="93" Margin="2,0,0,0" VerticalAlignment="Center" Width="505">
                             <Label Name="lbMoreInfo" Content="More Info" HorizontalAlignment="Left" Margin="91.649,38,0,-0.876" VerticalAlignment="Top" Width="65.381" FontSize="11" FontWeight="Bold" FontStyle="Italic" Foreground="#FF005DFF"/>
                             <CheckBox Name="cb_accepteula" Content="Accept EULA" HorizontalAlignment="Left" Margin="3.649,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="True"/>
                             <Label Content="JumpCloud Connect Key :" HorizontalAlignment="Left" Margin="3.649,7.999,0,0" VerticalAlignment="Top" AutomationProperties.HelpText="https://console.jumpcloud.com/#/systems/new" ToolTip="https://console.jumpcloud.com/#/systems/new" FontWeight="Normal"/>
                             <TextBox Name="tbJumpCloudConnectKey" HorizontalAlignment="Left" Height="23" Margin="148.673,10,0,0" TextWrapping="Wrap" Text="Enter JumpCloud Connect Key" VerticalAlignment="Top" Width="301.026" Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False"/>
                             <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="155.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                             <CheckBox Name="cb_leavedomain" Content="Leave Domain" HorizontalAlignment="Left" Margin="258.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                            <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="359.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                            <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="391,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                             <CheckBox Name="cb_custom_xml" Content="Use USMT Custom.XML" HorizontalAlignment="Left" Margin="4,68,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <CheckBox Name="cb_convertprofile" Content="Convert Profile" HorizontalAlignment="Left" Margin="156,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                            <CheckBox Name="cb_convertprofile" Content="Convert Profile" HorizontalAlignment="Left" Margin="156,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="true"/>
                             <CheckBox Name="cb_createrestore" Content="Create Restore Point" HorizontalAlignment="Left" Margin="258,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                            <CheckBox Name="cb_updatehomepath" Content="Update Home Path" HorizontalAlignment="Left" Margin="359,44,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                         </Grid>
                     </GroupBox>
                     <GroupBox Header="Domain Information" HorizontalAlignment="Left" Height="120" Margin="269,103,0,0" VerticalAlignment="Top" Width="321" FontWeight="Bold" Grid.Column="1">
@@ -147,11 +148,11 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
         {
         8 { $UserStateMigrationToolx64Path }
         4 { $UserStateMigrationToolx86Path }
-        Default { Write-Log -Message:('Unknown OSArchitecture') -Level:('Error') }
+        Default { Write-ToLog -Message:('Unknown OSArchitecture') -Level:('Error') }
         }
 
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
+        Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
         if ($WmiComputerSystem.PartOfDomain) {
             $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
             $securechannelstatus = Test-ComputerSecureChannel
@@ -200,14 +201,14 @@ $xaml.SelectNodes("//*[@Name]") | ForEach-Object { Set-Variable -Name ($_.Name) 
 
         $FormResults = [PSCustomObject]@{ }
 
-        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Getting Installed Applications..'
+        Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Getting Installed Applications..'
 
         $InstalledProducts = (Get-WmiObject -Class:('Win32_Product') | Select-Object Name)
         $Disk = Get-WmiObject -Class Win32_logicaldisk -Filter "DeviceID = 'C:'"
         $freespace = $Disk.FreeSpace
         $freespace = [math]::Round($freespace / 1MB, 0)
 
-        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
+        Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
 
         #region custom xml
 $usmtcustom = [xml] @"
@@ -277,7 +278,7 @@ $usmtcustom = [xml] @"
         $tmpDoc.WriteContentTo($writer)
         $tb_customxml.Text = $sw.ToString()
 
-        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
+        Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
         # Get Valid SIDs from the Registry and build user object
         $registyProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
         $profileList = @()
@@ -293,7 +294,7 @@ $usmtcustom = [xml] @"
             if ($isValidFormat) {
                 # Populate Users List
                 $users += [PSCustomObject]@{
-                    Name              = ConvertSID $listItem.PSChildName
+                    Name              = Convert-Sid $listItem.PSChildName
                     LocalPath         = $listItem.ProfileImagePath
                     SID               = $listItem.PSChildName
                     IsLocalAdmin      = $null
@@ -340,11 +341,11 @@ $usmtcustom = [xml] @"
             $user.LocalProfileSize = $largeprofile
         }
 
-        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Building Profile Group Box Query..'
+        Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Building Profile Group Box Query..'
 
         $Profiles = $users | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, LastLogin, @{Name = "UserName"; EXPRESSION = { $_.Name } }
 
-        Write-Log 'Loading Jumpcloud ADMU. Please Wait.. Done!'
+        Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Done!'
 
 #load UI Labels
 
@@ -434,7 +435,7 @@ $cb_forcereboot.Add_Checked({$script:ForceReboot = $true})
 $cb_forcereboot.Add_Unchecked({$script:ForceReboot = $false})
 
 # Convert Profile checkbox
-$script:ConvertProfile = $false
+$script:ConvertProfile = $true
 $cb_convertprofile.Add_Checked({$script:ConvertProfile = $true})
 $cb_convertprofile.Add_Checked({$cb_custom_xml.IsEnabled = $false})
 $cb_convertprofile.Add_Checked({$cb_accepteula.IsEnabled = $false})
@@ -447,6 +448,11 @@ $cb_custom_xml.Add_UnChecked({$tab_usmtcustomxml.IsEnabled = $false})
 $script:CreateRestore = $false
 $cb_createrestore.Add_Checked({$script:CreateRestore = $true})
 $cb_createrestore.Add_Unchecked({$script:CreateRestore = $false})
+
+# Update Home Path checkbox
+$script:UpdateHomePath = $false
+$cb_updatehomepath.Add_Checked({$script:UpdateHomePath = $true})
+$cb_updatehomepath.Add_Unchecked({$script:UpdateHomePath = $false})
 
 # Custom XML checkbox
 $script:Customxml = $false
@@ -527,6 +533,7 @@ $bDeleteProfile.Add_Click( {
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ForceReboot') -Value:($ForceReboot)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ConvertProfile') -Value:($ConvertProfile)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('CreateRestore') -Value:($CreateRestore)
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('UpdateHomePath') -Value:($UpdateHomePath)
         # Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('DomainUserName') -Value:($SelectedUserName.Substring($SelectedUserName.IndexOf('\') + 1))
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('DomainUserName') -Value:($SelectedUserName)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudUserName') -Value:($tbJumpCloudUserName.Text)
