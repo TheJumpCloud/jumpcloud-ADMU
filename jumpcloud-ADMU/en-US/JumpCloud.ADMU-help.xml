@@ -162,7 +162,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>UpdateHomePath</maml:name>
           <maml:Description>
-            <maml:para>{{ Fill UpdateHomePath Description }}</maml:para>
+            <maml:para>If set to $true, the ADMU will attempt to rename the selected username's homepath to the jumpcloud username. Note, this could break any applications that rely on a hard coded homepath. By default this is not set and will not rename the homepath.</maml:para>
           </maml:Description>
           <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
           <dev:type>
@@ -348,7 +348,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>UpdateHomePath</maml:name>
         <maml:Description>
-          <maml:para>{{ Fill UpdateHomePath Description }}</maml:para>
+          <maml:para>If set to $true, the ADMU will attempt to rename the selected username's homepath to the jumpcloud username. Note, this could break any applications that rely on a hard coded homepath. By default this is not set and will not rename the homepath.</maml:para>
         </maml:Description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>
