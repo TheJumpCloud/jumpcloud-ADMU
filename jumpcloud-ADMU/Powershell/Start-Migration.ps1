@@ -6192,7 +6192,7 @@ Function Start-Migration {
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AcceptEULA = $true,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$LeaveDomain = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ForceReboot = $false,
-    [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ConvertProfile = $false,
+    [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ConvertProfile = $true,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$UpdateHomePath = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$CreateRestore = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AzureADProfile = $false,
