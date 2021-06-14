@@ -52,6 +52,14 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build Module
         - Build Help Files
         - Build Nuspec
+  - Upload Artifact:
+      requires:
+        - Build
+        - Pester Tests
+        # - Sign Executable
+        - Build Module
+        - Build Help Files
+        - Build Nuspec
 
 workflows:
   version: 2
@@ -203,7 +211,7 @@ jobs:
           at: .
       - run:
           when: on_success
-          name: 'Commit PowerShell Module to << pipeline.git.branch >>'
+          name: 'Commit ADMU Module to << pipeline.git.branch >>'
           shell: pwsh.exe
           command: |
             $UserEmail = If ($env:CIRCLE_PROJECT_USERNAME) { $env:CIRCLE_PROJECT_USERNAME } Else { ($env:USERNAME).Replace(' ', '') + '@FakeEmail.com' }
@@ -215,6 +223,15 @@ jobs:
             git status
             git commit -m "Updating ADMU Module;[skip ci]"
             git push origin << pipeline.git.branch >>
+  Upload Artifact:
+    executor: win/default
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - store_artifacts:
+          path: ./
+          destination: artifact-file
 commands:
   deploy-nupkg:
     parameters:
