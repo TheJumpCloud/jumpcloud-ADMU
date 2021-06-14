@@ -37,32 +37,32 @@ Describe 'Functions' {
 
     }
 
-    Context 'Write-Log Function'{
+    Context 'Write-ToLog Function'{
 
-        It 'Write-Log - ' {
+        It 'Write-ToLog - ' {
 		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
                     remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-                Write-Log -Message:('Log is created - test.') -Level:('Info')
+                Write-ToLog -Message:('Log is created - test.') -Level:('Info')
                 $log='C:\windows\Temp\jcAdmu.log'
                 $log | Should -exist
         }
 
-        It 'Write-Log - Log is created' {
+        It 'Write-ToLog - Log is created' {
 		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
                     remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-                Write-Log -Message:('Log is created - test.') -Level:('Info')
+                Write-ToLog -Message:('Log is created - test.') -Level:('Info')
                 $log='C:\windows\Temp\jcAdmu.log'
 
                 $log | Should -exist
         }
 
-        It 'Write-Log - ERROR: Log entry exists' {
+        It 'Write-ToLog - ERROR: Log entry exists' {
 		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
                    remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-              # Write-Log -Message:('Test Error Log Entry.') -Level:('Error') -ErrorAction
+              # Write-ToLog -Message:('Test Error Log Entry.') -Level:('Error') -ErrorAction
                #$Log = Get-Content 'c:\windows\temp\jcAdmu.log'
                #$Log.Contains('ERROR: Test Error Log Entry.') | Should -Be $true
                #    if ($error.Count -eq 1) {
@@ -70,20 +70,20 @@ Describe 'Functions' {
                #    }
         }
 
-        It 'Write-Log - WARNING: Log entry exists' {
+        It 'Write-ToLog - WARNING: Log entry exists' {
 		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
                    remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-               Write-Log -Message:('Test Warning Log Entry.') -Level:('Warn')
+               Write-ToLog -Message:('Test Warning Log Entry.') -Level:('Warn')
                $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
                $Log.Contains('WARNING: Test Warning Log Entry.') | Should -Be $true
         }
 
-        It 'Write-Log - INFO: Log entry exists' {
+        It 'Write-ToLog - INFO: Log entry exists' {
             if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
                     remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-                Write-Log -Message:('Test Info Log Entry.') -Level:('Info')
+                Write-ToLog -Message:('Test Info Log Entry.') -Level:('Info')
                 $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
                 $Log.Contains('INFO: Test Info Log Entry.') | Should -Be $true
                 remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
@@ -103,7 +103,7 @@ Describe 'Functions' {
 
         It 'Remove-ItemIfExists - Fails c:\windows\temp\test\' {
             if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force}
-            Mock Remove-ItemIfExists {Write-Log -Message ('Removal Of Temp Files & Folders Failed') -Level Warn}
+            Mock Remove-ItemIfExists {Write-ToLog -Message ('Removal Of Temp Files & Folders Failed') -Level Warn}
             Remove-ItemIfExists -Path 'c:\windows\Temp\test\'
             $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
             $Log.Contains('Removal Of Temp Files & Folders Failed') | Should -Be $true
@@ -206,18 +206,18 @@ Describe 'Functions' {
 
     }
 
-    Context 'Test-HasNoSpaces Function'{
+    Context 'Test-HasNoSpace Function'{
 
-        It 'Test-HasNoSpaces - $null' {
-            Test-HasNoSpaces -field $null | Should -Be $true
+        It 'Test-HasNoSpace - $null' {
+            Test-HasNoSpace -field $null | Should -Be $true
         }
 
-        It 'Test-HasNoSpaces - no spaces' {
-            Test-HasNoSpaces -field 'testwithnospaces' | Should -Be $true
+        It 'Test-HasNoSpace - no spaces' {
+            Test-HasNoSpace -field 'testwithnospaces' | Should -Be $true
         }
 
-        It 'Test-HasNoSpaces - spaces' {
-            Test-HasNoSpaces -field 'test with spaces' | Should -Be $false
+        It 'Test-HasNoSpace - spaces' {
+            Test-HasNoSpace -field 'test with spaces' | Should -Be $false
         }
 
     }
@@ -298,11 +298,11 @@ Describe 'Functions' {
         }
     }
 
-    Context 'ConvertSID Function'{
+    Context 'Convert-Sid Function'{
 
-        It 'ConvertSID - Built In Administrator SID' {
+        It 'Convert-Sid - Built In Administrator SID' {
         $testusersid = (Get-WmiObject Win32_UserAccount -Filter "Name = 'testuser'").SID
-            (ConvertSID -Sid $testusersid) | Should -match 'testuser'
+            (Convert-Sid -Sid $testusersid) | Should -match 'testuser'
         }
 
     }
