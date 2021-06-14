@@ -1,41 +1,49 @@
 version: 2.1
+parameters:
+  buildReleaseType:
+    description: 'Semantic Version increment type of the release. Valid values: major, minor, patch'
+    default: "patch"
+    type: enum
+    enum: ["major", "minor", "patch"]
 orbs:
   win: circleci/windows@2.2.0
 build-and-sign-ADMU: &build-and-sign-ADMU
   - Build
-  - Test Setup:
-      requires:
-        - Build
   - Pester Tests:
       requires:
         - Build
-        - Test Setup
-  - Sign Executable:
-      requires:
-        - Build
-        - Test Setup
-        - Pester Tests
+  # - Sign Executable:
+  #    requires:
+  #      - Build
+  #      - Pester Tests
+     context: secrethub-credentials
   - Build Module:
       requires:
         - Build
-        - Test Setup
         - Pester Tests
-        - Sign Executable
+        # - Sign Executable
   - Build Help Files:
       requires:
         - Build
-        - Test Setup
         - Pester Tests
-        - Sign Executable
+        # - Sign Executable
         - Build Module
   - Build Nuspec:
       requires:
         - Build
-        - Test Setup
         - Pester Tests
-        - Sign Executable
+        # - Sign Executable
         - Build Module
         - Build Help Files
+  - Publish:
+      requires:
+        - Build
+        - Pester Tests
+        # - Sign Executable
+        - Build Module
+        - Build Help Files
+        - Build Nuspec
+      context: aws-credentials
 workflows:
   version: 2
   ci:
@@ -53,18 +61,16 @@ jobs:
           shell: powershell.exe
           command: |
             Install-Module -Name:('ps2exe') -Force
-            # Install-Module -Name:('Pester') -Force # Not needed until test step
       - run:
           name: Build
           shell: powershell.exe
           command: |
-            $ErrorActionPreference = 'Stop'
             ./Deploy/Build.ps1
       - persist_to_workspace:
           root: .
           paths:
             - .
-  Test Setup:
+  Pester Tests:
     executor: win/default
     steps:
       - attach_workspace:
@@ -73,38 +79,39 @@ jobs:
           name: Test Setup
           shell: powershell.exe
           command: |
-            $ErrorActionPreference = 'Stop'
             . ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
-  Pester Tests:
+      - run:
+          name: Install Required Modules & Set Env Variables for testing
+          shell: powershell.exe
+          command: |
+            Install-Module -Name:('PSScriptAnalyzer') -Force
+            Install-Module -Name:('JumpCloud') -Force
+            If (-not [System.String]::IsNullOrEmpty($env:JCApiKey) -and -not [System.String]::IsNullOrEmpty($env:JCOrgId))
+            {
+                Write-Host ('[VALIDATION] JCApiKey AND JCOrgId have been populated.')
+            }
+            Else
+            {
+                Write-Error ("Unable to test because JCApiKey and JCOrgId have not been set.")
+            }
+      - run:
+          name: Invoke Pester
+          shell: powershell.exe
+          command: |
+            ./jumpcloud-ADMU/Powershell/InvokePester.ps1 << pipeline.parameters.buildReleaseType >>
+      - store_test_results:
+          name: Uploading test results for ADMU'
+          path: ./jumpcloud-ADMU/test_results/
+  Sign Executable:
     executor: win/default
     steps:
       - attach_workspace:
           at: .
       - run:
-          name: Install Required Modules
-          shell: powershell.exe
-          command: |
-            Install-Module -Name:('PSScriptAnalyzer') -Force
-            Install-Module -Name:('Pester') -Force
-      - run:
-          name: Invoke Pester
-          shell: powershell.exe
-          command: |
-            $ErrorActionPreference = 'Stop'
-            ./jumpcloud-ADMU/Powershell/InvokePester.ps1
-      - store_test_results:
-          name: Uploading test results for ADMU'
-          path: ./jumpcloud-ADMU/test_results/
-
-  Sign Executable:
-    executor: win/default
-    steps:
-      - run:
           name: Sign .exe
           shell: powershell.exe
           command: |
-            $ErrorActionPreference = 'Stop'
-           # ./Deploy/Sign.ps1 -cert_pw_key <TODO: Cert Key in secret valut>
+            ./Deploy/Sign.ps1
   Build Module:
     executor: win/default
     steps:
@@ -115,7 +122,11 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/Build-Module.ps1
+            ./Deploy/Build-Module.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU')
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
   Build Help Files:
     executor: win/default
     steps:
@@ -126,7 +137,11 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/Build-HelpFiles.ps1
+            ./Deploy/Build-HelpFiles.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU')
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
   Build Nuspec:
     executor: win/default
     steps:
@@ -137,5 +152,52 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/BuildNuspecFromPsd1.ps1
-  
+            ./Deploy/BuildNuspecFromPsd1.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU') -buildNumber:("$Env:CIRCLE_BUILD_NUM")
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+  Publish:
+    executor: win/default
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install Dependencies
+          command: |
+            Install-Module -Name PowerShellGet -AllowPrerelease -RequiredVersion '3.0.0-beta10' -Force
+            Install-Module -Name AWS.Tools.Common -Force
+            Install-Module -Name AWS.Tools.CodeArtifact -Force
+            if ( -not ( Test-Path -Path ./Deploy/utils ) ) {
+              mkdir ./Deploy/utils
+              wget https://dist.nuget.org/win-x86-commandline/v3.3.0/nuget.exe -Outfile ./Deploy/utils/nuget.exe
+            }
+      - run:
+          name: Add nuget sources
+          shell: pwsh.exe
+          command: |
+            Set-AWSCredential -AccessKey:($env:AWS_ACCESS_KEY_ID) -SecretKey:($env:AWS_SECRET_ACCESS_KEY)
+            $CARepoEndpoint = "$(Get-CARepositoryEndpoint -Domain jumpcloud-artifacts -Region us-east-1 -Repository jumpcloud-nuget-modules -Format nuget)v3/index.json"
+            dotnet nuget add source $CARepoEndpoint --name CodeArtifact --username aws --password (Get-CAAuthorizationToken -Domain:("jumpcloud-artifacts") -Region:("us-east-1")).AuthorizationToken
+            dotnet nuget add source "https://www.powershellgallery.com/api/v2" --name PSGallery
+      - deploy-nupkg:
+          source: CodeArtifact
+commands:
+  deploy-nupkg:
+    parameters:
+      source:
+        description: Name of the source to deploy to
+        type: string
+    steps:
+      - run:
+          name: Pack nuspec
+          command: |
+            ./Deploy/utils/nuget.exe pack ./jumpcloud-ADMU/JumpCloud.ADMU.nuspec
+      - run:
+          name: Publishing to "<< parameters.source >>" repo
+          shell: pwsh.exe
+          command: |
+            $NupkgPath = (Get-ChildItem -Path:("./*.nupkg")).FullName
+            If('<< parameters.source >>' -eq 'CodeArtifact'){dotnet nuget push $NupkgPath --source << parameters.source >>}
+            ElseIf('<< parameters.source >>' -eq 'PSGallery'){dotnet nuget push $NupkgPath --source << parameters.source >> --api-key $env:NuGetApiKey}
+            Else {Write-Error "Unknown source value: << parameters.source >>"}

@@ -1,58 +1,59 @@
+BeforeAll {
+    Write-Host "Script Location: $PSScriptRoot"
+    Write-Host "Dot-Sourcing Start-Migration Script"
+    . $PSScriptRoot\..\Start-Migration.ps1
+}
 Describe 'Functions' {
+    Context 'Test-Account Functions'{
 
-    BeforeAll{
-        . ..\Start-Migration.ps1
-    }
-    Context 'VerifyAccount Function'{
-
-       It 'VerifyAccount - Real domain account bob.lazar@JCADB2.local' -Skip {
-           VerifyAccount -username bob.lazar -domain JCADB2.local | Should -Be $true
+       It 'Test-Account - Real domain account bob.lazar@JCADB2.local' -Skip {
+           Test-Account -username bob.lazar -domain JCADB2.local | Should -Be $true
        }
 
-       It 'VerifyAccount - Wrong account bobby.lazar@JCADB2.local' -Skip {
-           VerifyAccount -username bobby.lazar -domain JCADB2.local | Should -Be $false
+       It 'Test-Account - Wrong account bobby.lazar@JCADB2.local' -Skip {
+           Test-Account -username bobby.lazar -domain JCADB2.local | Should -Be $false
        }
 
-       It 'VerifyAccount - Real account with wrong domain bob.lazar@JCADB2.localw' -Skip {
-           VerifyAccount -username bob.lazar -domain JCADB2.localw | Should -Be $false
+       It 'Test-Account - Real account with wrong domain bob.lazar@JCADB2.localw' -Skip {
+           Test-Account -username bob.lazar -domain JCADB2.localw | Should -Be $false
        }
 
-       It 'VerifyAccount - Real local account with no domain' -Skip {
-           VerifyAccount -username testuser | Should -Be $true
+       It 'Test-Account - Real local account with no domain' -Skip {
+           Test-Account -username testuser | Should -Be $true
        }
 
-       It 'VerifyAccount - Wrong local account with no domain' -Skip {
-           VerifyAccount -username testuserq | Should -Be $false
+       It 'Test-Account - Wrong local account with no domain' -Skip {
+           Test-Account -username testuserq | Should -Be $false
        }
 
     }
 
-    Context 'Write-Log Function'{
+    Context 'Write-ToLog Function'{
 
-        It 'Write-Log - ' {
+        It 'Write-ToLog - ' {
 		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
                     remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-                Write-Log -Message:('Log is created - test.') -Level:('Info')
+                Write-ToLog -Message:('Log is created - test.') -Level:('Info')
                 $log='C:\windows\Temp\jcAdmu.log'
                 $log | Should -exist
         }
 
-        It 'Write-Log - Log is created' {
+        It 'Write-ToLog - Log is created' {
 		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
                     remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-                Write-Log -Message:('Log is created - test.') -Level:('Info')
+                Write-ToLog -Message:('Log is created - test.') -Level:('Info')
                 $log='C:\windows\Temp\jcAdmu.log'
 
                 $log | Should -exist
         }
 
-        It 'Write-Log - ERROR: Log entry exists' {
+        It 'Write-ToLog - ERROR: Log entry exists' {
 		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
                    remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-              # Write-Log -Message:('Test Error Log Entry.') -Level:('Error') -ErrorAction
+              # Write-ToLog -Message:('Test Error Log Entry.') -Level:('Error') -ErrorAction
                #$Log = Get-Content 'c:\windows\temp\jcAdmu.log'
                #$Log.Contains('ERROR: Test Error Log Entry.') | Should -Be $true
                #    if ($error.Count -eq 1) {
@@ -60,20 +61,20 @@ Describe 'Functions' {
                #    }
         }
 
-        It 'Write-Log - WARNING: Log entry exists' {
+        It 'Write-ToLog - WARNING: Log entry exists' {
 		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
                    remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-               Write-Log -Message:('Test Warning Log Entry.') -Level:('Warn')
+               Write-ToLog -Message:('Test Warning Log Entry.') -Level:('Warn')
                $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
                $Log.Contains('WARNING: Test Warning Log Entry.') | Should -Be $true
         }
 
-        It 'Write-Log - INFO: Log entry exists' {
+        It 'Write-ToLog - INFO: Log entry exists' {
             if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
                     remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-                Write-Log -Message:('Test Info Log Entry.') -Level:('Info')
+                Write-ToLog -Message:('Test Info Log Entry.') -Level:('Info')
                 $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
                 $Log.Contains('INFO: Test Info Log Entry.') | Should -Be $true
                 remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
@@ -81,63 +82,63 @@ Describe 'Functions' {
 
     }
 
-    Context 'Remove-ItemIfExists Function'{
+    Context 'Remove-ItemIfExist Function'{
 
-        It 'Remove-ItemIfExists - Does Exist c:\windows\temp\test\' {
+        It 'Remove-ItemIfExist - Does Exist c:\windows\temp\test\' {
             if(Test-Path 'c:\windows\Temp\test\') {Remove-Item 'c:\windows\Temp\test' -Recurse -Force}
             New-Item -ItemType directory -path 'c:\windows\Temp\test\'
             New-Item 'c:\windows\Temp\test\test.txt'
-            Remove-ItemIfExists -Path 'c:\windows\Temp\test\' -Recurse
+            Remove-ItemIfExist -Path 'c:\windows\Temp\test\' -Recurse
             Test-Path 'c:\windows\Temp\test\' | Should -Be $false
         }
 
-        It 'Remove-ItemIfExists - Fails c:\windows\temp\test\' {
+        It 'Remove-ItemIfExist - Fails c:\windows\temp\test\' {
             if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force}
-            Mock Remove-ItemIfExists {Write-Log -Message ('Removal Of Temp Files & Folders Failed') -Level Warn}
-            Remove-ItemIfExists -Path 'c:\windows\Temp\test\'
+            Mock Remove-ItemIfExist {Write-ToLog -Message ('Removal Of Temp Files & Folders Failed') -Level Warn}
+            Remove-ItemIfExist -Path 'c:\windows\Temp\test\'
             $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
             $Log.Contains('Removal Of Temp Files & Folders Failed') | Should -Be $true
         }
 
     }
 
-    Context 'DownloadLink Function'{
+    Context 'Invoke-DownloadFile Function'{
 
-        # It 'DownloadLink - ' {
+        # It 'Invoke-DownloadFile - ' {
         #     if(Test-Path 'c:\windows\Temp\test\') {Remove-Item 'c:\windows\Temp\test' -Recurse -Force}
         #     New-Item -ItemType directory -path 'c:\windows\Temp\test\'
-        #     #DownloadLink -Link:('http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x86.exe') -Path:('c:\windows\Temp\Test\vcredist_x86.exe')
+        #     #Invoke-DownloadFile -Link:('http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x86.exe') -Path:('c:\windows\Temp\Test\vcredist_x86.exe')
         #     test-path ('c:\windows\Temp\test\vcredist_x86.exe')  | Should -Be $true
         # }
 
     }
 
-    Context 'Check_Program_Installed Function'{
+    Context 'Test-ProgramInstalled Function'{
 
-        It 'Check_Program_Installed x64 - Google Chrome' -Skip {
-            Check_Program_Installed -programName 'Google Chrome' | Should -Be $true
+        It 'Test-ProgramInstalled x64 - Google Chrome' -Skip {
+            Test-ProgramInstalled -programName 'Google Chrome' | Should -Be $true
         }
 
-        It 'Check_Program_Installed x32 - TeamViewer 14' -Skip {
-            Check_Program_Installed -programName 'TeamViewer 14' | Should -Be $true
+        It 'Test-ProgramInstalled x32 - TeamViewer 14' -Skip {
+            Test-ProgramInstalled -programName 'TeamViewer 14' | Should -Be $true
         }
 
-        It 'Check_Program_Installed - Program Name Does Not Exist' {
-            Check_Program_Installed -programName 'Google Chrome1' | Should -Be $false
+        It 'Test-ProgramInstalled - Program Name Does Not Exist' {
+            Test-ProgramInstalled -programName 'Google Chrome1' | Should -Be $false
         }
 
     }
 
-    Context 'Uninstall_Program Function'{
+    Context 'Uninstall-Program Function'{
 
         It 'Install & Uninstall - x32 filezilla' -Skip {
             $app = 'C:\FileZilla_3.46.3_win32.exe'
             $arg = '/S'
             Start-Process $app $arg
             start-sleep -Seconds 5
-            Uninstall_Program -programName 'FileZilla Client 3.46.3'
+            Uninstall-Program -programName 'FileZilla Client 3.46.3'
             start-sleep -Seconds 5
-            Check_Program_Installed -programName 'FileZilla' | Should -Be $false
+            Test-ProgramInstalled -programName 'FileZilla' | Should -Be $false
         }
 
     }
@@ -196,18 +197,18 @@ Describe 'Functions' {
 
     }
 
-    Context 'Test-HasNoSpaces Function'{
+    Context 'Test-HasNoSpace Function'{
 
-        It 'Test-HasNoSpaces - $null' {
-            Test-HasNoSpaces -field $null | Should -Be $true
+        It 'Test-HasNoSpace - $null' {
+            Test-HasNoSpace -field $null | Should -Be $true
         }
 
-        It 'Test-HasNoSpaces - no spaces' {
-            Test-HasNoSpaces -field 'testwithnospaces' | Should -Be $true
+        It 'Test-HasNoSpace - no spaces' {
+            Test-HasNoSpace -field 'testwithnospaces' | Should -Be $true
         }
 
-        It 'Test-HasNoSpaces - spaces' {
-            Test-HasNoSpaces -field 'test with spaces' | Should -Be $false
+        It 'Test-HasNoSpace - spaces' {
+            Test-HasNoSpace -field 'test with spaces' | Should -Be $false
         }
 
     }
@@ -219,14 +220,16 @@ Describe 'Functions' {
             net user testuser Temp123! /add
             Remove-LocalGroupMember -Group "Users" -Member "testuser"
             Add-LocalGroupMember -SID S-1-5-32-545 -Member 'testuser'
-            ((Get-LocalGroupMember -SID S-1-5-32-545 | Select-Object Name).name -match 'testuser') -ne $null | Should -Be $true
+            # ((Get-LocalGroupMember -SID S-1-5-32-545 | Select-Object Name).name -match 'testuser') -ne $null | Should -Be $true
+            # ASDI seems to work when Get-LocalGroupMember errors
+            (([ADSI]"WinNT://./Users").psbase.Invoke('Members') | ForEach-Object { ([ADSI]$_).InvokeGet('AdsPath') } ) -match 'testuser' | Should -Be $true
         }
 
     }
 
     Context 'Test-Localusername Function'{
 
-        It 'Test-Localusername - exists' {
+        It 'Test-Localusername - exists' -skip {
 
             Test-Localusername -field 'blazar' | Should -Be $true
         }
@@ -240,7 +243,7 @@ Describe 'Functions' {
 
     Context 'Test-Domainusername Function'{
 
-        It 'Test-Domainusername - exists' {
+        It 'Test-Domainusername - exists' -skip {
 
             Test-Domainusername -field 'bob.lazar' | Should -Be $true
         }
@@ -252,47 +255,49 @@ Describe 'Functions' {
 
     }
 
-    Context 'DownloadAndInstallAgent Function'{
-
-        It 'DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x64' {
+    Context 'Install-JumpCloudAgent Function'{
+        It 'Install-JumpCloudAgent - Verify Download JCAgent prereq Visual C++ 2013 x64' -skip {
             Test-path 'C:\Windows\Temp\JCADMU\vc_redist.x64.exe' | Should -Be $true
+            #TODO: why test this?
         }
 
-        It 'DownloadAndInstallAgent - Verify Download JCAgent prereq Visual C++ 2013 x86' {
+        It 'Install-JumpCloudAgent - Verify Download JCAgent prereq Visual C++ 2013 x86' -skip {
             Test-path 'C:\Windows\Temp\JCADMU\vc_redist.x86.exe' | Should -Be $true
+            #TODO: why test this?
         }
 
-        It 'DownloadAndInstallAgent - Verify Download JCAgent' {
+        It 'Install-JumpCloudAgent - Verify Download JCAgent' {
             Test-path 'C:\Windows\Temp\JCADMU\JumpCloudInstaller.exe' | Should -Be $true
         }
 
-        It 'DownloadAndInstallAgent - Verify Install JCAgent prereq Visual C++ 2013 x64' {
-            (Check_Program_Installed("Microsoft Visual C\+\+ 2013 x64")) | Should -Be $true
+        It 'Install-JumpCloudAgent - Verify Install JCAgent prereq Visual C++ 2013 x64' {
+            (Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x64")) | Should -Be $true
         }
 
-        It 'DownloadAndInstallAgent - Verify Install JCAgent prereq Visual C++ 2013 x86' {
-            (Check_Program_Installed("Microsoft Visual C\+\+ 2013 x86")) | Should -Be $true
+        It 'Install-JumpCloudAgent - Verify Install JCAgent prereq Visual C++ 2013 x86' {
+            (Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x86")) | Should -Be $true
         }
 
-        It 'DownloadAndInstallAgent - Verify Install JCAgent' {
-        Start-Sleep -Seconds 10
-            (Check_Program_Installed("JumpCloud")) | Should -Be $true
+        It 'Install-JumpCloudAgent - Verify Install JCAgent' {
+        # Start-Sleep -Seconds 10
+            (Test-ProgramInstalled("JumpCloud")) | Should -Be $true
         }
 
     }
 
-    Context 'GetNetBiosName Function'{
+    Context 'Get-NetBiosName Function'{
 
-        It 'GetNetBiosName - JCADB2' {
-            GetNetBiosName | Should -Be 'JCADB2'
+        It 'Get-NetBiosName - JCADB2' -Skip {
+            Get-NetBiosName | Should -Be 'JCADB2'
+            #TODO: bind & test
         }
     }
 
-    Context 'ConvertSID Function'{
+    Context 'Convert-SID Function'{
 
-        It 'ConvertSID - Built In Administrator SID' {
+        It 'Convert-SID - Built In Administrator SID' {
         $testusersid = (Get-WmiObject Win32_UserAccount -Filter "Name = 'testuser'").SID
-            (ConvertSID -Sid $testusersid) | Should -match 'testuser'
+            (Convert-SID -Sid $testusersid) | Should -match 'testuser'
         }
 
     }

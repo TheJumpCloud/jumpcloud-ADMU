@@ -1,0 +1,14 @@
+{
+    "spellright.language": [
+        "en"
+    ],
+    "spellright.documentTypes": [
+        "markdown",
+        "latex",
+        "plaintext",
+        "yaml",
+        "powershell"
+    ],
+    "powershell.scriptAnalysis.settingsPath": "jumpcloud-ADMU/Powershell/Tests/PSScriptAnalyzerSettings.psd1",
+    "powershell.scriptAnalysis.enable": true
+}

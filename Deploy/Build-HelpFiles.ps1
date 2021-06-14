@@ -1,4 +1,14 @@
-. ($PSScriptRoot + '/' + 'Get-Config.ps1')
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [System.string]
+    $ModuleVersionType,
+    [Parameter()]
+    [System.string]
+    $ModuleName
+)
+. $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
+
 ###########################################################################
 Write-Host ('[status]Importing current module: ' + $ModuleName)
 Import-Module ($FilePath_psd1) -Force
