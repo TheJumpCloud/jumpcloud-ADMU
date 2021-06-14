@@ -6192,7 +6192,7 @@ Function Start-Migration {
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AcceptEULA = $true,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$LeaveDomain = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ForceReboot = $false,
-    [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ConvertProfile = $false,
+    [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ConvertProfile = $true,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$UpdateHomePath = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$CreateRestore = $false,
     [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AzureADProfile = $false,
@@ -6232,6 +6232,7 @@ Function Start-Migration {
       $LeaveDomain = $InputObject.LeaveDomain
       $ForceReboot = $InputObject.ForceReboot
       $ConvertProfile = $inputObject.ConvertProfile
+      $UpdateHomePath = $inputObject.UpdateHomePath
       $CreateRestore = $inputObject.CreateRestore
       $netBiosName = $inputObject.NetBiosName
       $Customxml = $inputObject.Customxml
@@ -6415,9 +6416,6 @@ Function Start-Migration {
         }
 
         Write-ToLog -Message:('Begin new local user registry copy')
-        if (test-path -path $newuserprofileimagepath){
-          Write-ToLog -Message:('new profile path looks good continue testing')
-        }
         # Give us admin rights to modify
         Write-ToLog -Message:("Take Ownership of $($newuserprofileimagepath)")
         $path = takeown /F "$($newuserprofileimagepath)" /r /d Y
@@ -6628,7 +6626,7 @@ Function Start-Migration {
         }
 
         Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $SelectedUserName + '.' + $NetBiosName)
-        Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUserName)
+        Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newuserprofileimagepath)
 
         Write-ToLog -Message:('New User Profile Path: ' + $newuserprofileimagepath + ' New User SID: ' + $NewUserSID)
         Write-ToLog -Message:('Old User Profile Path: ' + $olduserprofileimagepath + ' Old User SID: ' + $SelectedUserSID)
@@ -6886,6 +6884,6 @@ Function Start-Migration {
   }
   End {
     Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
-    Write-ToLog -Message:('Tool options chosen were : ' + 'Install JC Agent = ' + $InstallJCAgent + ', Leave Domain = ' + $LeaveDomain + ', Force Reboot = ' + $ForceReboot + ', AzureADProfile = ' + $AzureADProfile + ', Convert User Profile = ' + $ConvertProfile + ', Create System Restore Point = ' + $CreateRestore)
+    Write-ToLog -Message:('Tool options chosen were : ' + 'Install JC Agent = ' + $InstallJCAgent + ', Leave Domain = ' + $LeaveDomain + ', Force Reboot = ' + $ForceReboot + ', AzureADProfile = ' + $AzureADProfile + ', Convert User Profile = ' + $ConvertProfile + ', Create System Restore Point = ' + $CreateRestore + ', Update Home Path = ' + $UpdateHomePath)
   }
 }
