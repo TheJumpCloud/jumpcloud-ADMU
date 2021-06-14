@@ -66,7 +66,7 @@ Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
                             <CheckBox Name="cb_leavedomain" Content="Leave Domain" HorizontalAlignment="Left" Margin="258.699,44.326,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                             <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="391,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                             <CheckBox Name="cb_custom_xml" Content="Use USMT Custom.XML" HorizontalAlignment="Left" Margin="4,68,0,0" VerticalAlignment="Top" FontWeight="Normal"/>
-                            <CheckBox Name="cb_convertprofile" Content="Convert Profile" HorizontalAlignment="Left" Margin="156,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                            <CheckBox Name="cb_convertprofile" Content="Convert Profile" HorizontalAlignment="Left" Margin="156,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="true"/>
                             <CheckBox Name="cb_createrestore" Content="Create Restore Point" HorizontalAlignment="Left" Margin="258,68,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                             <CheckBox Name="cb_updatehomepath" Content="Update Home Path" HorizontalAlignment="Left" Margin="359,44,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                         </Grid>
