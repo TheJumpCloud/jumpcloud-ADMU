@@ -44,6 +44,15 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build Help Files
         - Build Nuspec
       context: aws-credentials
+  - Invoke Git Commit:
+      requires:
+        - Build
+        - Pester Tests
+        # - Sign Executable
+        - Build Module
+        - Build Help Files
+        - Build Nuspec
+
 workflows:
   version: 2
   ci:
@@ -164,6 +173,7 @@ jobs:
           at: .
       - run:
           name: Install Dependencies
+          shell: pwsh.exe
           command: |
             Install-Module -Name PowerShellGet -AllowPrerelease -RequiredVersion '3.0.0-beta10' -Force
             Install-Module -Name AWS.Tools.Common -Force
@@ -182,6 +192,28 @@ jobs:
             dotnet nuget add source "https://www.powershellgallery.com/api/v2" --name PSGallery
       - deploy-nupkg:
           source: CodeArtifact
+  Invoke Git Commit:
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - '6b:97:dc:6d:d1:d1:3f:67:62:c4:ad:2d:96:3c:9a:d7'
+      - attach_workspace:
+          at: .
+      - run:
+          when: on_success
+          name: 'Commit PowerShell Module to << pipeline.git.branch >>'
+          shell: pwsh.exe
+          command: |
+            $UserEmail = If ($env:CIRCLE_PROJECT_USERNAME) { $env:CIRCLE_PROJECT_USERNAME } Else { ($env:USERNAME).Replace(' ', '') + '@FakeEmail.com' }
+            $UserName = If ($env:CIRCLE_PROJECT_USERNAME) { $env:CIRCLE_PROJECT_USERNAME } Else { $env:USERNAME }
+            git config user.email "$UserEmail"
+            git config user.name "$UserName"
+            git pull
+            git add -A
+            git status
+            git commit -m "Updating ADMU Module;[skip ci]"
+            git push origin << pipeline.git.branch >>
 commands:
   deploy-nupkg:
     parameters:
