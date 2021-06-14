@@ -1,11 +1,11 @@
 ## 1.6.4
 
-Release Date: June 08, 2021
+Release Date: June 14, 2021
 
 #### RELEASE NOTES
 
 ```
-Added ability to change the rename step in the profile home path step. This defaults to not renaming to better account for systems where the folder is in use or can't be renamed.
+Added ability to change the rename step in the profile home path step. This defaults to not renaming to better account for systems where the folder is in use or can't be renamed. Also helps with any applications hardcoded to previous home path.
 
 ```
 

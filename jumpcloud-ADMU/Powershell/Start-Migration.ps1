@@ -6561,8 +6561,8 @@ Function Start-Migration {
             }
             catch
             {
-              Write-ToLog -Message:("Remove $newUserProfileImagePath failed, renaming to unusedADMUProfilere")
-              Rename-Item -Path $newUserProfileImagePath -NewName "unusedADMUProfilere" -ErrorAction Stop
+              Write-ToLog -Message:("Remove $newUserProfileImagePath failed, renaming to ADMU_unusedProfile_$JumpCloudUserName")
+              Rename-Item -Path $newUserProfileImagePath -NewName "ADMU_unusedProfile_$JumpCloudUserName" -ErrorAction Stop
             }
             # Set the New User Profile Image Path to Old User Profile Path (they are the same)
             $newuserprofileimagepath = $olduserprofileimagepath
@@ -6620,7 +6620,7 @@ Function Start-Migration {
             }
             catch
             {
-              Write-ToLog -Message:("Remove $newUserProfileImagePath failed, renaming to unusedADMUProfilere")
+              Write-ToLog -Message:("Remove $newUserProfileImagePath failed, renaming to ADMU_unusedProfile_$JumpCloudUserName")
               Rename-Item -Path $newUserProfileImagePath -NewName "ADMU_unusedProfile_$JumpCloudUserName" -ErrorAction Stop
             }
             # Set the New User Profile Image Path to Old User Profile Path (they are the same)
