@@ -9,40 +9,40 @@ orbs:
   win: circleci/windows@2.2.0
 build-and-sign-ADMU: &build-and-sign-ADMU
   - Build
-  # - Pester Tests:
-  #     requires:
-  #       - Build
-  - Sign Executable:
-     requires:
-       - Build
-      #  - Pester Tests
+  - Pester Tests:
+      requires:
+        - Build
+  # - Sign Executable:
+  #    requires:
+  #      - Build
+  #      - Pester Tests
      context: secrethub-credentials
   - Build Module:
       requires:
         - Build
-        # - Pester Tests
-        - Sign Executable
+        - Pester Tests
+        # - Sign Executable
   - Build Help Files:
       requires:
         - Build
-        # - Pester Tests
-        - Sign Executable
+        - Pester Tests
+        # - Sign Executable
         - Build Module
   - Build Nuspec:
       requires:
         - Build
-        # - Pester Tests
-        - Sign Executable
+        - Pester Tests
+        # - Sign Executable
         - Build Module
         - Build Help Files
-  - Publish:
-      requires:
-        - Build
-        # - Pester Tests
-        - Sign Executable
-        - Build Module
-        - Build Help Files
-        - Build Nuspec
+  # - Publish:
+  #     requires:
+  #       - Build
+  #       - Pester Tests
+  #       # - Sign Executable
+  #       - Build Module
+  #       - Build Help Files
+  #       - Build Nuspec
       context: aws-credentials
 workflows:
   version: 2
