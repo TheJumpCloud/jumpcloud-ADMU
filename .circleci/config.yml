@@ -82,7 +82,7 @@ jobs:
           name: Build
           shell: powershell.exe
           command: |
-            ./Deploy/Build.ps1 << pipeline.parameters.CIRCLE_WORKING_DIRECTORY >>
+            ./Deploy/Build.ps1 $CIRCLE_WORKING_DIRECTORY
       - persist_to_workspace:
           root: .
           paths:
