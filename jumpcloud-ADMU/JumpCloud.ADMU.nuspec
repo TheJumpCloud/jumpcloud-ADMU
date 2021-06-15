@@ -2,7 +2,7 @@
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
   <metadata>
     <id>JumpCloud.ADMU</id>
-    <version>1.6.5.736</version>
+    <version>1.6.5.745</version>
     <description>Powershell Module to run JumpCloud Active Directory Migration Utility.</description>
     <authors>JumpCloud Solutions Architect Team</authors>
     <owners>JumpCloud</owners>
