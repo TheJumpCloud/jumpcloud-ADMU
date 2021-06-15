@@ -50,7 +50,7 @@ Else
 $uwpPath = $RootPath + '\Deploy\uwp_jcadmu.ps1'
 $changes = git diff master... ./$uwpPath
 
-if (-not [System.String]::IsNullOrEmpty($compare))
+if (-not [System.String]::IsNullOrEmpty($changes))
 {
     Invoke-ps2exe -inputFile ($uwpPath) -outputFile ($RootPath + '\jumpcloud-ADMU\exe\uwp_jcadmu.exe') -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright '(c) 2021' -company 'JumpCloud' -iconfile ($RootPath + '\Deploy\admu.ico')
     Write-Host "upw_jcadmu.exe was generated successfully"
