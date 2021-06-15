@@ -45,15 +45,14 @@ Else
     Write-Error ('Build.ps1 failed. Transform process outputted an empty ADMU.ps1 file.')
 }
 
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/Deploy/uwp_jcadmu.ps1" -UseBasicParsing -OutFile 'C:\tmp\master.ps1' -ErrorAction Stop
-$masteruwp = 'C:\tmp\master.ps1'
-$branchuwp = ($RootPath + '\Deploy\uwp_jcadmu.ps1')
-$compare = (Compare-Object -ReferenceObject (Get-Content $masteruwp) -DifferenceObject (Get-Content $branchuwp))
+
+# Use Git to figure out changes
+$uwpPath = $RootPath + '\Deploy\uwp_jcadmu.ps1'
+$changes = git diff master... ./$uwpPath
 
 if (-not [System.String]::IsNullOrEmpty($compare))
 {
-    Invoke-ps2exe -inputFile ($RootPath + '\Deploy\uwp_jcadmu.ps1') -outputFile ($RootPath + '\jumpcloud-ADMU\exe\uwp_jcadmu.exe') -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright '(c) 2021' -company 'JumpCloud' -iconfile ($RootPath + '\Deploy\admu.ico')
+    Invoke-ps2exe -inputFile ($uwpPath) -outputFile ($RootPath + '\jumpcloud-ADMU\exe\uwp_jcadmu.exe') -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright '(c) 2021' -company 'JumpCloud' -iconfile ($RootPath + '\Deploy\admu.ico')
     Write-Host "upw_jcadmu.exe was generated successfully"
 }
 else
