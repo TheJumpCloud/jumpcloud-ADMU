@@ -1,29 +1,30 @@
 # Begin setup Steps
 
-# Setup Cert Directory
-$CertDirectory = "C:\cert\"
-if (!(Test-Path "$CertDirectory"))
-{
-    new-item -path $CertDirectory -ItemType Directory
-}
-# Setup SecretHub
-Invoke-WebRequest https://get.secrethub.io/windows | Invoke-Expression
-secrethub --version
-secrethub credential ls
-secrethub read --out-file $CertDirectory/godaddy_windows_signing_cert.pfx JumpCloud/github/godaddy-win-signcert-pfx
-secrethub read --out-file $CertDirectory/godaddy_windows_signing_cert_notrim.pfx JumpCloud/github/godaddy-win-signcert-pfx-notrim
+# SecretHub Steps for Eventual CircleCI work
+# # Setup Cert Directory
+# $CertDirectory = "C:\cert\"
+# if (!(Test-Path "$CertDirectory"))
+# {
+#     new-item -path $CertDirectory -ItemType Directory
+# }
+# # Setup SecretHub
+# Invoke-WebRequest https://get.secrethub.io/windows | Invoke-Expression
+# secrethub --version
+# secrethub credential ls
+# secrethub read --out-file $CertDirectory/godaddy_windows_signing_cert.pfx JumpCloud/github/godaddy-win-signcert-pfx
+# secrethub read --out-file $CertDirectory/godaddy_windows_signing_cert_notrim.pfx JumpCloud/github/godaddy-win-signcert-pfx-notrim
 
 
 # Sign Variables
 $signpath = 'C:\tools\signtool.exe'
-$GUI_JCADMU = ("$PSScriptRoot/../jumpcloud-ADMU/Exe/gui_jcadmu.exe")
-$UWP_JCADMU = ("$PSScriptRoot/../jumpcloud-ADMU/Exe/uwp_jcadmu.exe")
+$GUI_JCADMU = ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\gui_jcadmu.exe')
+$UWP_JCADMU = ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\uwp_jcadmu.exe')
 
-# End Setup Steps
+$certdir = 'C:\agent\_work\_temp\'
 $certFileName = "godaddy_windows_signing_cert.pfx"
 $certPasswordFileName = "godaddy_windows_signing_cert_password.txt"
-$certPath = Join-Path $CertDirectory $certFileName
-$passwordfile = $CertDirectory + $certPasswordFileName
+$certPath = Join-Path $certDir $certFileName
+$passwordfile = $certdir + $certPasswordFileName
 $password = Get-Content $passwordfile -Raw
 
 Write-Output "Signing binaries"
