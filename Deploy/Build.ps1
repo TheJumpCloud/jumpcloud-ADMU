@@ -48,7 +48,7 @@ Else
 
 # Use Git to figure out changes
 $uwpPath = $RootPath + '\Deploy\uwp_jcadmu.ps1'
-$changes = git diff master... -- $uwpPath
+$changes = git diff origin/master... -- $uwpPath
 
 if (-not [System.String]::IsNullOrEmpty($changes))
 {
