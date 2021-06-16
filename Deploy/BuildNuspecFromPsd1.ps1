@@ -1,11 +1,23 @@
-. ($PSScriptRoot + '/' + 'Get-Config.ps1')
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [System.string]
+    $ModuleVersionType,
+    [Parameter()]
+    [System.string]
+    $ModuleName,
+    [Parameter()]
+    [System.string]
+    $buildNumber
+)
+. $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 
 # Set Variables for New-NuspecFile
 $ManifestPath = "$($FilePath_psd1)"
 $OutputPath = "$($FolderPath_Module)"
 $Psd1 = Import-PowerShellDataFile -Path:($ManifestPath)
 $Id = $(Get-Item ($ManifestPath)).BaseName
-$Version = $Psd1.ModuleVersion
+$Version = $Psd1.ModuleVersion + ".$buildNumber"
 $Description = $Psd1.Description
 $Authors = $Psd1.Author
 $Owners = $Psd1.CompanyName
