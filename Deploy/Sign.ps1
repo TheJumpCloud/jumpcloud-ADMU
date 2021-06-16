@@ -1,3 +1,21 @@
+# Begin setup Steps
+
+# SecretHub Steps for Eventual CircleCI work
+# # Setup Cert Directory
+# $CertDirectory = "C:\cert\"
+# if (!(Test-Path "$CertDirectory"))
+# {
+#     new-item -path $CertDirectory -ItemType Directory
+# }
+# # Setup SecretHub
+# Invoke-WebRequest https://get.secrethub.io/windows | Invoke-Expression
+# secrethub --version
+# secrethub credential ls
+# secrethub read --out-file $CertDirectory/godaddy_windows_signing_cert.pfx JumpCloud/github/godaddy-win-signcert-pfx
+# secrethub read --out-file $CertDirectory/godaddy_windows_signing_cert_notrim.pfx JumpCloud/github/godaddy-win-signcert-pfx-notrim
+
+
+# Sign Variables
 $signpath = 'C:\tools\signtool.exe'
 $GUI_JCADMU = ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\gui_jcadmu.exe')
 $UWP_JCADMU = ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\uwp_jcadmu.exe')

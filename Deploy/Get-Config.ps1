@@ -1,12 +1,23 @@
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [System.string]
+    $ModuleVersionType,
+    [Parameter()]
+    [System.string]
+    $ModuleName
+)
+$env:ModuleVersionType = $ModuleVersionType
+$env:MODULENAME = $ModuleName
 # Populate variables
-$ModuleName = $env:MODULENAME
-$ModuleFolderName = $env:MODULEFOLDERNAME
-$DEPLOYFOLDER = $env:DEPLOYFOLDER
-$RELEASETYPE = $env:RELEASETYPE
+$ModuleFolderName = "$PSScriptroot/../JumpCloud-ADMU/"
+$DEPLOYFOLDER = "$PSScriptroot"
+$RELEASETYPE = $ModuleVersionType
 $GitHubWikiUrl = 'https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/'
 $ScriptRoot = Switch ($env:DEPLOYFOLDER) { $true { $env:DEPLOYFOLDER } Default { $PSScriptRoot } }
 $FolderPath_ModuleRootPath = (Get-Item -Path:($ScriptRoot)).Parent.FullName
 $FilePath_ModuleChangelog = $FolderPath_ModuleRootPath + '/ModuleChangelog.md'
+# $FilePath_psd1 = "$ModuleFolderName/($env:MODULENAME.psd1)"
 Switch ($env:DEPLOYFOLDER) { $true { $env:DEPLOYFOLDER } Default { $env:DEPLOYFOLDER = $PSScriptRoot } }
 # Validate that variables have been populated
 @('MODULENAME', 'MODULEFOLDERNAME', 'DEPLOYFOLDER', 'RELEASETYPE') | ForEach-Object {
@@ -30,7 +41,8 @@ $FolderPath_ModuleRootPath = (Get-Item -Path:($DEPLOYFOLDER)).Parent.FullName
 $RequiredFiles = ('LICENSE', 'psm1', 'psd1')
 $RequiredFolders = ('Docs', 'Private', 'Public', 'Tests', 'en-US')
 # Define folder path variables
-$FolderPath_Module = $FolderPath_ModuleRootPath + '\' + $ModuleFolderName
+# $FolderPath_Module = $FolderPath_ModuleRootPath + '\' + $ModuleFolderName
+$FolderPath_Module = $ModuleFolderName
 $RequiredFolders | ForEach-Object {
     $FolderName = $_
     $FolderPath = $FolderPath_Module + '\' + $FolderName
@@ -63,7 +75,7 @@ If (!(Get-PackageProvider -Name:('NuGet') -ListAvailable -ErrorAction:('Silently
 }
 
 # Get module function names
-$Functions_Public = @(Get-ChildItem -Path "C:\agent\_work\1\s\jumpCloud-ADMU\Powershell\Start-Migration.ps1")
+$Functions_Public = @(Get-ChildItem -Path "$ModuleFolderName/Powershell/Start-Migration.ps1")
 
 # Import module in development
 Write-Host ('Importing module: ' + $FilePath_psd1)

@@ -1,4 +1,14 @@
-. ($PSScriptRoot + '/' + 'Get-Config.ps1')
+[CmdletBinding()]
+param (
+    [Parameter()]
+    [System.string]
+    $ModuleVersionType,
+    [Parameter()]
+    [System.string]
+    $ModuleName
+)
+
+. $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 ###########################################################################
 # Region Checking PowerShell Gallery module version
 Write-Host ('[status]Check PowerShell Gallery for module version info')

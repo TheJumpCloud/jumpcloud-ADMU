@@ -1,3 +1,13 @@
+## 1.6.5
+
+Release Date: June 15, 2021
+
+#### RELEASE NOTES
+
+```
+Updated automated testing framework and pipeline for ADMU, no changes to the migration tool since version 1.6.4
+```
+
 ## 1.6.4
 
 Release Date: June 14, 2021
