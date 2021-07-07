@@ -8,7 +8,7 @@ Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
 <Window
      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-     Title="JumpCloud ADMU 1.6.5" Height="677.234" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
+     Title="JumpCloud ADMU 1.6.6" Height="677.234" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
     <Grid Margin="0,0,-0.2,0.168" RenderTransformOrigin="0.531,0.272">
         <TabControl Name="tc_main" HorizontalAlignment="Left" Height="614" VerticalAlignment="Top" Width="1012">
             <TabItem Name="tab_jcadmu" Header="JumpCloud ADMU">
@@ -425,6 +425,12 @@ $cb_installjcagent.Add_Unchecked({$script:InstallJCAgent = $false})
 $cb_installjcagent.Add_Unchecked({$tbJumpCloudConnectKey.IsEnabled =$false})
 
 # Leave Domain checkbox
+if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false -and )
+{
+$cb_leavedomain.IsEnabled = $false
+    Write-ToLog 'To leave AzureAD fully, ADMU script must be ran as NTAuthority\SYSTEM ..please correct & try again or run as a jc command.'
+}
+
 $script:LeaveDomain = $false
 $cb_leavedomain.Add_Checked({$script:LeaveDomain = $true})
 $cb_leavedomain.Add_Unchecked({$script:LeaveDomain = $false})
