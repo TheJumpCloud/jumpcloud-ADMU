@@ -425,14 +425,18 @@ $cb_installjcagent.Add_Unchecked({$script:InstallJCAgent = $false})
 $cb_installjcagent.Add_Unchecked({$tbJumpCloudConnectKey.IsEnabled =$false})
 
 # Leave Domain checkbox
-if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false -and )
-{
-$cb_leavedomain.IsEnabled = $false
-    Write-ToLog 'To leave AzureAD fully, ADMU script must be ran as NTAuthority\SYSTEM ..please correct & try again or run as a jc command.'
-}
-
 $script:LeaveDomain = $false
-$cb_leavedomain.Add_Checked({$script:LeaveDomain = $true})
+$cb_leavedomain.Add_Checked({
+
+if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false -and !($AzureADStatus -eq 'NO' ))
+{
+$wshell = New-Object -ComObject Wscript.Shell
+$Output = $wshell.popup("'To leave AzureAD, ADMU script must be ran as NTAuthority\SYSTEM ..More information found at https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Leaving-AzureAD-Domains","Jumpcloud")
+$script:LeaveDomain = $false
+$cb_leavedomain.IsEnabled = $false
+}
+$script:LeaveDomain = $true
+})
 $cb_leavedomain.Add_Unchecked({$script:LeaveDomain = $false})
 
 # Force Reboot checkbox
