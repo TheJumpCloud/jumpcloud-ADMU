@@ -430,7 +430,7 @@ $script:LeaveDomain = $false
 $cb_leavedomain.Add_Checked({
 if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false -and !($AzureADStatus -eq 'NO' ))
 {
-# Throw Popup, Yes Loads URL, No Closes. Disables And Unchecks LeaveDomain Checkbox Else LeaveDomain -eq $true
+# Throw Popup, OK Loads URL, Cancel Closes. Disables And Unchecks LeaveDomain Checkbox Else LeaveDomain -eq $true
 [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
 $result = [System.Windows.Forms.MessageBox]::Show("To leave AzureAD, ADMU must be run as NTAuthority\SYSTEM.`nFor more information on the requirements`nSelect 'OK' else select 'Cancel'" , "JumpCloud ADMU" , 1)
 if ($result -eq 'OK') {
