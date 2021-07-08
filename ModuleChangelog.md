@@ -1,24 +1,22 @@
 ## 1.6.6
 
-Release Date: June 16, 2021
+Release Date: July 8, 2021
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Added AzureAD leave domain check, if not running as NTAUTHORITY\SYSTEM popup will inform in gui related wiki article. 
 ```
 
-#### FEATURES:
-
-{{Fill in the Features}}
-
 #### IMPROVEMENTS:
-
-{{Fill in the Improvements}}
+```
+Add logic to only run AzureAD leave domain command if running as NTAUTHORITY\SYSTEM. If not AzureAD joined, it will leave domain as normal.
+If not run as SYSTEM, the GUI will stop the param being passed and a dialog shown. In the migration script an error will be logged and continue without running the leave domain command in the case of not being run as SYSTEM and AzureAD joined.
+```
 
 #### BUG FIXES:
 
-{{Fill in the Bug Fixes}}
+Updated 'Accept EULA - more info' link to correct URL
 
 ## 1.6.5
 

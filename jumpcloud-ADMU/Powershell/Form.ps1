@@ -8,7 +8,7 @@ Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
 <Window
      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-     Title="JumpCloud ADMU 1.6.5" Height="677.234" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
+     Title="JumpCloud ADMU 1.6.6" Height="677.234" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
     <Grid Margin="0,0,-0.2,0.168" RenderTransformOrigin="0.531,0.272">
         <TabControl Name="tc_main" HorizontalAlignment="Left" Height="614" VerticalAlignment="Top" Width="1012">
             <TabItem Name="tab_jcadmu" Header="JumpCloud ADMU">
@@ -426,7 +426,23 @@ $cb_installjcagent.Add_Unchecked({$tbJumpCloudConnectKey.IsEnabled =$false})
 
 # Leave Domain checkbox
 $script:LeaveDomain = $false
-$cb_leavedomain.Add_Checked({$script:LeaveDomain = $true})
+# Checked And Not Running As System And Joined To Azure AD
+$cb_leavedomain.Add_Checked({
+if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false -and !($AzureADStatus -eq 'NO' ))
+{
+# Throw Popup, OK Loads URL, Cancel Closes. Disables And Unchecks LeaveDomain Checkbox Else LeaveDomain -eq $true
+[System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+$result = [System.Windows.Forms.MessageBox]::Show("To leave AzureAD, ADMU must be run as NTAuthority\SYSTEM.`nFor more information on the requirements`nSelect 'OK' else select 'Cancel'" , "JumpCloud ADMU" , 1)
+if ($result -eq 'OK') {
+    [Diagnostics.Process]::Start('https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Leaving-AzureAD-Domains')
+}
+Write-ToLog -Message:('Unable to leave AzureAD, ADMU Script must be run as NTAuthority\SYSTEM.This will have to be completed manually. For more information on the requirements read https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Leaving-AzureAD-Domains') -Level:('Error')
+$script:LeaveDomain = $false
+$cb_leavedomain.IsChecked = $false
+$cb_leavedomain.IsEnabled = $false
+}
+$script:LeaveDomain = $true
+})
 $cb_leavedomain.Add_Unchecked({$script:LeaveDomain = $false})
 
 # Force Reboot checkbox
@@ -521,7 +537,7 @@ $lvProfileList.Add_SelectionChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList)
     })
 # AcceptEULA moreinfo link - Mouse button event
-$lbMoreInfo.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start('https://github.com/TheJumpCloud/support/tree/BS-ADMU-version_1.0.0/ADMU#EULA--Legal-Explanation') })
+$lbMoreInfo.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start('https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/eula-legal-explanation') })
 # Custom USMT XML moreinfo link - Mouse button event
 $lbMoreInfo_xml.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start('https://docs.microsoft.com/en-us/windows/deployment/usmt/usmt-customize-xml-files') })
 
