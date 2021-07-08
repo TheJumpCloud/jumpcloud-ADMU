@@ -436,6 +436,7 @@ $result = [System.Windows.Forms.MessageBox]::Show("To leave AzureAD, ADMU must b
 if ($result -eq 'OK') {
     [Diagnostics.Process]::Start('https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Leaving-AzureAD-Domains')
 }
+Write-ToLog -Message:('Unable to leave AzureAD, ADMU Script must be run as NTAuthority\SYSTEM.This will have to be completed manually. For more information on the requirements read https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Leaving-AzureAD-Domains') -Level:('Error')
 $script:LeaveDomain = $false
 $cb_leavedomain.IsChecked = $false
 $cb_leavedomain.IsEnabled = $false
