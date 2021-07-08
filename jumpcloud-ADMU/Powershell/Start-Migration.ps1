@@ -6848,13 +6848,15 @@ Function Start-Migration {
         if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false){
           Write-ToLog -Message:('Unable to leave AzureAD, ADMU Script must be run as NTAuthority\SYSTEM.This will have to be completed manually. For more information on the requirements read https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Leaving-AzureAD-Domains') -Level:('Error')
         }
-        try {
-          Write-ToLog -Message:('Leaving AzureAD')
-          dsregcmd.exe /leave
-        }
-        catch {
-          Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
-          Exit;
+        else{
+          try {
+            Write-ToLog -Message:('Leaving AzureAD Domain with dsregcmd.exe')
+            dsregcmd.exe /leave
+          }
+          catch {
+            Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
+            Exit;
+          }
         }
       }
       else {
