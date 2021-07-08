@@ -6205,7 +6205,7 @@ Function Start-Migration {
     If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) { Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent" }else {}
 
     # Start script
-    $admuVersion = '1.6.5'
+    $admuVersion = '1.6.6'
     Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
     Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
     Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
@@ -6845,13 +6845,18 @@ Function Start-Migration {
 
     if ($LeaveDomain -eq $true) {
       if ($netBiosName -match 'AzureAD') {
-        try {
-          Write-ToLog -Message:('Leaving AzureAD')
-          dsregcmd.exe /leave
+        if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false){
+          Write-ToLog -Message:('Unable to leave AzureAD, ADMU Script must be run as NTAuthority\SYSTEM.This will have to be completed manually. For more information on the requirements read https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Leaving-AzureAD-Domains') -Level:('Error')
         }
-        catch {
-          Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
-          Exit;
+        else{
+          try {
+            Write-ToLog -Message:('Leaving AzureAD Domain with dsregcmd.exe')
+            dsregcmd.exe /leave
+          }
+          catch {
+            Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Error')
+            Exit;
+          }
         }
       }
       else {
