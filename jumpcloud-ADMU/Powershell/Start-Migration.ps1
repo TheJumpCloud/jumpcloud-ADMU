@@ -6845,6 +6845,9 @@ Function Start-Migration {
 
     if ($LeaveDomain -eq $true) {
       if ($netBiosName -match 'AzureAD') {
+        if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false){
+          Write-ToLog -Message:('Unable to leave AzureAD, ADMU Script must be run as NTAuthority\SYSTEM.This will have to be completed manually. For more information on the requirements read https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Leaving-AzureAD-Domains') -Level:('Error')
+        }
         try {
           Write-ToLog -Message:('Leaving AzureAD')
           dsregcmd.exe /leave
