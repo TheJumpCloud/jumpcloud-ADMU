@@ -96,6 +96,7 @@ jobs:
           name: Test Setup
           shell: powershell.exe
           command: |
+            $ErrorActionPreference = 'Stop'
             . ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
       - run:
           name: Install Required Modules & Set Env Variables for testing
