@@ -388,10 +388,23 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
             $script:bDeleteProfile.IsEnabled = $true
             Return $true
         }
-        Elseif(($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name) -or ($lvProfileList.selectedItem.Username -eq 'UNKNOWN ACCOUNT')){
+        Elseif ($lvProfileList.selectedItem.Username -eq 'UNKNOWN ACCOUNT')
+        {
+            # Unmatched Profile, prevent migration
             $script:bDeleteProfile.Content = "Select Domain Profile"
             $script:bDeleteProfile.IsEnabled = $false
             Return $false
+        }
+        Elseif (($($lvProfileList.selectedItem.Username) -split '\\').count -ge 2 )
+        {
+            # Test if profile is in domain\username format
+            if (($($lvProfileList.selectedItem.Username) -split '\\')[0] -match $WmiComputerSystem.Name)
+            {
+                # if the profile domain name matches system name, prevent migration
+                $script:bDeleteProfile.Content = "Select Domain Profile"
+                $script:bDeleteProfile.IsEnabled = $false
+                Return $false
+            }
         }
         Else
         {
