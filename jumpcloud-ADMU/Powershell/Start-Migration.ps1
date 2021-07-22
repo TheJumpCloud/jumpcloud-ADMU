@@ -1,4 +1,40 @@
 #region Functions
+function Test-RegValueMatch {
+
+  param (
+
+   [parameter(Mandatory=$true)]
+   [ValidateNotNullOrEmpty()]$Path,
+
+   [parameter(Mandatory=$true)]
+   [ValidateNotNullOrEmpty()]$Value,
+
+   [parameter(Mandatory=$true)]
+   [ValidateNotNullOrEmpty()]$stringmatch
+
+  )
+
+#Supress Error If Path Not Found
+$ErrorActionPreference="SilentlyContinue"
+$regvalue = Get-ItemPropertyValue -Path $Path -Name $Value
+$ErrorActionPreference="Continue"
+$out = 'Value For ' + $Value + ' Is ' + $1 + ' On ' + $Path
+
+if ([string]::IsNullOrEmpty($regvalue)) {
+  write-host 'KEY DOESNT EXIST OR IS EMPTY'
+  return $false
+}
+else {
+  if ($regvalue -match ($stringmatch)) {
+      Write-Host $out
+      return $true
+  } else {
+      Write-Host $out
+      return $false
+  }
+}
+  }
+
 function Register-NativeMethod
 {
   [CmdletBinding()]
@@ -6306,6 +6342,17 @@ Function Start-Migration {
       Write-ToLog -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + ' NetBiosName is ' + $netBiosName)
     }
     #endregion Test checks
+
+    # Check Shell Paths
+
+    Set-UserRegistryLoadState -op "UnLoad" -ProfilePath $olduserprofileimagepath -UserSid $SelectedUserSid
+    Set-UserRegistryLoadState -op "Load" -ProfilePath $olduserprofileimagepath -UserSid $SelectedUserSid
+
+    $mountedreg = 'HCU:\' + $SelectedUserSid + '_admu' + '\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders'
+
+    Test-RegistryValue -Path $mountedreg -Value 'Templates' -stringmatch $olduserprofileimagepath
+
+    #endregion Check Shell Paths
 
   }
   Process {
