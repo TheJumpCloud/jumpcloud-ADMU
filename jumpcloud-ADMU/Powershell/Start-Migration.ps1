@@ -6344,13 +6344,14 @@ Function Start-Migration {
     #endregion Test checks
 
     # Check Shell Paths
+    $olduserprofileimagepath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
 
     Set-UserRegistryLoadState -op "UnLoad" -ProfilePath $olduserprofileimagepath -UserSid $SelectedUserSid
     Set-UserRegistryLoadState -op "Load" -ProfilePath $olduserprofileimagepath -UserSid $SelectedUserSid
 
     $mountedreg = 'HCU:\' + $SelectedUserSid + '_admu' + '\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders'
 
-    Test-RegistryValue -Path $mountedreg -Value 'Templates' -stringmatch $olduserprofileimagepath
+    Test-RegValueMatch -Path $mountedreg -Value 'Templates' -stringmatch $olduserprofileimagepath
 
     #endregion Check Shell Paths
 
