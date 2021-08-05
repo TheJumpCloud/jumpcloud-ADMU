@@ -8,7 +8,7 @@ Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
 <Window
      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-     Title="JumpCloud ADMU 1.6.6" Height="677.234" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
+     Title="JumpCloud ADMU 1.6.7" Height="677.234" Width="1053.775" WindowStartupLocation="CenterScreen" ResizeMode="NoResize" ForceCursor="True">
     <Grid Margin="0,0,-0.2,0.168" RenderTransformOrigin="0.531,0.272">
         <TabControl Name="tc_main" HorizontalAlignment="Left" Height="614" VerticalAlignment="Top" Width="1012">
             <TabItem Name="tab_jcadmu" Header="JumpCloud ADMU">
@@ -388,10 +388,23 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
             $script:bDeleteProfile.IsEnabled = $true
             Return $true
         }
-        Elseif(($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name) -or ($lvProfileList.selectedItem.Username -eq 'UNKNOWN ACCOUNT')){
+        Elseif ($lvProfileList.selectedItem.Username -eq 'UNKNOWN ACCOUNT')
+        {
+            # Unmatched Profile, prevent migration
             $script:bDeleteProfile.Content = "Select Domain Profile"
             $script:bDeleteProfile.IsEnabled = $false
             Return $false
+        }
+        Elseif (($($lvProfileList.selectedItem.Username) -split '\\').count -ge 2 )
+        {
+            # Test if profile is in domain\username format
+            if (($($lvProfileList.selectedItem.Username) -split '\\')[0] -match $WmiComputerSystem.Name)
+            {
+                # if the profile domain name matches system name, prevent migration
+                $script:bDeleteProfile.Content = "Select Domain Profile"
+                $script:bDeleteProfile.IsEnabled = $false
+                Return $false
+            }
         }
         Else
         {
