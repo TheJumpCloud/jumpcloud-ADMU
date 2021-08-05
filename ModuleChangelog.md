@@ -1,24 +1,16 @@
 ## 1.6.7
 
-Release Date: July 08, 2021
+Release Date: July 22, 2021
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Block profile conversion via GUI where domain username matches system name.
 ```
-
-#### FEATURES:
-
-{{Fill in the Features}}
 
 #### IMPROVEMENTS:
 
-{{Fill in the Improvements}}
-
-#### BUG FIXES:
-
-{{Fill in the Bug Fixes}}
+Block profile conversion via GUI where domain username matches system name.
 
 ## 1.6.6
 
