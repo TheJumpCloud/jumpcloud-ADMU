@@ -39,7 +39,7 @@ Describe 'Build Tests' {
             $branchformversion.$($env:ModuleVersionType) | Should -Be ($masterformversion.$($env:ModuleVersionType) + 1)
         }
 
-        It 'Start-Migration version' {
+        It 'Start-Migration version' -Skip{
             $startMigrationPath = "$PSScriptRoot\..\Start-Migration.ps1"
             # $VersionRegex = [regex]"(\$admuVersion = )\'(.*?)\'"
             $VersionRegex = [regex]"(admuVersion = )'(.*?)'"
