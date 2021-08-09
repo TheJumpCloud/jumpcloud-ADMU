@@ -1,3 +1,16 @@
+## 1.6.8
+
+Release Date: August 09, 2021
+
+#### RELEASE NOTES
+
+```
+Fix for previous version 1.6.7 where after migrating a domain user with the same username as the system hostname
+```
+
+#### BUG FIXES:
+
+Domain users with the same name as the system hostname now initalize correctly and the GUI will allow for migration of these user accounts
 ## 1.6.7
 
 Release Date: July 22, 2021
