@@ -1,9 +1,8 @@
-## Welcome to GitHub Pages
+## JumpCloud Active Directory Migration Utility
 
-You can use the [editor on GitHub](https://github.com/TheJumpCloud/jumpcloud-ADMU/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+The JumpCloud Active Directory Migration Utility (ADMU) is designed to help administrators migrate Active Directory or Azure Active Directory accounts to local accounts. The JumpCloud agent can take over and manage migrated local accounts while maintaining, files, application data and settings.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
-
+[Migration Video](https://fast.wistia.net/embed/channel/6mrjdjaaty)
 ### Markdown
 
 Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
