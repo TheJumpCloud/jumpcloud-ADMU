@@ -2,7 +2,8 @@
 
 The JumpCloud Active Directory Migration Utility (ADMU) is designed to help administrators migrate Active Directory or Azure Active Directory accounts to local accounts. The JumpCloud agent can take over and manage migrated local accounts while maintaining, files, application data and settings.
 
-<iframe allowtransparency="true" title="JumpCloud ADMU Video" allowFullscreen frameborder="0" scrolling="no" class="wistia_embed" name="wistia_embed" src="https://fast.wistia.net/embed/iframe/6mrjdjaaty" width="400" height="225"></iframe>
+<script src="https://fast.wistia.com/embed/medias/573eial3qa.jsonp" async></script><script src="https://fast.wistia.com/assets/external/E-v1.js" async></script><div class="wistia_responsive_padding" style="padding:56.25% 0 0 0;position:relative;"><div class="wistia_responsive_wrapper" style="height:100%;left:0;position:absolute;top:0;width:100%;"><div class="wistia_embed wistia_async_573eial3qa videoFoam=true" style="height:100%;position:relative;width:100%"><div class="wistia_swatch" style="height:100%;left:0;opacity:0;overflow:hidden;position:absolute;top:0;transition:opacity 200ms;width:100%;"><img src="https://fast.wistia.com/embed/medias/573eial3qa/swatch" style="filter:blur(5px);height:100%;object-fit:contain;width:100%;" alt="" aria-hidden="true" onload="this.parentNode.style.opacity=1;" />
+
 ### Markdown
 
 Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
