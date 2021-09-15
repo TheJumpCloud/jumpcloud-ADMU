@@ -16,34 +16,10 @@
       <command:syntaxItem>
         <maml:name>Start-Migration</maml:name>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>AcceptEULA</maml:name>
-          <maml:Description>
-            <maml:para>A boolean $true/$false value for accepting Microsoft's Assessment and Deployment Kit (ADK) EULA. If $false the following log entry would be outputted. LOG: 'Installing Windows ADK at C:\Program Files (x86)\Windows Kits\10\ please complete GUI prompts &amp; accept EULA within 5mins or it will exit.'</maml:para>
-          </maml:Description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>AzureADProfile</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>A boolean $true/$false value to allow the conversion of AzureAD profile. This will set the domain account used in the migration to `AZUREAD`.</maml:para>
-          </maml:Description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>Customxml</maml:name>
-          <maml:Description>
-            <maml:para>A boolean $true/$false value to allow the use of a custom.xml in the user state migration process. If $true USMT will look for `C:\Windows\Temp\Custom.xml` for additional migration steps.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
           <dev:type>
             <maml:name>System.Boolean</maml:name>
@@ -53,9 +29,9 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>ForceReboot</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>A boolean $true/$false value to force the system to reboot at the end of the migration process. A reboot is required when unbinding from a domain.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
           <dev:type>
             <maml:name>System.Boolean</maml:name>
@@ -65,9 +41,9 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>InstallJCAgent</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>A boolean $true/$false value to install the JumpCloud agent on the system. If this value is $true you will be required to also pass a `JumpCloudConnectKey` value. If the system remains on the domain, the JumpCloud agent will be installed but not connected until it leaves the domain.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
           <dev:type>
             <maml:name>System.Boolean</maml:name>
@@ -77,9 +53,9 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>JumpCloudConnectKey</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>A string value that is required if `-InstallJCAgent` is $true. This connect key can be found in the JumpCloud console under add systems. It must be 24 chars and is different than an JumpCloud API key.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
             <maml:name>System.String</maml:name>
@@ -89,9 +65,9 @@
         </command:parameter>
         <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>JumpCloudUserName</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>A string value that will be used for the new converted local account that can be bound to JumpCloud. This value must be unique on the system, if it is not unique an error will stop the migration. This value should match the JumpCloud Username value to allow takeover when a User is bound to a system within the JumpCloud console.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
             <maml:name>System.String</maml:name>
@@ -101,9 +77,9 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>LeaveDomain</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>A boolean $true/$false value to force the system to leave currently bound domain, this is required for the JumpCloud Agent to operate. It can also be reversed by simply rejoining the system back to the domain. This will also work for AzureAD and will disconnect the AzureAD bind.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
           <dev:type>
             <maml:name>System.Boolean</maml:name>
@@ -113,33 +89,21 @@
         </command:parameter>
         <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>TempPassword</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>A string value that is used to set the new local accounts password. When duplicating the user account a password must be set when created and this value is passed. Once the system is online in JumpCloud the password will be overwritten and synced with JumpCloud if the user is taken over.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
             <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>ConvertProfile</maml:name>
-          <maml:Description>
-            <maml:para>The Convert User functionality from v1.5.0 can be invoked with the ConvertProfile parameter. This functionality will convert the SelectedUserName user or SID to a local user with the account name specified by the JumpCloudUserName parameter.</maml:para>
-          </maml:Description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
             <maml:uri />
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
         <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>SelectedUserName</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>A string value for the DomainUserName that is used in the migration script. This value is verified to make sure the account exists on the system. If the Domain Account does not exist, the script will error and not continue. Either pass a username using the "Domain\username" syntax or a domain user SID.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
             <maml:name>System.String</maml:name>
@@ -148,10 +112,10 @@
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>CreateRestore</maml:name>
-          <maml:Description>
-            <maml:para>If set, the ADMU will attempt to invoke Checkpoint-Computer and make a system restore checkpoint before any migration actions are taken. By default in Windows 10, only one system restore point can be set per day.</maml:para>
-          </maml:Description>
+          <maml:name>AutobindJCUser</maml:name>
+          <maml:description>
+            <maml:para>This parameter will bind the username specified in the `JumpCloudUserName` field to the current system after Migration.</maml:para>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
           <dev:type>
             <maml:name>System.Boolean</maml:name>
@@ -161,12 +125,24 @@
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>UpdateHomePath</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>If set to $true, the ADMU will attempt to rename the selected username's homepath to the jumpcloud username. Note, this could break any applications that rely on a hard coded homepath. By default this is not set and will not rename the homepath.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
           <dev:type>
             <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>JumpCloudAPIKey</maml:name>
+          <maml:description>
+            <maml:para>The Read/Write API key of a JumpCloud Administrator. This parameter is required if the AutoBind JC User parameter is specified.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
             <maml:uri />
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
@@ -176,9 +152,9 @@
         <maml:name>Start-Migration</maml:name>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>inputObject</maml:name>
-          <maml:Description>
+          <maml:description>
             <maml:para>An PSObject can be passed to the function with the required values for the migration process. This is used when the GUI version of the tool is used and inputs to the XAML form are passed to this function.</maml:para>
-          </maml:Description>
+          </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Object</command:parameterValue>
           <dev:type>
             <maml:name>System.Object</maml:name>
@@ -190,34 +166,10 @@
     </command:syntax>
     <command:parameters>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>AcceptEULA</maml:name>
-        <maml:Description>
-          <maml:para>A boolean $true/$false value for accepting Microsoft's Assessment and Deployment Kit (ADK) EULA. If $false the following log entry would be outputted. LOG: 'Installing Windows ADK at C:\Program Files (x86)\Windows Kits\10\ please complete GUI prompts &amp; accept EULA within 5mins or it will exit.'</maml:para>
-        </maml:Description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>AzureADProfile</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>A boolean $true/$false value to allow the conversion of AzureAD profile. This will set the domain account used in the migration to `AZUREAD`.</maml:para>
-        </maml:Description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>Customxml</maml:name>
-        <maml:Description>
-          <maml:para>A boolean $true/$false value to allow the use of a custom.xml in the user state migration process. If $true USMT will look for `C:\Windows\Temp\Custom.xml` for additional migration steps.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>
           <maml:name>System.Boolean</maml:name>
@@ -227,9 +179,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>ForceReboot</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>A boolean $true/$false value to force the system to reboot at the end of the migration process. A reboot is required when unbinding from a domain.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>
           <maml:name>System.Boolean</maml:name>
@@ -239,9 +191,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>InstallJCAgent</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>A boolean $true/$false value to install the JumpCloud agent on the system. If this value is $true you will be required to also pass a `JumpCloudConnectKey` value. If the system remains on the domain, the JumpCloud agent will be installed but not connected until it leaves the domain.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>
           <maml:name>System.Boolean</maml:name>
@@ -251,9 +203,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>JumpCloudConnectKey</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>A string value that is required if `-InstallJCAgent` is $true. This connect key can be found in the JumpCloud console under add systems. It must be 24 chars and is different than an JumpCloud API key.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
           <maml:name>System.String</maml:name>
@@ -263,9 +215,9 @@
       </command:parameter>
       <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>JumpCloudUserName</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>A string value that will be used for the new converted local account that can be bound to JumpCloud. This value must be unique on the system, if it is not unique an error will stop the migration. This value should match the JumpCloud Username value to allow takeover when a User is bound to a system within the JumpCloud console.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
           <maml:name>System.String</maml:name>
@@ -275,9 +227,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>LeaveDomain</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>A boolean $true/$false value to force the system to leave currently bound domain, this is required for the JumpCloud Agent to operate. It can also be reversed by simply rejoining the system back to the domain. This will also work for AzureAD and will disconnect the AzureAD bind.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>
           <maml:name>System.Boolean</maml:name>
@@ -287,9 +239,9 @@
       </command:parameter>
       <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>TempPassword</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>A string value that is used to set the new local accounts password. When duplicating the user account a password must be set when created and this value is passed. Once the system is online in JumpCloud the password will be overwritten and synced with JumpCloud if the user is taken over.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
           <maml:name>System.String</maml:name>
@@ -299,9 +251,9 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>inputObject</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>An PSObject can be passed to the function with the required values for the migration process. This is used when the GUI version of the tool is used and inputs to the XAML form are passed to this function.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Object</command:parameterValue>
         <dev:type>
           <maml:name>System.Object</maml:name>
@@ -309,23 +261,11 @@
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>ConvertProfile</maml:name>
-        <maml:Description>
-          <maml:para>The Convert User functionality from v1.5.0 can be invoked with the ConvertProfile parameter. This functionality will convert the SelectedUserName user or SID to a local user with the account name specified by the JumpCloudUserName parameter.</maml:para>
-        </maml:Description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
       <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>SelectedUserName</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>A string value for the DomainUserName that is used in the migration script. This value is verified to make sure the account exists on the system. If the Domain Account does not exist, the script will error and not continue. Either pass a username using the "Domain\username" syntax or a domain user SID.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
           <maml:name>System.String</maml:name>
@@ -334,10 +274,10 @@
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>CreateRestore</maml:name>
-        <maml:Description>
-          <maml:para>If set, the ADMU will attempt to invoke Checkpoint-Computer and make a system restore checkpoint before any migration actions are taken. By default in Windows 10, only one system restore point can be set per day.</maml:para>
-        </maml:Description>
+        <maml:name>AutobindJCUser</maml:name>
+        <maml:description>
+          <maml:para>This parameter will bind the username specified in the `JumpCloudUserName` field to the current system after Migration.</maml:para>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>
           <maml:name>System.Boolean</maml:name>
@@ -347,12 +287,24 @@
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>UpdateHomePath</maml:name>
-        <maml:Description>
+        <maml:description>
           <maml:para>If set to $true, the ADMU will attempt to rename the selected username's homepath to the jumpcloud username. Note, this could break any applications that rely on a hard coded homepath. By default this is not set and will not rename the homepath.</maml:para>
-        </maml:Description>
+        </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>
           <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>JumpCloudAPIKey</maml:name>
+        <maml:description>
+          <maml:para>The Read/Write API key of a JumpCloud Administrator. This parameter is required if the AutoBind JC User parameter is specified.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
           <maml:uri />
         </dev:type>
         <dev:defaultValue>None</dev:defaultValue>
@@ -386,24 +338,16 @@
     <command:examples>
       <command:example>
         <maml:title>-------------------------- Example 1 --------------------------</maml:title>
-        <dev:code>PS C:\&gt; Start-Migration -JumpCloudUserName 'john.smith' -SelectedUserName 'DOMAIN\jsmith' -TempPassword 'Temp123!' -AcceptEULA $true -LeaveDomain $true -ForceReboot $true -AZureADProfile $false -Customxml $false -InstallJCAgent $true -JumpCloudConnectKey 'CONNECTKEYHERE'.</dev:code>
+        <dev:code>PS C:\&gt; Start-Migration -SelectedUserName 'DOMAIN\bobfay' -JumpCloudUserName 'bob.fay' -TempPassword 'Temp123!Temp123!' -LeaveDomain $true -ForceReboot $true -InstallJCAgent $true -JumpCloudConnectKey 'ConnectKEY' -AutobindJCUser $true -JumpCloudAPIKey 'APIKEY'</dev:code>
         <dev:remarks>
-          <maml:para>This example would run the `Start-Migration` function on a domain user `DOMAIN\jsmith` and create a new local user account `COMPUTERNAME\john.smith`. Using a temporary password `Temp123!`, accepting the EULA so no interactive prompts would display, the system would leave the bound domain and reboot, It is not converting a AzureAD profile or using a CustomXML for migration, It will also install the JumpCloud Agent and use the JumpCloud connect key provided.</maml:para>
+          <maml:para>This example would run the `Start-Migration` function on a domain user `DOMAIN\bobfay` and create a new local user account `COMPUTERNAME\bob.fay`. Using a temporary password `Temp123!Temp123!`. The JumpCloud Agent would be installed. After migration the JumpCloud user `bob.fay` would be bound to the system. Finally, the system would leave the bound domain and reboot.</maml:para>
         </dev:remarks>
       </command:example>
       <command:example>
         <maml:title>-------------------------- Example 2 --------------------------</maml:title>
-        <dev:code>PS C:\&gt; Start-Migration -JumpCloudUserName 'john.smith' -SelectedUserName 'DOMAIN\jsmith' -TempPassword 'Temp123!' -AcceptEULA $true -LeaveDomain $false -ForceReboot $false -InstallJCAgent $false</dev:code>
+        <dev:code>PS C:\&gt; Start-Migration -SelectedUserName 'DOMAIN\bobfay' -JumpCloudUserName 'bob.fay' -TempPassword 'Temp123!Temp123!' $false -ForceReboot $false -InstallJCAgent $false</dev:code>
         <dev:remarks>
-          <maml:para>This example would run the `Start-Migration` function on a domain user `DOMAIN\jsmith` and create a new local user account `COMPUTERNAME\john.smith`. Using a temporary password `Temp123!`, accepting the EULA so no interactive prompts would display, the system would remain bound to the current domain, no reboot or JumpCloud Agent would be installed. This would allow the administrator to run the converted account in parallel for testing.</maml:para>
-        </dev:remarks>
-      </command:example>
-      <command:example>
-        <maml:title>-------------------------- Example 3 --------------------------</maml:title>
-        <dev:code>PS C:\&gt; Start-Migration -JumpCloudUserName 'john.smith' -SelectedUserName 'DOMAIN\jsmith' -TempPassword 'Temp123!' -AcceptEULA $true -LeaveDomain $false -ForceReboot $false -InstallJCAgent $false -Customxml $true</dev:code>
-        <dev:remarks>
-          <maml:para>This example would run the `Start-Migration` function on a domain user `DOMAIN\jsmith` and create a new local user account `COMPUTERNAME\john.smith`. Using a temporary password `Temp123!`, accepting the EULA so no interactive prompts would display, the system would remain bound to the current domain, no reboot or JumpCloud Agent would be installed. This would allow the administrator to run the converted account in parallel for testing, A `Custom.XML` file would be used in the migration process from the location `C:\Windows\Temp\custom.xml` this could be edited from the default xml provided or the GUI utility could be used to edit.</maml:para>
-          <maml:para>`C:\Windows\Temp\custom.xml`</maml:para>
+          <maml:para>This example would run the `Start-Migration` function on a domain user `DOMAIN\jsmith` and create a new local user account `COMPUTERNAME\john.smith`. Using a temporary password `Temp123!Temp123!`, the system would remain bound to the current domain and not reboot. The JumpCloud Agent would not be installed. This would allow the administrator to run the converted account in parallel for testing.</maml:para>
         </dev:remarks>
       </command:example>
     </command:examples>

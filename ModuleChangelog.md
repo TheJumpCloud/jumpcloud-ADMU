@@ -1,29 +1,35 @@
-## 1.6.8
+## 2.0.0
 
-Release Date: August 09, 2021
-
-#### RELEASE NOTES
-
-```
-Fix for previous version 1.6.7 where after migrating a domain user with the same username as the system hostname
-```
-
-#### BUG FIXES:
-
-Domain users with the same name as the system hostname now initalize correctly and the GUI will allow for migration of these user accounts
-## 1.6.7
-
-Release Date: July 22, 2021
+Release Date: July 08, 2021
 
 #### RELEASE NOTES
 
 ```
-Block profile conversion via GUI where domain username matches system name.
+* Added API Key form and parameter to allow for "Auto-Binding" the user during Migration
+    * If selected, both the API Key and Connect Key values must be entered
+    * At the end of migration the ADMU will search the JumpCloud Organization for the username entered and bind the user to the system
+* GUI runs of the ADMU should prompt to view the log after migration
+* The migration user's registry hive is saved as a unique filename (ex: NTUSER_original.DAT is now NTUSER_original_yyyy-mm-dd-HHMMSS)
+* The 2.0.0 version of the tool no longer includes the Microsoft User State Migration Tool. Priror versions of the tool should be used if it's necessary to copy data from one profile to another.
+    * The default behavior of the 2.0.0 tool is to convert accounts with what was previously the `ConvertProfile` parameter.
+
 ```
+
+#### FEATURES:
+
+* Migration users may be automatically bound to systems post-successful migration
+* If the ADMU fails to migrate a user, the tool will attempt to remove the newly created local user so that the tool can be run again.
+  * This negates the need to manually remove the new local user if re-running the tool
 
 #### IMPROVEMENTS:
 
-Block profile conversion via GUI where domain username matches system name.
+* GUI version of the tool no longer queries account home directory size and should load much faster
+* Option to Update Home Path has been removed from the GUI version of the tool
+  * Often times changing the home path from "migration_user" to "migration.user" would break app functionality and cause more confusion than it was intended to solve. the `UpdateHomePath` parameter can still be set to true through the CLI/ PowerShell Module Version of the tool
+
+#### BUG FIXES:
+
+* Given the case where the ADMU writes a registry backup, subsequently fails, exits and is run again, The registry backup should not be overwritten with the same name.
 
 ## 1.6.6
 
