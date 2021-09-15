@@ -1,6 +1,6 @@
 ## 2.0.0
 
-Release Date: July 08, 2021
+Release Date: September 16, 2021
 
 #### RELEASE NOTES
 
@@ -30,6 +30,33 @@ Release Date: July 08, 2021
 #### BUG FIXES:
 
 * Given the case where the ADMU writes a registry backup, subsequently fails, exits and is run again, The registry backup should not be overwritten with the same name.
+
+## 1.6.8
+
+Release Date: August 09, 2021
+
+#### RELEASE NOTES
+
+```
+Fix for previous version 1.6.7 where after migrating a domain user with the same username as the system hostname
+```
+
+#### BUG FIXES:
+
+Domain users with the same name as the system hostname now initalize correctly and the GUI will allow for migration of these user accounts
+## 1.6.7
+
+Release Date: July 22, 2021
+
+#### RELEASE NOTES
+
+```
+Block profile conversion via GUI where domain username matches system name.
+```
+
+#### IMPROVEMENTS:
+
+Block profile conversion via GUI where domain username matches system name.
 
 ## 1.6.6
 
