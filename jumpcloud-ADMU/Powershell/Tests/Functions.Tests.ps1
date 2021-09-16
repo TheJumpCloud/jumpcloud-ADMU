@@ -5,10 +5,12 @@ BeforeAll {
     Connect-JCOnline -JumpCloudApiKey $env:JCApiKey -JumpCloudOrgId $env:JCOrgId -Force
 }
 Describe 'Functions' {
-    Context 'Show-Result Function'{
+    Context 'Show-Result Function' -Skip {
+        # This is a GUI test, check manually before release
     }
 
     Context 'Test-RegistryValueMatch Function'{
+        # Test that the Test-RegistryValueMatch function returns valid results from the registry
         It 'Value matches' {
             Test-RegistryValueMatch -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -Value 'Public' -stringmatch 'Public' | Should -Be $true
         }
@@ -75,7 +77,7 @@ Describe 'Functions' {
         }
     }
 
-    Context 'DenyInteractiveLogonRight Function'{
+    Context 'DenyInteractiveLogonRight Function' -Skip {
         #SeDenyInteractiveLogonRight not present in circleci instance
         It 'User exists on system' {
             # $objUser = New-Object System.Security.Principal.NTAccount("circleci")
@@ -94,10 +96,12 @@ Describe 'Functions' {
 
     }
 
-    Context 'Register-NativeMethod Function'{
+    Context 'Register-NativeMethod Function' -Skip {
+        # Register a C# Method to PWSH context we effectively test this with Migration tests
     }
 
-    Context 'Add-NativeMethod Function'{
+    Context 'Add-NativeMethod Function' -Skip {
+        # Add a C# Method to PWSH context we effectively test this with Migration tests
     }
 
     Context 'New-LocalUserProfile Function'{
@@ -134,6 +138,7 @@ Describe 'Functions' {
     }
 
     Context 'Set-ValueToKey Function'{
+        # Test that we can write to the registry when providing a key and value
         It 'Value is set on existing key' {
             Set-ValueToKey -registryRoot LocalMachine -keyPath 'SYSTEM\Software' -name '1' -value '1' -regValueKind DWord
             Get-ItemPropertyValue -Path 'HKLM:\SYSTEM\Software\' -Name '1' | Should -Be '1'
@@ -141,6 +146,7 @@ Describe 'Functions' {
     }
 
     Context 'New-RegKey Function'{
+        # Test that we can create new keys
         It 'Key is created' {
             New-RegKey -keyPath 'SYSTEM\1' -registryRoot LocalMachine
             test-path 'HKLM:\SYSTEM\1' | Should -Be $true
@@ -149,16 +155,13 @@ Describe 'Functions' {
 
     Context 'Get-SID Function'{
         It 'Profile exists and sid returned' {
-            # TODO: testing that the SID length is 44 isn't testing the Get-SID function, nor can we expect the SID length to be 44 each time.
-            # $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\circleci'| Select-Object SID).SID.Length | Should -Be '44'
-            # Get-SID -User:'circleci' -eq $circlecisid | Should -Be $true
-            # TODO: Agree on new test
             # SID of circleCI user should match SID regex pattern
             Get-SID -User:'circleci' -cnotmatch "^S-\d-\d+-(\d+-){1,14}\d+$" | Should -Be $true
         }
     }
 
-    Context 'Set-UserRegistryLoadState Function'{
+    Context 'Set-UserRegistryLoadState Function' -Skip {
+        # Unload and load user registry - we are testing this in Migration tests
         It 'Load ' {
             # $circlecisid = (Get-SID -User:'circleci')
             # Set-UserRegistryLoadState -op Load -ProfilePath 'C:\Users\circleci\' -UserSid $circlecisid
@@ -166,18 +169,21 @@ Describe 'Functions' {
             # Test-Path -Path 'HKU:\$($circlecisid)'
         }
 
-        It 'Unload' -skip{
+        It 'Unload'{
 
         }
     }
 
-    Context 'Test-UserRegistryLoadState Function'{
+    Context 'Test-UserRegistryLoadState Function' -skip{
+        # Tested in Migration Tests
     }
 
-    Context 'Backup-RegistryHive Function'{
+    Context 'Backup-RegistryHive Function' -skip{
+        # Tested in Migration Tests
     }
 
-    Context 'Get-ProfileImagePath Function'{
+    Context 'Get-ProfileImagePath Function' -skip{
+        # Tested in Migration Tests
     }
 
     Context 'Get-WindowsDrive Function'{
@@ -275,6 +281,7 @@ Describe 'Functions' {
     Context 'Uninstall-Program Function'{
 
         It 'Uninstall - aws command line interface' -Skip {
+            #TODO: This test actually be install something new, and uninstall should work
             uninstall-program -programname 'AWS Command Line Interface'
             start-sleep -Seconds 5
             Test-ProgramInstalled -programName 'AWS Command Line Interface' | Should -Be $false
@@ -432,18 +439,15 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Test-UsernameOrSID Function'{
+    Context 'Test-UsernameOrSID Function' -Skip {
+        # Tested in Migration Tests
         It 'Test-UsernameOrSID' {
 
         }
     }
 
-    Context 'Invoke-JumpCloudAgentInstall Function' -Skip{
-        It 'Invoke-JumpCloudAgentInstall' {
-        }
-    }
-
     Context 'Restart-ComputerWithDelay Function' -Skip{
+        # Test Manually
         It 'Restart-ComputerWithDelay' {
         }
     }
