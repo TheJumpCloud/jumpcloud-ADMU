@@ -1035,7 +1035,6 @@ Function Install-JumpCloudAgent(
         Write-ToLog -Message:('JumpCloud Agent Download Complete')
         Write-ToLog -Message:('Running JCAgent Installer')
         #Run Installer
-        # Invoke-JumpCloudAgentInstall -AgentPath $AGENT_INSTALLER_PATH -ConnectKey $JumpCloudConnectKey
         $installJCParams = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/VERYSILENT", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
         Invoke-Expression "$installJCParams"
         $timeout = 0
@@ -1195,11 +1194,6 @@ function Test-UsernameOrSID
 #endregion Functions
 
 #region Agent Install Helper Functions
-Function Invoke-JumpCloudAgentInstall()
-{
-    $params = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/VERYSILENT", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
-    Invoke-Expression "$params"
-}
 
 Function Restart-ComputerWithDelay
 {
@@ -1245,7 +1239,6 @@ Function Start-Migration
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$LeaveDomain = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ForceReboot = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$UpdateHomePath = $false,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AzureADProfile = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$InstallJCAgent = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AutobindJCUser = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
@@ -1267,7 +1260,7 @@ Function Start-Migration
         # Conditional ParameterSet logic
         If ($PSCmdlet.ParameterSetName -eq "form")
         {
-            $SelectedUserName = $inputObject.DomainUserName
+            $SelectedUserName = $inputObject.SelectedUserName
             $JumpCloudUserName = $inputObject.JumpCloudUserName
             $TempPassword = $inputObject.TempPassword
             if (($inputObject.JumpCloudConnectKey).Length -eq 40)
@@ -1283,15 +1276,11 @@ Function Start-Migration
             $LeaveDomain = $InputObject.LeaveDomain
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
-            $netBiosName = $inputObject.NetBiosName
             $displayGuiPrompt = $true
-        }
-        else
-        {
-            $netBiosName = Get-NetBiosName
         }
 
         # Define misc static variables
+        $netBiosName = Get-NetBiosName
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
         $localComputerName = $WmiComputerSystem.Name
         $windowsDrive = Get-WindowsDrive
@@ -1303,17 +1292,13 @@ Function Start-Migration
         $msvc2013x64Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x64.exe'
         $msvc2013x86Install = "$jcAdmuTempPath$msvc2013x86File /install /quiet /norestart"
         $msvc2013x64Install = "$jcAdmuTempPath$msvc2013x64File /install /quiet /norestart"
+        $netBiosName = Get-NetBiosName
 
         # JumpCloud Agent Installation Variables
         $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
-        # $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
         $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
-        # $AGENT_SERVICE_NAME = "JumpCloud-agent"
         $AGENT_INSTALLER_URL = "https://s3.amazonaws.com/jumpcloud-windows-agent/production/JumpCloudInstaller.exe"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\JumpCloudInstaller.exe"
-        # $AGENT_UNINSTALLER_NAME = "unins000.exe"
-        # $EVENT_LOGGER_KEY_NAME = "hklm:\SYSTEM\CurrentControlSet\services\eventlog\Application\JumpCloud-agent"
-        # $INSTALLER_BINARY_NAMES = "JumpCloudInstaller.exe,JumpCloudInstaller.tmp"
         # Track migration steps
         $admuTracker = [Ordered]@{
             backupOldUserReg    = @{'pass' = $false; 'fail' = $false }
@@ -1344,38 +1329,7 @@ Function Start-Migration
         {
             new-item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
         }
-
-        # Test checks
-        if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD')
-        {
-            $DomainName = 'AzureAD'
-            $netBiosName = 'AzureAD'
-            Write-ToLog -Message:($localComputerName + ' is currently Domain joined and $AzureADProfile = $true')
-        }
-        elseif ($AzureADProfile -eq $false)
-        {
-            $DomainName = $WmiComputerSystem.Domain
-            $netBiosName = Get-NetBiosName
-            Write-ToLog -Message:($localComputerName + ' is currently Domain joined to ' + $DomainName + ' NetBiosName is ' + $netBiosName)
-        }
-        #endregion Test checks
-
-        # Check User Shell Paths
-
-        #$oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
-
-        #TODO: move regload/unload test into begin block from below
-        #Set-UserRegistryLoadState -op "Unload" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSid
-        #$Set-UserRegistryLoadState -op "Load" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSid
-
-        #$mountedreg = 'HCU:\' + $SelectedUserSid + '_admu' + '\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders'
-
-        #Test-RegistryValueMatch -Path $mountedreg -Value 'Templates' -stringmatch $oldUserProfileImagePath
-
-        #Set-UserRegistryLoadState -op "Unload" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSid
-
-        #endregion Check User Shell Paths
-
+        Write-ToLog -Message:($localComputerName + ' is currently Domain joined to ' + $WmiComputerSystem.Domain + ' NetBiosName is ' + $netBiosName)
     }
     Process
     {
@@ -1520,8 +1474,6 @@ Function Start-Migration
         $acl.SetAccessRule($AccessRule)
         Write-ToLog -Message:("Applying ACL...")
         $acl | Set-Acl $newUserProfileImagePath
-        # $acl_updated = Get-Acl ($newUserProfileImagePath)
-        # Write-ToLog -Message:("Updated ACLs: $($acl_updated.access)")
 
         # Load New User Profile Registry Keys
         Set-UserRegistryLoadState -op "Load" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID

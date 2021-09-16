@@ -110,7 +110,7 @@ function DecodeBase64Image
             </Grid>
         </GroupBox>
         <Image Name="JCLogoImg" HorizontalAlignment="Left" Height="33" VerticalAlignment="Top" Margin="9,0,0,0" Width="500"/>
-        <Button Name="bDeleteProfile" Content="Select Profile" HorizontalAlignment="Left" Margin="237,418,0,0" VerticalAlignment="Top" Width="146" Height="26" IsEnabled="False" Grid.Column="1" Grid.ColumnSpan="2"/>
+        <Button Name="bMigrateProfile" Content="Select Profile" HorizontalAlignment="Left" Margin="237,418,0,0" VerticalAlignment="Top" Width="146" Height="26" IsEnabled="False" Grid.Column="1" Grid.ColumnSpan="2"/>
         <GroupBox Header="Migration Steps" HorizontalAlignment="Left" Height="148" VerticalAlignment="Top" Width="655" FontWeight="Bold" Margin="315,34,0,0" Grid.ColumnSpan="3">
             <TextBlock HorizontalAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Top" Height="118" Width="632" FontWeight="Normal"><Run Text="1. Select a domain or AzureAD account to be migrated to a local account from the list below."/><LineBreak/><Run Text="2. Enter a local account username and temporary password. The selected account will be migrated to this local account."/><LineBreak/><Run Text="3.(Optionally) Select Install JC Agent and provide a Connect Key to install the JC agent on this system."/><LineBreak/><Run Text="4.(Optionally) Select Autobind JC User and provide an API Key to bind the new local username to your JC organization."/><LineBreak/><Run Text="5.(Optionally) Select Force Reboot and/or Leave Domain as required."/><LineBreak/><Run Text="6. Click the Migrate Profile button."/><LineBreak/><Run Text="For further information check out the JC ADMU Wiki. - https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki"/></TextBlock>
         </GroupBox>
@@ -315,8 +315,8 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
                 -and !(($($lvProfileList.selectedItem.Username) -split '\\')[0] -match $WmiComputerSystem.Name)`
                 -and !(Test-Localusername $tbJumpCloudUserName.Text))
         {
-            $script:bDeleteProfile.Content = "Migrate Profile"
-            $script:bDeleteProfile.IsEnabled = $true
+            $script:bMigrateProfile.Content = "Migrate Profile"
+            $script:bMigrateProfile.IsEnabled = $true
             Return $true
         }
         ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
@@ -324,8 +324,8 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
                 -and !(Test-Localusername $tbJumpCloudUserName.Text))
         {
-            $script:bDeleteProfile.Content = "Migrate Profile"
-            $script:bDeleteProfile.IsEnabled = $true
+            $script:bMigrateProfile.Content = "Migrate Profile"
+            $script:bMigrateProfile.IsEnabled = $true
             Return $true
         }
         ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
@@ -333,8 +333,8 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
                 -and !(Test-Localusername $tbJumpCloudUserName.Text))
         {
-            $script:bDeleteProfile.Content = "Migrate Profile"
-            $script:bDeleteProfile.IsEnabled = $true
+            $script:bMigrateProfile.Content = "Migrate Profile"
+            $script:bMigrateProfile.IsEnabled = $true
             Return $true
         }
         Elseif (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
@@ -343,34 +343,34 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
                 -and !($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name)`
                 -and !(Test-Localusername $tbJumpCloudUserName.Text))
         {
-            $script:bDeleteProfile.Content = "Migrate Profile"
-            $script:bDeleteProfile.IsEnabled = $true
+            $script:bMigrateProfile.Content = "Migrate Profile"
+            $script:bMigrateProfile.IsEnabled = $true
             Return $true
         }
         Elseif ($lvProfileList.selectedItem.Username -eq 'UNKNOWN ACCOUNT')
         {
             # Unmatched Profile, prevent migration
-            $script:bDeleteProfile.Content = "Select Domain Profile"
-            $script:bDeleteProfile.IsEnabled = $false
+            $script:bMigrateProfile.Content = "Select Domain Profile"
+            $script:bMigrateProfile.IsEnabled = $false
             Return $false
         }
         elseif (($($lvProfileList.selectedItem.Username) -split '\\')[0] -match $WmiComputerSystem.Name)
         {
-            $script:bDeleteProfile.Content = "Select Domain Profile"
-            $script:bDeleteProfile.IsEnabled = $false
+            $script:bMigrateProfile.Content = "Select Domain Profile"
+            $script:bMigrateProfile.IsEnabled = $false
             Return $false
         }
         Else
         {
-            $script:bDeleteProfile.Content = "Migrate Profile"
-            $script:bDeleteProfile.IsEnabled = $false
+            $script:bMigrateProfile.Content = "Migrate Profile"
+            $script:bMigrateProfile.IsEnabled = $false
             Return $false
         }
     }
     Else
     {
-        $script:bDeleteProfile.Content = "Select Profile"
-        $script:bDeleteProfile.IsEnabled = $false
+        $script:bMigrateProfile.Content = "Select Profile"
+        $script:bMigrateProfile.IsEnabled = $false
         Return $false
     }
 }
@@ -577,8 +577,8 @@ $lvProfileList.Add_SelectionChanged( {
         $hku = ('HKU:\' + $SelectedUserSID)
         if (Test-Path -Path $hku)
         {
-            $script:bDeleteProfile.Content = "User Registry Loaded"
-            $script:bDeleteProfile.IsEnabled = $false
+            $script:bMigrateProfile.Content = "User Registry Loaded"
+            $script:bMigrateProfile.IsEnabled = $false
             $script:tbJumpCloudUserName.IsEnabled = $false
             $script:tbTempPassword.IsEnabled = $false
         }
@@ -589,7 +589,7 @@ $lvProfileList.Add_SelectionChanged( {
         }
     })
 
-$bDeleteProfile.Add_Click( {
+$bMigrateProfile.Add_Click( {
         if ($tbJumpCloudAPIKey.Text -And $tbJumpCloudUserName.Text -And $AutobindJCUser) {
             $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $tbJumpCloudAPIKey.Text -Username $tbJumpCloudUserName.Text -Prompt $true
             if ($testResult) {
@@ -605,19 +605,11 @@ $bDeleteProfile.Add_Click( {
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('AutobindJCUser') -Value:($AutobindJCUser)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('LeaveDomain') -Value:($LeaveDomain)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ForceReboot') -Value:($ForceReboot)
-        # Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('DomainUserName') -Value:($SelectedUserName.Substring($SelectedUserName.IndexOf('\') + 1))
-        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('DomainUserName') -Value:($SelectedUserName)
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('SelectedUserName') -Value:($SelectedUserName)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudUserName') -Value:($tbJumpCloudUserName.Text)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('TempPassword') -Value:($tbTempPassword.Text)
-        if (($tbJumpCloudConnectKey.Text).length -eq 40)
-        {
-            Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudConnectKey') -Value:($tbJumpCloudConnectKey.Text)
-        }
-        if (($tbJumpCloudAPIKey.Text).length -eq 40)
-        {
-            Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudAPIKey') -Value:($tbJumpCloudAPIKey.Text)
-        }
-        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('NetBiosName') -Value:($SelectedUserName)
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudConnectKey') -Value:($tbJumpCloudConnectKey.Text)
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudAPIKey') -Value:($tbJumpCloudAPIKey.Text)
         # Close form
         $Form.Close()
     })
@@ -652,7 +644,7 @@ $Profiles | ForEach-Object { $lvProfileList.Items.Add($_) | Out-Null }
 #===========================================================================
 $Form.Showdialog()
 
-If ($bDeleteProfile.IsEnabled -eq $true)
+If ($bMigrateProfile.IsEnabled -eq $true)
 {
     Return $FormResults
 }
