@@ -15,9 +15,8 @@ Starts the JumpCloud Active Directory Migration process.
 ### cmd
 ```
 Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPassword <String>
- [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-AzureADProfile <Boolean>]
- [-InstallJCAgent <Boolean>] [-AutobindJCUser <Boolean>] [-JumpCloudConnectKey <String>]
- [-JumpCloudAPIKey <String>] [<CommonParameters>]
+ [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
+ [-AutobindJCUser <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [<CommonParameters>]
 ```
 
 ### form
@@ -45,21 +44,6 @@ PS C:\> Start-Migration -SelectedUserName 'DOMAIN\bobfay' -JumpCloudUserName 'bo
 This example would run the `Start-Migration` function on a domain user `DOMAIN\jsmith` and create a new local user account `COMPUTERNAME\john.smith`. Using a temporary password `Temp123!Temp123!`, the system would remain bound to the current domain and not reboot. The JumpCloud Agent would not be installed. This would allow the administrator to run the converted account in parallel for testing.
 
 ## PARAMETERS
-
-### -AzureADProfile
-A boolean $true/$false value to allow the conversion of AzureAD profile. This will set the domain account used in the migration to `AZUREAD\`.
-
-```yaml
-Type: System.Boolean
-Parameter Sets: cmd
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
 
 ### -ForceReboot
 A boolean $true/$false value to force the system to reboot at the end of the migration process. A reboot is required when unbinding from a domain.
