@@ -273,7 +273,7 @@ Describe 'Migration Test Scenarios' {
                     Write-Host "Waiting 5 seconds for system to receive command..."
                     $count += 1
                     start-sleep 5
-                } until (($invokeResults) -or ($count -eq 24))
+                } until (($invokeResults) -or ($count -eq 48))
                 Write-Host "Command pushed to system, waiting on results"
                 $count = 0
                 do
@@ -282,7 +282,7 @@ Describe 'Migration Test Scenarios' {
                     Write-host "Waiting 5 seconds on results..."
                     $count += 1
                     start-sleep 5
-                } until ((($CommandResults.DataExitCode) -is [int]) -or ($count -eq 24))
+                } until ((($CommandResults.DataExitCode) -is [int]) -or ($count -eq 48))
                 $CommandResults.DataExitCode | Should -Be 0
             }
         }
