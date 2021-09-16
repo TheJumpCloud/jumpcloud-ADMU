@@ -1870,7 +1870,6 @@ Function Start-Migration
 
         # Cleanup Folders Again Before Reboot
         Write-ToLog -Message:('Removing Temp Files & Folders.')
-        Start-Sleep -s 10
         try
         {
             Remove-ItemIfExist -Path:($jcAdmuTempPath) -Recurse
@@ -2001,7 +2000,7 @@ Function Start-Migration
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })))
         {
             Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
-            Write-ToLog -Message:('Tool options chosen were : ' + "`nInstall JC Agent = " + $InstallJCAgent + "`nLeave Domain = " + $LeaveDomain + "`nForce Reboot = " + $ForceReboot + "`nAzureADProfile = " + $AzureADProfile + "`nUpdate Home Path" + $UpdateHomePath + "Autobind JC User" + $AutobindJCUser)
+            Write-ToLog -Message:('Tool options chosen were : ' + "`nInstall JC Agent = " + $InstallJCAgent + "`nLeave Domain = " + $LeaveDomain + "`nForce Reboot = " + $ForceReboot + "`nUpdate Home Path" + $UpdateHomePath + "Autobind JC User" + $AutobindJCUser)
             if ($displayGuiPrompt)
             {
                 Show-Result -domainUser $SelectedUserName $ -localUser "$($localComputerName)\$($JumpCloudUserName)" -success $true -profilePath $newUserProfileImagePath -logPath $jcAdmuLogFile

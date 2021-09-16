@@ -6,12 +6,15 @@ Release Date: September 16, 2021
 
 ```
 * Added API Key form and parameter to allow for "Auto-Binding" the user during Migration
-    * If selected, both the API Key and Connect Key values must be entered
-    * At the end of migration the ADMU will search the JumpCloud Organization for the username entered and bind the user to the system
+    * If selected, both the API Key value must also be entered
+    * At the end of migration the ADMU will search the JumpCloud Organization for the username entered and bind the user to the system. If the user does not exist the ADMU log will produce a warning message.
+    * The GUI will validate that the JumpCloud user exists in the console before Migration
 * GUI runs of the ADMU should prompt to view the log after migration
 * The migration user's registry hive is saved as a unique filename (ex: NTUSER_original.DAT is now NTUSER_original_yyyy-mm-dd-HHMMSS)
-* The 2.0.0 version of the tool no longer includes the Microsoft User State Migration Tool. Priror versions of the tool should be used if it's necessary to copy data from one profile to another.
+* The 2.0.0 version of the tool no longer includes the Microsoft User State Migration Tool (USMT). Prior versions of the tool should be used if it's necessary to copy data from one profile to another.
     * The default behavior of the 2.0.0 tool is to convert accounts with what was previously the `ConvertProfile` parameter.
+    * If profile data was mapped to a network share, the USMT could have a valid use case but the Custom XML would have to populated to migrate that data
+    * This is a breaking change for the CLI version of the tool, the convertProfile parameter does not exist in 2.0.0
 
 ```
 
