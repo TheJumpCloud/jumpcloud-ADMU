@@ -29,7 +29,7 @@ Describe 'Build Tests' {
 
         It 'XAML Form version' {
             $FormPath = "$PSScriptRoot\..\Form.ps1"
-            $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
+            $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )([0-9]+)\.([0-9]+)\.([0-9]+)'
             $formversion = Select-String -Path:($formpath) -Pattern:($VersionRegex)
             $branchformversion = [version]$formversion.Matches.value
             $masterform = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1 -useBasicParsing).tostring()
@@ -39,21 +39,20 @@ Describe 'Build Tests' {
             $branchformversion.$($env:ModuleVersionType) | Should -Be ($masterformversion.$($env:ModuleVersionType) + 1)
         }
 
-        It 'Start-Migration version' -Skip{
+        It 'Start-Migration version'{
             $startMigrationPath = "$PSScriptRoot\..\Start-Migration.ps1"
-            # $VersionRegex = [regex]"(\$admuVersion = )\'(.*?)\'"
-            $VersionRegex = [regex]"(admuVersion = )'(.*?)'"
+            $VersionRegex = [regex]"(?<=admuVersion = ')(([0-9]+)\.([0-9]+)\.([0-9]+))"
             $admuversion = Select-String -Path:($startMigrationPath) -Pattern:($VersionRegex)
-            $branchStartMigrationVersion = [version]$admuversion.Matches.Groups[2].value
+            $branchStartMigrationVersion = [version]$admuversion.Matches.value
             $masterStartMigration = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Start-Migration.ps1 -useBasicParsing).tostring()
             $masterVersion = Select-String -inputobject:($masterStartMigration) -Pattern:($VersionRegex)
-            $masterStartMigrationVersion = [version]$masterVersion.Matches.Groups[2].value
+            $masterStartMigrationVersion = [version]$masterVersion.Matches.value
             $branchStartMigrationVersion | Should -BeGreaterThan $masterStartMigrationVersion
             $branchStartMigrationVersion.$($env:ModuleVersionType) | Should -Be ($masterStartMigrationVersion.$($env:ModuleVersionType) + 1)
         }
 
         It 'gui_jcadmu.exe version' {
-            $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
+            $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )([0-9]+)\.([0-9]+)\.([0-9]+)'
             $masterform = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1 -useBasicParsing).tostring()
             $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
             $masterformversion = [version]$masterversion.Matches.value
@@ -64,7 +63,7 @@ Describe 'Build Tests' {
 
         It 'gui_jcadmu.exe signature valid' -skip {
             #(Get-AuthenticodeSignature ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\exe\gui_jcadmu.exe')).Status  | Should -Be 'Valid'
-            #TODO: why this test?
+
         }
     }
 }

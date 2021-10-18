@@ -7,7 +7,7 @@ param (
 
 $Output = $RootPath + '\Deploy\ADMU.ps1'
 $FormPath = $RootPath + '\jumpcloud-ADMU\Powershell\Form.ps1'
-$VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )(.*?)(?=" )'
+$VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )([0-9]+)\.([0-9]+)\.([0-9]+)'
 # Clear existing file
 If (Test-Path -Path:($Output)) { Remove-Item -Path:($Output) }
 
