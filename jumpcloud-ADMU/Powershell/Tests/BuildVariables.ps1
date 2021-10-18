@@ -49,3 +49,36 @@ $JCCommandTestingHash = @{
     #     JCUserSID   = '';
     # }
 }
+$JCFunctionalHash = @{
+    testCase1 = @{
+        Description    = 'Test that user is jumpcloud bound to system after migration'
+        Username       = 'ADMU_bind';
+        UserSID        = '';
+        Password       = $testUserPassword;
+        JCUsername     = 'ADMU_bind2';
+        UpdateHomePath = $false
+    }
+}
+
+$JCReversionHash = @{
+    testCase1 = @{
+        Description    = 'Reverse'
+        Username       = 'ADMU_newUserInit';
+        UserSID        = '';
+        Password       = $testUserPassword;
+        JCUsername     = 'ADMU_newUserInit2';
+        UpdateHomePath = $true;
+
+    }
+}
+$JCExistingHash = @{
+    renameOriginalFiles = @{
+        Description    = 'Existing'
+        Username       = 'ADMU_ExistingUser';
+        UserSID        = '';
+        Password       = $testUserPassword;
+        JCUsername     = 'ADMU_ADMU_ExistingUser2';
+        UpdateHomePath = $false
+
+    }
+}

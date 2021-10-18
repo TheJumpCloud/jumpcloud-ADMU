@@ -33,7 +33,7 @@ foreach ( $i in $OnlineComputers )
     # Step 1 - Convert the Profile
     $ADMUConvertSession = New-PSSession -ComputerName $System.ComputerName
     Invoke-Command -asJob -Session $ADMUConvertSession -JobName 'ADMU-Job' -ScriptBlock {
-        Param ($SelectedUserName, $JumpCloudUserName, $TempPassword, $JumpCloudConnectKey, $AcceptEULA, $InstallJCAgent, $LeaveDomain, $ForceReboot, $AzureADProfile, $Customxml, $ConvertProfile, $CreateRestore, $JcApiKey)
+        Param ($SelectedUserName, $JumpCloudUserName, $TempPassword, $JumpCloudConnectKey, $InstallJCAgent, $LeaveDomain, $ForceReboot, $AzureADProfile, $ConvertProfile, $JcApiKey)
         # Logoff all users on the system
         $quserResult = quser
         $quserRegex = $quserResult | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
@@ -47,19 +47,16 @@ foreach ( $i in $OnlineComputers )
         Install-PackageProvider -Name NuGet -Force
         Install-Module JumpCloud.ADMU -Force
         # Convert Strings to Bools
-        $AcceptEULA = ([System.Convert]::ToBoolean($AcceptEULA))
         $LeaveDomain = ([System.Convert]::ToBoolean($LeaveDomain))
         $ForceReboot = ([System.Convert]::ToBoolean($ForceReboot))
         $AzureADProfile = ([System.Convert]::ToBoolean($AzureADProfile))
         $InstallJCAgent = ([System.Convert]::ToBoolean($InstallJCAgent))
-        $Customxml = ([System.Convert]::ToBoolean($Customxml))
         $ConvertProfile = ([System.Convert]::ToBoolean($ConvertProfile))
-        $CreateRestore = ([System.Convert]::ToBoolean($CreateRestore))
 
         # Start Migration
         Set-ExecutionPolicy -ExecutionPolicy Bypass
         # TODO: Deselect or don't pass in forceReboot
-        Start-Migration -SelectedUserName $SelectedUserName -JumpCloudUserName $JumpCloudUserName -TempPassword $TempPassword -JumpCloudConnectKey $JumpCloudConnectKey -AcceptEULA $AcceptEULA -InstallJCAgent $InstallJCAgent -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -AZureADProfile $AzureADProfile -ConvertProfile $ConvertProfile -CreateRestore $CreateRestore
+        Start-Migration -SelectedUserName $SelectedUserName -JumpCloudUserName $JumpCloudUserName -TempPassword $TempPassword -JumpCloudConnectKey $JumpCloudConnectKey -InstallJCAgent $InstallJCAgent -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -AZureADProfile $AzureADProfile -ConvertProfile $ConvertProfile
 
         # Step 2 - Bind User Steps
         # Get the JumpCloud SystemKey
@@ -121,7 +118,7 @@ foreach ( $i in $OnlineComputers )
         # Force Reboot
         Write-Host "Rebooting as Job"
         Restart-Computer -Force -asJob
-    } -ArgumentList  ($System.SelectedUserName, $System.JumpCloudUserName, $System.TempPassword, $System.JumpCloudConnectKey, $System.AcceptEULA, $System.InstallJCAgent, $System.LeaveDomain, $System.ForceReboot, $System.AzureADProfile, $System.Customxml, $System.ConvertProfile, $System.CreateRestore, $JcApiKey)
+    } -ArgumentList  ($System.SelectedUserName, $System.JumpCloudUserName, $System.TempPassword, $System.JumpCloudConnectKey, $System.InstallJCAgent, $System.LeaveDomain, $System.ForceReboot, $System.AzureADProfile, $System.ConvertProfile, $JcApiKey)
 }
 
 $confirmation = Read-Host "Do you want to remove all completed psjobs and sessions: (y/n)"
