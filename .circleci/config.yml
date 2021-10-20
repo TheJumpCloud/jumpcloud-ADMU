@@ -1,12 +1,14 @@
 version: 2.1
 parameters:
   buildReleaseType:
-    description: 'Semantic Version increment type of the release. Valid values: major, minor, patch'
-    default: "patch"
+    description: "Semantic Version increment type of the release. Valid values: major, minor, patch"
+    default: "major"
     type: enum
     enum: ["major", "minor", "patch"]
 orbs:
   win: circleci/windows@2.2.0
+  slack: circleci/slack@4.1
+
 build-and-sign-ADMU: &build-and-sign-ADMU
   - Build
   - Pester Tests:
@@ -16,7 +18,7 @@ build-and-sign-ADMU: &build-and-sign-ADMU
   #    requires:
   #      - Build
   #      - Pester Tests
-    #  context: secrethub-credentials
+  #  context: secrethub-credentials
   - Build Module:
       requires:
         - Build
@@ -82,6 +84,7 @@ jobs:
           name: Build
           shell: powershell.exe
           command: |
+            $ErrorActionPreference = 'Stop'
             ./Deploy/Build.ps1 $env:CIRCLE_WORKING_DIRECTORY
       - persist_to_workspace:
           root: .
@@ -121,6 +124,7 @@ jobs:
       - store_test_results:
           name: Uploading test results for ADMU'
           path: ./jumpcloud-ADMU/test_results/
+
   Sign Executable:
     executor: win/default
     steps:
@@ -208,12 +212,12 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - '6b:97:dc:6d:d1:d1:3f:67:62:c4:ad:2d:96:3c:9a:d7'
+            - "6b:97:dc:6d:d1:d1:3f:67:62:c4:ad:2d:96:3c:9a:d7"
       - attach_workspace:
           at: .
       - run:
           when: on_success
-          name: 'Commit ADMU Module to << pipeline.git.branch >>'
+          name: "Commit ADMU Module to << pipeline.git.branch >>"
           shell: pwsh.exe
           command: |
             $UserEmail = If ($env:CIRCLE_PROJECT_USERNAME) { $env:CIRCLE_PROJECT_USERNAME } Else { ($env:USERNAME).Replace(' ', '') + '@FakeEmail.com' }
