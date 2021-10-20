@@ -42,15 +42,12 @@ $ScriptBlock ={
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name JumpCloudUserName -Value $null
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name SelectedUserName -Value $null
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name TempPassword -Value 'Temp123!'
-        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name AcceptEULA -Value 'true'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name LeaveDomain -Value 'false'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name ForceReboot -Value 'false'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name AzureADProfile -Value 'false'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name InstallJCAgent -Value 'false'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name JumpCloudConnectKey -Value '1111111111111111111111111111111111111111'
-        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name Customxml -Value 'false'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name ConvertProfile -Value 'true'
-        $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name CreateRestore -Value 'false'
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name MigrationSuccess -Value $null
         $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name DomainName -Value "$($info.csdomain)"
 
