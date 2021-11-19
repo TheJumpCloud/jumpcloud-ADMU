@@ -617,10 +617,10 @@ Function Get-ProfileImagePath
         return $profileImagePath
     }
 }
+
 Function Get-WindowsDrive
 {
-    $drive = (wmic OS GET SystemDrive /VALUE)
-    $drive = [regex]::Match($drive, 'SystemDrive=(.\:)').Groups[1].Value
+    $drive = (Get-WmiObject Win32_OperatingSystem).SystemDrive
     return $drive
 }
 
