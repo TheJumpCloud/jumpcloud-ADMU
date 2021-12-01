@@ -32,33 +32,33 @@ $jcdiscoverycsv = (Get-GitHubContent -OwnerName $GHUsername -RepositoryName $GHR
     New-Item -ItemType Directory -Force -Path $workingdir | Out-Null
     $dlname = ($workingdir + '\jcdiscovery.csv')
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $wc = New-Object System.Net.Webclient
-    $wc.DownloadFile($file.download_url, $dlname)
+    Invoke-WebRequest -Uri $jcdiscoverycsv.download_url -OutFile $dlname
 
 # Import the CSV & check for one row per system
 $ImportedCSV = Import-Csv -Path $discoverycsvlocation
-$counts = $ImportedCSV | Group-Object ComputerName
+$counts = $ImportedCSV | Group-Object LocalComputerName
 foreach ($i in $counts)
 {
     if ($i.count -gt 1)
     {
         write-error "Duplicate system found $($i.Name)"
+        exit 1
     }
 }
 
 # Find user to be migrated
 foreach ($row in $ImportedCSV) {
-    if ($row.Computername -eq ($env:COMPUTERNAME)) {
+    if ($row.LocalComputerName -eq ($env:COMPUTERNAME)) {
         $SelectedUsername = $row.SID
         $JumpCloudUserName = $row.JumpCloudUserName
     }
 }
 
 # Validate parameter are not empty:
-If ( -Not ($JumpCloudUserName)::IsNullOrEmpty)
+If ([string]::IsNullOrEmpty($JumpCloudUserName))
 {
-    Write-Host "Could not migrate user, entry not found in CSV for JumpCloud Username"
-    exit
+    Write-Error "Could not migrate user, entry not found in CSV for JumpCloud Username"
+    exit 1
 }
 
 # Install the latest ADMU from PSGallery

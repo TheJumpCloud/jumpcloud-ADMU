@@ -36,19 +36,19 @@ function Convert-Sid {
 
 # Find local machine SID
 $MachineSID = ($sidquery = (Get-WmiObject -Query "SELECT SID FROM Win32_UserAccount WHERE LocalAccount = 'True'" | Select-Object -First 1 -ExpandProperty SID) -split "-")[0..($sidquery.Length-2)]-join"-"
-$DomainLocalAccounts = Get-WmiObject -ClassName Win32_UserProfile | Select-Object SID,LocalPath,special | Where-Object {($_.SID -match $MachineSID) -and ($_.special -eq $false)}
+$DomainAccounts = Get-WmiObject -ClassName Win32_UserProfile | Select-Object SID,LocalPath,special | Where-Object {($_.SID -notmatch $MachineSID) -and ($_.special -eq $false)}
 
 # Add additional fields
-$DomainLocalAccounts | Add-Member -MemberType NoteProperty -Name LocalComputerName -Value $env:COMPUTERNAME
-$DomainLocalAccounts | Add-Member -MemberType NoteProperty -Name LocalUsername -Value $null
-$DomainLocalAccounts | Add-Member -MemberType NoteProperty -Name JumpCloudUserName -Value ''
+$DomainAccounts | Add-Member -MemberType NoteProperty -Name LocalComputerName -Value $env:COMPUTERNAME
+$DomainAccounts | Add-Member -MemberType NoteProperty -Name LocalUsername -Value $null
+$DomainAccounts | Add-Member -MemberType NoteProperty -Name JumpCloudUserName -Value ''
 
-foreach ($account in $DomainLocalAccounts) {
+foreach ($account in $DomainAccounts) {
         $account.LocalUsername = Convert-Sid -Sid $account.SID
 }
 
 # Output local CSV
-$DomainLocalAccounts | Select-Object SID, LocalPath, LocalComputerName, LocalUsername, JumpCloudUserName | ConvertTo-Json -Compress | out-file $newjsonoutputdir -Encoding unicode
+$DomainAccounts | Select-Object SID, LocalPath, LocalComputerName, LocalUsername, JumpCloudUserName | ConvertTo-Json -Compress | out-file $newjsonoutputdir -Encoding unicode
 
 # Upload latest csv to repo
 $DomainLocalAccountsCSV = (get-content -Path $newjsonoutputdir -Encoding unicode)

@@ -5,10 +5,18 @@ $GHRepoName = 'Jumpcloud-ADMU-Discovery'
 $password = ConvertTo-SecureString "$GHToken" -AsPlainText -Force
 $Cred = New-Object System.Management.Automation.PSCredential ($GHUsername, $password)
 
-$windowstemp = [System.Environment]::GetEnvironmentVariable('TEMP','Machine')
-$newjsonoutputdir = $windowstemp + '\' + $env:COMPUTERNAME + '.json'
-$workingdir = $windowstemp + '\jumpcloud-discovery'
-$discoverycsvlocation = $workingdir + '\jcdiscovery.csv'
+If ($IsMacOS){
+    $tempDir = '~/'
+    $newjsonoutputdir = $tempDir + '/' + $env:COMPUTERNAME + '.json'
+    $workingdir = $tempDir + '\jumpcloud-discovery'
+    $discoverycsvlocation = $workingdir + '\jcdiscovery.csv'
+}
+If ($IsWindows){
+    $windowstemp = [System.Environment]::GetEnvironmentVariable('TEMP','Machine')
+    $newjsonoutputdir = $windowstemp + '\' + $env:COMPUTERNAME + '.json'
+    $workingdir = $windowstemp + '\jumpcloud-discovery'
+    $discoverycsvlocation = $workingdir + '\jcdiscovery.csv'
+}
 
 if ($null -eq (Get-InstalledModule -Name "PowerShellForGitHub" -ErrorAction SilentlyContinue)) {
     Install-Module PowerShellForGitHub -Force
@@ -23,8 +31,7 @@ foreach ($file in $GHJsonFiles) {
     New-Item -ItemType Directory -Force -Path $workingdir | Out-Null
     $dlname = ($workingdir + '\' + $file.name)
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    $wc = New-Object System.Net.Webclient
-    $wc.DownloadFile($file.download_url, $dlname)
+    Invoke-WebRequest -Uri $file.download_url -OutFile $dlname
 }
 
 # Collate into single csv file
