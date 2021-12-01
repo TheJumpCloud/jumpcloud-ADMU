@@ -28,6 +28,7 @@ foreach ($file in $GHJsonFiles) {
 }
 
 # Collate into single csv file
+$combinedjson = @()
 $jsonfiles = Get-ChildItem -Filter *.json -Path $workingdir
 Foreach($File in $jsonfiles) {
    $combinedjson += Get-Content -Raw $File.FullName -Encoding unicode | ConvertFrom-Json
