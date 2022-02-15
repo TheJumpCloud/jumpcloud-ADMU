@@ -5,13 +5,22 @@ $GHRepoName = 'Jumpcloud-ADMU-Discovery'
 $password = ConvertTo-SecureString "$GHToken" -AsPlainText -Force
 $Cred = New-Object System.Management.Automation.PSCredential ($GHUsername, $password)
 
+# If system is Mac, save to home directory
 If ($IsMacOS){
     $tempDir = '~/'
     $newjsonoutputdir = $tempDir + '/' + $env:COMPUTERNAME + '.json'
     $workingdir = $tempDir + '\jumpcloud-discovery'
     $discoverycsvlocation = $workingdir + '\jcdiscovery.csv'
 }
-If ($IsWindows){
+elseif ($IsWindows){
+    # If system is Windows and running Powershell 7.x.xxx, save to %TEMP%\Jumpcloud-discovery
+    $windowstemp = [System.Environment]::GetEnvironmentVariable('TEMP','Machine')
+    $newjsonoutputdir = $windowstemp + '\' + $env:COMPUTERNAME + '.json'
+    $workingdir = $windowstemp + '\jumpcloud-discovery'
+    $discoverycsvlocation = $workingdir + '\jcdiscovery.csv'
+}
+else {
+    # Assume PowerShell 5.1.xxx
     $windowstemp = [System.Environment]::GetEnvironmentVariable('TEMP','Machine')
     $newjsonoutputdir = $windowstemp + '\' + $env:COMPUTERNAME + '.json'
     $workingdir = $windowstemp + '\jumpcloud-discovery'
