@@ -9,7 +9,7 @@ jobs:
           BASE64_ENCODED_SELF_SIGNED_CERT: ${{ secrets.BASE64_ENCODED_SELF_SIGNED_CERT }}
           CERTPASS: ${{ secrets.CERTPASS }}
         run: |
-          ./sign.ps1
+          ./Deploy/Sign.ps1
       - name: Push changes
         run: |
           git config user.name github-actions
