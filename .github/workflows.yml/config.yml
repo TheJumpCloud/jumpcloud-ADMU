@@ -1,0 +1,19 @@
+on: push
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v2
+      - shell: pwsh
+        env:
+          BASE64_ENCODED_SELF_SIGNED_CERT: ${{ secrets.BASE64_ENCODED_SELF_SIGNED_CERT }}
+          CERTPASS: ${{ secrets.CERTPASS }}
+        run: |
+          ./sign.ps1
+      - name: Push changes
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "generated"
+          git push
