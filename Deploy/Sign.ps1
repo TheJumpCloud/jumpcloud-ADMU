@@ -1,34 +1,26 @@
+
+
 # Begin setup Steps
 
-# SecretHub Steps for Eventual CircleCI work
-# # Setup Cert Directory
-# $CertDirectory = "C:\cert\"
-# if (!(Test-Path "$CertDirectory"))
-# {
-#     new-item -path $CertDirectory -ItemType Directory
-# }
-# # Setup SecretHub
-# Invoke-WebRequest https://get.secrethub.io/windows | Invoke-Expression
-# secrethub --version
-# secrethub credential ls
-# secrethub read --out-file $CertDirectory/godaddy_windows_signing_cert.pfx JumpCloud/github/godaddy-win-signcert-pfx
-# secrethub read --out-file $CertDirectory/godaddy_windows_signing_cert_notrim.pfx JumpCloud/github/godaddy-win-signcert-pfx-notrim
-
-
 # Sign Variables
-$signpath = 'C:\tools\signtool.exe'
-$GUI_JCADMU = ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\gui_jcadmu.exe')
-$UWP_JCADMU = ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\Exe\uwp_jcadmu.exe')
+$signpath = 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe'
+$GUI_JCADMU = "$PSScriptRoot/gui_jcadmu_unsigned.exe"
+$base64 = "$env:BASE64_ENCODED_SELF_SIGNED_CERT"
+$password = "$env:CERTPASS"
+$filenameCert = "$PSScriptRoot/cert.pfx"
+$bytes = [convert]::FromBase64String($base64)
+[IO.File]::WriteAllBytes($filenameCert, $bytes)
 
-$certdir = 'C:\agent\_work\_temp\'
-$certFileName = "godaddy_windows_signing_cert.pfx"
-$certPasswordFileName = "godaddy_windows_signing_cert_password.txt"
-$certPath = Join-Path $certDir $certFileName
-$passwordfile = $certdir + $certPasswordFileName
-$password = Get-Content $passwordfile -Raw
 
+
+if (test-path($filenameCert)){
+    Write-Output "Cert found"
+}
+else {
+    Write-Output "Cert not found, exiting"
+    exit 1
+}
 Write-Output "Signing binaries"
-
 New-Variable -Name MaxAttempts -Option Constant -Value 5
 
 # Add backup TSA Servers (RFC 3161) in case we get rate-limited
@@ -39,17 +31,25 @@ $tsaServers = @(
 )
 
 $filesToSign = @(
-    $GUI_JCADMU,
-    $UWP_JCADMU
+    $GUI_JCADMU
 )
 
+
 foreach ($file in $filesToSign) {
+    If (Test-Path -Path ($file)){
+        Write-Output "Attempting to sign $file"
+    }
+    else{
+        Write-Output "$file not found"
+        exit 1
+    }
+
     $tsaIndex = 0
     $attempts = 1
     while ($True) {
         Write-Output "attempting to sign with $($tsaServers[$tsaIndex])"
         & $signpath sign `
-            /f $certpath `
+            /f $filenameCert `
             /fd SHA256 `
             /p $password `
             $file
