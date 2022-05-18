@@ -1,3 +1,25 @@
+## 2.1.0
+
+Release Date: N/a
+
+#### RELEASE NOTES
+
+```
+Test
+
+```
+
+#### FEATURES:
+
+n/a
+
+#### IMPROVEMENTS:
+
+n/a
+
+#### BUG FIXES:
+
+n/a
 ## 2.0.0
 
 Release Date: September 16, 2021

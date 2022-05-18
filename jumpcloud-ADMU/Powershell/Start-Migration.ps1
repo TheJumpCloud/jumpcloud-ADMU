@@ -1251,7 +1251,7 @@ Function Start-Migration
         If (($AutobindJCUser -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudAPIKey))) { Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User" }else {}
 
         # Start script
-        $admuVersion = '2.0.0'
+        $admuVersion = '2.1.0'
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
