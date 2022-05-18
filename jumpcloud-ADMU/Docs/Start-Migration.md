@@ -2,7 +2,7 @@
 external help file: JumpCloud.ADMU-help.xml
 Module Name: JumpCloud.ADMU
 online version: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration
-schema: 2.0.1
+schema: 2.0.0
 ---
 
 # Start-Migration
