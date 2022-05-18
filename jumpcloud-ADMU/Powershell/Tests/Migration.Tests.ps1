@@ -194,7 +194,7 @@ Describe 'Migration Test Scenarios' {
             $match.Matches | Should -Not -BeNullOrEmpty
         }
     }
-    Context 'Start-Migration kicked off through JumpCloud agent' {
+    Context 'Start-Migration kicked off through JumpCloud agent' -Skip {
         BeforeAll {
             # test connection to Org
             $Org = Get-JcSdkOrganization
