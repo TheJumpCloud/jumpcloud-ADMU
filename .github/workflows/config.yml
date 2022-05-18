@@ -1,7 +1,4 @@
-on:
-  push:
-    branches:
-      - 'SA-2496-ADMU-Exe-Sign'
+on: push
 jobs:
   build:
     runs-on: windows-latest
