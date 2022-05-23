@@ -4,7 +4,7 @@
 
 # Sign Variables
 $signpath = 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe'
-$GUI_JCADMU = "D:\a\jumpcloud-ADMU\jumpcloud-ADMU\Exe/gui_jcadmu.exe"
+$GUI_JCADMU = "D:\a\jumpcloud-ADMU\jumpcloud-ADMU/Exe/gui_jcadmu.exe"
 $base64 = "$env:BASE64_ENCODED_SELF_SIGNED_CERT"
 $password = "$env:CERTPASS"
 $filenameCert = "$PSScriptRoot/cert.pfx"
