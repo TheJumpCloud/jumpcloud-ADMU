@@ -1,4 +1,4 @@
-on: push
+on: [repository_dispatch]
 jobs:
   build:
     runs-on: windows-latest
