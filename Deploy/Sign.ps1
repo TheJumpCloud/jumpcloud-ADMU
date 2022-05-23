@@ -5,7 +5,7 @@
 # Sign Variables
 $signpath = 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe'
 $RootPath = Split-Path (Split-Path $PSScriptRoot -Parent)
-Write-Output get-childitem -Path "$RootPath/jumpcloud-ADMU" | format-list * 
+get-childitem -Path "$RootPath/jumpcloud-ADMU" | format-list * 
 $GUI_JCADMU = "$RootPath/jumpcloud-ADMU/Exe/gui_jcadmu.exe"
 $base64 = "$env:BASE64_ENCODED_SELF_SIGNED_CERT"
 $password = "$env:CERTPASS"
