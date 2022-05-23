@@ -1,4 +1,4 @@
-on: repository_dispatch #Trigger
+on: workflow_dispatch #Trigger
 jobs:
   build:
     runs-on: windows-latest
