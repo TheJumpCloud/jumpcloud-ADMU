@@ -4,9 +4,9 @@
 
 # Sign Variables
 $signpath = 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe'
-$RootPath = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$RootPath = Split-Path (Split-Path $PSScriptRoot -Parent)
 Write-Output $RootPath
-$GUI_JCADMU = "$RootPath/Exe/gui_jcadmu.exe"
+$GUI_JCADMU = "$RootPath\Exe/gui_jcadmu.exe"
 $base64 = "$env:BASE64_ENCODED_SELF_SIGNED_CERT"
 $password = "$env:CERTPASS"
 $filenameCert = "$PSScriptRoot/cert.pfx"
