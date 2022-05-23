@@ -1,4 +1,4 @@
-on: [repository_dispatch]
+on: repository_dispatch #Trigger
 jobs:
   build:
     runs-on: windows-latest
