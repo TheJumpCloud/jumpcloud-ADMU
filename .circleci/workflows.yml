@@ -6,12 +6,12 @@ workflows:
   setup:
     jobs:
       - continuation/continue:
-          configuration_path: ".circleci/config.yml"
+          config-path: ".circleci/config.yml"
           pre-steps:
             - run:
                 command: |
                   if [ -z "${CIRCLE_PULL_REQUEST##*/}" ]
                   then
-                    IS_PR=false
+                    is_pr=false
                   else
-                    IS_PR=true
+                    is_pr=true
