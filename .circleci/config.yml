@@ -23,6 +23,18 @@ build-and-sign-ADMU: &build-and-sign-ADMU
       requires:
         - Build
         - Pester Tests
+  - Sign Exe
+      # context: github-credentials
+      # requires:
+      #   - Build
+      #   - Pester Tests
+      #   - Build Module
+      
+      # filters:
+      #   branches:
+      #       only:
+      #         - main
+      
         # - Sign Executable
   - Build Help Files:
       requires:
@@ -238,6 +250,15 @@ jobs:
       - store_artifacts:
           path: ./
           destination: artifact-file
+
+  Sign Exe:
+    docker:
+      - image: cimg/base:2020.01
+    steps:
+      - run:
+          name: Sign unsigned exe
+          command: |
+                curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ghactions-testing/dispatches' --header 'authorization: Bearer $GITHUB_TOKEN_SA_KEN' --data '{"event_type": "Sign Exe"}'    
 commands:
   deploy-nupkg:
     parameters:
