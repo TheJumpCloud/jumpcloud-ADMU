@@ -258,7 +258,7 @@ jobs:
             name: Sign unsigned exe
             command: |
                   if [ "${CIRCLE_PULL_REQUEST##*/}" != "" ];then
-                    echo "Is a pull request ${CIRCLE_PULL_REQUEST"
+                    echo "Is a pull request ${CIRCLE_PULL_REQUEST}"
                   fi
                     echo "Not a pr"
 
