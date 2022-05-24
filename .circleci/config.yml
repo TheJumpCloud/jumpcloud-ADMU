@@ -257,10 +257,10 @@ jobs:
       - run:
           name: Sign unsigned exe
           command: |
-                if [[ "<< pipeline.parameters.is_pr >>"  == true]]; then
-                  curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ghactions-testing/dispatches' --header "authorization: Bearer $GITHUB_TOKEN_SA_KEN" --data '{"event_type": "Sign Exe"}' 
-                else
-                  echo "Not PR"
+                if [ "${CIRCLE_PULL_REQUEST##*/}" != "" ];then
+                    echo "Is a pull request ${CIRCLE_PULL_REQUEST}"
+                  fi
+                    echo "Not a pr"
 
                       
 commands:
