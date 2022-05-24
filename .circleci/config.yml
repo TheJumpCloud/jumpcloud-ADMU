@@ -252,16 +252,15 @@ jobs:
 
   Sign Exe:
     docker:
-      - image: cimg/base:2020.01
+      - image: cimg/base:2020.01    
     steps:
-      - when:
-          condition:
-            equal: [$CIRCLE_PULL_REQUESTS]
-          steps:
-              - run:
-                  name: Sign unsigned exe
-                  command: |
-                        echo "$CIRCLE_PULL_REQUEST"
+        - run:
+            name: Sign unsigned exe
+            command: |
+                  if [ "${CIRCLE_PULL_REQUEST##*/}" != "" ];then
+                    echo "Is a pull request ${CIRCLE_PULL_REQUEST"
+                  fi
+                    echo "Not a pr"
 
                       
 commands:
