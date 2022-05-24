@@ -25,10 +25,10 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Pester Tests
   - Sign Exe:
       context: github-credentials
-      requires:
-        - Build
-        - Pester Tests
-        - Build Module
+      # requires:
+      #   - Build
+      #   - Pester Tests
+      #   - Build Module
       
       # filters:
       #   branches:
