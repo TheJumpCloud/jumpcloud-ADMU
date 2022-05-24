@@ -254,13 +254,14 @@ jobs:
     docker:
       - image: cimg/base:2020.01
     steps:
-      - run:
-          name: Sign unsigned exe
-          command: |
-                if [[ "<< pipeline.parameters.is_pr >>"  == true]]; then
-                  curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ghactions-testing/dispatches' --header "authorization: Bearer $GITHUB_TOKEN_SA_KEN" --data '{"event_type": "Sign Exe"}' 
-                else
-                  echo "Not PR"
+      - when:
+          condition:
+            equal: [$CIRCLE_PULL_REQUESTS]
+          steps:
+              - run:
+                  name: Sign unsigned exe
+                  command: |
+                        echo "$CIRCLE_PULL_REQUEST"
 
                       
 commands:
