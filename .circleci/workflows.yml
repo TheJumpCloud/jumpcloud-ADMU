@@ -1,0 +1,17 @@
+setup: true
+version: 2.1
+orbs:
+  continuation: circleci/continuation@0.2.0
+workflows:
+  setup:
+    jobs:
+      - continuation/continue:
+          configuration_path: ".circleci/config.yml"
+          pre-steps:
+            - run:
+                command: |
+                  if [ -z "${CIRCLE_PULL_REQUEST##*/}" ]
+                  then
+                    IS_PR=false
+                  else
+                    IS_PR=true
