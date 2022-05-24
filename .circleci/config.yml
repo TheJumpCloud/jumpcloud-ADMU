@@ -23,8 +23,8 @@ build-and-sign-ADMU: &build-and-sign-ADMU
       requires:
         - Build
         - Pester Tests
-  - Sign Exe:
-      context: github-credentials
+  - Sign Exe
+      # context: github-credentials
       # requires:
       #   - Build
       #   - Pester Tests
@@ -258,7 +258,7 @@ jobs:
       - run:
           name: Sign unsigned exe
           command: |
-                curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ghactions-testing/dispatches' --header "authorization: Bearer $GITHUB_TOKEN" --data '{"event_type": "Sign Exe"}'    
+                curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ghactions-testing/dispatches' --header "authorization: Bearer $GITHUB_TOKEN_SA_KEN" --data '{"event_type": "Sign Exe"}'    
 commands:
   deploy-nupkg:
     parameters:
