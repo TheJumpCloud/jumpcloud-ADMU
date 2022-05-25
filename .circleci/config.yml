@@ -252,7 +252,7 @@ jobs:
           command: |
               if [ "${CIRCLE_PULL_REQUEST##*/}" != "" ];then
                 echo "Is a pull request"
-              Else
+              else
                 echo "Not a PR"
               fi
 
