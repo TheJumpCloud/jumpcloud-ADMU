@@ -32,12 +32,6 @@ build-and-sign-ADMU: &build-and-sign-ADMU
       #   - Pester Tests
       #   - Build Module
       
-      # filters:
-      #   branches:
-      #       only:
-      #         - main
-      
-        # - Sign Executable
   - Build Help Files:
       requires:
         - Build
