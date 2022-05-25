@@ -1,20 +1,279 @@
-setup: true
 version: 2.1
+parameters:
+  buildReleaseType:
+    description: "Semantic Version increment type of the release. Valid values: major, minor, patch"
+    default: "patch"
+    type: enum
+    enum: ["major", "minor", "patch"]
 orbs:
-  continuation: circleci/continuation@0.2.0
+  win: circleci/windows@2.2.0
+  slack: circleci/slack@4.1
+
+build-and-sign-ADMU: &build-and-sign-ADMU
+  - Build
+  - Pester Tests:
+      requires:
+        - Build
+  # - Sign Executable:
+  #    requires:
+  #      - Build
+  #      - Pester Tests
+  #  context: secrethub-credentials
+  - Build Module:
+      requires:
+        - Build
+        - Pester Tests
+  - Sign Exe
+      # requires:
+      #   - Build
+      #   - Pester Tests
+      #   - Build Module
+      
+  - Build Help Files:
+      requires:
+        - Build
+        - Pester Tests
+        # - Sign Executable
+        - Build Module
+  - Build Nuspec:
+      requires:
+        - Build
+        - Pester Tests
+        # - Sign Executable
+        - Build Module
+        - Build Help Files
+  - Publish:
+      requires:
+        - Build
+        - Pester Tests
+        # - Sign Executable
+        - Build Module
+        - Build Help Files
+        - Build Nuspec
+      context: aws-credentials
+  - Invoke Git Commit:
+      requires:
+        - Build
+        - Pester Tests
+        # - Sign Executable
+        - Build Module
+        - Build Help Files
+        - Build Nuspec
+  - Upload Artifact:
+      requires:
+        - Build
+        - Pester Tests
+        # - Sign Executable
+        - Build Module
+        - Build Help Files
+        - Build Nuspec
+
 workflows:
-  setup:
-    jobs:
-      - continuation/continue:
-          configuration_path: ".circleci/workflows.yml"
-          parameters: /home/circleci/params.json
-          pre-steps:
-            - run:
-                command: |
-                  if [ -z "${CIRCLE_PULL_REQUEST##*/}" ]
-                  then
-                    IS_PR=false
-                  else
-                    IS_PR=true
-                  fi
-                    echo '{ "is_pr": '$IS_PR' }' >> /home/circleci/params.json
+  version: 2
+  ci:
+    jobs: *build-and-sign-ADMU
+
+jobs:
+  Build: # name of your job
+    executor: win/default # executor type
+    steps:
+      # Commands are run in a Windows
+      # virtual machine environment
+      - checkout
+      - run:
+          name: Install Required Modules
+          shell: powershell.exe
+          command: |
+            Install-Module -Name:('ps2exe') -Force
+      - run:
+          name: Build
+          shell: powershell.exe
+          command: |
+            $ErrorActionPreference = 'Stop'
+            ./Deploy/Build.ps1 $env:CIRCLE_WORKING_DIRECTORY
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+  Pester Tests:
+    executor: win/default
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Test Setup
+          shell: powershell.exe
+          command: |
+            $ErrorActionPreference = 'Stop'
+            . ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
+      - run:
+          name: Install Required Modules & Set Env Variables for testing
+          shell: powershell.exe
+          command: |
+            Install-Module -Name:('PSScriptAnalyzer') -Force
+            Install-Module -Name:('JumpCloud') -Force
+            If (-not [System.String]::IsNullOrEmpty($env:JCApiKey) -and -not [System.String]::IsNullOrEmpty($env:JCOrgId))
+            {
+                Write-Host ('[VALIDATION] JCApiKey AND JCOrgId have been populated.')
+            }
+            Else
+            {
+                Write-Error ("Unable to test because JCApiKey and JCOrgId have not been set.")
+            }
+      - run:
+          name: Invoke Pester
+          shell: powershell.exe
+          command: |
+            $ErrorActionPreference = 'Stop'
+            ./jumpcloud-ADMU/Powershell/InvokePester.ps1 << pipeline.parameters.buildReleaseType >>
+      - store_test_results:
+          name: Uploading test results for ADMU'
+          path: ./jumpcloud-ADMU/test_results/
+
+  Sign Executable:
+    executor: win/default
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Sign .exe
+          shell: powershell.exe
+          command: |
+            ./Deploy/Sign.ps1
+  Build Module:
+    executor: win/default
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Build Module
+          shell: powershell.exe
+          command: |
+            $ErrorActionPreference = 'Stop'
+            ./Deploy/Build-Module.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU')
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+  Build Help Files:
+    executor: win/default
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Build Help Files
+          shell: powershell.exe
+          command: |
+            $ErrorActionPreference = 'Stop'
+            ./Deploy/Build-HelpFiles.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU')
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+  Build Nuspec:
+    executor: win/default
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Build .nuspec
+          shell: powershell.exe
+          command: |
+            $ErrorActionPreference = 'Stop'
+            ./Deploy/BuildNuspecFromPsd1.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU') -buildNumber:("$Env:CIRCLE_BUILD_NUM")
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
+  Publish:
+    executor: win/default
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install Dependencies
+          shell: pwsh.exe
+          command: |
+            Install-Module -Name PowerShellGet -AllowPrerelease -RequiredVersion '3.0.0-beta10' -Force
+            Install-Module -Name AWS.Tools.Common -Force
+            Install-Module -Name AWS.Tools.CodeArtifact -Force
+            if ( -not ( Test-Path -Path ./Deploy/utils ) ) {
+              mkdir ./Deploy/utils
+              invoke-WebRequest https://dist.nuget.org/win-x86-commandline/v3.3.0/nuget.exe -Outfile ./Deploy/utils/nuget.exe
+            }
+      - run:
+          name: Add nuget sources
+          shell: pwsh.exe
+          command: |
+            Set-AWSCredential -AccessKey:($env:AWS_ACCESS_KEY_ID) -SecretKey:($env:AWS_SECRET_ACCESS_KEY)
+            $CARepoEndpoint = "$(Get-CARepositoryEndpoint -Domain jumpcloud-artifacts -Region us-east-1 -Repository jumpcloud-nuget-modules -Format nuget)v3/index.json"
+            dotnet nuget add source $CARepoEndpoint --name CodeArtifact --username aws --password (Get-CAAuthorizationToken -Domain:("jumpcloud-artifacts") -Region:("us-east-1")).AuthorizationToken
+            dotnet nuget add source "https://www.powershellgallery.com/api/v2" --name PSGallery
+      - deploy-nupkg:
+          source: CodeArtifact
+  Invoke Git Commit:
+    executor: win/default
+    steps:
+      - checkout
+      - add_ssh_keys:
+          fingerprints:
+            - "6b:97:dc:6d:d1:d1:3f:67:62:c4:ad:2d:96:3c:9a:d7"
+      - attach_workspace:
+          at: .
+      - run:
+          when: on_success
+          name: "Commit ADMU Module to << pipeline.git.branch >>"
+          shell: pwsh.exe
+          command: |
+            $UserEmail = If ($env:CIRCLE_PROJECT_USERNAME) { $env:CIRCLE_PROJECT_USERNAME } Else { ($env:USERNAME).Replace(' ', '') + '@FakeEmail.com' }
+            $UserName = If ($env:CIRCLE_PROJECT_USERNAME) { $env:CIRCLE_PROJECT_USERNAME } Else { $env:USERNAME }
+            git config user.email "$UserEmail"
+            git config user.name "$UserName"
+            git pull
+            git add -A
+            git status
+            git commit -m "Updating ADMU Module;[skip ci]"
+            git push origin << pipeline.git.branch >>
+  Upload Artifact:
+    executor: win/default
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - store_artifacts:
+          path: ./
+          destination: artifact-file
+  Sign Exe:
+    docker:
+      - image: cimg/base:2021.04
+    steps:
+      - run:
+          name: Sign unsigned exe
+          command: |
+              if [ "${CIRCLE_PULL_REQUEST##*/}" != "" ];then
+                echo "Is a pull request"
+              Else
+                echo "Not a PR"
+              fi
+
+
+                      
+commands:
+  deploy-nupkg:
+    parameters:
+      source:
+        description: Name of the source to deploy to
+        type: string
+    steps:
+      - run:
+          name: Pack nuspec
+          command: |
+            ./Deploy/utils/nuget.exe pack ./jumpcloud-ADMU/JumpCloud.ADMU.nuspec
+      - run:
+          name: Publishing to "<< parameters.source >>" repo
+          shell: pwsh.exe
+          command: |
+            $NupkgPath = (Get-ChildItem -Path:("./*.nupkg")).FullName
+            If('<< parameters.source >>' -eq 'CodeArtifact'){dotnet nuget push $NupkgPath --source << parameters.source >>}
+            ElseIf('<< parameters.source >>' -eq 'PSGallery'){dotnet nuget push $NupkgPath --source << parameters.source >> --api-key $env:NuGetApiKey}
+            Else {Write-Error "Unknown source value: << parameters.source >>"}
