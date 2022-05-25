@@ -2,7 +2,7 @@ version: 2.1
 parameters:
   buildReleaseType:
     description: "Semantic Version increment type of the release. Valid values: major, minor, patch"
-    default: "major"
+    default: "patch"
     type: enum
     enum: ["major", "minor", "patch"]
 orbs:
@@ -23,7 +23,12 @@ build-and-sign-ADMU: &build-and-sign-ADMU
       requires:
         - Build
         - Pester Tests
-        # - Sign Executable
+  - Sign Exe
+      # requires:
+      #   - Build
+      #   - Pester Tests
+      #   - Build Module
+      
   - Build Help Files:
       requires:
         - Build
@@ -238,6 +243,18 @@ jobs:
       - store_artifacts:
           path: ./
           destination: artifact-file
+  Sign Exe:
+    docker:
+      - image: cimg/base:2021.04
+    steps:
+      - run:
+          name: Sign unsigned exe
+          command: |
+              if [ "${CIRCLE_PULL_REQUEST##*/}" != "" ];then
+                echo "Is a pull request"
+              else
+                echo "Not a PR"
+              fi           
 commands:
   deploy-nupkg:
     parameters:
