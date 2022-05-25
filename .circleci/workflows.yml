@@ -257,8 +257,7 @@ jobs:
             - run:
                 name: Sign unsigned exe
                 command: |
-                    curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ghactions-testing/dispatches' --header "authorization: Bearer $GITHUB_TOKEN_SA_KEN" --data '{"event_type": "Sign Exe"}'    
-
+                    echo "PR"
 
                       
 commands:

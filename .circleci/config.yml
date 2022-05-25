@@ -17,4 +17,4 @@ workflows:
                   else
                     IS_PR=true
                   fi
-                  echo '{ "is_pr": '$IS_PR' }' >> /home/circleci/params.json
+                    echo '{ "is_pr": '$IS_PR' }' >> /home/circleci/params.json
