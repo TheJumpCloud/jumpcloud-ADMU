@@ -251,7 +251,6 @@ jobs:
           name: Sign unsigned exe
           command: |
               if [ "${CIRCLE_PULL_REQUEST##*/}" != "" ];then
-                echo "PR Branch"
                 curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ghactions-testing/dispatches' --header "authorization: Bearer $GITHUB_TOKEN_SA_KEN" --data '{"event_type": "Sign Exe"}' 
               else
                 echo "Not a PR"
