@@ -14,21 +14,10 @@ build-and-sign-ADMU: &build-and-sign-ADMU
   - Pester Tests:
       requires:
         - Build
-  # - Sign Executable:
-  #    requires:
-  #      - Build
-  #      - Pester Tests
-  #  context: secrethub-credentials
   - Build Module:
       requires:
         - Build
         - Pester Tests
-  - Sign Exe
-      # requires:
-      #   - Build
-      #   - Pester Tests
-      #   - Build Module
-      
   - Build Help Files:
       requires:
         - Build
@@ -67,11 +56,57 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build Module
         - Build Help Files
         - Build Nuspec
-
+release: &release
+  - Build
+  - Build Module:
+      requires:
+        - Build
+  - Sign Exe:
+      requires:
+        - Build
+        - Build Module
+  - Build Nuspec:
+      requires:
+        - Build
+        - Build Module
+        - Build Help Files
+  - Publish:
+      requires:
+        - Build
+        - Build Module
+        - Build Help Files
+        - Build Nuspec
+      context: aws-credentials
+  - Invoke Git Commit:
+      requires:
+        - Build
+        - Build Module
+        - Build Help Files
+        - Build Nuspec
+  - Upload Artifact:
+      requires:
+        - Build
+        - Build Module
+        - Build Help Files
+        - Build Nuspec
 workflows:
   version: 2
   ci:
     jobs: *build-and-sign-ADMU
+    when:
+      and:
+        - and:
+            - not:
+                matches:
+                  pattern: "^master$"
+                  value: << pipeline.git.branch >>
+  release:
+    jobs: *release
+    when:
+      matches:
+        pattern: "^master$"
+        value: << pipeline.git.branch >>
+
 
 jobs:
   Build: # name of your job
@@ -129,7 +164,6 @@ jobs:
       - store_test_results:
           name: Uploading test results for ADMU'
           path: ./jumpcloud-ADMU/test_results/
-
   Sign Executable:
     executor: win/default
     steps:
@@ -180,7 +214,7 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/BuildNuspecFromPsd1.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU') -buildNumber:("$Env:CIRCLE_BUILD_NUM")
+            ./Deploy/BuildNuspecFromPsd1.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU') -buildNumber:("$Env:CIRCLE_BUILD_NUM") -commit:("$Env:CIRCLE_SHA1")
       - persist_to_workspace:
           root: .
           paths:
@@ -255,9 +289,6 @@ jobs:
               else
                 echo "Not a PR"
               fi
-
-
-                      
 commands:
   deploy-nupkg:
     parameters:

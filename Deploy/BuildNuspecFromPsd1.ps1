@@ -8,16 +8,33 @@ param (
     $ModuleName,
     [Parameter()]
     [System.string]
-    $buildNumber
+    $buildNumber,
+    [System.String]
+    $commit
 )
 . $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
+
+# Determine Nuspec Version string:
+$gitCommit = git show $commit
+
+$mergeRegex = [regex]"Merge pull request"
+$commitMatch = Select-String -inputObject $gitCommit -Pattern $mergeRegex
+
+if ($commitMatch)
+{
+    # Nuspec version should be psd1 version
+    $Version = $Psd1.ModuleVersion
+}
+else{
+    # Nuspec version should contain build number for code artifact repo
+    $Version = $Psd1.ModuleVersion + ".$buildNumber"
+}
 
 # Set Variables for New-NuspecFile
 $ManifestPath = "$($FilePath_psd1)"
 $OutputPath = "$($FolderPath_Module)"
 $Psd1 = Import-PowerShellDataFile -Path:($ManifestPath)
 $Id = $(Get-Item ($ManifestPath)).BaseName
-$Version = $Psd1.ModuleVersion + ".$buildNumber"
 $Description = $Psd1.Description
 $Authors = $Psd1.Author
 $Owners = $Psd1.CompanyName
@@ -29,7 +46,7 @@ $ProjectUrl = $Psd1.PrivateData.PSData.ProjectUri
 $IconUrl = $Psd1.PrivateData.PSData.IconUri
 $Dependencies = $Psd1.RequiredModules
 
-# Addapted from PowerShell Get
+# Adapted from PowerShell Get
 # https://github.com/PowerShell/PowerShellGetv2/blob/7de99ee0c38611556e5c583ffaca98bb1922a0d4/src/PowerShellGet/private/functions/New-NuspecFile.ps1
 function New-NuspecFile {
     [CmdletBinding()]
