@@ -13,7 +13,8 @@ param (
     $commit
 )
 . $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
-
+# Get PSD1
+$Psd1 = Import-PowerShellDataFile -Path:($ManifestPath)
 # Determine Nuspec Version string:
 $gitCommit = git show $commit
 
@@ -25,7 +26,8 @@ if ($commitMatch)
     # Nuspec version should be psd1 version
     $Version = $Psd1.ModuleVersion
 }
-else{
+else
+{
     # Nuspec version should contain build number for code artifact repo
     $Version = $Psd1.ModuleVersion + ".$buildNumber"
 }
@@ -33,7 +35,6 @@ else{
 # Set Variables for New-NuspecFile
 $ManifestPath = "$($FilePath_psd1)"
 $OutputPath = "$($FolderPath_Module)"
-$Psd1 = Import-PowerShellDataFile -Path:($ManifestPath)
 $Id = $(Get-Item ($ManifestPath)).BaseName
 $Description = $Psd1.Description
 $Authors = $Psd1.Author
@@ -48,7 +49,8 @@ $Dependencies = $Psd1.RequiredModules
 
 # Adapted from PowerShell Get
 # https://github.com/PowerShell/PowerShellGetv2/blob/7de99ee0c38611556e5c583ffaca98bb1922a0d4/src/PowerShellGet/private/functions/New-NuspecFile.ps1
-function New-NuspecFile {
+function New-NuspecFile
+{
     [CmdletBinding()]
     Param(
         [Parameter(Mandatory = $true)]
@@ -113,7 +115,8 @@ function New-NuspecFile {
 
     # warn we're over 4000 characters for standard nuget servers
     $tagsString = $Tags -Join " "
-    if ($tagsString.Length -gt 4000) {
+    if ($tagsString.Length -gt 4000)
+    {
         Write-Warning -Message "Tag list exceeded 4000 characters and may not be accepted by some Nuget feeds."
     }
 
@@ -129,11 +132,21 @@ function New-NuspecFile {
         tags                     = $tagsString
     }
 
-    if ($LicenseUrl) { $metaDataElementsHash.Add("licenseUrl", $LicenseUrl) }
-    if ($ProjectUrl) { $metaDataElementsHash.Add("projectUrl", $ProjectUrl) }
-    if ($IconUrl) { $metaDataElementsHash.Add("iconUrl", $IconUrl) }
+    if ($LicenseUrl)
+    {
+        $metaDataElementsHash.Add("licenseUrl", $LicenseUrl) 
+    }
+    if ($ProjectUrl)
+    {
+        $metaDataElementsHash.Add("projectUrl", $ProjectUrl) 
+    }
+    if ($IconUrl)
+    {
+        $metaDataElementsHash.Add("iconUrl", $IconUrl) 
+    }
 
-    foreach ($key in $metaDataElementsHash.Keys) {
+    foreach ($key in $metaDataElementsHash.Keys)
+    {
         $element = $xml.CreateElement($key, $nameSpaceUri)
         $elementInnerText = $metaDataElementsHash.item($key)
         $element.InnerText = $elementInnerText
@@ -142,35 +155,51 @@ function New-NuspecFile {
     }
 
 
-    if ($Dependencies) {
+    if ($Dependencies)
+    {
         $dependenciesElement = $xml.CreateElement("dependencies", $nameSpaceUri)
 
-        foreach ($dependency in $Dependencies) {
+        foreach ($dependency in $Dependencies)
+        {
             $element = $xml.CreateElement("dependency", $nameSpaceUri)
             # $element.
             $element.SetAttribute("id", $dependency)
-            if ($dependency.version) { $element.SetAttribute("version", $dependency.version) }
+            if ($dependency.version)
+            {
+                $element.SetAttribute("version", $dependency.version) 
+            }
 
             $dependenciesElement.AppendChild($element) | Out-Null
         }
         $metaDataElement.AppendChild($dependenciesElement) | Out-Null
     }
 
-    if ($Files) {
+    if ($Files)
+    {
         $filesElement = $xml.CreateElement("files", $nameSpaceUri)
 
-        foreach ($file in $Files) {
+        foreach ($file in $Files)
+        {
             $element = $xml.CreateElement("file", $nameSpaceUri)
             $element.SetAttribute("src", $file.src)
-            if ($file.target) { $element.SetAttribute("target", $file.target) }
-            if ($file.exclude) { $element.SetAttribute("exclude", $file.exclude) }
+            if ($file.target)
+            {
+                $element.SetAttribute("target", $file.target) 
+            }
+            if ($file.exclude)
+            {
+                $element.SetAttribute("exclude", $file.exclude) 
+            }
 
             $filesElement.AppendChild($element) | Out-Null
         }
     }
 
     $packageElement.AppendChild($metaDataElement) | Out-Null
-    if ($filesElement) { $packageElement.AppendChild($filesElement) | Out-Null }
+    if ($filesElement)
+    {
+        $packageElement.AppendChild($filesElement) | Out-Null 
+    }
 
     $xml.AppendChild($packageElement) | Out-Null
 
