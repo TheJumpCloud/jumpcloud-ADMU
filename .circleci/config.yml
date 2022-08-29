@@ -22,20 +22,17 @@ build-and-sign-ADMU: &build-and-sign-ADMU
       requires:
         - Build
         - Pester Tests
-        # - Sign Executable
         - Build Module
   - Build Nuspec:
       requires:
         - Build
         - Pester Tests
-        # - Sign Executable
         - Build Module
         - Build Help Files
   - Publish:
       requires:
         - Build
         - Pester Tests
-        # - Sign Executable
         - Build Module
         - Build Help Files
         - Build Nuspec
@@ -44,7 +41,6 @@ build-and-sign-ADMU: &build-and-sign-ADMU
       requires:
         - Build
         - Pester Tests
-        # - Sign Executable
         - Build Module
         - Build Help Files
         - Build Nuspec
@@ -52,7 +48,6 @@ build-and-sign-ADMU: &build-and-sign-ADMU
       requires:
         - Build
         - Pester Tests
-        # - Sign Executable
         - Build Module
         - Build Help Files
         - Build Nuspec
@@ -61,10 +56,6 @@ release: &release
   - Build Module:
       requires:
         - Build
-  - Sign Exe:
-      requires:
-        - Build
-        - Build Module
   - Build Nuspec:
       requires:
         - Build
@@ -83,6 +74,11 @@ release: &release
         - Build Module
         - Build Help Files
         - Build Nuspec
+  - Sign Exe:
+      requires:
+        - Build
+        - Build Module
+        - Invoke Git Commit
   - Upload Artifact:
       requires:
         - Build
@@ -106,7 +102,6 @@ workflows:
       matches:
         pattern: "^master$"
         value: << pipeline.git.branch >>
-
 
 jobs:
   Build: # name of your job
@@ -164,16 +159,6 @@ jobs:
       - store_test_results:
           name: Uploading test results for ADMU'
           path: ./jumpcloud-ADMU/test_results/
-  Sign Executable:
-    executor: win/default
-    steps:
-      - attach_workspace:
-          at: .
-      - run:
-          name: Sign .exe
-          shell: powershell.exe
-          command: |
-            ./Deploy/Sign.ps1
   Build Module:
     executor: win/default
     steps:
@@ -284,11 +269,11 @@ jobs:
       - run:
           name: Sign unsigned exe
           command: |
-              if [ "${CIRCLE_PULL_REQUEST##*/}" != "" ];then
-                echo "Is a pull request"
-              else
-                echo "Not a PR"
-              fi
+            if [ "${CIRCLE_PULL_REQUEST##*/}" != "" ];then
+              curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ghactions-testing/dispatches' --header "authorization: Bearer $GITHUB_TOKEN_SA_KEN" --data '{"event_type": "Sign Exe"}' 
+            else
+              echo "Not a PR"
+            fi
 commands:
   deploy-nupkg:
     parameters:
