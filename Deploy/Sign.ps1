@@ -6,7 +6,7 @@
 $signpath = 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe'
 $RootPath = Split-Path (Split-Path $PSScriptRoot -Parent)
 $GUI_JCADMU = "$RootPath/jumpcloud-ADMU/jumpcloud-ADMU/Exe/gui_jcadmu.exe"
-$base64 = "$env:BASE64_ENCODED_SELF_SIGNED_CERT"
+$base64 = "$env:BASE64_ENCODED_CERT"
 $password = "$env:CERTPASS"
 $filenameCert = "$PSScriptRoot/cert.pfx"
 $bytes = [convert]::FromBase64String($base64)
@@ -14,10 +14,12 @@ $bytes = [convert]::FromBase64String($base64)
 
 
 
-if (test-path($filenameCert)){
+if (test-path($filenameCert))
+{
     Write-Output "Cert found"
 }
-else {
+else
+{
     Write-Output "Cert not found, exiting"
     exit 1
 }
@@ -36,50 +38,61 @@ $filesToSign = @(
 )
 
 
-foreach ($file in $filesToSign) {
-    If (Test-Path -Path ($file)){
+foreach ($file in $filesToSign)
+{
+    If (Test-Path -Path ($file))
+    {
         Write-Output "Attempting to sign $file"
     }
-    else{
+    else
+    {
         Write-Output "$file not found"
         exit 1
     }
 
     $tsaIndex = 0
     $attempts = 1
-    while ($True) {
+    while ($True)
+    {
         Write-Output "attempting to sign with $($tsaServers[$tsaIndex])"
         & $signpath sign `
             /f $filenameCert `
             /fd SHA256 `
             /p $password `
+            /tr http://timestamp.digicert.com `
             $file
 
-            #move above $file for tsachecks
-            #/tr $($tsaServers[$tsaIndex]) `
-            #/td SHA256 `
+        #move above $file for tsachecks
+        #/tr $($tsaServers[$tsaIndex]) `
+        #/td SHA256 `
 
-        if ( -not $? ) {
-            if ($attempts -le $MaxAttempts) {
+        if ( -not $? )
+        {
+            if ($attempts -le $MaxAttempts)
+            {
                 Write-Output "attempt $attempts failed, retrying..."
                 $attempts++
                 Start-Sleep -Seconds 15
                 Continue
             }
-            Else {
-                if ($tsaIndex -lt $tsaServers.Count) {
+            Else
+            {
+                if ($tsaIndex -lt $tsaServers.Count)
+                {
                     Write-Output "trying a different TSA Server $($tsaServers[$tsaIndex])"
                     $tsaIndex++
                     $attempts = 1
                     Continue
                 }
-                Else {
+                Else
+                {
                     Write-Output "Failed to sign $file, error=$error"
                     Exit 1
                 }
             }
         }
-        Else {
+        Else
+        {
             Break
         }
     }
