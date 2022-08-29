@@ -44,6 +44,11 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build Module
         - Build Help Files
         - Build Nuspec
+  - Sign Exe:
+      requires:
+        - Build
+        - Build Module
+        - Invoke Git Commit
   - Upload Artifact:
       requires:
         - Build
