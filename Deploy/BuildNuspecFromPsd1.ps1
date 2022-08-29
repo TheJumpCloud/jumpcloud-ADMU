@@ -14,6 +14,8 @@ param (
 )
 . $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 # Get PSD1
+$ManifestPath = "$($FilePath_psd1)"
+$OutputPath = "$($FolderPath_Module)"
 $Psd1 = Import-PowerShellDataFile -Path:($ManifestPath)
 # Determine Nuspec Version string:
 $gitCommit = git show $commit
@@ -33,8 +35,6 @@ else
 }
 
 # Set Variables for New-NuspecFile
-$ManifestPath = "$($FilePath_psd1)"
-$OutputPath = "$($FolderPath_Module)"
 $Id = $(Get-Item ($ManifestPath)).BaseName
 $Description = $Psd1.Description
 $Authors = $Psd1.Author
