@@ -619,8 +619,7 @@ Function Get-ProfileImagePath
 }
 Function Get-WindowsDrive
 {
-    $drive = (wmic OS GET SystemDrive /VALUE)
-    $drive = [regex]::Match($drive, 'SystemDrive=(.\:)').Groups[1].Value
+    $drive = (Get-WmiObject Win32_OperatingSystem).SystemDrive
     return $drive
 }
 
@@ -1247,8 +1246,20 @@ Function Start-Migration
 
     Begin
     {
-        If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) { Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent" }else {}
-        If (($AutobindJCUser -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudAPIKey))) { Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User" }else {}
+        If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey)))
+        {
+            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent" 
+        }
+        else
+        {
+        }
+        If (($AutobindJCUser -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudAPIKey)))
+        {
+            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User" 
+        }
+        else
+        {
+        }
 
         # Start script
         $admuVersion = '2.0.1'
@@ -1532,10 +1543,12 @@ Function Start-Migration
             # collect unused references in memory and clear
             [gc]::collect()
             # Attempt to unload
-            try {
+            try
+            {
                 REG UNLOAD "HKU\$($newusersid)_admu" 2>&1 | out-null
             }
-            catch{
+            catch
+            {
                 Write-ToLog "This account has been previously migrated"
             }
             # if ($UnloadReg){
