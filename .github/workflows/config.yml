@@ -9,11 +9,11 @@ jobs:
           BASE64_ENCODED_CERT: ${{ secrets.BASE64_ENCODED_CERT }}
           CERTPASS: ${{ secrets.CERTPASS }}
         run: |
-          echo Dispatch ran
-      # - name: Push changes
-      #   run: |
-      #     git config user.name github-actions
-      #     git config user.email github-actions@github.com
-      #     git add .
-      #     git commit -m "generated"
-      #     git push
+          ./Deploy/Sign.ps1
+      - name: Push changes
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "generated"
+          git push
