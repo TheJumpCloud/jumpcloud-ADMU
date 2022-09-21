@@ -470,7 +470,7 @@ function Set-UserRegistryLoadState
                 }
                 else
                 {
-                    Write-ToLog -Message:('Cound not load profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
+                    Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
                 }
                 Start-Sleep -Seconds 1
                 $results = REG LOAD HKU\"$($UserSid)_Classes_admu" "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" *>&1
@@ -480,7 +480,7 @@ function Set-UserRegistryLoadState
                 }
                 else
                 {
-                    Write-ToLog -Message:('Cound not load profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
+                    Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                 }
             }
             "Unload"
