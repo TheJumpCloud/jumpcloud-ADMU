@@ -5,7 +5,7 @@ $GHRepoName = 'Jumpcloud-ADMU-Discovery'
 $password = ConvertTo-SecureString "$GHToken" -AsPlainText -Force
 $Cred = New-Object System.Management.Automation.PSCredential ($GHUsername, $password)
 
-$windowstemp = [System.Environment]::GetEnvironmentVariable('TEMP','Machine')
+$windowstemp = [System.Environment]::GetEnvironmentVariable('TEMP', 'Machine')
 $workingdir = $windowstemp
 $discoverycsvlocation = $workingdir + '\jcdiscovery.csv'
 
@@ -20,7 +20,8 @@ $JumpCloudAPIKey = 'yourJCAPIKey'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 Install-PackageProvider -Name NuGet -Force
 # Install Module PowerShellForGitHub
-if ($null -eq (Get-InstalledModule -Name "PowerShellForGitHub" -ErrorAction SilentlyContinue)) {
+if ($null -eq (Get-InstalledModule -Name "PowerShellForGitHub" -ErrorAction SilentlyContinue))
+{
     Install-Module PowerShellForGitHub -Force
 }
 
@@ -28,11 +29,11 @@ if ($null -eq (Get-InstalledModule -Name "PowerShellForGitHub" -ErrorAction Sile
 Set-GitHubAuthentication -Credential $cred
 
 # Download jcdiscovery.csv from GH
-$jcdiscoverycsv = (Get-GitHubContent -OwnerName $GHUsername -RepositoryName $GHRepoName -BranchName 'main' -ErrorAction SilentlyContinue -WarningAction SilentlyContinue).Entries | Where-Object {$_.name -match 'jcdiscovery.csv'} | Select-Object name,download_url
-    New-Item -ItemType Directory -Force -Path $workingdir | Out-Null
-    $dlname = ($workingdir + '\jcdiscovery.csv')
-    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-    Invoke-WebRequest -Uri $jcdiscoverycsv.download_url -OutFile $dlname
+$jcdiscoverycsv = (Get-GitHubContent -OwnerName $GHUsername -RepositoryName $GHRepoName -BranchName 'main' -ErrorAction SilentlyContinue -WarningAction SilentlyContinue).Entries | Where-Object { $_.name -match 'jcdiscovery.csv' } | Select-Object name, download_url
+New-Item -ItemType Directory -Force -Path $workingdir | Out-Null
+$dlname = ($workingdir + '\jcdiscovery.csv')
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Invoke-WebRequest -Uri $jcdiscoverycsv.download_url -OutFile $dlname
 
 # Import the CSV & check for one row per system
 $ImportedCSV = Import-Csv -Path $discoverycsvlocation
@@ -47,8 +48,10 @@ foreach ($i in $counts)
 }
 
 # Find user to be migrated
-foreach ($row in $ImportedCSV) {
-    if ($row.LocalComputerName -eq ($env:COMPUTERNAME)) {
+foreach ($row in $ImportedCSV)
+{
+    if ($row.LocalComputerName -eq ($env:COMPUTERNAME))
+    {
         $SelectedUsername = $row.SID
         $JumpCloudUserName = $row.JumpCloudUserName
     }
@@ -69,7 +72,10 @@ Install-Module JumpCloud.ADMU -Force
 $quserResult = quser
 $quserRegex = $quserResult | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
 $quserObject = $quserRegex | ConvertFrom-Csv
-If ($quserObject.username){logoff.exe $quserObject.ID}
+If ($quserObject.username)
+{
+    logoff.exe $quserObject.ID
+}
 
 # Run ADMU
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
