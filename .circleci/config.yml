@@ -69,25 +69,25 @@ release: &release
         - Build Module
         - Build Help Files
         - Build Nuspec
-  - Sign Exe:
-      context: github-credentials
-      requires:
-        - Build
-        - Build Module
-        - Invoke Git Commit
   - Invoke Git Commit:
       requires:
         - Build
         - Build Module
         - Build Help Files
         - Build Nuspec
-        - Sign Exe
   - Upload Artifact:
       requires:
         - Build
         - Build Module
         - Build Help Files
         - Build Nuspec
+  - Sign Exe:
+      context: github-credentials
+      requires:
+        - Build
+        - Build Module
+        - Invoke Git Commit
+        - Upload Artifact
 workflows:
   version: 2
   ci:
