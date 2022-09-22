@@ -439,16 +439,21 @@ Describe 'Functions' {
     }
 
     Context 'Convert-SID Function' {
+        BeforeAll {
+            $newUserPassword = ConvertTo-SecureString -String 'Temp123!' -AsPlainText -Force
+            New-localUser -Name 'sidTest' -password $newUserPassword -Description "Created By JumpCloud ADMU tests"
+            New-LocalUserProfile -username:('sidTest')
+        }
         It 'Convert-SID - circleci SID' {
-            $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\circleci_packer' | Select-Object SID).SID
-            (Convert-SID -Sid $circlecisid) | Should -match 'circleci_packer'
+            $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\sidTest' | Select-Object SID).SID
+            (Convert-SID -Sid $circlecisid) | Should -match 'sidTest'
         }
     }
 
     Context 'Convert-UserName Function' {
         It 'Convert-UserName' {
-            $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\circleci_packer' | Select-Object SID).SID
-            (Convert-UserName -user:('circleci_packer')) | Should -match $circlecisid
+            $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\sidTest' | Select-Object SID).SID
+            (Convert-UserName -user:('sidTest')) | Should -match $circlecisid
         }
     }
 
