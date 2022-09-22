@@ -145,6 +145,7 @@ jobs:
             Install-Module -Name:('PSScriptAnalyzer') -Force
             Install-Module -Name:('JumpCloud') -Force
             Install-Module -Name:('Pester') -SkipPublisherCheck -Force
+            Import-Module -Name:('Pester') -Force
             If (-not [System.String]::IsNullOrEmpty($env:JCApiKey) -and -not [System.String]::IsNullOrEmpty($env:JCOrgId))
             {
                 Write-Host ('[VALIDATION] JCApiKey AND JCOrgId have been populated.')
