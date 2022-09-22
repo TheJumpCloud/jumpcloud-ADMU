@@ -28,7 +28,8 @@ Describe 'Migration Test Scenarios' {
             {
                 # Remove log before testing
                 $logPath = "C:\Windows\Temp\jcadmu.log"
-                if (Test-Path -Path $logPath){
+                if (Test-Path -Path $logPath)
+                {
                     Remove-Item $logPath
                     New-Item $logPath -Force -ItemType File
                 }
@@ -122,7 +123,7 @@ Describe 'Migration Test Scenarios' {
             "C:\Users\$($user.JCUsername)" | Should -Not -Exist
         }
     }
-    It "Account of a prior migration can be sucessfully migrated again and not overwrite registry backup files"{
+    It "Account of a prior migration can be sucessfully migrated again and not overwrite registry backup files" {
         $Password = "Temp123!"
         $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
         $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -194,7 +195,7 @@ Describe 'Migration Test Scenarios' {
             $match.Matches | Should -Not -BeNullOrEmpty
         }
     }
-    Context 'Start-Migration kicked off through JumpCloud agent' -Skip {
+    Context 'Start-Migration kicked off through JumpCloud agent' {
         BeforeAll {
             # test connection to Org
             $Org = Get-JcSdkOrganization
