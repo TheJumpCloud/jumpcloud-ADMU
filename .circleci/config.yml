@@ -114,12 +114,12 @@ jobs:
       - checkout
       - run:
           name: Install Required Modules
-          shell: pwsh.exe
+          shell: powershell.exe
           command: |
             Install-Module -Name:('ps2exe') -Force
       - run:
           name: Build
-          shell: pwsh.exe
+          shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/Build.ps1 $env:CIRCLE_WORKING_DIRECTORY
@@ -134,13 +134,13 @@ jobs:
           at: .
       - run:
           name: Test Setup
-          shell: pwsh.exe
+          shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
             . ./Deploy/TestSetup.ps1 -TestOrgConnectKey:($env:PesterConnectKey)
       - run:
           name: Install Required Modules & Set Env Variables for testing
-          shell: pwsh.exe
+          shell: powershell.exe
           command: |
             Install-Module -Name:('PSScriptAnalyzer') -Force
             Install-Module -Name:('JumpCloud') -Force
@@ -156,7 +156,7 @@ jobs:
             }
       - run:
           name: Invoke Pester
-          shell: pwsh.exe
+          shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
             ./jumpcloud-ADMU/Powershell/InvokePester.ps1 << pipeline.parameters.buildReleaseType >>
@@ -170,7 +170,7 @@ jobs:
           at: .
       - run:
           name: Build Module
-          shell: pwsh.exe
+          shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/Build-Module.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU')
@@ -185,7 +185,7 @@ jobs:
           at: .
       - run:
           name: Build Help Files
-          shell: pwsh.exe
+          shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/Build-HelpFiles.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU')
@@ -200,7 +200,7 @@ jobs:
           at: .
       - run:
           name: Build .nuspec
-          shell: pwsh.exe
+          shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
             ./Deploy/BuildNuspecFromPsd1.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU') -buildNumber:("$Env:CIRCLE_BUILD_NUM") -commit:("$Env:CIRCLE_SHA1")
