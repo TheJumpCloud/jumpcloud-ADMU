@@ -9,6 +9,10 @@ Release Date: Sept 21, 2022
 * Wmic commands replaced with powershell equivalent options (thanks to [@willemkokke](https://github.com/willemkokke) for the suggestion)
 ```
 
+#### BUG FIXES:
+
+- Addressed an encoding issue with the PowerShellForGitHub module and the [invoke ADMU from agent](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/advanced-deployment-scenarios) workflows. If the newest version of the module 0.16.1 is used the scripts will no longer throw an error regarding invalid JSON.
+
 ## 2.0.0
 
 Release Date: September 16, 2021
