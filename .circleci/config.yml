@@ -6,8 +6,7 @@ parameters:
     type: enum
     enum: ["major", "minor", "patch"]
 orbs:
-  win: circleci/windows@2.2.0
-  slack: circleci/slack@4.1
+  win: circleci/windows@5.0.0
 
 build-and-sign-ADMU: &build-and-sign-ADMU
   - Build
