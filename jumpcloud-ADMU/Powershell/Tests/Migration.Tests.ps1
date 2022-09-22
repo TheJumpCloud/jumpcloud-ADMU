@@ -279,7 +279,7 @@ Describe 'Migration Test Scenarios' {
                 $count = 0
                 do
                 {
-                    $CommandResults = Get-JcSdkCommandResult -id $invokeResults.Id
+                    $CommandResults = Get-JCCommandResult -CommandResultID $invokeResults.Id
                     Write-host "Waiting 5 seconds on results..."
                     $count += 1
                     start-sleep 5
