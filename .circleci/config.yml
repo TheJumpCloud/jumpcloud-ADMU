@@ -60,25 +60,21 @@ release: &release
       requires:
         - Build
         - Build Module
-        - Build Help Files
   - Publish:
       context: aws-credentials
       requires:
         - Build
         - Build Module
-        - Build Help Files
         - Build Nuspec
   - Invoke Git Commit:
       requires:
         - Build
         - Build Module
-        - Build Help Files
         - Build Nuspec
   - Upload Artifact:
       requires:
         - Build
         - Build Module
-        - Build Help Files
         - Build Nuspec
   - Sign Exe:
       context: github-credentials
