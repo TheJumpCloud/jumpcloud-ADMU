@@ -283,8 +283,8 @@ Describe 'Migration Test Scenarios' {
                     Write-host "Waiting 5 seconds on results..."
                     $count += 1
                     start-sleep 5
-                } until ((($CommandResults.DataExitCode) -is [int]) -or ($count -eq 48))
-                $CommandResults.DataExitCode | Should -Be 0
+                } until ((($CommandResults.exitCode) -is [int]) -or ($count -eq 48))
+                $CommandResults.exitCode | Should -Be 0
             }
         }
     }
