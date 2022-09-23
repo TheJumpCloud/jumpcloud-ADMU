@@ -1,3 +1,18 @@
+## 2.0.1
+
+Release Date: Sept 21, 2022
+
+#### RELEASE NOTES
+
+```
+* Module EXEs have been updated with a new DigiCert code signing certificate. The prior GoDaddy certificate could not be renewed at the end of this year.
+* Wmic commands replaced with powershell equivalent options (thanks to [@willemkokke](https://github.com/willemkokke) for the suggestion)
+```
+
+#### BUG FIXES:
+
+- Addressed an encoding issue with the PowerShellForGitHub module and the [invoke ADMU from agent](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/advanced-deployment-scenarios) workflows. If the newest version of the module 0.16.1 is used the scripts will no longer throw an error regarding invalid JSON.
+
 ## 2.0.0
 
 Release Date: September 16, 2021
@@ -20,19 +35,19 @@ Release Date: September 16, 2021
 
 #### FEATURES:
 
-* Migration users may be automatically bound to systems post-successful migration
-* If the ADMU fails to migrate a user, the tool will attempt to remove the newly created local user so that the tool can be run again.
-  * This negates the need to manually remove the new local user if re-running the tool
+- Migration users may be automatically bound to systems post-successful migration
+- If the ADMU fails to migrate a user, the tool will attempt to remove the newly created local user so that the tool can be run again.
+  - This negates the need to manually remove the new local user if re-running the tool
 
 #### IMPROVEMENTS:
 
-* GUI version of the tool no longer queries account home directory size and should load much faster
-* Option to Update Home Path has been removed from the GUI version of the tool
-  * Often times changing the home path from "migration_user" to "migration.user" would break app functionality and cause more confusion than it was intended to solve. the `UpdateHomePath` parameter can still be set to true through the CLI/ PowerShell Module Version of the tool
+- GUI version of the tool no longer queries account home directory size and should load much faster
+- Option to Update Home Path has been removed from the GUI version of the tool
+  - Often times changing the home path from "migration_user" to "migration.user" would break app functionality and cause more confusion than it was intended to solve. the `UpdateHomePath` parameter can still be set to true through the CLI/ PowerShell Module Version of the tool
 
 #### BUG FIXES:
 
-* Given the case where the ADMU writes a registry backup, subsequently fails, exits and is run again, The registry backup should not be overwritten with the same name.
+- Given the case where the ADMU writes a registry backup, subsequently fails, exits and is run again, The registry backup should not be overwritten with the same name.
 
 ## 1.6.8
 
@@ -47,6 +62,7 @@ Fix for previous version 1.6.7 where after migrating a domain user with the same
 #### BUG FIXES:
 
 Domain users with the same name as the system hostname now initalize correctly and the GUI will allow for migration of these user accounts
+
 ## 1.6.7
 
 Release Date: July 22, 2021
@@ -68,10 +84,11 @@ Release Date: July 8, 2021
 #### RELEASE NOTES
 
 ```
-Added AzureAD leave domain check, if not running as NTAUTHORITY\SYSTEM popup will inform in gui related wiki article. 
+Added AzureAD leave domain check, if not running as NTAUTHORITY\SYSTEM popup will inform in gui related wiki article.
 ```
 
 #### IMPROVEMENTS:
+
 ```
 Add logic to only run AzureAD leave domain command if running as NTAUTHORITY\SYSTEM. If not AzureAD joined, it will leave domain as normal.
 If not run as SYSTEM, the GUI will stop the param being passed and a dialog shown. In the migration script an error will be logged and continue without running the leave domain command in the case of not being run as SYSTEM and AzureAD joined.
@@ -210,11 +227,12 @@ Add monitor job and improve admu-discovery script.
 
 #### IMPROVEMENTS:
 
-*  Improve admu-discovery script and add monitor job function
+- Improve admu-discovery script and add monitor job function
+
 #### BUG FIXES:
 
-* Add SID lookup to ACL function to account for foreign languages
-* Add additional wait time for unload of user registry before conversion starts
+- Add SID lookup to ACL function to account for foreign languages
+- Add additional wait time for unload of user registry before conversion starts
 
 ## 1.5.3
 
@@ -236,8 +254,8 @@ Time required to 'Convert User' has been significantly decreased.
 
 #### BUG FIXES:
 
-* Fix for profile path where similarly named profile paths evaluated to the same profile path
-* Fix uwp_jcadmu.exe 0kb download bug
+- Fix for profile path where similarly named profile paths evaluated to the same profile path
+- Fix uwp_jcadmu.exe 0kb download bug
 
 ## 1.5.2
 
@@ -265,14 +283,13 @@ During login and after an account has been converted, a powershell window displa
 
 #### FEATURES:
 
-* Splash screen added during first login to converted account
+- Splash screen added during first login to converted account
 
 ## 1.5.0
 
 Release Date: Dec 10, 2020
 
 #### RELEASE NOTES
-
 
 ```
 Ability to convert rather than duplicate domain user accounts. User's AppData is kept intact. This conversion process is much faster than the default behaivor of migration and no addtitional storage space is required.
@@ -319,7 +336,6 @@ Now allows install-module JumpCloud.ADMU
 - Remove double jcagent install
 - Don't call dsregcmd on windows 8.1 systems
 - Display 'Fix secure channel' when domain joined but no healthy secure channel, rather than blank.
-
 
 ## 1.4.2
 
@@ -441,6 +457,7 @@ Improve JumpCloud ADMU to work in remote non domain joined scenarios.
 ## 1.2.15
 
 #### RELEASE DATE
+
 March 16, 2020
 
 #### RELEASE NOTES
@@ -585,14 +602,13 @@ September 27, 2019
 
 - Improve and reduce migapp.xml & miguser.xml entrys. This will reduce overall file count and scanning times.
 
-- Add UI loading feedback using write-progress. 
+- Add UI loading feedback using write-progress.
 
 - Add localadmin column to UI for profiles.
 
 - Add profile size column to UI for profiles. Also add system c:\ available space to UI.
 
 - Introduce Pester tests and azure pipeline CI for improved automated testing.
-
 
 ## 1.1.0
 

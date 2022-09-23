@@ -9,7 +9,7 @@ Describe 'Functions' {
         # This is a GUI test, check manually before release
     }
 
-    Context 'Test-RegistryValueMatch Function'{
+    Context 'Test-RegistryValueMatch Function' {
         # Test that the Test-RegistryValueMatch function returns valid results from the registry
         It 'Value matches' {
             Test-RegistryValueMatch -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -Value 'Public' -stringmatch 'Public' | Should -Be $true
@@ -20,7 +20,7 @@ Describe 'Functions' {
         }
     }
     Context 'Test-JumpCloudUsername Function' {
-        It 'Valid Username Returns True'{
+        It 'Valid Username Returns True' {
             # Get the first user
             $user = Get-JcSdkUser | Select-Object -First 1
             # Test function
@@ -28,7 +28,7 @@ Describe 'Functions' {
             $testResult | Should -Be $true
             $userID | Should -Be $user.Id
         }
-        It 'Invalid Username Returns False'{
+        It 'Invalid Username Returns False' {
             # Get the first user
             $user = Get-JcSdkUser | Select-Object -First 1
             # Append random string to username
@@ -40,19 +40,19 @@ Describe 'Functions' {
         }
     }
 
-    Context 'BindUsernameToJCSystem Function'{
+    Context 'BindUsernameToJCSystem Function' {
         It 'User exists' {
             # Generate New User
             $Password = "Temp123!"
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # If User Exists, remove from the org
             $users = Get-JCSDKUser
-                if ("$($user.JCUsername)" -in $users.Username)
-                {
-                    $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
-                    Write-Host "Found JumpCloud User, $($existing.Id) removing..."
-                    Remove-JcSdkUser -Id $existing.Id
-                }
+            if ("$($user.JCUsername)" -in $users.Username)
+            {
+                $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
+                Write-Host "Found JumpCloud User, $($existing.Id) removing..."
+                Remove-JcSdkUser -Id $existing.Id
+            }
             $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
             # Begin Test
             Get-JCAssociation -Type user -Id:($($GeneratedUser.Id)) | Remove-JCAssociation -Force
@@ -68,12 +68,13 @@ Describe 'Functions' {
             $bind | Should -Be $false
         }
 
-        It 'Agent not installed' -skip{
+        It 'Agent not installed' -skip {
             #TODO: Is this test necessary, it breaks the migration tests
-            if ((Test-Path -Path "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf") -eq $True) {
+            if ((Test-Path -Path "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf") -eq $True)
+            {
                 Remove-Item "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
-              }
-            {BindUsernameToJCSystem -JcApiKey $env:JCApiKey -JumpCloudUserName 'jsmith' -ErrorAction Stop} | Should -Throw
+            }
+            { BindUsernameToJCSystem -JcApiKey $env:JCApiKey -JumpCloudUserName 'jsmith' -ErrorAction Stop } | Should -Throw
         }
     }
 
@@ -104,7 +105,7 @@ Describe 'Functions' {
         # Add a C# Method to PWSH context we effectively test this with Migration tests
     }
 
-    Context 'New-LocalUserProfile Function'{
+    Context 'New-LocalUserProfile Function' {
         It 'User created and exists on system' {
             $newUserPassword = ConvertTo-SecureString -String 'Temp123!' -AsPlainText -Force
             New-localUser -Name 'testjc' -password $newUserPassword -Description "Created By JumpCloud ADMU tests"
@@ -113,11 +114,11 @@ Describe 'Functions' {
         }
 
         It 'User does not exist on system and throws exception' {
-            {New-LocalUserProfile -username:('userdoesntexist') -ErrorAction Stop} | Should -Throw
+            { New-LocalUserProfile -username:('userdoesntexist') -ErrorAction Stop } | Should -Throw
         }
     }
 
-    Context 'Remove-LocalUserProfile Function'{
+    Context 'Remove-LocalUserProfile Function' {
         It 'Add and remove,user should not exist on system' {
             $newUserPassword = ConvertTo-SecureString -String 'Temp123!' -AsPlainText -Force
             New-localUser -Name 'testremovejc2' -password $newUserPassword -Description "Created By JumpCloud ADMU tests"
@@ -133,11 +134,11 @@ Describe 'Functions' {
         }
 
         It 'User does not exist on system and throws exception' {
-            {Remove-LocalUserProfile -username:('randomusernamethatdoesntexist') -ErrorAction Stop} | Should -Throw
+            { Remove-LocalUserProfile -username:('randomusernamethatdoesntexist') -ErrorAction Stop } | Should -Throw
         }
     }
 
-    Context 'Set-ValueToKey Function'{
+    Context 'Set-ValueToKey Function' {
         # Test that we can write to the registry when providing a key and value
         It 'Value is set on existing key' {
             Set-ValueToKey -registryRoot LocalMachine -keyPath 'SYSTEM\Software' -name '1' -value '1' -regValueKind DWord
@@ -145,7 +146,7 @@ Describe 'Functions' {
         }
     }
 
-    Context 'New-RegKey Function'{
+    Context 'New-RegKey Function' {
         # Test that we can create new keys
         It 'Key is created' {
             New-RegKey -keyPath 'SYSTEM\1' -registryRoot LocalMachine
@@ -153,7 +154,7 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Get-SID Function'{
+    Context 'Get-SID Function' {
         It 'Profile exists and sid returned' {
             # SID of circleCI user should match SID regex pattern
             Get-SID -User:'circleci' -cnotmatch "^S-\d-\d+-(\d+-){1,14}\d+$" | Should -Be $true
@@ -169,85 +170,93 @@ Describe 'Functions' {
             # Test-Path -Path 'HKU:\$($circlecisid)'
         }
 
-        It 'Unload'{
+        It 'Unload' {
 
         }
     }
 
-    Context 'Test-UserRegistryLoadState Function' -skip{
+    Context 'Test-UserRegistryLoadState Function' -skip {
         # Tested in Migration Tests
     }
 
-    Context 'Backup-RegistryHive Function' -skip{
+    Context 'Backup-RegistryHive Function' -skip {
         # Tested in Migration Tests
     }
 
-    Context 'Get-ProfileImagePath Function' -skip{
+    Context 'Get-ProfileImagePath Function' -skip {
         # Tested in Migration Tests
     }
 
-    Context 'Get-WindowsDrive Function'{
+    Context 'Get-WindowsDrive Function' {
         It 'Get-WindowsDrive - C' {
             Get-WindowsDrive | Should -Be "C:"
         }
     }
 
-    Context 'Write-ToLog Function'{
+    Context 'Write-ToLog Function' {
 
         It 'Write-ToLog - ' {
-		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
-                    remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
+            {
+                remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-                Write-ToLog -Message:('Log is created - test.') -Level:('Info')
-                $log='C:\windows\Temp\jcAdmu.log'
-                $log | Should -exist
+            Write-ToLog -Message:('Log is created - test.') -Level:('Info')
+            $log = 'C:\windows\Temp\jcAdmu.log'
+            $log | Should -exist
         }
 
         It 'Write-ToLog - Log is created' {
-		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
-                    remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
+            {
+                remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-                Write-ToLog -Message:('Log is created - test.') -Level:('Info')
-                $log='C:\windows\Temp\jcAdmu.log'
-                $log | Should -exist
+            Write-ToLog -Message:('Log is created - test.') -Level:('Info')
+            $log = 'C:\windows\Temp\jcAdmu.log'
+            $log | Should -exist
         }
 
         It 'Write-ToLog - ERROR: Log entry exists' {
-		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
-                   remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
+            {
+                remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-              # Write-ToLog -Message:('Test Error Log Entry.') -Level:('Error') -ErrorAction
-               #$Log = Get-Content 'c:\windows\temp\jcAdmu.log'
-               #$Log.Contains('ERROR: Test Error Log Entry.') | Should -Be $true
-               #    if ($error.Count -eq 1) {
-               #    $error.Clear()
-               #    }
+            # Write-ToLog -Message:('Test Error Log Entry.') -Level:('Error') -ErrorAction
+            #$Log = Get-Content 'c:\windows\temp\jcAdmu.log'
+            #$Log.Contains('ERROR: Test Error Log Entry.') | Should -Be $true
+            #    if ($error.Count -eq 1) {
+            #    $error.Clear()
+            #    }
         }
 
         It 'Write-ToLog - WARNING: Log entry exists' {
-		    if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
-                   remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
+            {
+                remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-               Write-ToLog -Message:('Test Warning Log Entry.') -Level:('Warn')
-               $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
-               $Log.Contains('WARNING: Test Warning Log Entry.') | Should -Be $true
+            Write-ToLog -Message:('Test Warning Log Entry.') -Level:('Warn')
+            $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
+            $Log.Contains('WARNING: Test Warning Log Entry.') | Should -Be $true
         }
 
         It 'Write-ToLog - INFO: Log entry exists' {
-            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
-                    remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
-            }
-                Write-ToLog -Message:('Test Info Log Entry.') -Level:('Info')
-                $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
-                $Log.Contains('INFO: Test Info Log Entry.') | Should -Be $true
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
+            {
                 remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+            }
+            Write-ToLog -Message:('Test Info Log Entry.') -Level:('Info')
+            $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
+            $Log.Contains('INFO: Test Info Log Entry.') | Should -Be $true
+            remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
         }
     }
 
-    Context 'Remove-ItemIfExist Function'{
+    Context 'Remove-ItemIfExist Function' {
 
         It 'Remove-ItemIfExist - Does Exist c:\windows\temp\test\' {
-            if(Test-Path 'c:\windows\Temp\test\') {Remove-Item 'c:\windows\Temp\test' -Recurse -Force}
+            if (Test-Path 'c:\windows\Temp\test\')
+            {
+                Remove-Item 'c:\windows\Temp\test' -Recurse -Force
+            }
             New-Item -ItemType directory -path 'c:\windows\Temp\test\'
             New-Item 'c:\windows\Temp\test\test.txt'
             Remove-ItemIfExist -Path 'c:\windows\Temp\test\' -Recurse
@@ -255,15 +264,18 @@ Describe 'Functions' {
         }
 
         It 'Remove-ItemIfExist - Fails c:\windows\temp\test\' {
-            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force}
-            Mock Remove-ItemIfExist {Write-ToLog -Message ('Removal Of Temp Files & Folders Failed') -Level Warn}
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
+            {
+                remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+            }
+            Mock Remove-ItemIfExist { Write-ToLog -Message ('Removal Of Temp Files & Folders Failed') -Level Warn }
             Remove-ItemIfExist -Path 'c:\windows\Temp\test\'
             $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
             $Log.Contains('Removal Of Temp Files & Folders Failed') | Should -Be $true
         }
     }
 
-    Context 'Test-ProgramInstalled Function'{
+    Context 'Test-ProgramInstalled Function' {
 
         It 'Test-ProgramInstalled x64 - PowerShell 7-x64' {
             test-programinstalled -programName 'PowerShell 7-x64' | Should -Be $true
@@ -278,7 +290,7 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Uninstall-Program Function'{
+    Context 'Uninstall-Program Function' {
 
         It 'Uninstall - aws command line interface' -Skip {
             #TODO: This test actually be install something new, and uninstall should work
@@ -288,7 +300,7 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Start-NewProcess Function'{
+    Context 'Start-NewProcess Function' {
 
         It 'Start-NewProcess - Notepad' {
             Start-NewProcess -pfile:('c:\windows\system32\notepad.exe') -Timeout 1000
@@ -297,19 +309,20 @@ Describe 'Functions' {
         }
 
         It 'Start-NewProcess & end after 2s timeout - Notepad ' {
-            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true){
-                    remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
+            {
+                remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
             Start-NewProcess -pfile:('c:\windows\system32\notepad.exe') -Timeout 1000
             Start-Sleep -s 2
             Stop-Process -Name "notepad"
             $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
-               $Log.Contains('Windows ADK Setup did not complete after 5mins') | Should -Be $true
-               remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+            $Log.Contains('Windows ADK Setup did not complete after 5mins') | Should -Be $true
+            remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
         }
     }
 
-    Context 'Test-IsNotEmpty Function'{
+    Context 'Test-IsNotEmpty Function' {
 
         It 'Test-IsNotEmpty - $null' {
             Test-IsNotEmpty -field $null | Should -Be $true
@@ -324,7 +337,7 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Test-Is40chars Function'{
+    Context 'Test-Is40chars Function' {
 
         It 'Test-Is40chars - $null' {
             Test-Is40chars -field $null | Should -Be $false
@@ -339,7 +352,7 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Test-HasNoSpace Function'{
+    Context 'Test-HasNoSpace Function' {
 
         It 'Test-HasNoSpace - $null' {
             Test-HasNoSpace -field $null | Should -Be $true
@@ -354,7 +367,7 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Add-LocalUser Function'{
+    Context 'Add-LocalUser Function' {
 
         It 'Add-LocalUser - testuser to Users ' {
             net user testuser /delete | Out-Null
@@ -365,7 +378,7 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Test-Localusername Function'{
+    Context 'Test-Localusername Function' {
 
         It 'Test-Localusername - exists' {
 
@@ -378,8 +391,8 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Test-Domainusername Function'{
-# Requires domainjoined system
+    Context 'Test-Domainusername Function' {
+        # Requires domainjoined system
         It 'Test-Domainusername - exists' -skip {
 
             Test-Domainusername -field 'bob.lazar' | Should -Be $true
@@ -391,12 +404,12 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Install-JumpCloudAgent Function'{
-    #Already installed on circleci
+    Context 'Install-JumpCloudAgent Function' {
+        #Already installed on circleci
         It 'Install-JumpCloudAgent - Verify Download JCAgent prereq Visual C++ 2013 x64' -skip {
             Test-path 'C:\Windows\Temp\JCADMU\vc_redist.x64.exe' | Should -Be $true
         }
-    #Already installed on circleci
+        #Already installed on circleci
         It 'Install-JumpCloudAgent - Verify Download JCAgent prereq Visual C++ 2013 x86' -skip {
             Test-path 'C:\Windows\Temp\JCADMU\vc_redist.x86.exe' | Should -Be $true
         }
@@ -418,24 +431,29 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Get-NetBiosName Function'{
-# Requires domainjoined system
+    Context 'Get-NetBiosName Function' {
+        # Requires domainjoined system
         It 'Get-NetBiosName - JCADB2' -Skip {
             Get-NetBiosName | Should -Be 'JCADB2'
         }
     }
 
-    Context 'Convert-SID Function'{
+    Context 'Convert-SID Function' {
+        BeforeAll {
+            $newUserPassword = ConvertTo-SecureString -String 'Temp123!' -AsPlainText -Force
+            New-localUser -Name 'sidTest' -password $newUserPassword -Description "Created By JumpCloud ADMU tests"
+            New-LocalUserProfile -username:('sidTest')
+        }
         It 'Convert-SID - circleci SID' {
-            $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\circleci'| Select-Object SID).SID
-            (Convert-SID -Sid $circlecisid) | Should -match 'circleci'
+            $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\sidTest' | Select-Object SID).SID
+            (Convert-SID -Sid $circlecisid) | Should -match 'sidTest'
         }
     }
 
-    Context 'Convert-UserName Function'{
+    Context 'Convert-UserName Function' {
         It 'Convert-UserName' {
-            $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\circleci'| Select-Object SID).SID
-            (Convert-UserName -user:('circleci')) | Should -match $circlecisid
+            $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\sidTest' | Select-Object SID).SID
+            (Convert-UserName -user:('sidTest')) | Should -match $circlecisid
         }
     }
 
@@ -446,7 +464,7 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Restart-ComputerWithDelay Function' -Skip{
+    Context 'Restart-ComputerWithDelay Function' -Skip {
         # Test Manually
         It 'Restart-ComputerWithDelay' {
         }
