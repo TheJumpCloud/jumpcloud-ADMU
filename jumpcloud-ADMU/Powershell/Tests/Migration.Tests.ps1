@@ -209,7 +209,7 @@ Describe 'Migration Test Scenarios' {
 
             # variables for test
             $CommandBody = '
-        . C:\Users\circleci\project\jumpcloud-ADMU\Powershell\Start-Migration.ps1
+        . "C:\Users\circleci.$env:COMPUTERNAME\project\jumpcloud-ADMU\Powershell\Start-Migration.ps1"
         # Trim env vars with hardcoded ""
         $JCU = ${ENV:$JcUserName}.Trim([char]0x0022)
         $SU = ${ENV:$SelectedUserName}.Trim([char]0x0022)
