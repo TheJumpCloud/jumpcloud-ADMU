@@ -63,7 +63,8 @@ foreach ( $i in $OnlineComputers )
         $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
         $regex = 'systemKey\":\"(\w+)\"'
         $systemKey = [regex]::Match($config, $regex).Groups[1].Value
-        if ($systemKey){
+        if ($systemKey)
+        {
             $Headers = @{
                 'Accept'       = 'application/json';
                 'Content-Type' = 'application/json';
@@ -72,7 +73,8 @@ foreach ( $i in $OnlineComputers )
             $Form = @{
                 'filter' = "username:eq:$($JumpcloudUserName)"
             }
-            Try{
+            Try
+            {
                 Write-Host "Getting information from SystemID: $systemKey"
                 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
                 $Response = Invoke-WebRequest -Method 'Get' -Uri "https://console.jumpcloud.com/api/systemusers" -Headers $Headers -Body $Form -UseBasicParsing
@@ -86,7 +88,8 @@ foreach ( $i in $OnlineComputers )
             $Results = $Response.Content | ConvertFrom-JSON
             $JcUserId = $Results.results.id
             # Bind Step
-            if ($JcUserId){
+            if ($JcUserId)
+            {
                 $Headers = @{
                     'Accept'    = 'application/json';
                     'x-api-key' = $JcApiKey
@@ -108,11 +111,13 @@ foreach ( $i in $OnlineComputers )
                     $StatusCode = $_.Exception.Response.StatusCode.value__
                 }
             }
-            else {
-                Write-Host "Cound not bind user/ JumpCloudUsername did not exist in JC Directory"
+            else
+            {
+                Write-Host "Could not bind user/ JumpCloudUsername did not exist in JC Directory"
             }
         }
-        else{
+        else
+        {
             Write-Host "Could not find systemKey, aborting bind step"
         }
         # Force Reboot

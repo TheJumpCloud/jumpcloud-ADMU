@@ -28,7 +28,8 @@ Describe 'Migration Test Scenarios' {
             {
                 # Remove log before testing
                 $logPath = "C:\Windows\Temp\jcadmu.log"
-                if (Test-Path -Path $logPath){
+                if (Test-Path -Path $logPath)
+                {
                     Remove-Item $logPath
                     New-Item $logPath -Force -ItemType File
                 }
@@ -122,7 +123,7 @@ Describe 'Migration Test Scenarios' {
             "C:\Users\$($user.JCUsername)" | Should -Not -Exist
         }
     }
-    It "Account of a prior migration can be sucessfully migrated again and not overwrite registry backup files"{
+    It "Account of a prior migration can be sucessfully migrated again and not overwrite registry backup files" {
         $Password = "Temp123!"
         $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
         $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -208,7 +209,7 @@ Describe 'Migration Test Scenarios' {
 
             # variables for test
             $CommandBody = '
-        . C:\Users\circleci\project\jumpcloud-ADMU\Powershell\Start-Migration.ps1
+        . "C:\Users\circleci.$env:COMPUTERNAME\project\jumpcloud-ADMU\Powershell\Start-Migration.ps1"
         # Trim env vars with hardcoded ""
         $JCU = ${ENV:$JcUserName}.Trim([char]0x0022)
         $SU = ${ENV:$SelectedUserName}.Trim([char]0x0022)
@@ -278,12 +279,12 @@ Describe 'Migration Test Scenarios' {
                 $count = 0
                 do
                 {
-                    $CommandResults = Get-JcSdkCommandResult -id $invokeResults.Id
+                    $CommandResults = Get-JCCommandResult -CommandResultID $invokeResults.Id
                     Write-host "Waiting 5 seconds on results..."
                     $count += 1
                     start-sleep 5
-                } until ((($CommandResults.DataExitCode) -is [int]) -or ($count -eq 48))
-                $CommandResults.DataExitCode | Should -Be 0
+                } until ((($CommandResults.exitCode) -is [int]) -or ($count -eq 48))
+                $CommandResults.exitCode | Should -Be 0
             }
         }
     }
