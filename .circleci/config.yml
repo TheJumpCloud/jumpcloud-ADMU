@@ -5,6 +5,10 @@ parameters:
     default: "patch"
     type: enum
     enum: ["major", "minor", "patch"]
+  ManualModuleVersion:
+    description: "When `true` the pipeline will use the Module Version specified in JumpCloud Module JumpCloud.psd1 file"
+    type: boolean
+    default: true
 orbs:
   win: circleci/windows@5.0.0
 
@@ -169,7 +173,7 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/Build-Module.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU')
+            ./Deploy/Build-Module.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU') -ManualModuleVersion $<< pipeline.parameters.ManualModuleVersion >>
       - persist_to_workspace:
           root: .
           paths:
