@@ -5,6 +5,10 @@ parameters:
     default: "patch"
     type: enum
     enum: ["major", "minor", "patch"]
+  PublishToPSGallery:
+    description: "When `true` and when run against Master branch, this workflow will publish the latest code to PSGallery"
+    type: boolean
+    default: true
   ManualModuleVersion:
     description: "When `true` the pipeline will use the Module Version specified in JumpCloud Module JumpCloud.psd1 file"
     type: boolean
@@ -54,6 +58,13 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build Module
         - Build Help Files
         - Build Nuspec
+  - Publish Module Validation:
+      requires:
+        - Build
+        - Pester Tests
+        - Build Module
+        - Build Help Files
+        - Build Nuspec
 release: &release
   - Build
   - draft-github-release
@@ -70,17 +81,23 @@ release: &release
         - Build
         - Build Module
         - Build Nuspec
+  - Publish Module Validation:
+      requires:
+        - Build
+        - Build Module
+        - Build Nuspec
   - Invoke Git Commit:
       requires:
         - Build
         - Build Module
         - Build Nuspec
+        - Publish Module Validation
   - Upload Artifact:
       requires:
         - Build
         - Build Module
         - Build Nuspec
-  - Sign Exe:
+  - Start Sign Job:
       context: github-credentials
       requires:
         - Build
@@ -101,9 +118,9 @@ workflows:
   release:
     jobs: *release
     when:
-      matches:
-        pattern: "^master$"
-        value: << pipeline.git.branch >>
+      and:
+        - equal: [master, << pipeline.git.branch >>]
+        - equal: [true, << pipeline.parameters.PublishToPSGallery >>]
 
 jobs:
   Build: # name of your job
@@ -252,9 +269,15 @@ jobs:
           name: Add nuget sources
           shell: pwsh.exe
           command: |
-            dotnet nuget add source "https://www.powershellgallery.com/api/v2" --name PSGallery
+            dotnet nuget add source "https://www.powershellgallery.com/api/v2/package" --name PSGallery
       - deploy-nupkg:
           source: PSGallery
+  Publish Module Validation:
+    machine:
+      image: ubuntu-2004:202201-02
+    steps:
+      - validate-pipeline-param:
+          branch: << pipeline.git.branch >>
   Invoke Git Commit:
     executor: win/default
     steps:
@@ -287,18 +310,15 @@ jobs:
       - store_artifacts:
           path: ./
           destination: artifact-file
-  Sign Exe:
+  Start Sign Job:
     docker:
       - image: cimg/base:2021.04
     steps:
       - run:
-          name: Sign unsigned exe
+          name: Start Sign Exe Job
           command: |
-            if [ "${CIRCLE_PULL_REQUEST##*/}" != "" ];then
-              curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/dispatches' --header "authorization: Bearer $GITHUB_TOKEN" --data '{"event_type": "Sign Exe"}'
-            else
-              echo "Not a PR"
-            fi
+            curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/dispatches' --header "authorization: Bearer $GITHUB_TOKEN" --data '{"event_type": "Sign Exe"}'
+
   draft-github-release:
     docker:
       - image: cibuilds/github:0.13
@@ -336,3 +356,37 @@ commands:
             If('<< parameters.source >>' -eq 'CodeArtifact'){dotnet nuget push $NupkgPath --source << parameters.source >>}
             ElseIf('<< parameters.source >>' -eq 'PSGallery'){dotnet nuget push $NupkgPath --source << parameters.source >> --api-key $env:NuGetApiKey}
             Else {Write-Error "Unknown source value: << parameters.source >>"}
+  validate-pipeline-param:
+    parameters:
+      branch:
+        description: Name of the branch to deploy to
+        type: string
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Reset Publish To Gallery Param
+          shell: bash
+          environment:
+            branch: << parameters.branch >>
+          command: |
+            sudo snap install yq
+            publish=$(/snap/bin/yq e '.parameters.PublishToPSGallery.default' ~/project/.circleci/config.yml)
+            if [[ $branch != 'master' ]]; then
+                echo "Running on $branch, checking to see if PublishToPSGallery param is set..."
+                if [[ $publish == "false" ]]; then
+                  echo "CircleCI Param PublishToPSGallery is not set to 'true' (currently: $publish) - Module will not publish on merge to master"
+                  exit 1
+                elif [[ $publish == "true" ]]; then
+                  echo "CircleCI Param PublishToPSGallery is set to 'true' - Module will publish on merge to master"
+                fi
+            fi
+            if [[ $branch == 'master' ]]; then
+                echo "Running on $branch, resetting PublishToPSGallery param..."
+                /snap/bin/yq e '.parameters.ManualModuleVersion.default = false' -i ~/project/.circleci/config.yml
+                /snap/bin/yq e '.parameters.PublishToPSGallery.default = false' -i ~/project/.circleci/config.yml
+            fi
+      - persist_to_workspace:
+          root: .
+          paths:
+            - .
