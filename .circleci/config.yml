@@ -5,6 +5,10 @@ parameters:
     default: "patch"
     type: enum
     enum: ["major", "minor", "patch"]
+  ManualModuleVersion:
+    description: "When `true` the pipeline will use the Module Version specified in JumpCloud Module JumpCloud.psd1 file"
+    type: boolean
+    default: true
 orbs:
   win: circleci/windows@5.0.0
 
@@ -60,7 +64,7 @@ release: &release
       requires:
         - Build
         - Build Module
-  - Publish:
+  - Publish on PSGallery:
       context: aws-credentials
       requires:
         - Build
@@ -169,7 +173,7 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/Build-Module.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU')
+            ./Deploy/Build-Module.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU') -ManualModuleVersion $<< pipeline.parameters.ManualModuleVersion >>
       - persist_to_workspace:
           root: .
           paths:
@@ -230,6 +234,27 @@ jobs:
             dotnet nuget add source "https://www.powershellgallery.com/api/v2" --name PSGallery
       - deploy-nupkg:
           source: CodeArtifact
+  Publish on PSGallery:
+    executor: win/default
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: Install Dependencies
+          shell: pwsh.exe
+          command: |
+            Install-Module -Name PowerShellGet -AllowPrerelease -RequiredVersion '3.0.0-beta10' -Force
+            if ( -not ( Test-Path -Path ./Deploy/utils ) ) {
+              mkdir ./Deploy/utils
+              invoke-WebRequest https://dist.nuget.org/win-x86-commandline/v3.3.0/nuget.exe -Outfile ./Deploy/utils/nuget.exe
+            }
+      - run:
+          name: Add nuget sources
+          shell: pwsh.exe
+          command: |
+            dotnet nuget add source "https://www.powershellgallery.com/api/v2" --name PSGallery
+      - deploy-nupkg:
+          source: PSGallery
   Invoke Git Commit:
     executor: win/default
     steps:
@@ -270,7 +295,7 @@ jobs:
           name: Sign unsigned exe
           command: |
             if [ "${CIRCLE_PULL_REQUEST##*/}" != "" ];then
-              curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/dispatches' --header "authorization: Bearer $GITHUB_TOKEN" --data '{"event_type": "Sign Exe"}' 
+              curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/dispatches' --header "authorization: Bearer $GITHUB_TOKEN" --data '{"event_type": "Sign Exe"}'
             else
               echo "Not a PR"
             fi
@@ -284,7 +309,7 @@ jobs:
           name: "Draft Release on GitHub"
           command: |
             # Module Version
-            VERSION=$(grep -o '\d\+\.\d\+\.\d\+' /root/project/jumpcloud-ADMU/JumpCloud.ADMU.psd1)
+            VERSION=$(grep -o '\d\+\.\d\+\.\d\+' ./jumpcloud-ADMU/JumpCloud.ADMU.psd1)
             TITLE="JumpCloud ADMU v$VERSION"
             # Get the changelog text between the latest release # and the next sequential "## SemanticVersionNumber"
             CHANGELOG=$(cat /root/project/ModuleChangelog.md |awk "/^## $VERSION/{ f = 1; next } /## [0-9]+.[0-9]+.[0-9]+/{ f = 0 } f")
