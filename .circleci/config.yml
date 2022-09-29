@@ -67,7 +67,6 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build Nuspec
 release: &release
   - Build
-  - draft-github-release
   - Build Module:
       requires:
         - Build
@@ -86,6 +85,12 @@ release: &release
         - Build
         - Build Module
         - Build Nuspec
+  - draft-github-release:
+      requires:
+        - Build
+        - Build Module
+        - Build Nuspec
+        - Publish Module Validation
   - Invoke Git Commit:
       requires:
         - Build
@@ -329,7 +334,7 @@ jobs:
           name: "Draft Release on GitHub"
           command: |
             # Module Version
-            VERSION=$(grep -o '\d\+\.\d\+\.\d\+' ./jumpcloud-ADMU/JumpCloud.ADMU.psd1)
+            VERSION=$(grep -o '\d\+\.\d\+\.\d\+' ./project/jumpcloud-ADMU/JumpCloud.ADMU.psd1)
             TITLE="JumpCloud ADMU v$VERSION"
             # Get the changelog text between the latest release # and the next sequential "## SemanticVersionNumber"
             CHANGELOG=$(cat /root/project/ModuleChangelog.md |awk "/^## $VERSION/{ f = 1; next } /## [0-9]+.[0-9]+.[0-9]+/{ f = 0 } f")
