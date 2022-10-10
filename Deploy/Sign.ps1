@@ -6,6 +6,7 @@
 $signpath = 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe'
 $RootPath = Split-Path (Split-Path $PSScriptRoot -Parent)
 $GUI_JCADMU = "$RootPath/jumpcloud-ADMU/jumpcloud-ADMU/Exe/gui_jcadmu.exe"
+$UWP_JCADMU = "$RootPath/jumpcloud-ADMU/jumpcloud-ADMU/Exe/uwp_jcadmu.exe"
 $base64 = "$env:BASE64_ENCODED_CERT"
 $password = "$env:CERTPASS"
 $filenameCert = "$PSScriptRoot/cert.pfx"
@@ -34,7 +35,8 @@ $tsaServers = @(
 )
 
 $filesToSign = @(
-    $GUI_JCADMU
+    $GUI_JCADMU,
+    $UWP_JCADMU
 )
 
 
@@ -61,10 +63,6 @@ foreach ($file in $filesToSign)
             /p $password `
             /tr http://timestamp.digicert.com `
             $file
-
-        #move above $file for tsachecks
-        #/tr $($tsaServers[$tsaIndex]) `
-        #/td SHA256 `
 
         if ( -not $? )
         {
