@@ -8,14 +8,13 @@ parameters:
   PublishToPSGallery:
     description: "When `true` and when run against Master branch, this workflow will publish the latest code to PSGallery"
     type: boolean
-    default: true
+    default: false
   ManualModuleVersion:
     description: "When `true` the pipeline will use the Module Version specified in JumpCloud Module JumpCloud.psd1 file"
     type: boolean
-    default: true
+    default: false
 orbs:
   win: circleci/windows@5.0.0
-
 build-and-sign-ADMU: &build-and-sign-ADMU
   - Build
   - Pester Tests:
@@ -126,12 +125,12 @@ workflows:
       and:
         - equal: [master, << pipeline.git.branch >>]
         - equal: [true, << pipeline.parameters.PublishToPSGallery >>]
-
 jobs:
   Build: # name of your job
     executor: win/default # executor type
     steps:
       # Commands are run in a Windows
+
       # virtual machine environment
       - checkout
       - run:
@@ -323,7 +322,6 @@ jobs:
           name: Start Sign Exe Job
           command: |
             curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/dispatches' --header "authorization: Bearer $GITHUB_TOKEN" --data '{"event_type": "Sign Exe"}'
-
   draft-github-release:
     docker:
       - image: cibuilds/github:0.13
