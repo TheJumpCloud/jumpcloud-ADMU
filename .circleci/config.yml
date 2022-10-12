@@ -64,6 +64,12 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build Module
         - Build Help Files
         - Build Nuspec
+  - draft-github-release:
+      requires:
+        - Build
+        - Build Module
+        - Build Nuspec
+        - Publish Module Validation
 release: &release
   - Build
   - Build Module:
