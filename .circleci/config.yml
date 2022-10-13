@@ -64,13 +64,6 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build Module
         - Build Help Files
         - Build Nuspec
-  - draft-github-release:
-      context: github-credentials
-      requires:
-        - Build
-        - Build Module
-        - Build Nuspec
-        - Publish Module Validation
 release: &release
   - Build
   - Build Module:
@@ -92,6 +85,7 @@ release: &release
         - Build Module
         - Build Nuspec
   - draft-github-release:
+      context: github-credentials
       requires:
         - Build
         - Build Module
@@ -346,7 +340,7 @@ jobs:
             TAG="v$VERSION"
             BODY="$TITLE $CHANGELOG"
             # Post Draft Release
-            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -n "$TITLE" -b "$BODY" -delete -draft "$TAG" /root/project/jumpcloud-ADMU/
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -n "$TITLE" -b "$BODY" -delete -draft "$TAG" /root/project/jumpcloud-ADMU/Exe
 commands:
   deploy-nupkg:
     parameters:
