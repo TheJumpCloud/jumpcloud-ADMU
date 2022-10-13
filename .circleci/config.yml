@@ -65,6 +65,7 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build Help Files
         - Build Nuspec
   - draft-github-release:
+      context: github-credentials
       requires:
         - Build
         - Build Module
