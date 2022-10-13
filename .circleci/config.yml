@@ -8,11 +8,11 @@ parameters:
   PublishToPSGallery:
     description: "When `true` and when run against Master branch, this workflow will publish the latest code to PSGallery"
     type: boolean
-    default: false
+    default: true
   ManualModuleVersion:
     description: "When `true` the pipeline will use the Module Version specified in JumpCloud Module JumpCloud.psd1 file"
     type: boolean
-    default: false
+    default: true
 orbs:
   win: circleci/windows@5.0.0
 build-and-sign-ADMU: &build-and-sign-ADMU
@@ -85,6 +85,7 @@ release: &release
         - Build Module
         - Build Nuspec
   - draft-github-release:
+      context: github-credentials
       requires:
         - Build
         - Build Module
@@ -332,14 +333,14 @@ jobs:
           name: "Draft Release on GitHub"
           command: |
             # Module Version
-            VERSION=$(grep -o '\d\+\.\d\+\.\d\+' ./project/jumpcloud-ADMU/JumpCloud.ADMU.psd1)
+            VERSION=$(grep -o '\d\+\.\d\+\.\d\+' /root/project/jumpcloud-ADMU/JumpCloud.ADMU.psd1)
             TITLE="JumpCloud ADMU v$VERSION"
             # Get the changelog text between the latest release # and the next sequential "## SemanticVersionNumber"
             CHANGELOG=$(cat /root/project/ModuleChangelog.md |awk "/^## $VERSION/{ f = 1; next } /## [0-9]+.[0-9]+.[0-9]+/{ f = 0 } f")
             TAG="v$VERSION"
             BODY="$TITLE $CHANGELOG"
             # Post Draft Release
-            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -n "$TITLE" -b "$BODY" -delete -draft "$TAG" /root/project/PowerShell/
+            ghr -t ${GITHUB_TOKEN} -u ${CIRCLE_PROJECT_USERNAME} -r ${CIRCLE_PROJECT_REPONAME} -c ${CIRCLE_SHA1} -n "$TITLE" -b "$BODY" -delete -draft "$TAG" /root/project/jumpcloud-ADMU/Exe
 commands:
   deploy-nupkg:
     parameters:

@@ -43,7 +43,10 @@ New-ModuleManifest -Path:($FilePath_psd1) `
     -Description:('Powershell Module to run JumpCloud Active Directory Migration Utility.')
 
 # EndRegion Building New-JCModuleManifest
-
+# update psd1 with utf8 encoding
+$psd1Raw = Get-Content -Raw $FilePath_psd1 -Encoding unicode
+$Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
+[System.IO.File]::WriteAllLines($FilePath_psd1, $psd1Raw, $Utf8NoBomEncoding)
 # Region Updating module change log
 Write-Host ('[status]Updating module change log: "' + $FilePath_ModuleChangelog + '"')
 $ModuleChangelog = Get-Content -Path:($FilePath_ModuleChangelog)

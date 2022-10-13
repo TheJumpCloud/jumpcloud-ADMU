@@ -1,6 +1,6 @@
-## 2.0.4
+## 2.0.5
 
-Release Date: Oct 10, 2022
+Release Date: Oct 13, 2022
 
 #### RELEASE NOTES
 
