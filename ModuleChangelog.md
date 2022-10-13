@@ -1,49 +1,5 @@
 ## 2.0.5
 
-Release Date: October 13, 2022
-
-#### RELEASE NOTES
-
-```
-{{Fill in the Release Notes}}
-```
-
-#### FEATURES:
-
-{{Fill in the Features}}
-
-#### IMPROVEMENTS:
-
-{{Fill in the Improvements}}
-
-#### BUG FIXES:
-
-{{Fill in the Bug Fixes}}
-
-## 2.0.1
-
-Release Date: October 13, 2022
-
-#### RELEASE NOTES
-
-```
-{{Fill in the Release Notes}}
-```
-
-#### FEATURES:
-
-{{Fill in the Features}}
-
-#### IMPROVEMENTS:
-
-{{Fill in the Improvements}}
-
-#### BUG FIXES:
-
-{{Fill in the Bug Fixes}}
-
-## 2.0.5
-
 Release Date: Oct 12, 2022
 
 #### RELEASE NOTES
