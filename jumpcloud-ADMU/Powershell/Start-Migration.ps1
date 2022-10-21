@@ -1262,7 +1262,7 @@ Function Start-Migration
         }
 
         # Start script
-        $admuVersion = '2.0.5'
+        $admuVersion = '2.0.6'
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
