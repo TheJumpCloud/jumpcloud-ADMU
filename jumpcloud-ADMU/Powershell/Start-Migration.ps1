@@ -1247,8 +1247,20 @@ Function Start-Migration
 
     Begin
     {
-        If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) { Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent" }else {}
-        If (($AutobindJCUser -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudAPIKey))) { Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User" }else {}
+        If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey)))
+        {
+            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent" 
+        }
+        else
+        {
+        }
+        If (($AutobindJCUser -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudAPIKey)))
+        {
+            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User" 
+        }
+        else
+        {
+        }
 
         # Start script
         $admuVersion = '2.0.0'
@@ -1532,10 +1544,12 @@ Function Start-Migration
             # collect unused references in memory and clear
             [gc]::collect()
             # Attempt to unload
-            try {
+            try
+            {
                 REG UNLOAD "HKU\$($newusersid)_admu" 2>&1 | out-null
             }
-            catch{
+            catch
+            {
                 Write-ToLog "This account has been previously migrated"
             }
             # if ($UnloadReg){
@@ -1763,11 +1777,25 @@ Function Start-Migration
         if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD')
         {
             # Find Appx User Apps by Username
-            $appxList = Get-AppXpackage -user (Convert-Sid $SelectedUserSID) | Select-Object InstallLocation
+            try
+            {
+                $appxList = Get-AppXpackage -user (Convert-Sid $SelectedUserSID) | Select-Object InstallLocation
+            }
+            catch
+            {
+                Write-ToLog -Message "Could Not Determine User AppxPackages individually, will rebuild from AllUsers list"
+            }
         }
         else
         {
-            $appxList = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
+            try
+            {
+                $appxList = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
+            }
+            catch
+            {
+                Write-ToLog -Message "Could Not Determine User AppxPackages individually, will rebuild from AllUsers list"
+            }
         }
         if ($appxList.Count -eq 0)
         {
