@@ -18,7 +18,7 @@ ModuleVersion = '2.0.6'
 # CompatiblePSEditions = @()
 
 # ID used to uniquely identify this module
-GUID = '89f96522-450f-4a09-a36d-14b3b101528e'
+GUID = 'eebfe2f7-7fd4-4473-830b-0185c842bbcb'
 
 # Author of this module
 Author = 'JumpCloud Solutions Architect Team'
