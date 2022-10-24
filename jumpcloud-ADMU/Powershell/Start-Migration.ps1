@@ -995,7 +995,7 @@ Function Install-JumpCloudAgent(
     If (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x64")))
     {
         Write-ToLog -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x64')
-        (New-Object System.Net.WebClient).DownloadFile("${msvc2013x64Link}", ($usmtTempPath + $msvc2013x64File))
+        (New-Object System.Net.WebClient).DownloadFile("${msvc2013x64Link}", ($JcAdmuTempPath + $msvc2013x64File))
         Invoke-Expression -Command:($msvc2013x64Install)
         $timeout = 0
         While (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x64")))
@@ -1012,7 +1012,7 @@ Function Install-JumpCloudAgent(
     If (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x86")))
     {
         Write-ToLog -Message:('Downloading & Installing JCAgent prereq Visual C++ 2013 x86')
-        (New-Object System.Net.WebClient).DownloadFile("${msvc2013x86Link}", ($usmtTempPath + $msvc2013x86File))
+        (New-Object System.Net.WebClient).DownloadFile("${msvc2013x86Link}", ($JcAdmuTempPath + $msvc2013x86File))
         Invoke-Expression -Command:($msvc2013x86Install)
         $timeout = 0
         While (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x86")))
@@ -1262,7 +1262,7 @@ Function Start-Migration
         }
 
         # Start script
-        $admuVersion = '2.0.5'
+        $admuVersion = '2.0.6'
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
@@ -1776,11 +1776,25 @@ Function Start-Migration
         if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD')
         {
             # Find Appx User Apps by Username
-            $appxList = Get-AppXpackage -user (Convert-Sid $SelectedUserSID) | Select-Object InstallLocation
+            try
+            {
+                $appxList = Get-AppXpackage -user (Convert-Sid $SelectedUserSID) | Select-Object InstallLocation
+            }
+            catch
+            {
+                Write-ToLog -Message "Could not determine AppXPackages for selected user, this is okay. Rebuilding UWP Apps from AllUsers list"
+            }
         }
         else
         {
-            $appxList = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
+            try
+            {
+                $appxList = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
+            }
+            catch
+            {
+                Write-ToLog -Message "Could not determine AppXPackages for selected user, this is okay. Rebuilding UWP Apps from AllUsers list"
+            }
         }
         if ($appxList.Count -eq 0)
         {

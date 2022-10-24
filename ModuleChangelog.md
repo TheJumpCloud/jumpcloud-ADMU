@@ -1,3 +1,17 @@
+## 2.0.6
+
+Release Date: Oct 21, 2022
+
+#### RELEASE NOTES
+
+```
+* Updated prerequisite paths for JumpCloud Agent and added try/ catch statements.
+```
+
+#### BUG FIXES:
+
+- Addressed an encoding issue with the PowerShellForGitHub module and the [invoke ADMU from agent](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/advanced-deployment-scenarios) workflows. If the newest version of the module 0.16.1 is used the scripts will no longer throw an error regarding invalid JSON.
+
 ## 2.0.5
 
 Release Date: Oct 13, 2022
