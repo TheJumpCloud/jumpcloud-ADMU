@@ -1,3 +1,18 @@
+## 2.0.7
+
+Release Date: November 2, 2022
+
+#### RELEASE NOTES
+
+```
+* JumpCloud username search is no longer case sensitive.
+* Updated Advanced Deployment Scripts to support multi-user migrations.
+```
+
+#### BUG FIXES:
+
+- Script failures should not result in the ADMU catching the error & displaying the log message.
+
 ## 2.0.6
 
 Release Date: Oct 21, 2022

@@ -23,8 +23,18 @@ Describe 'Functions' {
         It 'Valid Username Returns True' {
             # Get the first user
             $user = Get-JcSdkUser | Select-Object -First 1
-            # Test function
+            # Test username w/o modification
             $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $user.Username
+            $testResult | Should -Be $true
+            $userID | Should -Be $user.Id
+            # toUpper
+            $upper = ($user.Username).ToUpper()
+            $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $upper
+            $testResult | Should -Be $true
+            $userID | Should -Be $user.Id
+            # to lower
+            $lower = ($user.Username).ToLower()
+            $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $lower
             $testResult | Should -Be $true
             $userID | Should -Be $user.Id
         }
@@ -47,8 +57,7 @@ Describe 'Functions' {
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # If User Exists, remove from the org
             $users = Get-JCSDKUser
-            if ("$($user.JCUsername)" -in $users.Username)
-            {
+            if ("$($user.JCUsername)" -in $users.Username) {
                 $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
                 Write-Host "Found JumpCloud User, $($existing.Id) removing..."
                 Remove-JcSdkUser -Id $existing.Id
@@ -70,8 +79,7 @@ Describe 'Functions' {
 
         It 'Agent not installed' -skip {
             #TODO: Is this test necessary, it breaks the migration tests
-            if ((Test-Path -Path "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf") -eq $True)
-            {
+            if ((Test-Path -Path "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf") -eq $True) {
                 Remove-Item "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
             }
             { BindUsernameToJCSystem -JcApiKey $env:JCApiKey -JumpCloudUserName 'jsmith' -ErrorAction Stop } | Should -Throw
@@ -196,8 +204,7 @@ Describe 'Functions' {
     Context 'Write-ToLog Function' {
 
         It 'Write-ToLog - ' {
-            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
-            {
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
                 remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
             Write-ToLog -Message:('Log is created - test.') -Level:('Info')
@@ -206,8 +213,7 @@ Describe 'Functions' {
         }
 
         It 'Write-ToLog - Log is created' {
-            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
-            {
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
                 remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
             Write-ToLog -Message:('Log is created - test.') -Level:('Info')
@@ -216,8 +222,7 @@ Describe 'Functions' {
         }
 
         It 'Write-ToLog - ERROR: Log entry exists' {
-            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
-            {
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
                 remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
             # Write-ToLog -Message:('Test Error Log Entry.') -Level:('Error') -ErrorAction
@@ -229,8 +234,7 @@ Describe 'Functions' {
         }
 
         It 'Write-ToLog - WARNING: Log entry exists' {
-            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
-            {
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
                 remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
             Write-ToLog -Message:('Test Warning Log Entry.') -Level:('Warn')
@@ -239,8 +243,7 @@ Describe 'Functions' {
         }
 
         It 'Write-ToLog - INFO: Log entry exists' {
-            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
-            {
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
                 remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
             Write-ToLog -Message:('Test Info Log Entry.') -Level:('Info')
@@ -253,8 +256,7 @@ Describe 'Functions' {
     Context 'Remove-ItemIfExist Function' {
 
         It 'Remove-ItemIfExist - Does Exist c:\windows\temp\test\' {
-            if (Test-Path 'c:\windows\Temp\test\')
-            {
+            if (Test-Path 'c:\windows\Temp\test\') {
                 Remove-Item 'c:\windows\Temp\test' -Recurse -Force
             }
             New-Item -ItemType directory -path 'c:\windows\Temp\test\'
@@ -264,8 +266,7 @@ Describe 'Functions' {
         }
 
         It 'Remove-ItemIfExist - Fails c:\windows\temp\test\' {
-            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
-            {
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
                 remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
             Mock Remove-ItemIfExist { Write-ToLog -Message ('Removal Of Temp Files & Folders Failed') -Level Warn }
@@ -309,8 +310,7 @@ Describe 'Functions' {
         }
 
         It 'Start-NewProcess & end after 2s timeout - Notepad ' {
-            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true)
-            {
+            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
                 remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
             Start-NewProcess -pfile:('c:\windows\system32\notepad.exe') -Timeout 1000

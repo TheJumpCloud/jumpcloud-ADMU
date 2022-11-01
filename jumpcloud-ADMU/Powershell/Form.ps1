@@ -7,8 +7,7 @@ $BlueBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAAsTAAALE
 
 Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms, System.Drawing
 
-function DecodeBase64Image
-{
+function DecodeBase64Image {
     param (
         [Parameter(Mandatory = $true)]
         [String]$ImageBase64
@@ -31,7 +30,7 @@ function DecodeBase64Image
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.0.6"
+        Title="JumpCloud ADMU 2.0.7"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1000" Height="490">
@@ -120,12 +119,9 @@ function DecodeBase64Image
 
 # Read XAML
 $reader = (New-Object System.Xml.XmlNodeReader $xaml)
-Try
-{
+Try {
     $Form = [Windows.Markup.XamlReader]::Load($reader)
-}
-Catch
-{
+} Catch {
     Write-Error "Unable to load Windows.Markup.XamlReader. Some possible causes for this problem include: .NET Framework is missing PowerShell must be launched with PowerShell -sta, invalid XAML code was encountered.";
     Exit;
 }
@@ -149,57 +145,42 @@ $img_localaccount_password_valid.Source = DecodeBase64Image -ImageBase64 $Active
 $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
 Write-progress -Activity 'Jumpcloud ADMU' -Status 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..' -PercentComplete 25
 Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
-if ($WmiComputerSystem.PartOfDomain)
-{
+if ($WmiComputerSystem.PartOfDomain) {
     $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
     $securechannelstatus = Test-ComputerSecureChannel
 
     $nbtstat = nbtstat -n
-    foreach ($line in $nbtStat)
-    {
-        if ($line -match '^\s*([^<\s]+)\s*<00>\s*GROUP')
-        {
+    foreach ($line in $nbtStat) {
+        if ($line -match '^\s*([^<\s]+)\s*<00>\s*GROUP') {
             $NetBiosName = $matches[1]
         }
     }
 
-    if ([System.String]::IsNullOrEmpty($WmiComputerDomain[0].DnsForestName) -and $securechannelstatus -eq $false)
-    {
+    if ([System.String]::IsNullOrEmpty($WmiComputerDomain[0].DnsForestName) -and $securechannelstatus -eq $false) {
         $DomainName = 'Fix Secure Channel'
-    }
-    else
-    {
+    } else {
         $DomainName = [string]$WmiComputerDomain.DnsForestName
     }
     $NetBiosName = [string]$NetBiosName
-}
-elseif ($WmiComputerSystem.PartOfDomain -eq $false)
-{
+} elseif ($WmiComputerSystem.PartOfDomain -eq $false) {
     $DomainName = 'N/A'
     $NetBiosName = 'N/A'
     $securechannelstatus = 'N/A'
 }
-if ((Get-CimInstance Win32_OperatingSystem).Version -match '10')
-{
+if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
     $AzureADInfo = dsregcmd.exe /status
-    foreach ($line in $AzureADInfo)
-    {
-        if ($line -match "AzureADJoined : ")
-        {
+    foreach ($line in $AzureADInfo) {
+        if ($line -match "AzureADJoined : ") {
             $AzureADStatus = ($line.trimstart('AzureADJoined : '))
         }
-        if ($line -match "WorkplaceJoined : ")
-        {
+        if ($line -match "WorkplaceJoined : ") {
             $Workplace_join = ($line.trimstart('WorkplaceJoined : '))
         }
-        if ($line -match "TenantName : ")
-        {
+        if ($line -match "TenantName : ") {
             $TenantName = ($line.trimstart('WorkplaceTenantName : '))
         }
     }
-}
-else
-{
+} else {
     $AzureADStatus = 'N/A'
     $Workplace_join = 'N/A'
     $TenantName = 'N/A'
@@ -213,19 +194,16 @@ Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Getting C:\ & Local Profile D
 # Get Valid SIDs from the Registry and build user object
 $registyProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
 $profileList = @()
-foreach ($profile in $registyProfiles)
-{
+foreach ($profile in $registyProfiles) {
     $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
 }
 # List to store users
 $users = @()
-foreach ($listItem in $profileList)
-{
+foreach ($listItem in $profileList) {
     $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+$"
     $isValidFormat = [regex]::IsMatch($($listItem.PSChildName), $sidPattern);
     # Get Valid SIDs
-    if ($isValidFormat)
-    {
+    if ($isValidFormat) {
         # Populate Users List
         $users += [PSCustomObject]@{
             Name              = Convert-Sid $listItem.PSChildName
@@ -242,40 +220,28 @@ foreach ($listItem in $profileList)
 # Get Win32 Profiles to merge data with valid SIDs
 $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
 $date_format = "yyyy-MM-dd HH:mm"
-foreach ($user in $users)
-{
+foreach ($user in $users) {
     # Get Data from Win32Profile
-    foreach ($win32user in $win32UserProfiles)
-    {
-        if ($($user.SID) -eq $($win32user.SID))
-        {
+    foreach ($win32user in $win32UserProfiles) {
+        if ($($user.SID) -eq $($win32user.SID)) {
             $user.RoamingConfigured = $win32user.RoamingConfigured
             $user.Loaded = $win32user.Loaded
-            if ([string]::IsNullOrEmpty($($win32user.LastUseTime)))
-            {
+            if ([string]::IsNullOrEmpty($($win32user.LastUseTime))) {
                 $user.LastLogin = "N/A"
-            }
-            else
-            {
+            } else {
                 $user.LastLogin = [System.Management.ManagementDateTimeConverter]::ToDateTime($($win32user.LastUseTime)).ToUniversalTime().ToSTring($date_format)
             }
         }
     }
     # Get Admin Status
-    try
-    {
+    try {
         $admin = Get-LocalGroupMember -Member "$($user.SID)" -Name "Administrators" -EA SilentlyContinue
-    }
-    catch
-    {
+    } catch {
         $user = Get-LocalGroupMember -Member "$($user.SID)" -Name "Users"
     }
-    if ($admin)
-    {
+    if ($admin) {
         $user.IsLocalAdmin = $true
-    }
-    else
-    {
+    } else {
         $user.IsLocalAdmin = $false
     }
     # Get Profile Size
@@ -304,71 +270,54 @@ $lbNetBios.Content = $NetBiosName
 $lbAzureAD_Joined.Content = $AzureADStatus
 $lbTenantName.Content = $TenantName
 
-Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKey, [object]$tbTempPassword, [object]$lvProfileList, [object]$tbJumpCloudAPIKey)
-{
-    If (![System.String]::IsNullOrEmpty($lvProfileList.SelectedItem.UserName))
-    {
+Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKey, [object]$tbTempPassword, [object]$lvProfileList, [object]$tbJumpCloudAPIKey) {
+    If (![System.String]::IsNullOrEmpty($lvProfileList.SelectedItem.UserName)) {
         If (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
                 -and ((Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text) -and ($cb_installjcagent.IsChecked -eq $true))`
                 -and ((Test-Is40chars $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text) -and ($cb_autobindjcuser.IsChecked -eq $true))`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
                 -and !(($($lvProfileList.selectedItem.Username) -split '\\')[0] -match $WmiComputerSystem.Name)`
-                -and !(Test-Localusername $tbJumpCloudUserName.Text))
-        {
+                -and !(Test-Localusername $tbJumpCloudUserName.Text)) {
             $script:bMigrateProfile.Content = "Migrate Profile"
             $script:bMigrateProfile.IsEnabled = $true
             Return $true
-        }
-        ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
+        } ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
                 -and ((Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text) -and ($cb_installjcagent.IsChecked -eq $true) -and ($cb_autobindjcuser.IsChecked -eq $false))`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
-                -and !(Test-Localusername $tbJumpCloudUserName.Text))
-        {
+                -and !(Test-Localusername $tbJumpCloudUserName.Text)) {
             $script:bMigrateProfile.Content = "Migrate Profile"
             $script:bMigrateProfile.IsEnabled = $true
             Return $true
-        }
-        ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
+        } ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
                 -and ((Test-Is40chars $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text) -and ($cb_autobindjcuser.IsChecked -eq $true) -and ($cb_installjcagent.IsChecked -eq $false))`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
-                -and !(Test-Localusername $tbJumpCloudUserName.Text))
-        {
+                -and !(Test-Localusername $tbJumpCloudUserName.Text)) {
             $script:bMigrateProfile.Content = "Migrate Profile"
             $script:bMigrateProfile.IsEnabled = $true
             Return $true
-        }
-        Elseif (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
+        } Elseif (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
                 -and ($cb_installjcagent.IsChecked -eq $false) -and ($cb_autobindjcuser.IsChecked -eq $false)`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
                 -and !($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name)`
-                -and !(Test-Localusername $tbJumpCloudUserName.Text))
-        {
+                -and !(Test-Localusername $tbJumpCloudUserName.Text)) {
             $script:bMigrateProfile.Content = "Migrate Profile"
             $script:bMigrateProfile.IsEnabled = $true
             Return $true
-        }
-        Elseif ($lvProfileList.selectedItem.Username -eq 'UNKNOWN ACCOUNT')
-        {
+        } Elseif ($lvProfileList.selectedItem.Username -eq 'UNKNOWN ACCOUNT') {
             # Unmatched Profile, prevent migration
             $script:bMigrateProfile.Content = "Select Domain Profile"
             $script:bMigrateProfile.IsEnabled = $false
             Return $false
-        }
-        elseif (($($lvProfileList.selectedItem.Username) -split '\\')[0] -match $WmiComputerSystem.Name)
-        {
+        } elseif (($($lvProfileList.selectedItem.Username) -split '\\')[0] -match $WmiComputerSystem.Name) {
             $script:bMigrateProfile.Content = "Select Domain Profile"
             $script:bMigrateProfile.IsEnabled = $false
             Return $false
-        }
-        Else
-        {
+        } Else {
             $script:bMigrateProfile.Content = "Migrate Profile"
             $script:bMigrateProfile.IsEnabled = $false
             Return $false
         }
-    }
-    Else
-    {
+    } Else {
         $script:bMigrateProfile.Content = "Select Profile"
         $script:bMigrateProfile.IsEnabled = $false
         Return $false
@@ -386,14 +335,11 @@ $cb_installjcagent.Add_Checked( { $img_ckey_info.Visibility = 'Visible' })
 $cb_installjcagent.Add_Checked( { $img_ckey_valid.Visibility = 'Visible' })
 $cb_installjcagent.Add_Checked( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text)) -eq $false)
-        {
+        If (((Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text)) -eq $false) {
             #$tbJumpCloudConnectKey.Tooltip = "Connect Key Must be 40chars & Not Contain Spaces"
             $tbJumpCloudConnectKey.Background = "#FFC6CBCF"
             $tbJumpCloudConnectKey.BorderBrush = "#FFF90000"
-        }
-        Else
-        {
+        } Else {
             $tbJumpCloudConnectKey.Background = "white"
             $tbJumpCloudConnectKey.Tooltip = $null
             $tbJumpCloudConnectKey.FontWeight = "Normal"
@@ -409,14 +355,11 @@ $cb_installjcagent.Add_Unchecked( { $img_ckey_info.Visibility = 'Hidden' })
 $cb_installjcagent.Add_Unchecked( { $img_ckey_valid.Visibility = 'Hidden' })
 $cb_installjcagent.Add_Unchecked( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text) -or ($cb_installjcagent.IsEnabled)) -eq $false)
-        {
+        If (((Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text) -or ($cb_installjcagent.IsEnabled)) -eq $false) {
             #$tbJumpCloudConnectKey.Tooltip = "Connect Key Must be 40chars & Not Contain Spaces"
             $tbJumpCloudConnectKey.Background = "#FFC6CBCF"
             $tbJumpCloudConnectKey.BorderBrush = "#FFF90000"
-        }
-        Else
-        {
+        } Else {
             $tbJumpCloudConnectKey.Background = "white"
             $tbJumpCloudConnectKey.Tooltip = $null
             $tbJumpCloudConnectKey.FontWeight = "Normal"
@@ -434,14 +377,11 @@ $cb_autobindjcuser.Add_Checked( { $img_apikey_info.Visibility = 'Visible' })
 $cb_autobindjcuser.Add_Checked( { $img_apikey_valid.Visibility = 'Visible' })
 $cb_autobindjcuser.Add_Checked( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbJumpCloudConnectAPIKey:($tbJumpCloudAPIKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-Is40chars $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text)) -eq $false)
-        {
+        If (((Test-Is40chars $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text)) -eq $false) {
             #$tbJumpCloudAPIKey.Tooltip = "API Key Must be 40chars & Not Contain Spaces"
             $tbJumpCloudAPIKey.Background = "#FFC6CBCF"
             $tbJumpCloudAPIKey.BorderBrush = "#FFF90000"
-        }
-        Else
-        {
+        } Else {
             $tbJumpCloudAPIKey.Background = "white"
             $tbJumpCloudAPIKey.Tooltip = $null
             $tbJumpCloudAPIKey.FontWeight = "Normal"
@@ -457,14 +397,11 @@ $cb_autobindjcuser.Add_Unchecked( { $img_apikey_info.Visibility = 'Hidden' })
 $cb_autobindjcuser.Add_Unchecked( { $img_apikey_valid.Visibility = 'Hidden' })
 $cb_autobindjcuser.Add_Unchecked( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbJumpCloudConnectAPIKey:($tbJumpCloudAPIKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-Is40chars $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text) -or ($cb_autobindjcuser.IsEnabled)) -eq $false)
-        {
+        If (((Test-Is40chars $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text) -or ($cb_autobindjcuser.IsEnabled)) -eq $false) {
             #$tbJumpCloudAPIKey.Tooltip = "API Key Must be 40chars & Not Contain Spaces"
             $tbJumpCloudAPIKey.Background = "#FFC6CBCF"
             $tbJumpCloudAPIKey.BorderBrush = "#FFF90000"
-        }
-        Else
-        {
+        } Else {
             $tbJumpCloudAPIKey.Background = "white"
             $tbJumpCloudAPIKey.Tooltip = $null
             $tbJumpCloudAPIKey.FontWeight = "Normal"
@@ -484,15 +421,12 @@ $cb_forcereboot.Add_Unchecked( { $script:ForceReboot = $false })
 
 $tbJumpCloudUserName.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If ((Test-IsNotEmpty $tbJumpCloudUserName.Text) -or (!(Test-HasNoSpace $tbJumpCloudUserName.Text)) -or (Test-Localusername $tbJumpCloudUserName.Text))
-        {
+        If ((Test-IsNotEmpty $tbJumpCloudUserName.Text) -or (!(Test-HasNoSpace $tbJumpCloudUserName.Text)) -or (Test-Localusername $tbJumpCloudUserName.Text)) {
             $tbJumpCloudUserName.Background = "#FFC6CBCF"
             $tbJumpCloudUserName.BorderBrush = "#FFF90000"
             $img_localaccount_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
             $img_localaccount_valid.ToolTip = "Local account username can't be empty, contain spaces, already exist on the local system or match the local computer name."
-        }
-        Else
-        {
+        } Else {
             $tbJumpCloudUserName.Background = "white"
             $tbJumpCloudUserName.FontWeight = "Normal"
             $tbJumpCloudUserName.BorderBrush = "#FFC6CBCF"
@@ -503,15 +437,12 @@ $tbJumpCloudUserName.add_TextChanged( {
 
 $tbJumpCloudConnectKey.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text)) -eq $false)
-        {
+        If (((Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text)) -eq $false) {
             $tbJumpCloudConnectKey.Background = "#FFC6CBCF"
             $tbJumpCloudConnectKey.BorderBrush = "#FFF90000"
             $img_ckey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
             $img_ckey_valid.ToolTip = "Connect Key must be 40chars & not contain spaces."
-        }
-        Else
-        {
+        } Else {
             $tbJumpCloudConnectKey.Background = "white"
             $tbJumpCloudConnectKey.FontWeight = "Normal"
             $tbJumpCloudConnectKey.BorderBrush = "#FFC6CBCF"
@@ -522,16 +453,13 @@ $tbJumpCloudConnectKey.add_TextChanged( {
 
 $tbJumpCloudAPIKey.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbJumpCloudConnectAPIKey:($tbJumpCloudAPIKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-Is40chars $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text)) -eq $false)
-        {
+        If (((Test-Is40chars $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text)) -eq $false) {
             $tbJumpCloudAPIKey.Background = "#FFC6CBCF"
             $tbJumpCloudAPIKey.BorderBrush = "#FFF90000"
             $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
             $img_apikey_valid.ToolTip = "Jumpcloud API Key must be 40chars & not contain spaces."
 
-        }
-        Else
-        {
+        } Else {
             $tbJumpCloudAPIKey.Background = "white"
             $tbJumpCloudAPIKey.Tooltip = $null
             $tbJumpCloudAPIKey.FontWeight = "Normal"
@@ -543,15 +471,12 @@ $tbJumpCloudAPIKey.add_TextChanged( {
 
 $tbTempPassword.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If ((!(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)) -eq $false)
-        {
+        If ((!(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)) -eq $false) {
             $tbTempPassword.Background = "#FFC6CBCF"
             $tbTempPassword.BorderBrush = "#FFF90000"
             $img_localaccount_password_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
             $img_localaccount_password_valid.ToolTip = "Local Account Temp Password should not be empty or contain spaces, it should also meet local password policy req. on the system."
-        }
-        Else
-        {
+        } Else {
             $tbTempPassword.Background = "white"
             $tbTempPassword.Tooltip = $null
             $tbTempPassword.FontWeight = "Normal"
@@ -566,39 +491,29 @@ $lvProfileList.Add_SelectionChanged( {
         $script:SelectedUserName = ($lvProfileList.SelectedItem.username)
         New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        try
-        {
+        try {
             $SelectedUserSID = ((New-Object System.Security.Principal.NTAccount($script:SelectedUserName)).Translate( [System.Security.Principal.SecurityIdentifier]).Value)
-        }
-        catch
-        {
+        } catch {
             $SelectedUserSID = $script:SelectedUserName
         }
         $hku = ('HKU:\' + $SelectedUserSID)
-        if (Test-Path -Path $hku)
-        {
+        if (Test-Path -Path $hku) {
             $script:bMigrateProfile.Content = "User Registry Loaded"
             $script:bMigrateProfile.IsEnabled = $false
             $script:tbJumpCloudUserName.IsEnabled = $false
             $script:tbTempPassword.IsEnabled = $false
-        }
-        else
-        {
+        } else {
             $script:tbJumpCloudUserName.IsEnabled = $true
             $script:tbTempPassword.IsEnabled = $true
         }
     })
 
 $bMigrateProfile.Add_Click( {
-        if ($tbJumpCloudAPIKey.Text -And $tbJumpCloudUserName.Text -And $AutobindJCUser)
-        {
+        if ($tbJumpCloudAPIKey.Text -And $tbJumpCloudUserName.Text -And $AutobindJCUser) {
             $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $tbJumpCloudAPIKey.Text -Username $tbJumpCloudUserName.Text -Prompt $true
-            if ($testResult)
-            {
+            if ($testResult) {
                 Write-ToLog "Matched $($tbJumpCloudUserName.Text) with user in the JumpCloud Console"
-            }
-            else
-            {
+            } else {
                 Write-ToLog "$($tbJumpCloudUserName.Text) not found in the JumpCloud console"
                 return
             }
@@ -647,7 +562,6 @@ $Profiles | ForEach-Object { $lvProfileList.Items.Add($_) | Out-Null }
 #===========================================================================
 $Form.Showdialog()
 
-If ($bMigrateProfile.IsEnabled -eq $true)
-{
+If ($bMigrateProfile.IsEnabled -eq $true) {
     Return $FormResults
 }
