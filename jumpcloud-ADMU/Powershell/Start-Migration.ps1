@@ -1590,6 +1590,8 @@ Function Start-Migration {
                 Restart-Computer -ComputerName $env:COMPUTERNAME -Force
             }
             #endregion SilentAgentInstall
+            # we are done here
+            break
         }
     }
     End {
