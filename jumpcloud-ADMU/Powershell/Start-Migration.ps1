@@ -739,6 +739,27 @@ function Test-Domainusername {
     }
 }
 
+function Test-JumpCloudSystemKey {
+    [CmdletBinding()]
+    [OutputType([System.Boolean])]
+    param (
+        [Parameter()]
+        [System.String]
+        $WindowsDrive
+    )
+
+    process {
+        $config = get-content "$WindowsDrive\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf" -ErrorVariable configExitCode -ErrorAction SilentlyContinue
+        if ($configExitCode) {
+            $message += "JumpCloud Agent is not installed on this system`nPlease also enter your Connect Key to install JumpCloud"
+            $wshell = New-Object -ComObject Wscript.Shell
+            $var = $wshell.Popup("$message", 0, "ADMU Status", 0x0 + 0x40)
+            return $false
+        } else {
+            return $true
+        }
+    }
+}
 function Test-JumpCloudUsername {
     [CmdletBinding()]
     [OutputType([System.Boolean])]
@@ -1669,7 +1690,7 @@ Function Start-Migration {
         }
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) {
             Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
-            Write-ToLog -Message:('Tool options chosen were : ' + "`nInstall JC Agent = " + $InstallJCAgent + "`nLeave Domain = " + $LeaveDomain + "`nForce Reboot = " + $ForceReboot + "`nUpdate Home Path" + $UpdateHomePath + "`nAutobind JC User" + $AutobindJCUser)
+            Write-ToLog -Message:('Tool options chosen were : ' + "`nInstall JC Agent = " + $InstallJCAgent + "`nLeave Domain = " + $LeaveDomain + "`nForce Reboot = " + $ForceReboot + "`nUpdate Home Path = " + $UpdateHomePath + "`nAutobind JC User = " + $AutobindJCUser)
             if ($displayGuiPrompt) {
                 Show-Result -domainUser $SelectedUserName -localUser "$($localComputerName)\$($JumpCloudUserName)" -success $true -profilePath $newUserProfileImagePath -logPath $jcAdmuLogFile
             }

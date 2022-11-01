@@ -510,6 +510,19 @@ $lvProfileList.Add_SelectionChanged( {
 
 $bMigrateProfile.Add_Click( {
         if ($tbJumpCloudAPIKey.Text -And $tbJumpCloudUserName.Text -And $AutobindJCUser) {
+            # If text field is default/ not 40 chars
+            if (!(Test-Is40chars $tbJumpCloudConnectKey.Text)) {
+                # Validate the the JumpCLoud Agent Conf File exists:
+                $keyResult = Test-JumpCloudSystemKey -WindowsDrive $(Get-WindowsDrive)
+                if (!$keyResult) {
+                    # If we catch here, the system conf file does not exist. User is prompted to enter connect key; log below
+                    Write-ToLog "The JumpCloud agent has not be registered on this system, to please specify a valid Connect Key to continue."
+                    return
+                }
+            } else {
+                Write-ToLog "ConnectKey is populated, JumpCloud agent will be installed"
+            }
+
             $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $tbJumpCloudAPIKey.Text -Username $tbJumpCloudUserName.Text -Prompt $true
             if ($testResult) {
                 Write-ToLog "Matched $($tbJumpCloudUserName.Text) with user in the JumpCloud Console"
