@@ -10,30 +10,28 @@ $newjsonoutputdir = $windowstemp + '\' + $env:COMPUTERNAME + '.json'
 $workingdir = $windowstemp + '\jumpcloud-discovery'
 $discoverycsvlocation = $workingdir + '\jcdiscovery.csv'
 
-if ($null -eq (Get-InstalledModule -Name "PowerShellForGitHub" -ErrorAction SilentlyContinue))
-{
+# For some systems, Nuget may not be installed
+if ($null -eq ( Get-PackageProvider -Name NuGet -ErrorAction SilentlyContinue)) {
+  Install-PackageProvider -Name NuGet -Force
+}
+if ($null -eq (Get-InstalledModule -Name "PowerShellForGitHub" -ErrorAction SilentlyContinue)) {
   Install-Module PowerShellForGitHub -Force
 }
 
 # Auth to github
 Set-GitHubAuthentication -Credential $cred
 
-function Convert-Sid
-{
+function Convert-Sid {
   [CmdletBinding()]
   param
   (
     [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
     $Sid
   )
-  process
-  {
-    try
-    {
+  process {
+    try {
         (New-Object System.Security.Principal.SecurityIdentifier($Sid)).Translate( [System.Security.Principal.NTAccount]).Value
-    }
-    catch
-    {
+    } catch {
       return $Sid
     }
   }
@@ -48,13 +46,12 @@ $DomainAccounts | Add-Member -MemberType NoteProperty -Name LocalComputerName -V
 $DomainAccounts | Add-Member -MemberType NoteProperty -Name LocalUsername -Value $null
 $DomainAccounts | Add-Member -MemberType NoteProperty -Name JumpCloudUserName -Value ''
 
-foreach ($account in $DomainAccounts)
-{
+foreach ($account in $DomainAccounts) {
   $account.LocalUsername = Convert-Sid -Sid $account.SID
 }
 
 # Output local CSV
-$DomainAccounts | Select-Object SID, LocalPath, LocalComputerName, LocalUsername, JumpCloudUserName | ConvertTo-Json -Compress | out-file $newjsonoutputdir -Encoding unicode
+$DomainAccounts | Select-Object SID, LocalPath, LocalComputerName, LocalUsername, JumpCloudUserName | ConvertTo-Json -Compress | out-file $newjsonoutputdir #-Encoding unicode
 
 # Upload latest csv to repo
 $DomainLocalAccountsCSV = (get-content -Path $newjsonoutputdir)
