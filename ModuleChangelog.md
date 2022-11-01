@@ -12,6 +12,7 @@ Release Date: November 2, 2022
 #### BUG FIXES:
 
 - Script failures should not result in the ADMU catching the error & displaying the log message.
+- When selecting AutoBind JumpCloud User, the ADMU will also validate that the agent is installed prior to running migration. The tool would otherwise always fail to bind the user.
 
 ## 2.0.6
 
