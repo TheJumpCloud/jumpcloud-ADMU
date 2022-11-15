@@ -337,18 +337,18 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Test-Is40chars Function' {
+    Context 'Test-CharLen -len 40 -testString Function' {
 
-        It 'Test-Is40chars - $null' {
-            Test-Is40chars -field $null | Should -Be $false
+        It 'Test-CharLen -len 40 -testString - $null' {
+            Test-CharLen -len 40 -testString -field $null | Should -Be $false
         }
 
-        It 'Test-Is40chars - 39 Chars' {
-            Test-Is40chars -field '111111111111111111111111111111111111111' | Should -Be $false
+        It 'Test-CharLen -len 40 -testString - 39 Chars' {
+            Test-CharLen -len 40 -testString -field '111111111111111111111111111111111111111' | Should -Be $false
         }
 
-        It 'Test-Is40chars - 40 Chars' {
-            Test-Is40chars -field '1111111111111111111111111111111111111111' | Should -Be $true
+        It 'Test-CharLen -len 40 -testString - 40 Chars' {
+            Test-CharLen -len 40 -testString -field '1111111111111111111111111111111111111111' | Should -Be $true
         }
     }
 

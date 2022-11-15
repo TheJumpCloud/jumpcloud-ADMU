@@ -674,8 +674,19 @@ Function Test-IsNotEmpty ([System.String] $field) {
         Return $false
     }
 }
-Function Test-Is40chars ([System.String] $field) {
-    If ($field.Length -eq 40) {
+Function Test-CharLen {
+    [CmdletBinding()]
+    param (
+        # Char Length to test
+        [Parameter(Mandatory = $true)]
+        [System.Int32]
+        $len,
+        # String to test #allow false to allow for searching empty strings
+        [Parameter(Mandatory = $false)]
+        [System.String]
+        $testString
+    )
+    If ($testString.Length -eq $len) {
         Return $true
     } Else {
         Return $false
@@ -879,7 +890,7 @@ function Get-mtpOrganization {
     }
     process {
         # if there's only one org return found org, else prompt for selection
-        if (($results.count -eq 1)) {
+        if (($results.count -eq 1) -And ($($results._id))) {
             Write-ToLog -Message "API Key Validated`nOrgName: $($results.DisplayName)`nOrgID: $($results._id)"
             $orgs = $results._id, $results.DisplayName
         } elseif (($results.count -gt 1)) {
@@ -887,7 +898,9 @@ function Get-mtpOrganization {
             # initial prompt for MTP selection
             switch ($inputType) {
                 $true {
+                    Write-ToLog -Message "Prompting for MTP Admin Selection"
                     $orgs = Prompt-mtpSelection -Orgs $results
+                    Write-ToLog -Message "API Key Validated`nOrgName: $($orgs[1])`nOrgID: $($orgs[0])"
                 }
                 Default {
                     Write-ToLog -Message "API Key appears to be a MTP Admin Key. Please specify the JumpCloudOrgID Parameter and try again"
@@ -895,8 +908,7 @@ function Get-mtpOrganization {
                 }
             }
         } else {
-            Write-ToLog -Message "Found $($results.count) orgs with the specifed API Key"
-            Write-ToLog -Message "No results"
+            Write-ToLog -Message "No orgs matched provided API Key"
             $orgs = $false
         }
 
