@@ -51,7 +51,11 @@ Describe 'Functions' {
     }
 
     Context 'BindUsernameToJCSystem Function' {
+        BeforeAll {
+            $OrgID, $OrgName = Get-mtpOrganization -apiKey $env:JCApiKey
+        }
         It 'User exists' {
+            # Get ORG ID for
             # Generate New User
             $Password = "Temp123!"
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -65,7 +69,7 @@ Describe 'Functions' {
             $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
             # Begin Test
             Get-JCAssociation -Type user -Id:($($GeneratedUser.Id)) | Remove-JCAssociation -Force
-            $bind = BindUsernameToJCSystem -JcApiKey $env:JCApiKey -JumpCloudUserName $user1
+            $bind = BindUsernameToJCSystem -JcApiKey $env:JCApiKey -JcOrgId $OrgID -JumpCloudUserName $user1
             $bind | Should -Be $true
             ((Get-JCAssociation -Type:user -Id:($($GeneratedUser.Id))).id).count | Should -Be '1'
             # Clean Up
@@ -73,7 +77,7 @@ Describe 'Functions' {
         }
 
         It 'APIKey not valid' {
-            $bind = BindUsernameToJCSystem -JcApiKey '1234122341234234123412341234123412341234' -JumpCloudUserName 'jsmith'
+            $bind = BindUsernameToJCSystem -JcApiKey '1234122341234234123412341234123412341234' -JcOrgId $OrgID -JumpCloudUserName 'jsmith'
             $bind | Should -Be $false
         }
 
@@ -340,15 +344,15 @@ Describe 'Functions' {
     Context 'Test-CharLen -len 40 -testString Function' {
 
         It 'Test-CharLen -len 40 -testString - $null' {
-            Test-CharLen -len 40 -testString -field $null | Should -Be $false
+            Test-CharLen -len 40 -testString $null | Should -Be $false
         }
 
         It 'Test-CharLen -len 40 -testString - 39 Chars' {
-            Test-CharLen -len 40 -testString -field '111111111111111111111111111111111111111' | Should -Be $false
+            Test-CharLen -len 40 -testString '111111111111111111111111111111111111111' | Should -Be $false
         }
 
         It 'Test-CharLen -len 40 -testString - 40 Chars' {
-            Test-CharLen -len 40 -testString -field '1111111111111111111111111111111111111111' | Should -Be $true
+            Test-CharLen -len 40 -testString '1111111111111111111111111111111111111111' | Should -Be $true
         }
     }
 

@@ -899,7 +899,7 @@ function Get-mtpOrganization {
             switch ($inputType) {
                 $true {
                     Write-ToLog -Message "Prompting for MTP Admin Selection"
-                    $orgs = Prompt-mtpSelection -Orgs $results
+                    $orgs = show-mtpSelection -Orgs $results
                     Write-ToLog -Message "API Key Validated`nOrgName: $($orgs[1])`nOrgID: $($orgs[0])"
                 }
                 Default {
@@ -914,6 +914,7 @@ function Get-mtpOrganization {
 
     }
     end {
+        #returned org as an object [0]=id [1]=dispalyName
         return $orgs
     }
 }

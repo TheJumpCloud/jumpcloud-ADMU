@@ -22,7 +22,7 @@ function DecodeBase64Image {
     $ObjBitmapImage.Freeze() #Makes the current object unmodifiable and sets its IsFrozen property to true.
     $ObjBitmapImage
 }
-function Prompt-mtpSelection {
+function show-mtpSelection {
     [OutputType([object[]])]
     [CmdletBinding()]
     param (
