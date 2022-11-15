@@ -391,7 +391,7 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
         If (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
                 -and ((Test-CharLen -len 40 -testString $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text) -and ($cb_installjcagent.IsChecked -eq $true))`
                 -and ((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text) -and ($cb_autobindjcuser.IsChecked -eq $true))`
-                -and ((Test-CharLen -len 24 -testString $($Global:OrgSelection[0])) -and (Test-HasNoSpace $($Global:OrgSelection[0])) -and ($cb_autobindjcuser.IsChecked -eq $true))`
+                -and ((Test-CharLen -len 24 -testString $lbl_orgId.Text) -and (Test-HasNoSpace $lbl_orgId.Text) -and ($cb_autobindjcuser.IsChecked -eq $true))`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
                 -and !(($($lvProfileList.selectedItem.Username) -split '\\')[0] -match $WmiComputerSystem.Name)`
                 -and !(Test-Localusername $tbJumpCloudUserName.Text)) {
@@ -407,7 +407,7 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
             Return $true
         } ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
                 -and ((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text) -and ($cb_autobindjcuser.IsChecked -eq $true) -and ($cb_installjcagent.IsChecked -eq $false))`
-                -and ((Test-CharLen -len 24 -testString $($Global:OrgSelection[0])) -and (Test-HasNoSpace $($Global:OrgSelection[0])) -and ($cb_autobindjcuser.IsChecked -eq $true) -and ($cb_installjcagent.IsChecked -eq $false))`
+                -and ((Test-CharLen -len 24 -testString $lbl_orgId.Text) -and (Test-HasNoSpace $lbl_orgId.Text) -and ($cb_autobindjcuser.IsChecked -eq $true) -and ($cb_installjcagent.IsChecked -eq $false))`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
                 -and !(Test-Localusername $tbJumpCloudUserName.Text)) {
             $script:bMigrateProfile.Content = "Migrate Profile"
@@ -581,9 +581,9 @@ $tbJumpCloudAPIKey.add_TextChanged( {
         } Else {
             # Get org name/ id
             try {
-                $GLOBAL:OrgSelection = Get-mtpOrganization -ApiKey $tbJumpCloudAPIKey.Text -inputType #-errorAction silentlycontinue
-                $lbl_orgName.Text = "Connected to: $($GLOBAL:OrgSelection[1])"
-                $lbl_orgId.Text = "Org ID: $($GLOBAL:OrgSelection[0])"
+                $OrgSelection = Get-mtpOrganization -ApiKey $tbJumpCloudAPIKey.Text -inputType #-errorAction silentlycontinue
+                $lbl_orgName.Text = "Connected to: $($OrgSelection[1])"
+                $lbl_orgId.Text = "$($OrgSelection[0])"
                 $tbJumpCloudAPIKey.Background = "white"
                 $tbJumpCloudAPIKey.Tooltip = $null
                 $tbJumpCloudAPIKey.FontWeight = "Normal"
@@ -591,6 +591,7 @@ $tbJumpCloudAPIKey.add_TextChanged( {
                 $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ActiveBase64
                 $img_apikey_valid.ToolTip = $null
             } catch {
+                $OrgSelection = ""
                 $lbl_orgName.Text = ""
                 $lbl_orgId.Text = ""
                 $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
@@ -598,20 +599,6 @@ $tbJumpCloudAPIKey.add_TextChanged( {
             }
         }
     })
-# $tbJumpCloudAPIKey.Add_TextChanged({
-#         #output the selected value and text
-#         if (Test-CharLen -len 40 -testString ($tbJumpCloudAPIKey.Text)) {
-#             # Get org name/ id
-#             $GLOBAL:OrgSelection = Get-mtpOrganization -ApiKey $tbJumpCloudAPIKey.Text -inputType -errorAction silentlycontinue
-#             if ($GLOBAL:OrgSelection -eq $false) {
-#                 $lbl_orgName.Text = ""
-#                 $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
-#             } else {
-#                 $lbl_orgName.Text = "Connected to: $($GLOBAL:OrgSelection[1])"
-#                 $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ActiveBase64
-#             }
-#         }
-#     })
 $tbTempPassword.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
         If ((!(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)) -eq $false) {
@@ -665,8 +652,7 @@ $bMigrateProfile.Add_Click( {
             } else {
                 Write-ToLog "ConnectKey is populated, JumpCloud agent will be installed"
             }
-            write-host $GLOBAL:OrgSelection
-            $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $tbJumpCloudAPIKey.Text -JumpCloudOrgID $($GLOBAL:OrgSelection[0]) -Username $tbJumpCloudUserName.Text -Prompt $true
+            $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $tbJumpCloudAPIKey.Text -JumpCloudOrgID $lbl_orgId.Text -Username $tbJumpCloudUserName.Text -Prompt $true
             if ($testResult) {
                 Write-ToLog "Matched $($tbJumpCloudUserName.Text) with user in the JumpCloud Console"
             } else {
@@ -684,7 +670,7 @@ $bMigrateProfile.Add_Click( {
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('TempPassword') -Value:($tbTempPassword.Text)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudConnectKey') -Value:($tbJumpCloudConnectKey.Text)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudAPIKey') -Value:($tbJumpCloudAPIKey.Text)
-        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudOrgID') -Value:($($GLOBAL:OrgSelection[0]))
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudOrgID') -Value:($lbl_orgId.Text)
         # Close form
         $Form.Close()
     })
