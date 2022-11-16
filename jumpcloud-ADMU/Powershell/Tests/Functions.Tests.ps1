@@ -77,7 +77,7 @@ Describe 'Functions' {
             $bind | Should -Be $true
             $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
             $association | Should -not -BeNullOrEmpty
-            $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $false
+            $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
             # Clean Up
             Remove-JcSdkUser -Id $GeneratedUser.Id
         }

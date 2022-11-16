@@ -44,19 +44,19 @@ $JCCommandTestingHash = @{
 $JCFunctionalHash = @{
     testCase1 = @{
         Description    = 'Test that user is jumpcloud bound to system after migration'
-        Username       = 'ADMU_bind';
+        Username       = 'ADMU_bind_1';
         UserSID        = '';
         Password       = $testUserPassword;
-        JCUsername     = 'ADMU_bind2';
+        JCUsername     = 'ADMU_bind_1_migrated';
         UpdateHomePath = $false
         BindAsAdmin    = $false
     }
     testCase2 = @{
         Description    = 'Test that user is jumpcloud bound AS ADMIN to system after migration'
-        Username       = 'ADMU_bind3';
+        Username       = 'ADMU_bind_2';
         UserSID        = '';
         Password       = $testUserPassword;
-        JCUsername     = 'ADMU_bind4';
+        JCUsername     = 'ADMU_bind_2_migrated';
         UpdateHomePath = $false
         BindAsAdmin    = $true
     }
