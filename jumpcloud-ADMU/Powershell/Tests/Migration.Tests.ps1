@@ -168,8 +168,14 @@ Describe 'Migration Test Scenarios' {
                 # GeneratedUserID should be in the associations list
                 $GeneratedUser.Id | Should -BeIn $associations.ToId
                 Write-Host "validating sudo status, sudo should be: $($user.BindAsAdmin)"
-                $association = $associations | Where-Object ($._ToId -eq $GeneratedUser.Id )
-                $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $($user.BindAsAdmin)
+                $association = $associations | Where-Object ( $_.ToId -eq $GeneratedUser.Id )
+                if ($($user.BindAsAdmin)) {
+                    # When we set Bind As Admin to True we should return sudo.enabled -eq $true
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
+                } else {
+                    # else it's null
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
+                }
             }
         }
     }
