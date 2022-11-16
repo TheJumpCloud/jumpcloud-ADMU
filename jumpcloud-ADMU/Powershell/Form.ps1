@@ -175,8 +175,10 @@ function show-mtpSelection {
                 <TextBox Name="tbJumpCloudConnectKey" HorizontalAlignment="Left" Height="23" Margin="178,10,0,0" Text="Enter JumpCloud Connect Key" VerticalAlignment="Top" Width="271" Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False"/>
                 <TextBlock Name="lbl_apikey" HorizontalAlignment="Left" Margin="3,42,0,0" Text="JumpCloud API Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
                 <TextBox Name="tbJumpCloudAPIKey" HorizontalAlignment="Left" Height="23" Margin="178,40,0,0" Text="Enter JumpCloud API Key" VerticalAlignment="Top" Width="271" Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False"/>
-                <TextBlock Name="lbl_orgName" HorizontalAlignment="Left" Margin="3,64,0,0" Text="" VerticalAlignment="Top" FontWeight="Normal"/>
-                <TextBlock Name="lbl_orgid" HorizontalAlignment="Left" Margin="3,79,0,0" Text="" VerticalAlignment="Top" FontWeight="Normal"/>
+                <TextBlock Name="lbl_orgNameTitle" HorizontalAlignment="Left" Margin="3,64,0,0" Text="Organization Name:" VerticalAlignment="Top" FontWeight="Normal"/>
+                <TextBlock Name="lbl_orgName" HorizontalAlignment="Left" Margin="118,64,0,0" Text="Not Currently Connected To A JumpCloud Organization" VerticalAlignment="Top" FontWeight="Normal"/>
+                <TextBlock Name="lbl_orgidTitle" HorizontalAlignment="Left" Margin="3,79,0,0" Text="Organization ID:" VerticalAlignment="Top" FontWeight="Normal"/>
+                <TextBlock Name="lbl_orgid" HorizontalAlignment="Left" Margin="96,79,0,0" Text="" VerticalAlignment="Top" FontWeight="Normal"/>
                 <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="10,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="123,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <CheckBox Name="cb_leavedomain" Content="Leave Domain" HorizontalAlignment="Left" Margin="10,123,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
@@ -582,7 +584,7 @@ $tbJumpCloudAPIKey.add_TextChanged( {
             # Get org name/ id
             try {
                 $OrgSelection = Get-mtpOrganization -ApiKey $tbJumpCloudAPIKey.Text -inputType #-errorAction silentlycontinue
-                $lbl_orgName.Text = "Connected to: $($OrgSelection[1])"
+                $lbl_orgName.Text = "$($OrgSelection[1])"
                 $lbl_orgId.Text = "$($OrgSelection[0])"
                 $tbJumpCloudAPIKey.Background = "white"
                 $tbJumpCloudAPIKey.Tooltip = $null
