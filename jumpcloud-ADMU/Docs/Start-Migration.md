@@ -16,7 +16,8 @@ Starts the JumpCloud Active Directory Migration process.
 ```
 Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPassword <String>
  [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
- [-AutobindJCUser <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [<CommonParameters>]
+ [-AutobindJCUser <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>]
+ [-JumpCloudOrgID <String>] [<CommonParameters>]
 ```
 
 ### form
@@ -197,6 +198,21 @@ Accept wildcard characters: False
 
 ### -JumpCloudAPIKey
 The Read/Write API key of a JumpCloud Administrator. This parameter is required if the AutoBind JC User parameter is specified.
+
+```yaml
+Type: System.String
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -JumpCloudOrgID
+{{ Fill JumpCloudOrgID Description }}
 
 ```yaml
 Type: System.String
