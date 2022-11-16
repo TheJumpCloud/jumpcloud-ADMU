@@ -16,20 +16,17 @@ BeforeAll {
 Describe 'Migration Test Scenarios' {
     Context 'Start-Migration on local accounts (Test Functionallity)' {
         It "username extists for testing" {
-            foreach ($user in $userTestingHash.Values)
-            {
+            foreach ($user in $userTestingHash.Values) {
                 $user.username | Should -Not -BeNullOrEmpty
                 $user.JCusername | Should -Not -BeNullOrEmpty
                 Get-LocalUser $user.username | Should -Not -BeNullOrEmpty
             }
         }
         It "Test Convert profile migration for Local users" {
-            foreach ($user in $userTestingHash.Values)
-            {
+            foreach ($user in $userTestingHash.Values) {
                 # Remove log before testing
                 $logPath = "C:\Windows\Temp\jcadmu.log"
-                if (Test-Path -Path $logPath)
-                {
+                if (Test-Path -Path $logPath) {
                     Remove-Item $logPath
                     New-Item $logPath -Force -ItemType File
                 }
@@ -37,12 +34,9 @@ Describe 'Migration Test Scenarios' {
                 # Begin Test
                 { Start-Migration -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath } | Should -Not -Throw
                 # Depending on the user in the UserTestingHash, the home path will differ
-                if ($user.UpdateHomePath)
-                {
+                if ($user.UpdateHomePath) {
                     $UserHome = "C:\Users\$($user.JCUsername)"
-                }
-                else
-                {
+                } else {
                     $UserHome = "C:\Users\$($user.Username)"
                 }
                 # Read the log and get date data
@@ -78,8 +72,7 @@ Describe 'Migration Test Scenarios' {
         # This test contains a job which will load the migration user's profile
         # into memory and effectively break the migration process. This test
         # simulates the case where a process is loaded 'during' migration.
-        foreach ($user in $JCReversionHash.Values)
-        {
+        foreach ($user in $JCReversionHash.Values) {
             # Begin background job before Start-Migration
             $waitJob = Start-Job -ScriptBlock:( {
                     [CmdletBinding()]
@@ -96,8 +89,7 @@ Describe 'Migration Test Scenarios' {
                     )
                     $file = "C:\Users\$JCUserName"
                     # wait for the new user
-                    while (!(Test-Path -Path $file -ErrorAction SilentlyContinue))
-                    {
+                    while (!(Test-Path -Path $file -ErrorAction SilentlyContinue)) {
                         $date = Get-Date -UFormat "%D %r"
                         Write-Host "$date - waiting for file:"
                         Start-Sleep -Seconds:(1)
@@ -162,21 +154,22 @@ Describe 'Migration Test Scenarios' {
 
     Context 'Start-Migration Sucessfully Binds JumpCloud User to System' {
         It 'user bound to system after migration' {
-            foreach ($user in $JCFunctionalHash.Values)
-            {
+            foreach ($user in $JCFunctionalHash.Values) {
                 $users = Get-JCSDKUser
-                if ("$($user.JCUsername)" -in $users.Username)
-                {
+                if ("$($user.JCUsername)" -in $users.Username) {
                     $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
                     Write-Host "Found JumpCloud User, $($existing.Id) removing..."
                     Remove-JcSdkUser -Id $existing.Id
                 }
                 $GeneratedUser = New-JcSdkUser -Email:("$($user.JCUsername)@jumpcloudadmu.com") -Username:("$($user.JCUsername)") -Password:("$($user.password)")
                 write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
-                { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath } | Should -Not -Throw
+                { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
                 $associations = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user
                 # GeneratedUserID should be in the associations list
                 $GeneratedUser.Id | Should -BeIn $associations.ToId
+                Write-Host "validating sudo status, sudo should be: $($user.BindAsAdmin)"
+                $association = $associations | Where-Object ($._ToId -eq $GeneratedUser.Id )
+                $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $($user.BindAsAdmin)
             }
         }
     }
@@ -220,16 +213,14 @@ Describe 'Migration Test Scenarios' {
             $CommandName = 'RemoteADMU'
             # clear command results
             $results = Get-JcSdkCommandResult
-            foreach ($result in $results)
-            {
+            foreach ($result in $results) {
                 # Delete Command Results
                 Write-Host "Found Command Results: $($result.id) removing..."
                 remove-jcsdkcommandresult -id $result.id
             }
             # Clear previous commands matching the name
             $RemoteADMUCommands = Get-JcSdkCommand | Where-Object { $_.name -eq $CommandName }
-            foreach ($result in $RemoteADMUCommands)
-            {
+            foreach ($result in $RemoteADMUCommands) {
                 # Delete Command Results
                 Write-Host "Found existing Command: $($result.id) removing..."
                 Remove-JcSdkCommand -id $result.id
@@ -247,14 +238,12 @@ Describe 'Migration Test Scenarios' {
         It 'Invoke ADMU from JumpCloud Command' {
             # clear results
             $results = Get-JcSdkCommandResult
-            foreach ($result in $results)
-            {
+            foreach ($result in $results) {
                 # Delete Command Results
                 remove-jcsdkcommandresult -id $result.id
             }
             # begin tests
-            foreach ($user in $JCCommandTestingHash.Values)
-            {
+            foreach ($user in $JCCommandTestingHash.Values) {
                 write-host "Running: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)"
                 $headers = @{
                     'Accept'    = "application/json"
@@ -268,8 +257,7 @@ Describe 'Migration Test Scenarios' {
                 Invoke-RestMethod -Method POST -Uri "https://console.jumpcloud.com/api/command/trigger/$($CommandTrigger)" -ContentType 'application/json' -Headers $headers -Body $Form
                 Write-Host "Invoke Command ADMU:"
                 $count = 0
-                do
-                {
+                do {
                     $invokeResults = Get-JcSdkCommandResult
                     Write-Host "Waiting 5 seconds for system to receive command..."
                     $count += 1
@@ -277,8 +265,7 @@ Describe 'Migration Test Scenarios' {
                 } until (($invokeResults) -or ($count -eq 48))
                 Write-Host "Command pushed to system, waiting on results"
                 $count = 0
-                do
-                {
+                do {
                     $CommandResults = Get-JCCommandResult -CommandResultID $invokeResults.Id
                     Write-host "Waiting 5 seconds on results..."
                     $count += 1
@@ -292,8 +279,7 @@ Describe 'Migration Test Scenarios' {
 AfterAll {
     $systems = Get-JCsdkSystem
     $CIsystems = $systems | Where-Object { $_.displayname -match "packer" }
-    foreach ($system in $CIsystems)
-    {
+    foreach ($system in $CIsystems) {
         Remove-JcSdkSystem -id $system.Id
     }
 }
