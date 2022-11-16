@@ -155,9 +155,10 @@ function BindUsernameToJCSystem {
             $jsonForm = $Form | ConvertTo-Json
             Try {
                 Write-ToLog -Message:("Attempting to bind userID: $id to systemID: $systemKey")
-                $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$id/associations" -Headers $Headers -Body $Form -UseBasicParsing
+                $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$id/associations" -Headers $Headers -Body $jsonForm -UseBasicParsing
                 $StatusCode = $Response.StatusCode
             } catch {
+                $errorMsg = $_.Exception.Message
                 $StatusCode = $_.Exception.Response.StatusCode.value__
                 Write-ToLog -Message:("Could not bind user to system") -Level:('Warn')
             }
@@ -171,7 +172,7 @@ function BindUsernameToJCSystem {
             Write-ToLog -Message:("Associations Endpoint returened statusCode $statusCode [success]") -Level:('Warn')
             return $true
         } else {
-            Write-ToLog -Message:("Associations Endpoint returened statusCode $statusCode") -Level:('Warn')
+            Write-ToLog -Message:("Associations Endpoint returened statusCode $statusCode | $errorMsg") -Level:('Warn')
             return $false
         }
     }
@@ -884,14 +885,14 @@ function Get-mtpOrganization {
         if ($orgID) {
             Write-ToLog -Message "OrgID specified, attempting to validate org..."
             $baseURl = "https://console.jumpcloud.com/api/organizations/$($orgID)"
-            $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers
+            $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
             $Content = $Request.Content | ConvertFrom-Json
             $results += $Content
         } else {
             Write-ToLog -Message "No OrgID specified, attempting to search for valid orgs..."
             while ($paginate) {
                 $baseUrl = "https://console.jumpcloud.com/api/organizations"
-                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers
+                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
                 $Content = $Request.Content | ConvertFrom-Json
                 $results += $Content.results
                 if ($Content.results.Count -eq $limit) {
@@ -1658,7 +1659,7 @@ Function Start-Migration {
 
             # Download the appx register exe
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-            Invoke-WebRequest -Uri 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -OutFile 'C:\windows\uwp_jcadmu.exe'
+            Invoke-WebRequest -Uri 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -OutFile 'C:\windows\uwp_jcadmu.exe' -UseBasicParsing
             Start-Sleep -Seconds 5
             try {
                 Get-Item -Path "$windowsDrive\Windows\uwp_jcadmu.exe" -ErrorAction Stop
