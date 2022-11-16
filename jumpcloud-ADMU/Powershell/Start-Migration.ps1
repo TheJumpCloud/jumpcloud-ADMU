@@ -1143,31 +1143,43 @@ Function Start-Migration {
 
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
-        # validate API KEY if no JumpCloud Org is specified
-        If (($JumpCloudAPIKey) -And (-Not $JumpCloudOrgID)) {
-            If ($PSCmdlet.ParameterSetName -eq "form") {
-                $JumpCloudOrgID = (Get-mtpOrganization -apiKey $JumpCloudAPIKey -inputType)[0]
-            } elseif ($PSCmdlet.ParameterSetName -eq "cmd") {
-                # IF MTP API KEY is specified here we'll throw an error and exit
-                $JumpCloudOrgID = (Get-mtpOrganization -apiKey $JumpCloudAPIKey)[0]
-            }
-        }
-        If (($JumpCloudAPIKey) -And ($JumpCloudOrgID)) {
-            $JumpCloudOrgID = (Get-mtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)[0]
-        }
-        If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) {
-            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent"
-        } else {
-        }
-        If (($AutobindJCUser -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudAPIKey))) {
-            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User"
-        }
-
         # Start script
         $admuVersion = '2.1.0'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
+        # validate API KEY/ OrgID if Autobind is selected
+        if ($AutobindJCUser) {
+            if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
+                # Validate Org/ APIKEY & Return OrgID
+                $ValidatedJumpCloudOrgID = (Get-mtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)[0]
+                If (-Not $ValidatedJumpCloudOrgID) {
+                    Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
+                    break
+                }
+            } elseif ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
+                # Attempt To Validate Org/ APIKEY & Return OrgID
+                # Error thrown in Get-mtpOrganization if MTPKEY
+                $ValidatedJumpCloudOrgID = (Get-mtpOrganization -apiKey $JumpCloudAPIKey -inputType)[0]
+                If (-Not $ValidatedJumpCloudOrgID) {
+                    Throw [System.Management.Automation.ValidationMetadataException] "ORG ID Could not be validated"
+                    break
+                }
+            } elseif ((([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
+                # Throw Error
+                Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User"
+                break
+            } elseif ((([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
+                # Throw Error
+                Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User"
+                break
+            }
+        }
+        # Validate ConnectKey if Install Agent is selected
+        If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) {
+            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent"
+            break
+        }
 
         # Conditional ParameterSet logic
         If ($PSCmdlet.ParameterSetName -eq "form") {
@@ -1179,7 +1191,7 @@ Function Start-Migration {
             }
             if (($inputObject.JumpCloudAPIKey).Length -eq 40) {
                 $JumpCloudAPIKey = $inputObject.JumpCloudAPIKey
-                $JumpCloudOrgID = $inputObject.JumpCloudOrgID
+                $ValidatedJumpCloudOrgID = $inputObject.JumpCloudOrgID
             }
             $InstallJCAgent = $inputObject.InstallJCAgent
             $AutobindJCUser = $inputObject.AutobindJCUser
@@ -1651,7 +1663,7 @@ Function Start-Migration {
 
             #region AutobindUserToJCSystem
             if ($AutobindJCUser -eq $true) {
-                $bindResult = BindUsernameToJCSystem -JcApiKey $JumpCloudAPIKey -JcOrgId $JumpCloudOrgId -JumpCloudUserName $JumpCloudUserName
+                $bindResult = BindUsernameToJCSystem -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JumpCloudUserName $JumpCloudUserName
                 if ($bindResult) {
                     Write-ToLog -Message:('jumpcloud autobind step succeeded for user ' + $JumpCloudUserName)
                     $admuTracker.autoBind.pass = $true
