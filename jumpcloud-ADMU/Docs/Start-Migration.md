@@ -16,8 +16,8 @@ Starts the JumpCloud Active Directory Migration process.
 ```
 Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPassword <String>
  [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
- [-AutobindJCUser <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>]
- [-JumpCloudOrgID <String>] [<CommonParameters>]
+ [-AutobindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-JumpCloudConnectKey <String>]
+ [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>] [<CommonParameters>]
 ```
 
 ### form
@@ -216,6 +216,21 @@ Accept wildcard characters: False
 
 ```yaml
 Type: System.String
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -BindAsAdmin
+{{ Fill BindAsAdmin Description }}
+
+```yaml
+Type: System.Boolean
 Parameter Sets: cmd
 Aliases:
 
