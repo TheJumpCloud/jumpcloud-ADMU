@@ -286,7 +286,6 @@ Context 'Start-Migration kicked off through JumpCloud agent' {
         }
     }
 }
-}
 AfterAll {
     $systems = Get-JCsdkSystem
     $CIsystems = $systems | Where-Object { $_.displayname -match "packer" }
