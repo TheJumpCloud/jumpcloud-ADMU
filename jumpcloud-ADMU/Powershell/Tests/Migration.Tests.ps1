@@ -155,8 +155,8 @@ Describe 'Migration Test Scenarios' {
     Context 'Start-Migration Sucessfully Binds JumpCloud User to System' {
         It 'user bound to system after migration' {
             foreach ($user in $JCFunctionalHash.Values) {
-                Write-Host "## Begin Bind User Test ##"
-                Write-Host "## $($user.Username) Bound as Admin: $($user.BindAsAdmin)  ##"
+                Write-Host "`n## Begin Bind User Test ##"
+                Write-Host "## $($user.Username) Bound as Admin: $($user.BindAsAdmin)  ##`n"
                 $users = Get-JCSDKUser
                 if ("$($user.JCUsername)" -in $users.Username) {
                     $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
@@ -164,15 +164,13 @@ Describe 'Migration Test Scenarios' {
                     Remove-JcSdkUser -Id $existing.Id
                 }
                 $GeneratedUser = New-JcSdkUser -Email:("$($user.JCUsername)@jumpcloudadmu.com") -Username:("$($user.JCUsername)") -Password:("$($user.password)")
-                Write-Host "## GeneratedUser ID: $($generatedUser.id)"
-                Write-Host "## GeneratedUser Username: $($generatedUser.Username)"
+                Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
+                Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
                 write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
                 { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
-                $associations = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user
-                # GeneratedUserID should be in the associations list
-                $GeneratedUser.Id | Should -BeIn $associations.ToId
-                Write-Host "validating sudo status, sudo should be: $($user.BindAsAdmin)"
-                $association = $associations | Where-Object ( $_.ToId -eq $GeneratedUser.Id )
+                $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                Write-Host "`n## Validating sudo status on $($GeneratedUser.Id) | Should be ($($user.BindAsAdmin)) on $systemKey"
+                $association | Should -not -BeNullOrEmpty
                 if ($($user.BindAsAdmin)) {
                     Write-Host "UserID $($GeneratedUser.Id) should be sudo"
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
