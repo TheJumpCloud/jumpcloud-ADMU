@@ -1,3 +1,17 @@
+## 2.1.0
+
+Release Date: November 16, 2022
+
+#### RELEASE NOTES
+
+```
+* Additional Logging for username search
+* Invoke-FromJCAgent scripts updated
+* Support for MTP Admins
+  * New Parameter `JumpCloudOrgId` added to the Start-Migration function.
+  * GUI Prompt added to specify an MTP Organization if a MTP Key is detected
+```
+
 ## 2.0.7
 
 Release Date: November 2, 2022

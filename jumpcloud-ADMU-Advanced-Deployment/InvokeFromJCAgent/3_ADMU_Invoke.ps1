@@ -14,6 +14,7 @@ $ForceReboot = $true
 $UpdateHomePath = $false
 $AutobindJCUser = $true
 $JumpCloudAPIKey = ''
+$JumpCloudOrgID = '' # This field is required if you use a MTP API Key
 
 ################################################################################
 # Do not edit below
@@ -80,13 +81,29 @@ Install-Module JumpCloud.ADMU -Force
 start-sleep -Seconds 5
 
 # Query User Sessions & logoff
-$quserResult = quser
-$quserRegex = $quserResult | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
-$quserObject = $quserRegex | ConvertFrom-Csv
-If ($quserObject.username) {
-    logoff.exe $quserObject.ID
+# get rid of the > char & break out into a CSV type object
+$quserResult = (quser) -replace '^>', ' ' | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
+# create a list for users
+$processedUsers = @()
+foreach ($obj in $quserResult) {
+    # if missing an entry for one of: USERNAME,SESSIONNAME,ID,STATE,IDLE TIME OR LOGON TIME, add a comma
+    if ($obj.Split(',').Count -ne 6) {
+        # Write-Host ($obj -replace '(^[^,]+)', '$1,')
+        $processedUsers += ($obj -replace '(^[^,]+)', '$1,')
+    } else {
+        # Write-Host ($obj)
+        $processedUsers += $obj
+    }
 }
-
+$UsersList = $processedUsers | ConvertFrom-Csv
+Write-host "[status] $($usersList.count) will be logged out"
+foreach ($user in $UsersList) {
+    If (($user.username)) {
+        write-host "[status] Logging off user: $($user.username) with ID: $($user.ID)"
+        # Force Logout
+        logoff.exe $($user.ID)
+    }
+}
 # Run ADMU
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
 
@@ -115,9 +132,22 @@ foreach ($user in $UsersToMigrate) {
     if (($lastUser -eq $user) -And ($LeaveDomainAfterMigration)) {
         # If we are migrating the last user (or only user if single migration), we can leave the domain:
         Write-Host "[status] Migrating last user for this system..."
-        Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $LeaveDomainAfterMigration -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey
-
+        If ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
+            # migrate with OrgID
+            Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $LeaveDomainAfterMigration -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID -$JumpCloudOrgID
+        } else {
+            # migrate without OrgID
+            Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $LeaveDomainAfterMigration -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey
+        }
     } else {
+        If ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
+            # migrate with OrgID
+            Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $LeaveDomainAfterMigration -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID -$JumpCloudOrgID
+
+        } else {
+            # migrate without OrgID
+            Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $LeaveDomainAfterMigration -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey
+        }
         Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey
     }
 }
