@@ -138,7 +138,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>JumpCloudOrgID</maml:name>
           <maml:description>
-            <maml:para>{{ Fill JumpCloudOrgID Description }}</maml:para>
+            <maml:para>The ID of the JumpCloud Organization you wish to connect to. This field is only required if an MTP Api Key is used in the JumpCloudApiKey Parameter</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
           <dev:type>
@@ -150,7 +150,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>BindAsAdmin</maml:name>
           <maml:description>
-            <maml:para>{{ Fill BindAsAdmin Description }}</maml:para>
+            <maml:para>Option to bind user as sudo administrator or not. This parameter is not required and will default to $false (User will not be bound as admin). Set to $true if you'd like to bind the JumpCloudUserName as administrator during migration.</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
           <dev:type>
@@ -312,7 +312,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>JumpCloudOrgID</maml:name>
         <maml:description>
-          <maml:para>{{ Fill JumpCloudOrgID Description }}</maml:para>
+          <maml:para>The ID of the JumpCloud Organization you wish to connect to. This field is only required if an MTP Api Key is used in the JumpCloudApiKey Parameter</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
         <dev:type>
@@ -324,7 +324,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>BindAsAdmin</maml:name>
         <maml:description>
-          <maml:para>{{ Fill BindAsAdmin Description }}</maml:para>
+          <maml:para>Option to bind user as sudo administrator or not. This parameter is not required and will default to $false (User will not be bound as admin). Set to $true if you'd like to bind the JumpCloudUserName as administrator during migration.</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>
