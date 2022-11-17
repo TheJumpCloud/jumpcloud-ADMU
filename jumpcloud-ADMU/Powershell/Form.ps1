@@ -7,7 +7,8 @@ $BlueBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAAsTAAALE
 
 [void][System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
 [void][reflection.assembly]::LoadWithPartialName("System.Windows.Forms")
-Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms, System.Drawing
+# Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms, System.Drawing, System.Drawing
 function DecodeBase64Image {
     param (
         [Parameter(Mandatory = $true)]
@@ -179,6 +180,7 @@ function show-mtpSelection {
                 <TextBlock Name="lbl_orgid" HorizontalAlignment="Left" Margin="96,79,0,0" Text="" VerticalAlignment="Top" FontWeight="Normal"/>
                 <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="10,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="123,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                <CheckBox Name="cb_bindAsAdmin" Content="Bind As Admin" HorizontalAlignment="Left" Margin="253,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
                 <CheckBox Name="cb_leavedomain" Content="Leave Domain" HorizontalAlignment="Left" Margin="10,123,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <CheckBox Name="cb_autobindjcuser" Content="Autobind JC User" HorizontalAlignment="Left" Margin="123,123,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <Image Name="img_ckey_info" HorizontalAlignment="Left" Height="14" Margin="157,13,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="The Connect Key provides you with a means of associating this system with your JumpCloud organization. The Key is used to deploy the agent to this system." />
@@ -493,6 +495,8 @@ $cb_autobindjcuser.Add_Checked( { $script:AutobindJCUser = $true })
 $cb_autobindjcuser.Add_Checked( { $tbJumpCloudAPIKey.IsEnabled = $true })
 $cb_autobindjcuser.Add_Checked( { $img_apikey_info.Visibility = 'Visible' })
 $cb_autobindjcuser.Add_Checked( { $img_apikey_valid.Visibility = 'Visible' })
+$cb_autobindjcuser.Add_Checked( { $cb_bindAsAdmin.IsEnabled = $true })
+$cb_bindAsAdmin.Add_Checked( { $script:BbindAsAdmin = $true })
 $cb_autobindjcuser.Add_Checked( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbJumpCloudConnectAPIKey:($tbJumpCloudAPIKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
         If (((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text)) -eq $false) {
@@ -513,6 +517,9 @@ $cb_autobindjcuser.Add_Unchecked( { $script:AutobindJCUser = $false })
 $cb_autobindjcuser.Add_Unchecked( { $tbJumpCloudAPIKey.IsEnabled = $false })
 $cb_autobindjcuser.Add_Unchecked( { $img_apikey_info.Visibility = 'Hidden' })
 $cb_autobindjcuser.Add_Unchecked( { $img_apikey_valid.Visibility = 'Hidden' })
+$cb_autobindjcuser.Add_Unchecked( { $cb_bindAsAdmin.IsEnabled = $false })
+$cb_autobindjcuser.Add_Unchecked( { $cb_bindAsAdmin.IsChecked = $false })
+$cb_bindAsAdmin.Add_Unchecked( { $script:BbindAsAdmin = $false })
 $cb_autobindjcuser.Add_Unchecked( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbJumpCloudConnectAPIKey:($tbJumpCloudAPIKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
         If (((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text) -or ($cb_autobindjcuser.IsEnabled)) -eq $false) {
@@ -661,8 +668,10 @@ $bMigrateProfile.Add_Click( {
             }
         }
         # Build FormResults object
+        Write-ToLog "Building Form Results"
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('InstallJCAgent') -Value:($InstallJCAgent)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('AutobindJCUser') -Value:($AutobindJCUser)
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('BindAsAdmin') -Value:($BindAsAdmin)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('LeaveDomain') -Value:($LeaveDomain)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ForceReboot') -Value:($ForceReboot)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('SelectedUserName') -Value:($SelectedUserName)
@@ -697,7 +706,11 @@ $lbl_apikey.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start('https:/
 $Form.Add_MouseLeftButtonDown( {
         $Form.DragMove()
     })
-
+$Form.Add_Closing({
+        # exit and close form
+        $FormResults = $null
+        Return $FormResults
+    })
 # Put the list of profiles in the profile box
 $Profiles | ForEach-Object { $lvProfileList.Items.Add($_) | Out-Null }
 #===========================================================================

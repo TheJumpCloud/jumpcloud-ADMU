@@ -6,6 +6,7 @@ Release Date: November 16, 2022
 
 ```
 * Additional Logging for username search
+* Support for binding users as Administrators
 * Invoke-FromJCAgent scripts updated
 * Support for MTP Admins
   * New Parameter `JumpCloudOrgId` added to the Start-Migration function.

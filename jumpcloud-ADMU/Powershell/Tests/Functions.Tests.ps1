@@ -53,8 +53,12 @@ Describe 'Functions' {
     Context 'BindUsernameToJCSystem Function' {
         BeforeAll {
             $OrgID, $OrgName = Get-mtpOrganization -apiKey $env:JCApiKey
+
+            $config = get-content "$WindowsDrive\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
+            $regex = 'systemKey\":\"(\w+)\"'
+            $systemKey = [regex]::Match($config, $regex).Groups[1].Value
         }
-        It 'User exists' {
+        It 'Bind As non-Administrator' {
             # Get ORG ID for
             # Generate New User
             $Password = "Temp123!"
@@ -71,7 +75,33 @@ Describe 'Functions' {
             Get-JCAssociation -Type user -Id:($($GeneratedUser.Id)) | Remove-JCAssociation -Force
             $bind = BindUsernameToJCSystem -JcApiKey $env:JCApiKey -JcOrgId $OrgID -JumpCloudUserName $user1
             $bind | Should -Be $true
-            ((Get-JCAssociation -Type:user -Id:($($GeneratedUser.Id))).id).count | Should -Be '1'
+            $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+            $association | Should -not -BeNullOrEmpty
+            $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
+            # Clean Up
+            Remove-JcSdkUser -Id $GeneratedUser.Id
+        }
+        It 'Bind As non-Administrator' {
+            # Get ORG ID for
+            # Generate New User
+            $Password = "Temp123!"
+            $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # If User Exists, remove from the org
+            $users = Get-JCSDKUser
+            if ("$($user.JCUsername)" -in $users.Username) {
+                $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
+                Write-Host "Found JumpCloud User, $($existing.Id) removing..."
+                Remove-JcSdkUser -Id $existing.Id
+            }
+            $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
+            # Begin Test
+            Get-JCAssociation -Type user -Id:($($GeneratedUser.Id)) | Remove-JCAssociation -Force
+            $bind = BindUsernameToJCSystem -JcApiKey $env:JCApiKey -JcOrgId $OrgID -JumpCloudUserName $user1 -BindAsAdmin $true
+            $bind | Should -Be $true
+            # ((Get-JCAssociation -Type:user -Id:($($GeneratedUser.Id))).id).count | Should -Be '1'
+            $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+            $association | Should -not -BeNullOrEmpty
+            $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
             # Clean Up
             Remove-JcSdkUser -Id $GeneratedUser.Id
         }
