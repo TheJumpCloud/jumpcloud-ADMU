@@ -13,7 +13,9 @@ $LeaveDomain = $true
 $ForceReboot = $true
 $UpdateHomePath = $false
 $AutobindJCUser = $true
+$BindAsAdmin = $false # Bind user as admin (default False)
 $JumpCloudAPIKey = ''
+$JumpCloudOrgID = '' # This field is required if you use a MTP API Key
 
 ################################################################################
 # Do not edit below
@@ -80,13 +82,29 @@ Install-Module JumpCloud.ADMU -Force
 start-sleep -Seconds 5
 
 # Query User Sessions & logoff
-$quserResult = quser
-$quserRegex = $quserResult | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
-$quserObject = $quserRegex | ConvertFrom-Csv
-If ($quserObject.username) {
-    logoff.exe $quserObject.ID
+# get rid of the > char & break out into a CSV type object
+$quserResult = (quser) -replace '^>', ' ' | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
+# create a list for users
+$processedUsers = @()
+foreach ($obj in $quserResult) {
+    # if missing an entry for one of: USERNAME,SESSIONNAME,ID,STATE,IDLE TIME OR LOGON TIME, add a comma
+    if ($obj.Split(',').Count -ne 6) {
+        # Write-Host ($obj -replace '(^[^,]+)', '$1,')
+        $processedUsers += ($obj -replace '(^[^,]+)', '$1,')
+    } else {
+        # Write-Host ($obj)
+        $processedUsers += $obj
+    }
 }
-
+$UsersList = $processedUsers | ConvertFrom-Csv
+Write-host "[status] $($usersList.count) will be logged out"
+foreach ($user in $UsersList) {
+    If (($user.username)) {
+        write-host "[status] Logging off user: $($user.username) with ID: $($user.ID)"
+        # Force Logout
+        logoff.exe $($user.ID)
+    }
+}
 # Run ADMU
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
 
@@ -112,13 +130,30 @@ $lastUser = $($UsersToMigrate | Select-Object -Last 1)
 # migrate each user
 foreach ($user in $UsersToMigrate) {
     Write-Host "[status] Begin Migration for user: $($user.selectedUsername) -> $($user.JumpCloudUserName)"
-    if (($lastUser -eq $user) -And ($LeaveDomainAfterMigration)) {
+    if ($lastUser -eq $user) {
         # If we are migrating the last user (or only user if single migration), we can leave the domain:
         Write-Host "[status] Migrating last user for this system..."
-        Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $LeaveDomainAfterMigration -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey
-
+        #TODO: switch to form to de-clutter
+        if ($LeaveDomainAfterMigration) {
+            if ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
+                Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $true -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin
+            } else {
+                Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $true -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -JumpCloudOrgID $JumpCloudOrgID
+            }
+        } else {
+            if ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
+                Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin
+            } else {
+                Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -JumpCloudOrgID $JumpCloudOrgID
+            }
+        }
     } else {
-        Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey
+        if ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
+            Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin
+        } else {
+            Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -JumpCloudOrgID $JumpCloudOrgID
+        }
+
     }
 }
 
@@ -135,6 +170,6 @@ if ($ForceRebootAfterMigration) {
     $headers = @{}
     $headers.Add("x-api-key", $JumpCloudAPIKey)
     write-host "[status] invoking reboot command through JumpCloud"
-    $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systems/$($systemKey)/command/builtin/shutdown" -Method POST -Headers $headers
+    $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systems/$($systemKey)/command/builtin/restart" -Method POST -Headers $headers
 }
 exit 0

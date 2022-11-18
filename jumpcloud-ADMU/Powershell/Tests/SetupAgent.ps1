@@ -17,24 +17,21 @@ Function InitUser {
         [System.String]
         $Password
     )
-    Process{
+    Process {
         Write-Host "Building Profile for $($UserName)"
-        if ((Get-LocalUser | Select-Object Name) -match $($UserName))
-        {
+        if ((Get-LocalUser | Select-Object Name) -match $($UserName)) {
             Remove-LocalUserProfile $($UserName)
         }
         $newUserPassword = ConvertTo-SecureString -String "$($Password)" -AsPlainText -Force
         New-localUser -Name "$($UserName)" -password $newUserPassword -ErrorVariable userExitCode -Description "Created By JumpCloud ADMU"
-        if ($userExitCode)
-        {
+        if ($userExitCode) {
             Write-Log -Message:("$userExitCode")
             Write-Log -Message:("The user: $($UserName) could not be created, exiting")
             exit 1
         }
         # Initialize the Profile
         New-LocalUserProfile -username "$($UserName)" -ErrorVariable profileInit
-        if ($profileInit)
-        {
+        if ($profileInit) {
             Write-Log -Message:("$profileInit")
             Write-Log -Message:("The user: $($UserName) could not be initalized, exiting")
             exit 1
@@ -43,24 +40,19 @@ Function InitUser {
 }
 
 # For each user in testing hash, create new user with the specified password and init the account
-forEach ($User in $userTestingHash.Values)
-{
+forEach ($User in $userTestingHash.Values) {
     InitUser -UserName $($User.Username) -Password $($User.Password)
 }
-forEach ($User in $JCCommandTestingHash.Values)
-{
+forEach ($User in $JCCommandTestingHash.Values) {
     InitUser -UserName $($User.Username) -Password $($User.Password)
 }
-ForEach ($User in $JCFunctionalHash.Values)
-{
+ForEach ($User in $JCFunctionalHash.Values) {
     InitUser -UserName $($User.Username) -Password $($User.Password)
 }
-ForEach ($User in $JCReversionHash.Values)
-{
+ForEach ($User in $JCReversionHash.Values) {
     InitUser -UserName $($User.Username) -Password $($User.Password)
 }
-ForEach ($User in $JCExistingHash.Values)
-{
+ForEach ($User in $JCExistingHash.Values) {
     InitUser -UserName $($User.Username) -Password $($User.Password)
 }
 # End region for test user generation

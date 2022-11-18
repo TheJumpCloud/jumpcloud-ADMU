@@ -3,31 +3,23 @@ $testUserPassword = '$T#st1234'
 # Region for test user generation
 $userTestingHash = @{
     testCase1 = @{
-        Description     = 'Test that user can be converted with different name'
-        Username        = 'test_case_1';
-        UserSID         = '';
-        Password        = $testUserPassword;
-        JCUsername      = 'test_case_1_migrated';
-        JCUserSID       = '';
-        UpdateHomePath  = $false
+        Description    = 'Test that user can be converted with different name'
+        Username       = 'test_case_1';
+        UserSID        = '';
+        Password       = $testUserPassword;
+        JCUsername     = 'test_case_1_migrated';
+        JCUserSID      = '';
+        UpdateHomePath = $false
     }
     testCase2 = @{
-        Description     = 'Test that user can be converted with different name x2s'
-        Username        = 'test_case_2';
-        UserSID         = '';
-        Password        = $testUserPassword;
-        JCUsername      = 'test_case_2_migrated';
-        JCUserSID       = '';
-        UpdateHomePath  = $true
+        Description    = 'Test that user can be converted with different name x2s'
+        Username       = 'test_case_2';
+        UserSID        = '';
+        Password       = $testUserPassword;
+        JCUsername     = 'test_case_2_migrated';
+        JCUserSID      = '';
+        UpdateHomePath = $true
     }
-    #estCase3 = @{
-    #   Description = 'Test that user can be converted with same name'
-    #   Username    = 'sameUsername';
-    #   UserSID     = '';
-    #   Password    = $testUserPassword;
-    #   JCUsername  = 'sameUsername';
-    #   JCUserSID   = '';
-    #
 }
 
 $JCCommandTestingHash = @{
@@ -52,11 +44,21 @@ $JCCommandTestingHash = @{
 $JCFunctionalHash = @{
     testCase1 = @{
         Description    = 'Test that user is jumpcloud bound to system after migration'
-        Username       = 'ADMU_bind';
+        Username       = 'ADMU_bind_1';
         UserSID        = '';
         Password       = $testUserPassword;
-        JCUsername     = 'ADMU_bind2';
+        JCUsername     = 'ADMU_bind_1_migrated';
         UpdateHomePath = $false
+        BindAsAdmin    = $false
+    }
+    testCase2 = @{
+        Description    = 'Test that user is jumpcloud bound AS ADMIN to system after migration'
+        Username       = 'ADMU_bind_2';
+        UserSID        = '';
+        Password       = $testUserPassword;
+        JCUsername     = 'ADMU_bind_2_migrated';
+        UpdateHomePath = $false
+        BindAsAdmin    = $true
     }
 }
 

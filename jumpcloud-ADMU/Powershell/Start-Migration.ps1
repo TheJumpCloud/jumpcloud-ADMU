@@ -110,7 +110,9 @@ function BindUsernameToJCSystem {
     param
     (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(40, 40)][string]$JcApiKey,
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][string]$JumpCloudUserName
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(24, 24)][string]$JcOrgId,
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][string]$JumpCloudUserName,
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][bool]$BindAsAdmin
     )
     Begin {
         $config = get-content "$WindowsDrive\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
@@ -123,22 +125,40 @@ function BindUsernameToJCSystem {
     }
     Process {
         # Get UserID from JumpCloud Console
-        $ret, $id = Test-JumpCloudUsername -JumpCloudApiKey $JcApiKey -Username $JumpCloudUserName
+        Write-ToLog -Message:("Searching for user: $JumpCloudUserName")
+        $ret, $id = Test-JumpCloudUsername -JumpCloudApiKey $JcApiKey -JumpCloudOrgID $JcOrgId -Username $JumpCloudUserName
         if ($ret -And $id) {
+            Write-ToLog -Message:("User matched in JumpCloud")
             $Headers = @{
                 'Accept'       = 'application/json';
                 'Content-Type' = 'application/json';
                 'x-api-key'    = $JcApiKey;
+                'x-org-id'     = $JcOrgId;
             }
             $Form = @{
                 'op'   = 'add';
                 'type' = 'system';
                 'id'   = "$systemKey"
-            } | ConvertTo-Json
+            }
+            if ($BindAsAdmin) {
+                Write-ToLog -Message:("Bind As Admin specified. Setting sudo attributes for userID: $id")
+                $Form.Add("attributes", @{
+                        "sudo" = @{
+                            "enabled"         = $true
+                            "withoutPassword" = $false
+                        }
+                    }
+                )
+            } else {
+                Write-ToLog -Message:("Bind As Admin NOT specified. userID: $id will be bound as a standard user")
+            }
+            $jsonForm = $Form | ConvertTo-Json
             Try {
-                $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$id/associations" -Headers $Headers -Body $Form -UseBasicParsing
+                Write-ToLog -Message:("Attempting to bind userID: $id to systemID: $systemKey")
+                $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$id/associations" -Headers $Headers -Body $jsonForm -UseBasicParsing
                 $StatusCode = $Response.StatusCode
             } catch {
+                $errorMsg = $_.Exception.Message
                 $StatusCode = $_.Exception.Response.StatusCode.value__
                 Write-ToLog -Message:("Could not bind user to system") -Level:('Warn')
             }
@@ -149,8 +169,10 @@ function BindUsernameToJCSystem {
     End {
         # Associations post should return 204 success no content
         if ($StatusCode -eq 204) {
+            Write-ToLog -Message:("Associations Endpoint returened statusCode $statusCode [success]") -Level:('Warn')
             return $true
         } else {
+            Write-ToLog -Message:("Associations Endpoint returened statusCode $statusCode | $errorMsg") -Level:('Warn')
             return $false
         }
     }
@@ -667,8 +689,19 @@ Function Test-IsNotEmpty ([System.String] $field) {
         Return $false
     }
 }
-Function Test-Is40chars ([System.String] $field) {
-    If ($field.Length -eq 40) {
+Function Test-CharLen {
+    [CmdletBinding()]
+    param (
+        # Char Length to test
+        [Parameter(Mandatory = $true)]
+        [System.Int32]
+        $len,
+        # String to test #allow false to allow for searching empty strings
+        [Parameter(Mandatory = $false)]
+        [System.String]
+        $testString
+    )
+    If ($testString.Length -eq $len) {
         Return $true
     } Else {
         Return $false
@@ -770,6 +803,9 @@ function Test-JumpCloudUsername {
         $JumpCloudApiKey,
         [Parameter()]
         [System.String]
+        $JumpCloudOrgID,
+        [Parameter()]
+        [System.String]
         $Username,
         [Parameter()]
         [System.Boolean]
@@ -781,6 +817,7 @@ function Test-JumpCloudUsername {
             'Accept'       = 'application/json';
             'Content-Type' = 'application/json';
             'x-api-key'    = $JumpCloudApiKey;
+            'x-org-id'     = $JumpCloudOrgID;
         }
         $Form = @{
             "filter" = @{
@@ -806,9 +843,11 @@ function Test-JumpCloudUsername {
         # Search User should return 200 success
         If ($StatusCode -ne 200) {
             Return $false, $null
+            Write-ToLog -Message "JumpCloud username could not be found"
         }
         If ($Results.totalCount -eq 1 -and $($Results.results[0].username) -eq $Username) {
             # write-host $Results.results[0]._id
+            Write-ToLog -Message "Identified JumpCloud User`nUsername: $($Results.results[0].username)`nID: $($Results.results[0]._id)"
             return $true, $Results.results[0]._id
         } else {
             if ($prompt) {
@@ -820,6 +859,81 @@ function Test-JumpCloudUsername {
         }
     }
 }
+function Get-mtpOrganization {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $apiKey,
+        [Parameter()]
+        [System.String]
+        $orgID,
+        [parameter()]
+        [switch]
+        $inputType
+    )
+    begin {
+        $skip = 0
+        $limit = 100
+        $paginate = $true
+        $Headers = @{
+            'Content-Type' = 'application/json';
+            'Accept'       = 'application/json';
+            'x-api-key'    = "$($apiKey)";
+        }
+        $results = @()
+        if ($orgID) {
+            Write-ToLog -Message "OrgID specified, attempting to validate org..."
+            $baseURl = "https://console.jumpcloud.com/api/organizations/$($orgID)"
+            $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+            $Content = $Request.Content | ConvertFrom-Json
+            $results += $Content
+        } else {
+            Write-ToLog -Message "No OrgID specified, attempting to search for valid orgs..."
+            while ($paginate) {
+                $baseUrl = "https://console.jumpcloud.com/api/organizations"
+                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+                $Content = $Request.Content | ConvertFrom-Json
+                $results += $Content.results
+                if ($Content.results.Count -eq $limit) {
+                    $skip += $limit
+                } else {
+                    $paginate = $false
+                }
+            }
+        }
+    }
+    process {
+        # if there's only one org return found org, else prompt for selection
+        if (($results.count -eq 1) -And ($($results._id))) {
+            Write-ToLog -Message "API Key Validated`nOrgName: $($results.DisplayName)`nOrgID: $($results._id)"
+            $orgs = $results._id, $results.DisplayName
+        } elseif (($results.count -gt 1)) {
+            Write-ToLog -Message "Found $($results.count) orgs with the specifed API Key"
+            # initial prompt for MTP selection
+            switch ($inputType) {
+                $true {
+                    Write-ToLog -Message "Prompting for MTP Admin Selection"
+                    $orgs = show-mtpSelection -Orgs $results
+                    Write-ToLog -Message "API Key Validated`nOrgName: $($orgs[1])`nOrgID: $($orgs[0])"
+                }
+                Default {
+                    Write-ToLog -Message "API Key appears to be a MTP Admin Key. Please specify the JumpCloudOrgID Parameter and try again"
+                    throw "API Key appears to be a MTP Admin Key. Please specify the JumpCloudOrgID Parameter and try again"
+                }
+            }
+        } else {
+            Write-ToLog -Message "No orgs matched provided API Key"
+            $orgs = $false
+        }
+
+    }
+    end {
+        #returned org as an object [0]=id [1]=dispalyName
+        return $orgs
+    }
+}
+
 Function Install-JumpCloudAgent(
     [System.String]$msvc2013x64Link
     , [System.String]$msvc2013Path
@@ -1037,26 +1151,51 @@ Function Start-Migration {
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$UpdateHomePath = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$InstallJCAgent = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AutobindJCUser = $false,
+        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$BindAsAdmin = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudAPIKey,
+        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(24, 24)][string]$JumpCloudOrgID,
         [Parameter(ParameterSetName = "form")][Object]$inputObject)
 
     Begin {
-        If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) {
-            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent"
-        } else {
-        }
-        If (($AutobindJCUser -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudAPIKey))) {
-            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User"
-        } else {
-        }
-
-        # Start script
-        $admuVersion = '2.0.7'
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
+        # Start script
+        $admuVersion = '2.1.0'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
+        # validate API KEY/ OrgID if Autobind is selected
+        if ($AutobindJCUser) {
+            if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
+                # Validate Org/ APIKEY & Return OrgID
+                $ValidatedJumpCloudOrgID = (Get-mtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)[0]
+                If (-Not $ValidatedJumpCloudOrgID) {
+                    Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
+                    break
+                }
+            } elseif ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
+                # Attempt To Validate Org/ APIKEY & Return OrgID
+                # Error thrown in Get-mtpOrganization if MTPKEY
+                $ValidatedJumpCloudOrgID = (Get-mtpOrganization -apiKey $JumpCloudAPIKey -inputType)[0]
+                If (-Not $ValidatedJumpCloudOrgID) {
+                    Throw [System.Management.Automation.ValidationMetadataException] "ORG ID Could not be validated"
+                    break
+                }
+            } elseif ((([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
+                # Throw Error
+                Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User"
+                break
+            } elseif ((([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
+                # Throw Error
+                Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User"
+                break
+            }
+        }
+        # Validate ConnectKey if Install Agent is selected
+        If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) {
+            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent"
+            break
+        }
 
         # Conditional ParameterSet logic
         If ($PSCmdlet.ParameterSetName -eq "form") {
@@ -1068,9 +1207,11 @@ Function Start-Migration {
             }
             if (($inputObject.JumpCloudAPIKey).Length -eq 40) {
                 $JumpCloudAPIKey = $inputObject.JumpCloudAPIKey
+                $ValidatedJumpCloudOrgID = $inputObject.JumpCloudOrgID
             }
             $InstallJCAgent = $inputObject.InstallJCAgent
             $AutobindJCUser = $inputObject.AutobindJCUser
+            $BindAsAdmin = $inputObject.BindAsAdmin
             $LeaveDomain = $InputObject.LeaveDomain
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
@@ -1518,7 +1659,7 @@ Function Start-Migration {
 
             # Download the appx register exe
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-            Invoke-WebRequest -Uri 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -OutFile 'C:\windows\uwp_jcadmu.exe'
+            Invoke-WebRequest -Uri 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -OutFile 'C:\windows\uwp_jcadmu.exe' -UseBasicParsing
             Start-Sleep -Seconds 5
             try {
                 Get-Item -Path "$windowsDrive\Windows\uwp_jcadmu.exe" -ErrorAction Stop
@@ -1539,7 +1680,7 @@ Function Start-Migration {
 
             #region AutobindUserToJCSystem
             if ($AutobindJCUser -eq $true) {
-                $bindResult = BindUsernameToJCSystem -JcApiKey $JumpCloudAPIKey -JumpCloudUserName $JumpCloudUserName
+                $bindResult = BindUsernameToJCSystem -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JumpCloudUserName $JumpCloudUserName -BindAsAdmin $BindAsAdmin
                 if ($bindResult) {
                     Write-ToLog -Message:('jumpcloud autobind step succeeded for user ' + $JumpCloudUserName)
                     $admuTracker.autoBind.pass = $true

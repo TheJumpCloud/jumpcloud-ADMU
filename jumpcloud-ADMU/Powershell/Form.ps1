@@ -5,8 +5,10 @@ $ErrorBase64 = "iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAACXBIWXMAAAsTAAAL
 $ActiveBase64 = "iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAGKSURBVHgBlZRPTsJQEMbfTBvccgTcKYFQlxJM2hvUEygnID2CJ6jKAZQTgCcoorK1Cf5hZ4/A1oQ3Y98j1FKLbWfTvnn9fp3ON68gcqL15NtsGhfIbLOAxibLITOECPJh0fUmWQ2kF0eB3zBreCcAbPFPsBCR/JbO0vGiP6Bm4FtYM4I4UxflYgVC9rfVwW8lxmsFSAIjks5HzwtRrYyDSpWko46Avq6oPRu6bPK4jIoFR0x0HotVH61kQ0oHCcktC5FA+jOIqb+zpxwGwE6eKA+yPPUi1U9AY5wR2CiArXQOiEfv3cGhuuZBVD9jhxo7mniN2WqkoGt1XfQGl4L5qgiSwNrz2y/e3Uws3SaKIMwcIgl+zOTriEbQfPatMhAdqI8O3edsadjxfOgWQlRFxBM92a2Xm6DofO2FxGYoc3Sz1xjPBYuVqBrMK2WGutUg5QqxdCrBNpC+0iYgFcqlNcqT7DDugUzj6XY+U/8lyHuuPfNdMtEFFp3tmYL4BQQwhbUcvZ1506zmB49h1CYDMPPcAAAAAElFTkSuQmCC"
 $BlueBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAElSURBVHgBbVE7TsNAEH2z+dQ+wnKCmIY6nICCIEIXdymIYk4AnCBBEETpVBQWSjgBpEM0+Ag+ghGiQIl3GH/BcUaa1erNe292ZglFuAsLGzMGmwGItCCRZACGh1lvXtAoPYcLjYZ5AbEuDZg8wHRTMfEUtycXCax2kolCzI4dud3kYhcjf5J1GD1NwOyiHq+StqT1B/GhEnK3yjNzGLOPzdqpkhM+bJW7FBGBFMPEEZpNXW+qOgrZNoqwxEXj4SwUu0GNT/yZCIKttl5e7WyZJbUPEfB1BWx9PaebA63wfwbmEPF61cC7H+KgtyeEbBbT/oHisdz61ecYB/f9NyqBc/9K0EvUQ54VO7g7Xaa6Smn4qNFsHclH2cmAst4A7e8lpk45yy8GxWbP/ZW8WwAAAABJRU5ErkJggg=="
 
-Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms, System.Drawing
-
+[void][System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
+[void][reflection.assembly]::LoadWithPartialName("System.Windows.Forms")
+# Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms, System.Drawing, System.Drawing
 function DecodeBase64Image {
     param (
         [Parameter(Mandatory = $true)]
@@ -20,6 +22,117 @@ function DecodeBase64Image {
     $ObjBitmapImage.Freeze() #Makes the current object unmodifiable and sets its IsFrozen property to true.
     $ObjBitmapImage
 }
+function show-mtpSelection {
+    [OutputType([object[]])]
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [System.Object]
+        $Orgs
+    )
+    begin {
+        $Prompt = 'Please Select A JumpCloud MTP:'
+        $Title = 'MTP Organization Selection'
+        # define a data table to store org names/ org ids
+        $datatable = New-Object system.Data.DataTable
+        #Define Columns
+        $col1 = New-Object system.Data.DataColumn "Value", ([string])
+        $col2 = New-Object system.Data.DataColumn "Text", ([string])
+        #add columns to datatable
+        $datatable.columns.add($col1)
+        $datatable.columns.add($col2)
+        # Define Buttons:
+        $okButton = [System.Windows.Forms.Button]@{
+            Location     = '290,12'
+            Size         = '60,22'
+            Text         = 'OK'
+            DialogResult = [System.Windows.Forms.DialogResult]::OK
+        }
+        $cancelButton = [System.Windows.Forms.Button]@{
+            Location     = '290,40'
+            Size         = '60,22'
+            Text         = 'Cancel'
+            DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+        }
+        # label for the form
+        $label = [System.Windows.Forms.Label]@{
+            AutoSize    = $true
+            Location    = '10,10'
+            Size        = '240,20'
+            MaximumSize = '250,0'
+            Text        = $Prompt
+        }
+        $dynamicLabel = [System.Windows.Forms.Label]@{
+            AutoSize    = $true
+            Location    = '10,30'
+            Size        = '240,20'
+            MaximumSize = '250,0'
+            Text        = ''
+        }
+        foreach ($org in $orgs) {
+            #Create a row
+            $name = New-Variable -Name "row_$($org._id)"
+            $name = $datarow1 = $datatable.NewRow()
+            #Enter data in the row
+            $name.Text = "$($org.DisplayName)"
+            $name.Value = "$($org._id)"
+            #Add the row to the datatable
+            $datatable.Rows.Add($name)
+        }
+        #create a combobox
+        $comboBox = [System.Windows.Forms.ComboBox]@{
+            Location      = '10,90'
+            AutoSize      = $true
+            MaximumSize   = '500,0'
+            # MaximumSize   = '335,0'
+            DropDownStyle = "DropDownList"
+        }
+        $SelectBox = [System.Windows.Forms.Form]@{
+            Text            = $Title
+            Size            = '369,159'
+            # Size            = '369,159'
+            StartPosition   = 'CenterScreen'
+            AcceptButton    = $okButton
+            CancelButton    = $cancelButton
+            FormBorderStyle = 'FixedDialog'
+            MinimizeBox     = $false
+            MaximizeBox     = $false
+        }
+    }
+    process {
+        #clear combo before we bind it
+        $combobox.Items.Clear()
+
+        #bind combobox to datatable
+        $combobox.ValueMember = "Value"
+        $combobox.DisplayMember = "Text"
+        $combobox.Datasource = $datatable
+
+        #add combobox to form
+        $SelectBox.Controls.Add($combobox)
+
+        #show form
+        $SelectBox.Controls.AddRange(@($okButton, $cancelButton, $label, $dynamicLabel))
+        $SelectBox.Topmost = $true
+        $SelectBox.Add_Shown({ $comboBox.Select() })
+
+    }
+    end {
+        $combobox.Add_SelectedIndexChanged({
+                #output the selected value and text
+                $dynamicLabel.Text = "OrgName: $($combobox.SelectedItem['Text'])`nOrgID: $($combobox.SelectedItem['Value'])"
+                $dynamicLabel.Refresh();
+                # write-host $combobox.SelectedItem["Value"] $combobox.SelectedItem["Text"]
+            })
+        $result = $SelectBox.ShowDialog()
+        if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
+            # return id of the org we selected
+            return $combobox.SelectedItem["Value"], $combobox.SelectedItem["Text"]
+        } else {
+            return $null
+        }
+    }
+}
 # Set source here. Take note in the XAML as to where the variable name was taken.
 
 #==============================================================================================
@@ -30,10 +143,10 @@ function DecodeBase64Image {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.0.7"
+        Title="JumpCloud ADMU 2.1.0"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
-        Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1000" Height="490">
+        Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1000" Height="520">
 
     <Grid Margin="0,0,0,0">
         <Grid.RowDefinitions>
@@ -44,7 +157,7 @@ function DecodeBase64Image {
             <ColumnDefinition Width="57*"/>
             <ColumnDefinition Width="23*"/>
         </Grid.ColumnDefinitions>
-        <ListView Name="lvProfileList" MinWidth="960" MinHeight="110" Width="960" MaxWidth="960" MaxHeight="110" Height="110" Margin="10,187,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="3">
+        <ListView Name="lvProfileList" MinWidth="960" MinHeight="120" Width="960" MaxWidth="960" MaxHeight="120" Height="110" Margin="10,187,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="3">
             <ListView.View>
                 <GridView>
                     <GridViewColumn Header="System Accounts" DisplayMemberBinding="{Binding UserName}" Width="300"/>
@@ -55,16 +168,21 @@ function DecodeBase64Image {
                 </GridView>
             </ListView.View>
         </ListView>
-        <GroupBox Header="System Migration Options" Width="480" FontWeight="Bold" HorizontalAlignment="Left" MinWidth="480" MinHeight="135" Margin="10,306,0,0" VerticalAlignment="Top" Height="138">
-            <Grid HorizontalAlignment="Left" Height="121" VerticalAlignment="Top" Width="470">
+        <GroupBox Header="System Migration Options" Width="480" FontWeight="Bold" HorizontalAlignment="Left" MinWidth="480" MinHeight="165" Margin="10,306,0,0" VerticalAlignment="Top" Height="168">
+            <Grid HorizontalAlignment="Left" Height="141" VerticalAlignment="Top" Width="470">
                 <TextBlock Name="lbl_connectkey" HorizontalAlignment="Left" Margin="3,13,0,0" Text="JumpCloud Connect Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
                 <TextBox Name="tbJumpCloudConnectKey" HorizontalAlignment="Left" Height="23" Margin="178,10,0,0" Text="Enter JumpCloud Connect Key" VerticalAlignment="Top" Width="271" Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False"/>
-                <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="123,76,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                <CheckBox Name="cb_leavedomain" Content="Leave Domain" HorizontalAlignment="Left" Margin="10,98,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="10,76,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <TextBlock Name="lbl_apikey" HorizontalAlignment="Left" Margin="3,42,0,0" Text="JumpCloud API Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
                 <TextBox Name="tbJumpCloudAPIKey" HorizontalAlignment="Left" Height="23" Margin="178,40,0,0" Text="Enter JumpCloud API Key" VerticalAlignment="Top" Width="271" Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False"/>
-                <CheckBox Name="cb_autobindjcuser" Content="Autobind JC User" HorizontalAlignment="Left" Margin="123,98,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                <TextBlock Name="lbl_orgNameTitle" HorizontalAlignment="Left" Margin="3,64,0,0" Text="Organization Name:" VerticalAlignment="Top" FontWeight="Normal"/>
+                <TextBlock Name="lbl_orgName" HorizontalAlignment="Left" Margin="118,64,0,0" Text="Not Currently Connected To A JumpCloud Organization" VerticalAlignment="Top" FontWeight="Normal"/>
+                <TextBlock Name="lbl_orgidTitle" HorizontalAlignment="Left" Margin="3,79,0,0" Text="Organization ID:" VerticalAlignment="Top" FontWeight="Normal"/>
+                <TextBlock Name="lbl_orgid" HorizontalAlignment="Left" Margin="96,79,0,0" Text="" VerticalAlignment="Top" FontWeight="Normal"/>
+                <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="10,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="123,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                <CheckBox Name="cb_bindAsAdmin" Content="Bind As Admin" HorizontalAlignment="Left" Margin="253,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
+                <CheckBox Name="cb_leavedomain" Content="Leave Domain" HorizontalAlignment="Left" Margin="10,123,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                <CheckBox Name="cb_autobindjcuser" Content="Autobind JC User" HorizontalAlignment="Left" Margin="123,123,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <Image Name="img_ckey_info" HorizontalAlignment="Left" Height="14" Margin="157,13,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="The Connect Key provides you with a means of associating this system with your JumpCloud organization. The Key is used to deploy the agent to this system." />
                 <Image Name="img_ckey_valid" HorizontalAlignment="Left" Height="14" Margin="454,13,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Connect Key must be 40chars &amp; not contain spaces" />
                 <Image Name="img_apikey_info" HorizontalAlignment="Left" Height="14" Margin="157,42,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Click the link for more info on how to obtain the api key. The API key must be from a user with at least 'Manager' or 'Administrator' privileges." RenderTransformOrigin="1.857,-1.066"/>
@@ -273,8 +391,9 @@ $lbTenantName.Content = $TenantName
 Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKey, [object]$tbTempPassword, [object]$lvProfileList, [object]$tbJumpCloudAPIKey) {
     If (![System.String]::IsNullOrEmpty($lvProfileList.SelectedItem.UserName)) {
         If (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
-                -and ((Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text) -and ($cb_installjcagent.IsChecked -eq $true))`
-                -and ((Test-Is40chars $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text) -and ($cb_autobindjcuser.IsChecked -eq $true))`
+                -and ((Test-CharLen -len 40 -testString $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text) -and ($cb_installjcagent.IsChecked -eq $true))`
+                -and ((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text) -and ($cb_autobindjcuser.IsChecked -eq $true))`
+                -and ((Test-CharLen -len 24 -testString $lbl_orgId.Text) -and (Test-HasNoSpace $lbl_orgId.Text) -and ($cb_autobindjcuser.IsChecked -eq $true))`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
                 -and !(($($lvProfileList.selectedItem.Username) -split '\\')[0] -match $WmiComputerSystem.Name)`
                 -and !(Test-Localusername $tbJumpCloudUserName.Text)) {
@@ -282,14 +401,15 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
             $script:bMigrateProfile.IsEnabled = $true
             Return $true
         } ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
-                -and ((Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text) -and ($cb_installjcagent.IsChecked -eq $true) -and ($cb_autobindjcuser.IsChecked -eq $false))`
+                -and ((Test-CharLen -len 40 -testString $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text) -and ($cb_installjcagent.IsChecked -eq $true) -and ($cb_autobindjcuser.IsChecked -eq $false))`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
                 -and !(Test-Localusername $tbJumpCloudUserName.Text)) {
             $script:bMigrateProfile.Content = "Migrate Profile"
             $script:bMigrateProfile.IsEnabled = $true
             Return $true
         } ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
-                -and ((Test-Is40chars $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text) -and ($cb_autobindjcuser.IsChecked -eq $true) -and ($cb_installjcagent.IsChecked -eq $false))`
+                -and ((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text) -and ($cb_autobindjcuser.IsChecked -eq $true) -and ($cb_installjcagent.IsChecked -eq $false))`
+                -and ((Test-CharLen -len 24 -testString $lbl_orgId.Text) -and (Test-HasNoSpace $lbl_orgId.Text) -and ($cb_autobindjcuser.IsChecked -eq $true) -and ($cb_installjcagent.IsChecked -eq $false))`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
                 -and !(Test-Localusername $tbJumpCloudUserName.Text)) {
             $script:bMigrateProfile.Content = "Migrate Profile"
@@ -335,7 +455,7 @@ $cb_installjcagent.Add_Checked( { $img_ckey_info.Visibility = 'Visible' })
 $cb_installjcagent.Add_Checked( { $img_ckey_valid.Visibility = 'Visible' })
 $cb_installjcagent.Add_Checked( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text)) -eq $false) {
+        If (((Test-CharLen -len 40 -testString $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text)) -eq $false) {
             #$tbJumpCloudConnectKey.Tooltip = "Connect Key Must be 40chars & Not Contain Spaces"
             $tbJumpCloudConnectKey.Background = "#FFC6CBCF"
             $tbJumpCloudConnectKey.BorderBrush = "#FFF90000"
@@ -355,7 +475,7 @@ $cb_installjcagent.Add_Unchecked( { $img_ckey_info.Visibility = 'Hidden' })
 $cb_installjcagent.Add_Unchecked( { $img_ckey_valid.Visibility = 'Hidden' })
 $cb_installjcagent.Add_Unchecked( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text) -or ($cb_installjcagent.IsEnabled)) -eq $false) {
+        If (((Test-CharLen -len 40 -testString $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text) -or ($cb_installjcagent.IsEnabled)) -eq $false) {
             #$tbJumpCloudConnectKey.Tooltip = "Connect Key Must be 40chars & Not Contain Spaces"
             $tbJumpCloudConnectKey.Background = "#FFC6CBCF"
             $tbJumpCloudConnectKey.BorderBrush = "#FFF90000"
@@ -375,9 +495,11 @@ $cb_autobindjcuser.Add_Checked( { $script:AutobindJCUser = $true })
 $cb_autobindjcuser.Add_Checked( { $tbJumpCloudAPIKey.IsEnabled = $true })
 $cb_autobindjcuser.Add_Checked( { $img_apikey_info.Visibility = 'Visible' })
 $cb_autobindjcuser.Add_Checked( { $img_apikey_valid.Visibility = 'Visible' })
+$cb_autobindjcuser.Add_Checked( { $cb_bindAsAdmin.IsEnabled = $true })
+$cb_bindAsAdmin.Add_Checked( { $script:BindAsAdmin = $true })
 $cb_autobindjcuser.Add_Checked( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbJumpCloudConnectAPIKey:($tbJumpCloudAPIKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-Is40chars $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text)) -eq $false) {
+        If (((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text)) -eq $false) {
             #$tbJumpCloudAPIKey.Tooltip = "API Key Must be 40chars & Not Contain Spaces"
             $tbJumpCloudAPIKey.Background = "#FFC6CBCF"
             $tbJumpCloudAPIKey.BorderBrush = "#FFF90000"
@@ -395,9 +517,12 @@ $cb_autobindjcuser.Add_Unchecked( { $script:AutobindJCUser = $false })
 $cb_autobindjcuser.Add_Unchecked( { $tbJumpCloudAPIKey.IsEnabled = $false })
 $cb_autobindjcuser.Add_Unchecked( { $img_apikey_info.Visibility = 'Hidden' })
 $cb_autobindjcuser.Add_Unchecked( { $img_apikey_valid.Visibility = 'Hidden' })
+$cb_autobindjcuser.Add_Unchecked( { $cb_bindAsAdmin.IsEnabled = $false })
+$cb_autobindjcuser.Add_Unchecked( { $cb_bindAsAdmin.IsChecked = $false })
+$cb_bindAsAdmin.Add_Unchecked( { $script:BindAsAdmin = $false })
 $cb_autobindjcuser.Add_Unchecked( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbJumpCloudConnectAPIKey:($tbJumpCloudAPIKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-Is40chars $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text) -or ($cb_autobindjcuser.IsEnabled)) -eq $false) {
+        If (((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text) -or ($cb_autobindjcuser.IsEnabled)) -eq $false) {
             #$tbJumpCloudAPIKey.Tooltip = "API Key Must be 40chars & Not Contain Spaces"
             $tbJumpCloudAPIKey.Background = "#FFC6CBCF"
             $tbJumpCloudAPIKey.BorderBrush = "#FFF90000"
@@ -437,7 +562,7 @@ $tbJumpCloudUserName.add_TextChanged( {
 
 $tbJumpCloudConnectKey.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-Is40chars $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text)) -eq $false) {
+        If (((Test-CharLen -len 40 -testString $tbJumpCloudConnectKey.Text) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Text)) -eq $false) {
             $tbJumpCloudConnectKey.Background = "#FFC6CBCF"
             $tbJumpCloudConnectKey.BorderBrush = "#FFF90000"
             $img_ckey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
@@ -453,22 +578,34 @@ $tbJumpCloudConnectKey.add_TextChanged( {
 
 $tbJumpCloudAPIKey.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbJumpCloudConnectAPIKey:($tbJumpCloudAPIKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-Is40chars $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text)) -eq $false) {
+
+        If (((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Text) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Text)) -eq $false) {
             $tbJumpCloudAPIKey.Background = "#FFC6CBCF"
             $tbJumpCloudAPIKey.BorderBrush = "#FFF90000"
             $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
             $img_apikey_valid.ToolTip = "Jumpcloud API Key must be 40chars & not contain spaces."
 
         } Else {
-            $tbJumpCloudAPIKey.Background = "white"
-            $tbJumpCloudAPIKey.Tooltip = $null
-            $tbJumpCloudAPIKey.FontWeight = "Normal"
-            $tbJumpCloudAPIKey.BorderBrush = "#FFC6CBCF"
-            $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ActiveBase64
-            $img_apikey_valid.ToolTip = $null
+            # Get org name/ id
+            try {
+                $OrgSelection = Get-mtpOrganization -ApiKey $tbJumpCloudAPIKey.Text -inputType #-errorAction silentlycontinue
+                $lbl_orgName.Text = "$($OrgSelection[1])"
+                $lbl_orgId.Text = "$($OrgSelection[0])"
+                $tbJumpCloudAPIKey.Background = "white"
+                $tbJumpCloudAPIKey.Tooltip = $null
+                $tbJumpCloudAPIKey.FontWeight = "Normal"
+                $tbJumpCloudAPIKey.BorderBrush = "#FFC6CBCF"
+                $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ActiveBase64
+                $img_apikey_valid.ToolTip = $null
+            } catch {
+                $OrgSelection = ""
+                $lbl_orgName.Text = ""
+                $lbl_orgId.Text = ""
+                $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
+                Write-ToLog "MTP KEY MAY BE WRONG"
+            }
         }
     })
-
 $tbTempPassword.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
         If ((!(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)) -eq $false) {
@@ -511,7 +648,7 @@ $lvProfileList.Add_SelectionChanged( {
 $bMigrateProfile.Add_Click( {
         if ($tbJumpCloudAPIKey.Text -And $tbJumpCloudUserName.Text -And $AutobindJCUser) {
             # If text field is default/ not 40 chars
-            if (!(Test-Is40chars $tbJumpCloudConnectKey.Text)) {
+            if (!(Test-CharLen -len 40 -testString $tbJumpCloudConnectKey.Text)) {
                 # Validate the the JumpCLoud Agent Conf File exists:
                 $keyResult = Test-JumpCloudSystemKey -WindowsDrive $(Get-WindowsDrive)
                 if (!$keyResult) {
@@ -522,8 +659,7 @@ $bMigrateProfile.Add_Click( {
             } else {
                 Write-ToLog "ConnectKey is populated, JumpCloud agent will be installed"
             }
-
-            $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $tbJumpCloudAPIKey.Text -Username $tbJumpCloudUserName.Text -Prompt $true
+            $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $tbJumpCloudAPIKey.Text -JumpCloudOrgID $lbl_orgId.Text -Username $tbJumpCloudUserName.Text -Prompt $true
             if ($testResult) {
                 Write-ToLog "Matched $($tbJumpCloudUserName.Text) with user in the JumpCloud Console"
             } else {
@@ -532,8 +668,10 @@ $bMigrateProfile.Add_Click( {
             }
         }
         # Build FormResults object
+        Write-ToLog "Building Form Results"
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('InstallJCAgent') -Value:($InstallJCAgent)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('AutobindJCUser') -Value:($AutobindJCUser)
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('BindAsAdmin') -Value:($BindAsAdmin)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('LeaveDomain') -Value:($LeaveDomain)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ForceReboot') -Value:($ForceReboot)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('SelectedUserName') -Value:($SelectedUserName)
@@ -541,6 +679,7 @@ $bMigrateProfile.Add_Click( {
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('TempPassword') -Value:($tbTempPassword.Text)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudConnectKey') -Value:($tbJumpCloudConnectKey.Text)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudAPIKey') -Value:($tbJumpCloudAPIKey.Text)
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudOrgID') -Value:($lbl_orgId.Text)
         # Close form
         $Form.Close()
     })
@@ -567,12 +706,17 @@ $lbl_apikey.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start('https:/
 $Form.Add_MouseLeftButtonDown( {
         $Form.DragMove()
     })
-
+$Form.Add_Closing({
+        # exit and close form
+        $FormResults = $null
+        Return $FormResults
+    })
 # Put the list of profiles in the profile box
 $Profiles | ForEach-Object { $lvProfileList.Items.Add($_) | Out-Null }
 #===========================================================================
 # Shows the form & allow move
 #===========================================================================
+
 $Form.Showdialog()
 
 If ($bMigrateProfile.IsEnabled -eq $true) {
