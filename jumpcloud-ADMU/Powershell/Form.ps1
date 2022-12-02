@@ -543,8 +543,7 @@ $cb_leavedomain.Add_Unchecked( { $script:LeaveDomain = $false })
 if ($AzureADStatus -eq "YES") {
     $cb_leavedomain.IsEnabled = $false
     $cb_leavedomain.Add_Unchecked( { $script:LeaveDomain = $false })
-    $cb_leavedomain.ToolTip = "Unable to automatically leave domain due to being AzureAD Joined"
-    $cb_leavedomain.ToolTip.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start("https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Leaving-AzureAD-Domains") })
+    $cb_leavedomain.ToolTip = "Unable to automatically leave domain due to being AzureAD Joined - https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Leaving-AzureAD-Domains"
 }
 
 # Force Reboot checkbox
