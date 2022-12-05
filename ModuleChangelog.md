@@ -1,4 +1,4 @@
-## 2.1.0
+## 2.1.1
 
 Release Date: November 17, 2022
 
