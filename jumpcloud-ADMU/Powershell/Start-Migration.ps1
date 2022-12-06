@@ -859,6 +859,41 @@ function Test-JumpCloudUsername {
         }
     }
 }
+function GET-UserFileTypeAssociations {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, HelpMessage = 'The SID of the user to capture file type associations')]
+        [System.String]
+        $UserSid,
+        [Parameter(Mandatory = $true, HelpMessage = 'The profile path of the new user to store the file type associations')]
+        [System.String]
+        $profilePath
+    )
+    begin {
+        Write-ToLog "Getting File Type Associations for userSID: $UserSid"
+    }
+    process {
+        $list = @()
+        $pathRoot = "HKEY_USERS:\$($UserSid)_admu\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
+        $exts = Get-ChildItem $pathRoot*
+        foreach ($ext in $exts) {
+            $indivExtension = $ext.PSChildName
+            $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
+            $list += [PSCustomObject]@{
+                extension  = $indivExtension
+                userChoice = $progId
+            }
+        }
+        Write-ToLog "Found $($list.count) Associations"
+
+    }
+    end {
+        Write-ToLog -Message "Writing fta_manifest.csv to $($profilePath)\AppData\Local\JumpCloudADMU\fta_manifest.csv"
+
+        $list | Export-CSV ($profilePath + '\AppData\Local\JumpCloudADMU\fta_manifest.csv') -Force
+    }
+}
+
 function Get-mtpOrganization {
     [CmdletBinding()]
     param (
@@ -1455,6 +1490,13 @@ Function Start-Migration {
                 Set-ValueToKey -registryRoot Users -keyPath "$($newusersid)_admu\SOFTWARE\JCADMU" -Name "previousProfilePath" -value "$oldUserProfileImagePath" -regValueKind String
             }
             ### End reg key check for new user
+
+            ## Begin FTA Export
+            $path = $oldUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
+            If (!(test-path $path)) {
+                New-Item -ItemType Directory -Force -Path $path
+            }
+            GET-UserFileTypeAssociations -UserSid $SelectedUserSID -profilePath $oldUserProfileImagePath
 
             # Unload "Selected" and "NewUser"
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID
