@@ -1,5 +1,15 @@
 ## 2.1.1
 
+Release Date: Dec 6, 2022
+
+#### RELEASE NOTES
+
+```
+* For the GUI version of the tool, if the system is AzureAD Domain Bound, the tool will prevent users from leaving the domain. System access is required to leave an AzureAD domain, administrator permission is not sufficient. A future change will be added to address this issue where a job will be kicked off with system permission. In the meantime, [refer to the wiki](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Leaving-AzureAD-Domains) for details behind this change. 
+```
+
+## 2.1.0
+
 Release Date: November 17, 2022
 
 #### RELEASE NOTES
