@@ -1810,7 +1810,14 @@ Function Start-Migration {
             #region Leave Domain or AzureAD
 
             if ($LeaveDomain -eq $true) {
-                if ($netBiosName -match 'AzureAD') {
+                # Get Azure AD Status
+                foreach ($line in $AzureADInfo) {
+                    if ($line -match "AzureADJoined : ") {
+                        $AzureADStatus = ($line.trimstart('AzureADJoined : '))
+                    }
+                }
+			    Write-ToLog -Message:($AzureADStatus) -Level:('Warn')
+                if ($AzureADStatus -match 'YES') {
                     if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false) {
                         Invoke-AsSystem { dsregcmd.exe /leave /debug }
                         Write-ToLog -Message:('Test dsregcmd admin') -Level:('Warn')
