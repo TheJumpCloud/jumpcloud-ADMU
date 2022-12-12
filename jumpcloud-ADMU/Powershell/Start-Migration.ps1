@@ -1816,10 +1816,10 @@ Function Start-Migration {
                         $AzureADStatus = ($line.trimstart('AzureADJoined : '))
                     }
                 }
-			    Write-ToLog -Message:($AzureADStatus) -Level:('Warn')
                 if ($AzureADStatus -match 'YES') {
+                    # Check if user is not NTAUTHORITY\SYSTEM
                     if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false) {
-                        Write-ToLog -Message:('User not NTAuthority\SYSTEM. Invoking as System to leave AzureAD') -Level:('Warn')
+                        Write-ToLog -Message:('User not NTAuthority\SYSTEM. Invoking as System to leave AzureAD')
                         Invoke-AsSystem { dsregcmd.exe /leave }
                     } else {
                         try {
