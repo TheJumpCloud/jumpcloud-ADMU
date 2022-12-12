@@ -1826,10 +1826,16 @@ Function Start-Migration {
                             if ($line -match "AzureADJoined : ") {
                                 $AzureADStatus = ($line.trimstart('AzureADJoined : '))
                             }
+                            if ($line -match "EnterpriseJoined : ") {
+                                $AzureEnterpriseStatus = ($line.trimstart('EnterpriseJoined : '))
+                            }
+                            if ($line -match "DomainJoined : ") {
+                                $AzureDomainStatus = ($line.trimstart('DomainJoined : '))
+                            }
                         }
                         # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
                          if ($AzureADStatus -match 'NO') {
-                            Write-ToLog -Message:('Successfully left Azure AD domain' + $ADStatus )
+                            Write-toLog -message "Left Azure AD domain successfully`nDevice Domain State`nAzureADJoined : $AzureADStatus`nEnterpriseJoined : $AzureEnterpriseStatus`nDomainJoined : $AzureDomainStatus"
 
                         } else {
                             Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
