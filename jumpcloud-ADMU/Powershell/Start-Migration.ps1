@@ -1829,7 +1829,7 @@ Function Start-Migration {
                         }
                         # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
                          if ($AzureADStatus -match 'NO') {
-                            Write-ToLog -Message:('Successfully left Azure AD domain' + ADStatus )
+                            Write-ToLog -Message:('Successfully left Azure AD domain' + $ADStatus )
 
                         } else {
                             Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
