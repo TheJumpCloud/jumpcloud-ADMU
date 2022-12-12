@@ -1149,7 +1149,6 @@ Function Invoke-AsSystem
     #
 
     param(
-        #[Parameter(Mandatory=$true)]
         [scriptblock] $Process = { ls },
         [scriptblock] $Begin = {} ,
         [scriptblock] $End = {} ,
@@ -1247,11 +1246,6 @@ namespace CosmosKey.Powershell.InvokeAsSystemSvc
         } while ($service.Status -ne "Stopped")
         ( Get-WmiObject win32_service -Filter "name='$serviceName'" ).delete() | out-null
         Import-Clixml -Path $outPath
-        # Remove-Item $servicePath -Force | out-null
-        # Remove-Item $inPath       -Force | out-null
-        # Remove-Item $outPath      -Force | out-null
-        # Remove-Item $scrPath      -Force | out-null
-        # Remove-Item $completePath      -Force | out-null
     }
 }
 
@@ -1820,7 +1814,27 @@ Function Start-Migration {
                     # Check if user is not NTAUTHORITY\SYSTEM
                     if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false) {
                         Write-ToLog -Message:('User not NTAuthority\SYSTEM. Invoking as System to leave AzureAD')
-                        Invoke-AsSystem { dsregcmd.exe /leave }
+                        try {
+                            Invoke-AsSystem { dsregcmd.exe /leave}
+                        }
+                        catch {
+                            Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
+                        }
+                        # Get Azure AD Status
+                        $ADStatus = dsregcmd.exe /status
+                        foreach ($line in $ADStatus) {
+                            if ($line -match "AzureADJoined : ") {
+                                $AzureADStatus = ($line.trimstart('AzureADJoined : '))
+                            }
+                        }
+                        # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
+                         if ($AzureADStatus -match 'NO') {
+                            Write-ToLog -Message:('Successfully left Azure AD domain' )
+
+                        } else {
+                            Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
+                        }
+
                     } else {
                         try {
                             Write-ToLog -Message:('Leaving AzureAD Domain with dsregcmd.exe')
