@@ -1,3 +1,13 @@
+## 2.1.2
+
+Release Date: December 13, 2022
+
+#### RELEASE NOTES
+
+```
+This version of the JumpCloud ADMU will inovke unbind step as SYSTEM if running as administrator. This change should only address a limitation with administrator credentials and leaving AzureAD Domains.
+```
+
 ## 2.1.0
 
 Release Date: November 17, 2022
