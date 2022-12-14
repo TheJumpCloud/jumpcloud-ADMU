@@ -1148,7 +1148,7 @@ Function Invoke-AsSystem {
     #
 
     param(
-        [scriptblock] $Process = { ls },
+        [scriptblock] $Process = { Get-ChildItem },
         [scriptblock] $Begin = {} ,
         [scriptblock] $End = {} ,
         [int] $Depth = 4
