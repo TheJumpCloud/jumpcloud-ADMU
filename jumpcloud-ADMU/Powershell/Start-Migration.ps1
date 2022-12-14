@@ -1140,8 +1140,7 @@ Function Restart-ComputerWithDelay {
     }
 }
 # Invoke system class “InvokeAsSystemSvc.exe” to execute the ADMU.ps1 script
-Function Invoke-AsSystem
-{
+Function Invoke-AsSystem {
     #
     # Invoke-AsSystem is a quick hack to run a PS ScriptBlock as the System account
     # It is possible to pass and retrieve object through the pipeline, though objects
@@ -1154,10 +1153,8 @@ Function Invoke-AsSystem
         [scriptblock] $End = {} ,
         [int] $Depth = 4
     )
-    begin
-    {
-        Function Test-Elevated
-        {
+    begin {
+        Function Test-Elevated {
             $wid = [System.Security.Principal.WindowsIdentity ]::GetCurrent()
             $prp = new-object System.Security.Principal.WindowsPrincipal($wid )
             $adm = [System.Security.Principal.WindowsBuiltInRole ]::Administrator
@@ -1199,8 +1196,7 @@ namespace CosmosKey.Powershell.InvokeAsSystemSvc
     }
 }
 "@
-        if ( -not (Test-Elevated))
-        {
+        if ( -not (Test-Elevated)) {
             throw "Process is not running as an eleveated process. Please run as elevated."
         }
         [void][ System.Reflection.Assembly]::LoadWithPartialName( "System.ServiceProcess")
@@ -1224,24 +1220,20 @@ namespace CosmosKey.Powershell.InvokeAsSystemSvc
         $script.ToString() | Out-File -FilePath $scrPath -Force
     }
 
-    process
-    {
+    process {
         [void] $objectsFromPipeline.Add( $_)
     }
 
-    end
-    {
+    end {
         $objectsFromPipeline | Export-Clixml -Path $inPath -Depth $Depth
         New-Service -Name $serviceName -BinaryPathName $serviceImagePath -DisplayName $serviceName -Description $serviceName -StartupType Manual | out-null
         $service = Get-Service $serviceName
         $service.Start() | out-null
-        while ( -not (test-path $completePath))
-        {
+        while ( -not (test-path $completePath)) {
             start-sleep -Milliseconds 100
         }
         $service.Stop() | Out-Null
-        do
-        {
+        do {
             $service = Get-Service $serviceName
         } while ($service.Status -ne "Stopped")
         ( Get-WmiObject win32_service -Filter "name='$serviceName'" ).delete() | out-null
