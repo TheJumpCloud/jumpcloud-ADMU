@@ -2,7 +2,7 @@ version: 2.1
 parameters:
   buildReleaseType:
     description: "Semantic Version increment type of the release. Valid values: major, minor, patch"
-    default: "minor"
+    default: "patch"
     type: enum
     enum: ["major", "minor", "patch"]
   PublishToPSGallery:

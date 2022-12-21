@@ -1807,9 +1807,8 @@ Function Start-Migration {
                     if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false) {
                         Write-ToLog -Message:('User not NTAuthority\SYSTEM. Invoking as System to leave AzureAD')
                         try {
-                            Invoke-AsSystem { dsregcmd.exe /leave}
-                        }
-                        catch {
+                            Invoke-AsSystem { dsregcmd.exe /leave }
+                        } catch {
                             Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
                         }
                         # Get Azure AD Status
@@ -1826,7 +1825,7 @@ Function Start-Migration {
                             }
                         }
                         # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
-                         if ($AzureADStatus -match 'NO') {
+                        if ($AzureADStatus -match 'NO') {
                             Write-toLog -message "Left Azure AD domain successfully`nDevice Domain State`nAzureADJoined : $AzureADStatus`nEnterpriseJoined : $AzureEnterpriseStatus`nDomainJoined : $AzureDomainStatus"
 
                         } else {

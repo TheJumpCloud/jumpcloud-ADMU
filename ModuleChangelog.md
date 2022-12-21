@@ -1,4 +1,4 @@
-## 2.1.2
+## 2.2.0
 
 Release Date: December 13, 2022
 
@@ -6,6 +6,16 @@ Release Date: December 13, 2022
 
 ```
 This version of the JumpCloud ADMU will inovke unbind step as SYSTEM if running as administrator. This change should only address a limitation with administrator credentials and leaving AzureAD Domains.
+```
+
+## 2.1.1
+
+Release Date: Dec 6, 2022
+
+#### RELEASE NOTES
+
+```
+* For the GUI version of the tool, if the system is AzureAD Domain Bound, the tool will prevent users from leaving the domain. System access is required to leave an AzureAD domain, administrator permission is not sufficient. A future change will be added to address this issue where a job will be kicked off with system permission. In the meantime, [refer to the wiki](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Leaving-AzureAD-Domains) for details behind this change.
 ```
 
 ## 2.1.0
