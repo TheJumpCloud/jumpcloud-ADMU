@@ -2,7 +2,7 @@
 external help file: JumpCloud.ADMU-help.xml
 Module Name: JumpCloud.ADMU
 online version: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration
-schema: 2.2.0
+schema: 2.0.0
 ---
 
 # Start-Migration
@@ -14,6 +14,7 @@ Starts the JumpCloud Active Directory Migration process.
 ## SYNTAX
 
 ### cmd
+
 ```
 Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPassword <String>
  [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
@@ -22,6 +23,7 @@ Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPass
 ```
 
 ### form
+
 ```
 Start-Migration [-inputObject <Object>] [<CommonParameters>]
 ```
@@ -259,14 +261,17 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### None
+
 ## OUTPUTS
 
 ### System.Object
+
 ## NOTES
 
 ## RELATED LINKS
