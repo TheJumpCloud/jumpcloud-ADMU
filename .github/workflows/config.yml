@@ -17,12 +17,17 @@ jobs:
           git config user.email github-actions@github.com
           git add ./jumpcloud-ADMU/Exe/gui_jcadmu.exe
           git add ./jumpcloud-ADMU/Exe/uwp_jcadmu.exe
+          git add ./jumpcloud-ADMU/JumpCloud.ADMU.psd1
+          git add ./jumpcloud-ADMU/JumpCloud.ADMU.psm1
+          git add ./jumpcloud-ADMU/ADMU.cat
+          git add ./jumpcloud-ADMU/PowerShell/Start-Migration.ps1
           git commit -m "Generated EXEs"
           git push
   publish:
     runs-on: ubuntu-latest
     steps:
       - name: GitHubActionTrigger
+        id: publish_trigger
         uses: circleci/trigger_circleci_pipeline@v1.0
         env:
           CCI_TOKEN: ${{ secrets.CIRCLECI_TOKEN }}

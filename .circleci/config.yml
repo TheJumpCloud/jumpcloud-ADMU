@@ -46,14 +46,6 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build
         - Build Module
         - Build Nuspec
-  - Publish:
-      context: aws-credentials
-      requires:
-        - Build
-        - Pester Tests
-        - Build Module
-        - Build Help Files
-        - Build Nuspec
   - Invoke Git Commit:
       requires:
         - Build
@@ -115,8 +107,11 @@ release: &release
         - Invoke Git Commit
         - Upload Artifact
 publish: &publish
+  - Publish
   - Publish on PSGallery:
       context: aws-credentials
+      requires:
+        - Publish
 workflows:
   version: 2
   ci:
@@ -137,7 +132,9 @@ workflows:
   Publish:
     jobs: *publish
     when:
-      equal: ["publish", << pipeline.parameters.GHA_Event >>]
+      and:
+        - equal: [master, << pipeline.git.branch >>]
+        - equal: ["publish_trigger", << pipeline.parameters.GHA_Action >>]
 jobs:
   Build: # name of your job
     executor: win/default # executor type
