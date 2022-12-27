@@ -32,6 +32,7 @@ build-and-sign-ADMU: &build-and-sign-ADMU
       requires:
         - Build
         - Build Module
+        - Build Nuspec
   - Publish:
       context: aws-credentials
       requires:
