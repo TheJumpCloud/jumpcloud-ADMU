@@ -17,15 +17,12 @@ param (
 Write-Host ('[status]Check PowerShell Gallery for module version info')
 $PSGalleryInfo = Get-PSGalleryModuleVersion -Name:($ModuleName) -ReleaseType:($RELEASETYPE) #('Major', 'Minor', 'Patch')
 # Check to see if ManualModuleVersion parameter is set to true
-if ($ManualModuleVersion)
-{
+if ($ManualModuleVersion) {
     $ManualModuleVersionRetrieval = Get-Content -Path:($FilePath_psd1) | Where-Object { $_ -like '*ModuleVersion*' }
     $SemanticRegex = [Regex]"[0-9]+.[0-9]+.[0-9]+"
     $SemeanticVersion = Select-String -InputObject $ManualModuleVersionRetrieval -pattern ($SemanticRegex)
     $ModuleVersion = $SemeanticVersion[0].Matches.Value
-}
-else
-{
+} else {
     $ModuleVersion = $PSGalleryInfo.NextVersion
 }
 Write-Host ('[status]PowerShell Gallery Name:' + $PSGalleryInfo.Name + ';CurrentVersion:' + $PSGalleryInfo.Version + '; NextVersion:' + $ModuleVersion )
@@ -51,8 +48,16 @@ $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
 Write-Host ('[status]Updating module change log: "' + $FilePath_ModuleChangelog + '"')
 $ModuleChangelog = Get-Content -Path:($FilePath_ModuleChangelog)
 $NewModuleChangelogRecord = New-ModuleChangelog -LatestVersion:($ModuleVersion) -ReleaseNotes:('{{Fill in the Release Notes}}') -Features:('{{Fill in the Features}}') -Improvements:('{{Fill in the Improvements}}') -BugFixes('{{Fill in the Bug Fixes}}')
-If (!(($ModuleChangelog | Select-Object -First 1) -match $ModuleVersion))
-{
+If (!(($ModuleChangelog | Select-Object -First 1) -match $ModuleVersion)) {
     ($NewModuleChangelogRecord + ($ModuleChangelog | Out-String)).Trim() | Set-Content -Path:($FilePath_ModuleChangelog) -Force
 }
 # EndRegion Updating module change log
+# Begin Update Manifest Region
+
+$files = @(
+    '..\jumpcloud-ADMU\JumpCloud.ADMU.psd1'
+    '..\jumpcloud-ADMU\JumpCloud.ADMU.psm1'
+    '..\jumpcloud-ADMU\PowerShell\Start-Migration.ps1'
+)
+New-FileCatalog -path $files  -CatalogFilePath '..\JumpCloud-ADMU\ADMU.cat' -CatalogVersion 2.0
+# EndRegion Manifest
