@@ -17,24 +17,21 @@ orbs:
   win: circleci/windows@5.0.0
 build-and-sign-ADMU: &build-and-sign-ADMU
   - Build
-  - Pester Tests:
-      requires:
-        - Build
   - Build Module:
       requires:
         - Build
-        - Pester Tests
   - Build Help Files:
       requires:
         - Build
-        - Pester Tests
-        - Build Module
   - Build Nuspec:
       requires:
         - Build
-        - Pester Tests
         - Build Module
         - Build Help Files
+  - Pester Tests:
+      requires:
+        - Build
+        - Build Module
   - Publish:
       context: aws-credentials
       requires:
