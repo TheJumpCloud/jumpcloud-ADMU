@@ -23,6 +23,7 @@ build-and-sign-ADMU: &build-and-sign-ADMU
   - Build Help Files:
       requires:
         - Build
+        - Build Module
   - Build Nuspec:
       requires:
         - Build
