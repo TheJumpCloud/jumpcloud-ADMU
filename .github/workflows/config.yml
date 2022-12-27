@@ -10,6 +10,7 @@ jobs:
           CERTPASS: ${{ secrets.CERTPASS }}
         run: |
           ./Deploy/Sign.ps1
+          ./Deploy/Update-SecurityCatalog.ps1
       - name: Push changes
         run: |
           git config user.name github-actions
@@ -18,3 +19,10 @@ jobs:
           git add ./jumpcloud-ADMU/Exe/uwp_jcadmu.exe
           git commit -m "Generated EXEs"
           git push
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: GitHubActionTrigger
+        uses: circleci/trigger_circleci_pipeline@v1.0
+        env:
+          CCI_TOKEN: ${{ secrets.CIRCLECI_TOKEN }}
