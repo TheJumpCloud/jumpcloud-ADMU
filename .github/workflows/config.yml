@@ -8,6 +8,7 @@ jobs:
         env:
           BASE64_ENCODED_CERT: ${{ secrets.BASE64_ENCODED_CERT }}
           CERTPASS: ${{ secrets.CERTPASS }}
+          CIRCLECI_TOKEN: ${{ secrets.CIRCLECI_TOKEN }}
         run: |
           ./Deploy/Sign.ps1
           ./Deploy/Update-SecurityCatalog.ps1
@@ -23,6 +24,17 @@ jobs:
           git add ./jumpcloud-ADMU/PowerShell/Start-Migration.ps1
           git commit -m "Generated EXEs"
           git push
+      - name: Draft GitHub Release
+        run: |
+          curl -u $CIRCLECI_TOKEN: -X POST \
+            --header 'Content-Type: application/json' \
+            -d '{
+              "branch": "master",
+              "parameters": {
+                  "Draft_Release_Workflow" : true
+              }
+            }' \
+          https://circleci.com/api/v2/project/github/TheJumpCloud/jumpcloud-ADMU/pipeline
   publish:
     runs-on: ubuntu-latest
     steps:
