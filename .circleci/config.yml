@@ -72,13 +72,6 @@ release: &release
         - Build
         - Build Module
         - Build Nuspec
-  - draft-github-release:
-      context: github-credentials
-      requires:
-        - Build
-        - Build Module
-        - Build Nuspec
-        - Publish Module Validation
   - Invoke Git Commit:
       requires:
         - Build
@@ -117,6 +110,8 @@ workflows:
                 matches:
                   pattern: "^master$"
                   value: << pipeline.git.branch >>
+            - equal:
+                - [false, << pipeline.parameters.Draft_Release_Workflow >>]
   release:
     jobs: *release
     when:
@@ -331,6 +326,7 @@ jobs:
     docker:
       - image: cibuilds/github:0.13
     steps:
+      - checkout
       - attach_workspace:
           at: .
       - run:
