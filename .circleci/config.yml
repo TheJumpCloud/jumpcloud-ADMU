@@ -110,8 +110,8 @@ workflows:
                 matches:
                   pattern: "^master$"
                   value: << pipeline.git.branch >>
-            - equal:
-                - [false, << pipeline.parameters.Draft_Release_Workflow >>]
+            - not:
+                equal: [true, << pipeline.parameters.Draft_Release_Workflow >>]
   release:
     jobs: *release
     when:
