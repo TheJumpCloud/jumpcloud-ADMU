@@ -13,18 +13,9 @@ parameters:
     description: "When `true` the pipeline will use the Module Version specified in JumpCloud Module JumpCloud.psd1 file"
     type: boolean
     default: false
-  GHA_Event:
-    type: string
-    default: ""
-  GHA_Actor:
-    type: string
-    default: ""
-  GHA_Action:
-    type: string
-    default: ""
-  GHA_Meta:
-    type: string
-    default: ""
+  Draft_Release_Workflow:
+    type: boolean
+    default: false
 orbs:
   win: circleci/windows@5.0.0
 build-and-sign-ADMU: &build-and-sign-ADMU
@@ -112,6 +103,9 @@ publish: &publish
       context: aws-credentials
       requires:
         - Publish
+ghrelease: &ghrelease
+  - draft-github-release:
+    context: github-credentials
 workflows:
   version: 2
   ci:
@@ -129,12 +123,12 @@ workflows:
       and:
         - equal: [master, << pipeline.git.branch >>]
         - equal: [true, << pipeline.parameters.PublishToPSGallery >>]
-  Publish:
-    jobs: *publish
+  ghrelease:
+    jobs: *ghrelease
     when:
       and:
         - equal: [master, << pipeline.git.branch >>]
-        - equal: ["publish_trigger", << pipeline.parameters.GHA_Action >>]
+        - equal: [true, << pipeline.parameters.Draft_Release_Workflow >>]
 jobs:
   Build: # name of your job
     executor: win/default # executor type
