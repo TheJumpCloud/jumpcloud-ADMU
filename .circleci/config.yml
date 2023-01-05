@@ -13,7 +13,12 @@ parameters:
     description: "When `true` the pipeline will use the Module Version specified in JumpCloud Module JumpCloud.psd1 file"
     type: boolean
     default: false
-  Draft_Release_Workflow:
+  Publish_Release_Workflow:
+    description: "Workflow Trigger From CodeArtifact, when `true` the workflow will release the ADMU to Public PSGallery"
+    type: boolean
+    default: false
+  Publish_CodeArtifact_Workflow:
+    description: "Workflow Trigger From CodeArtifact, when `true` the workflow will release the ADMU to Private CodeArtifact"
     type: boolean
     default: false
 orbs:
@@ -58,6 +63,14 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build Module
         - Build Help Files
         - Build Nuspec
+  - Start Sign Job:
+      context: github-credentials
+      requires:
+        - Build
+        - Pester Tests
+        - Build Module
+        - Build Help Files
+        - Build Nuspec
 release: &release
   - Build
   - Build Module:
@@ -90,15 +103,13 @@ release: &release
         - Build Module
         - Invoke Git Commit
         - Upload Artifact
-publish: &publish
-  - Publish
-  - Publish on PSGallery:
+codeartifact_release: &codeartifact_release
+  - Publish:
       context: aws-credentials
-      requires:
-        - Publish
-ghrelease: &ghrelease
+psgallery_release: &psgallery_release
   - draft-github-release:
       context: github-credentials
+  - Publish on PSGallery
 workflows:
   version: 2
   ci:
@@ -111,20 +122,31 @@ workflows:
                   pattern: "^master$"
                   value: << pipeline.git.branch >>
             - not:
-                equal: [true, << pipeline.parameters.Draft_Release_Workflow >>]
+                equal:
+                  [true, << pipeline.parameters.Publish_Release_Workflow >>]
+            - not:
+                equal:
+                  [
+                    true,
+                    << pipeline.parameters.Publish_CodeArtifact_Workflow >>,
+                  ]
   release:
     jobs: *release
     when:
       and:
         - equal: [master, << pipeline.git.branch >>]
         - equal: [true, << pipeline.parameters.PublishToPSGallery >>]
-  ghrelease:
-    jobs: *ghrelease
+  psgallery_release:
+    jobs: *psgallery_release
     when:
       and:
-        - equal:
-            [SA-3052_signPSModuleAndReleaseSteps, << pipeline.git.branch >>]
-        - equal: [true, << pipeline.parameters.Draft_Release_Workflow >>]
+        - equal: [master, << pipeline.git.branch >>]
+        - equal: [true, << pipeline.parameters.Publish_Release_Workflow >>]
+  codeartifact_release:
+    jobs: *codeartifact_release
+    when:
+      and:
+        - equal: [true, << pipeline.parameters.Publish_CodeArtifact_Workflow >>]
 jobs:
   Build: # name of your job
     executor: win/default # executor type
@@ -232,6 +254,7 @@ jobs:
   Publish:
     executor: win/default
     steps:
+      - checkout
       - attach_workspace:
           at: .
       - run:
@@ -258,6 +281,7 @@ jobs:
   Publish on PSGallery:
     executor: win/default
     steps:
+      - checkout
       - attach_workspace:
           at: .
       - run:
@@ -321,7 +345,7 @@ jobs:
       - run:
           name: Start Sign Exe Job
           command: |
-            curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/dispatches' --header "authorization: Bearer $GITHUB_TOKEN" --data '{"event_type": "Sign Exe"}'
+            curl --request POST --url 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/dispatches' --header "authorization: Bearer $GITHUB_TOKEN" --data '{"event_type": "Sign Exe", "client_payload": {"branch": $CIRCLE_BRANCH}}'
   draft-github-release:
     docker:
       - image: cibuilds/github:0.13

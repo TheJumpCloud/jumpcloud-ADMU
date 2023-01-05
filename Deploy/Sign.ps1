@@ -5,9 +5,6 @@ $RootPath = Split-Path (Split-Path $PSScriptRoot -Parent)
 $GUI_JCADMU = "$RootPath/jumpcloud-ADMU/jumpcloud-ADMU/Exe/gui_jcadmu.exe"
 $UWP_JCADMU = "$RootPath/jumpcloud-ADMU/jumpcloud-ADMU/Exe/uwp_jcadmu.exe"
 $JCADMU_CAT = "$RootPath/jumpcloud-ADMU/ADMU.cat"
-$JCADMU_SM = "$RootPath/jumpcloud-ADMU/PowerShell/Start-Migration.ps1"
-$JCADMU_SM = "$RootPath/jumpcloud-ADMU/JumpCloud.ADMU.psd1"
-$JCADMU_SM = "$RootPath/jumpcloud-ADMU/JumpCloud.ADMU.psm1"
 # cert variables
 $base64 = "$env:BASE64_ENCODED_CERT"
 $password = "$env:CERTPASS"
@@ -101,10 +98,7 @@ function Set-FileCertificate {
 # define list of files to sign
 $filesToSign = @(
     $GUI_JCADMU,
-    $UWP_JCADMU,
-    $JCADMU_SM,
-    $JCADMU_psd1,
-    $JCADMU_psm1
+    $UWP_JCADMU
 )
 # Sign each PSModule file and EXEs
 Write-Output "[status] Begin Signing Files:"
