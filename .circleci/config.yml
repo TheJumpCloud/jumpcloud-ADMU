@@ -85,7 +85,7 @@ release: &release
         - Build Module
         - Build Nuspec
   - draft-github-release:
-      context: github-credentials
+      context: github-credentials-sa-releases
       requires:
         - Build
         - Build Module
@@ -103,7 +103,7 @@ release: &release
         - Build Module
         - Build Nuspec
   - Start Sign Job:
-      context: github-credentials
+      context: github-credentials-sa-releases
       requires:
         - Build
         - Build Module
