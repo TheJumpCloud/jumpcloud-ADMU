@@ -28,7 +28,7 @@ process
   # $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
   $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
   # $AGENT_SERVICE_NAME = "JumpCloud-agent"
-  $AGENT_INSTALLER_URL = "https://s3.amazonaws.com/jumpcloud-windows-agent/production/JumpCloudInstaller.exe"
+  $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/JumpCloudInstaller.exe"
   $AGENT_INSTALLER_PATH = "C:\windows\Temp\JCADMU\JumpCloudInstaller.exe"
   # $OLD_AGENT_INSTALLER_PATH = "C:\tools\jcagent-0.10.80.exe"
   # $AGENT_UNINSTALLER_NAME = "unins000.exe"
