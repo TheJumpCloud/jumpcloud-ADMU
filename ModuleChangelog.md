@@ -1,6 +1,6 @@
 ## 2.1.2
 
-Release Date: Feb 13, 2023
+Release Date: Feb 15, 2023
 
 #### RELEASE NOTES
 
