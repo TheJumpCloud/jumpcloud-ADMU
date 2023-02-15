@@ -1236,7 +1236,7 @@ Function Start-Migration {
         # JumpCloud Agent Installation Variables
         $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
         $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
-        $AGENT_INSTALLER_URL = "https://s3.amazonaws.com/jumpcloud-windows-agent/production/JumpCloudInstaller.exe"
+        $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/JumpCloudInstaller.exe"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\JumpCloudInstaller.exe"
         # Track migration steps
         $admuTracker = [Ordered]@{
