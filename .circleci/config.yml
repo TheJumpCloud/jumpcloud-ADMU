@@ -41,6 +41,12 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build
         - Build Module
         - Build Nuspec
+  - Start Sign Job:
+      context: github-credentials-sa-releases
+      requires:
+        - Build
+        - Build Module
+        - Build Nuspec
   - Publish:
       context: aws-credentials
       requires:

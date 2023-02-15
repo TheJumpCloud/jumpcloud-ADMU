@@ -17,4 +17,4 @@ jobs:
           git add ./jumpcloud-ADMU/Exe/gui_jcadmu.exe
           git add ./jumpcloud-ADMU/Exe/uwp_jcadmu.exe
           git commit -m "Generated EXEs"
-          git push
+          git push origin SA-3108_updateContext
