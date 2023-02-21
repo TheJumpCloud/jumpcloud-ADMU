@@ -38,7 +38,8 @@
                     'PSAvoidUsingUsernameAndPasswordParams',
                     'PSAvoidUsingWMICmdlet',
                     'PSAvoidUsingInvokeExpression',
-                    'PSUseDeclaredVarsMoreThanAssignments'
+                    'PSUseDeclaredVarsMoreThanAssignments',
+                    'PSUseBOMForUnicodeEncodedFile'
                     )
 
     # You can use rule configuration to configure rules that support it:
