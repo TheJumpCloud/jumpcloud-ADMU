@@ -1,10 +1,12 @@
-## 2.1.2
+## 2.2.0
 
-Release Date: Feb 15, 2023
+Release Date: February 21, 2023
 
 #### RELEASE NOTES
 
 ```
+This version of the JumpCloud ADMU will unbind systems as NT/Authority SYSTEM if running as administrator. This change should only address a limitation with administrator credentials and leaving AzureAD Domains.
+
 Update Code Signing Certificate
 ```
 
@@ -78,7 +80,7 @@ Release Date: Oct 13, 2022
 
 - Addressed an encoding issue with the PowerShellForGitHub module and the [invoke ADMU from agent](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/advanced-deployment-scenarios) workflows. If the newest version of the module 0.16.1 is used the scripts will no longer throw an error regarding invalid JSON.
 
-## 2.0.0
+## 2.2.0
 
 Release Date: September 16, 2021
 
@@ -91,10 +93,10 @@ Release Date: September 16, 2021
     * The GUI will validate that the JumpCloud user exists in the console before Migration
 * GUI runs of the ADMU should prompt to view the log after migration
 * The migration user's registry hive is saved as a unique filename (ex: NTUSER_original.DAT is now NTUSER_original_yyyy-mm-dd-HHMMSS)
-* The 2.0.0 version of the tool no longer includes the Microsoft User State Migration Tool (USMT). Prior versions of the tool should be used if it's necessary to copy data from one profile to another.
-    * The default behavior of the 2.0.0 tool is to convert accounts with what was previously the `ConvertProfile` parameter.
+* The 2.2.0 version of the tool no longer includes the Microsoft User State Migration Tool (USMT). Prior versions of the tool should be used if it's necessary to copy data from one profile to another.
+    * The default behavior of the 2.2.0 tool is to convert accounts with what was previously the `ConvertProfile` parameter.
     * If profile data was mapped to a network share, the USMT could have a valid use case but the Custom XML would have to populated to migrate that data
-    * This is a breaking change for the CLI version of the tool, the convertProfile parameter does not exist in 2.0.0
+    * This is a breaking change for the CLI version of the tool, the convertProfile parameter does not exist in 2.2.0
 
 ```
 

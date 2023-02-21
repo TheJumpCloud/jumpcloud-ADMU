@@ -143,7 +143,7 @@ function show-mtpSelection {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.1.2"
+        Title="JumpCloud ADMU 2.2.0"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1000" Height="520">
@@ -535,16 +535,11 @@ $cb_autobindjcuser.Add_Unchecked( {
     })
 
 # Leave Domain checkbox
-# If system is joined to AzureAD, disable Leave Domain checkbox
-if ($AzureADStatus -eq "YES") {
-    $cb_leavedomain.ToolTip = "Unable to automatically leave domain due to being AzureAD Joined and running as local administrator - https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Leaving-AzureAD-Domains"
-    $cb_leavedomain.Add_Unchecked( { $script:LeaveDomain = $false })
-    $cb_leavedomain.IsEnabled = $false
-} else {
-    $script:LeaveDomain = $false
-    $cb_leavedomain.Add_Checked( { $script:LeaveDomain = $true })
-    $cb_leavedomain.Add_Unchecked( { $script:LeaveDomain = $false })
-}
+
+$script:LeaveDomain = $false
+$cb_leavedomain.Add_Checked( { $script:LeaveDomain = $true })
+$cb_leavedomain.Add_Unchecked( { $script:LeaveDomain = $false })
+
 
 # Force Reboot checkbox
 $script:ForceReboot = $false
