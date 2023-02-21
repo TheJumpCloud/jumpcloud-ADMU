@@ -35,16 +35,6 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Pester Tests
         - Build Module
         - Build Help Files
-  - draft-github-release:
-      requires:
-        - Build
-        - Build Module
-        - Build Nuspec
-  - Start Sign Job:
-      requires:
-        - Build
-        - Build Module
-        - Build Nuspec
   - Publish:
       context: aws-credentials
       requires:
