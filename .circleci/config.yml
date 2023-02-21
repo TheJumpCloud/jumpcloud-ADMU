@@ -36,13 +36,11 @@ build-and-sign-ADMU: &build-and-sign-ADMU
         - Build Module
         - Build Help Files
   - draft-github-release:
-      context: github-credentials-sa-releases
       requires:
         - Build
         - Build Module
         - Build Nuspec
   - Start Sign Job:
-      context: github-credentials-sa-releases
       requires:
         - Build
         - Build Module
@@ -97,7 +95,6 @@ release: &release
         - Build Module
         - Build Nuspec
   - draft-github-release:
-      context: github-credentials-sa-releases
       requires:
         - Build
         - Build Module
@@ -115,7 +112,6 @@ release: &release
         - Build Module
         - Build Nuspec
   - Start Sign Job:
-      context: github-credentials-sa-releases
       requires:
         - Build
         - Build Module
