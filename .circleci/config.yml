@@ -85,7 +85,6 @@ release: &release
         - Build Module
         - Build Nuspec
   - draft-github-release:
-      context: github-credentials
       requires:
         - Build
         - Build Module
@@ -103,7 +102,6 @@ release: &release
         - Build Module
         - Build Nuspec
   - Start Sign Job:
-      context: github-credentials
       requires:
         - Build
         - Build Module
@@ -289,7 +287,7 @@ jobs:
       - checkout
       - add_ssh_keys:
           fingerprints:
-            - "6b:97:dc:6d:d1:d1:3f:67:62:c4:ad:2d:96:3c:9a:d7"
+            - "f4:43:00:7a:f0:b0:f9:5c:ce:9e:69:fe:c8:b4:f4:5f"
       - attach_workspace:
           at: .
       - run:
