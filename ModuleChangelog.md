@@ -1,3 +1,13 @@
+## 2.2.1
+
+Release Date: February 22, 2023
+
+#### RELEASE NOTES
+
+```
+Update the JumpCloud Agent Installer URL to new CDN URL.
+```
+
 ## 2.2.0
 
 Release Date: February 21, 2023
