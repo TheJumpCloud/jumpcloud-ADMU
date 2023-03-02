@@ -1262,7 +1262,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.2.0'
+        $admuVersion = '2.2.1'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
@@ -1338,7 +1338,7 @@ Function Start-Migration {
         # JumpCloud Agent Installation Variables
         $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
         $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
-        $AGENT_INSTALLER_URL = "https://s3.amazonaws.com/jumpcloud-windows-agent/production/JumpCloudInstaller.exe"
+        $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/JumpCloudInstaller.exe"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\JumpCloudInstaller.exe"
         # Track migration steps
         $admuTracker = [Ordered]@{
