@@ -983,8 +983,7 @@ Function Install-JumpCloudAgent(
         Write-ToLog -Message:('JumpCloud Agent Download Complete')
         Write-ToLog -Message:('Running JCAgent Installer')
         #Run Installer
-        $installJCParams = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/VERYSILENT", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
-        Invoke-Expression "$installJCParams"
+        msiexec /i $AGENT_INSTALLER_PATH /quiet JCINSTALLERARGUMENTS=`"-k $JumpCloudConnectKey /VERYSILENT /NORESTART /NOCLOSEAPPLICATIONS /L*V "C:\Windows\Temp\jcUpdate.log"`"
         $timeout = 0
         while (!(Test-ProgramInstalled -programName:("JumpCloud"))) {
             Start-Sleep 5
@@ -1254,6 +1253,7 @@ Function Start-Migration {
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$InstallJCAgent = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AutobindJCUser = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$BindAsAdmin = $false,
+        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$setDefaultWindowsUser = $true,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudAPIKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(24, 24)][string]$JumpCloudOrgID,
@@ -1337,9 +1337,9 @@ Function Start-Migration {
 
         # JumpCloud Agent Installation Variables
         $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
-        $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
-        $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/JumpCloudInstaller.exe"
-        $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\JumpCloudInstaller.exe"
+        $AGENT_BINARY_NAME = "jcagent-msi-signed.msi"
+        $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
+        $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         # Track migration steps
         $admuTracker = [Ordered]@{
             backupOldUserReg    = @{'pass' = $false; 'fail' = $false }
@@ -1859,6 +1859,16 @@ Function Start-Migration {
                 Remove-ItemIfExist -Path:($jcAdmuTempPath) -Recurse
             } catch {
                 Write-ToLog -Message:('Failed to remove Temp Files & Folders.' + $jcAdmuTempPath)
+            }
+
+            # Set the last logged on user to the new user
+            if ($setDefaultWindowsUser -eq $true) {
+                $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI"
+                Write-ToLog -Message:('Setting Last Logged on Windows User to ' + $JumpCloudUserName)
+                set-ItemProperty -Path $registryPath -Name "LastLoggedOnUserSID" -Value "$($NewUserSID)"
+                set-ItemProperty -Path $registryPath -Name "SelectedUserSID" -Value "$($NewUserSID)"
+                set-ItemProperty -Path $registryPath -Name "LastLoggedOnUser" -Value ".\$($JumpCloudUserName)"
+                set-ItemProperty -Path $registryPath -Name "LastLoggedOnSAMUser" -Value ".\$($JumpCloudUserName)"
             }
 
             if ($ForceReboot -eq $true) {
