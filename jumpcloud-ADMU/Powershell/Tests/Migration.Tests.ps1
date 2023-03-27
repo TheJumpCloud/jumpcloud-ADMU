@@ -187,7 +187,7 @@ Describe 'Migration Test Scenarios' {
             $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # Initialize a single user to migrate:
-            InitUser -UserName $user1 -Password $Password
+            InitUser -UserName $localUser -Password $Password
             #Get SID of user
             $UserSID = Get-LocalUser -Name $migrateUser | Select-Object -ExpandProperty SID
             # Migrate the initialized user to the second username
@@ -209,7 +209,7 @@ Describe 'Migration Test Scenarios' {
             $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # Initialize a single user to migrate:
-            InitUser -UserName $user1 -Password $Password
+            InitUser -UserName $localUser -Password $Password
             #Get SID of user
             $UserSID = Get-LocalUser -Name $migrateUser | Select-Object -ExpandProperty SID
             # Migrate the initialized user to the second username
