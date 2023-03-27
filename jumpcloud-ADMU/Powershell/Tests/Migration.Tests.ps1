@@ -181,53 +181,54 @@ Describe 'Migration Test Scenarios' {
             }
         }
     }
-}
-Context 'Set-LastLoggedOnUser Tests' {
-    It "Start-Migration should succesfully SET last logged on windows user to migrated user" {
-        $Password = "Temp123!"
-        $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-        $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-        # Initialize a single user to migrate:
-        InitUser -UserName $user1 -Password $Password
-        #Get SID of user
-        $UserSID = Get-LocalUser -Name $migrateUser | Select-Object -ExpandProperty SID
-        # Migrate the initialized user to the second username
-        Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
-        # The HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI should be set to the migrated user
-        # Get the registry for LogonUI
-        $logonUI = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI
-        # The default user should be the migrated user
-        $logonUI.LastLoggedOnUser | Should -Be ".\$migrateUser"
-        $logonUi.LastLoggedOnSAMUser | Should -Be ".\$migrateUser"
+    Context 'Set-LastLoggedOnUser Tests' {
+        It "Start-Migration should succesfully SET last logged on windows user to migrated user" {
+            $Password = "Temp123!"
+            $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # Initialize a single user to migrate:
+            InitUser -UserName $user1 -Password $Password
+            #Get SID of user
+            $UserSID = Get-LocalUser -Name $migrateUser | Select-Object -ExpandProperty SID
+            # Migrate the initialized user to the second username
+            Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
+            # The HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI should be set to the migrated user
+            # Get the registry for LogonUI
+            $logonUI = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI
+            # The default user should be the migrated user
+            $logonUI.LastLoggedOnUser | Should -Be ".\$migrateUser"
+            $logonUi.LastLoggedOnSAMUser | Should -Be ".\$migrateUser"
 
-        #Check SID
-        $UserSID = Get-LocalUser -Name $migrateUser | Select-Object -ExpandProperty SID
-        $logonUI.LastLoggedOnUserSID | Should -Be $UserSID
-        $logonUI.SelectedUserSID | Should -Be $UserSID
-    }
-    It "Start-Migration should NOT SET last logged on windows user to the migrated user if -SetDefaultWindowsUser is false" {
-        $Password = "Temp123!"
-        $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-        $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-        # Initialize a single user to migrate:
-        InitUser -UserName $user1 -Password $Password
-        #Get SID of user
-        $UserSID = Get-LocalUser -Name $migrateUser | Select-Object -ExpandProperty SID
-        # Migrate the initialized user to the second username
-        Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
-        # The HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI should be set to the migrated user
-        # Get the registry for LogonUI
-        $logonUI = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI
-        # The default user should not be the migrated user
-        $logonUI.LastLoggedOnUser | Should -not -Be ".\$migrateUser"
-        $logonUi.LastLoggedOnSAMUser | Should -not -Be ".\$migrateUser"
+            #Check SID
+            $UserSID = Get-LocalUser -Name $migrateUser | Select-Object -ExpandProperty SID
+            $logonUI.LastLoggedOnUserSID | Should -Be $UserSID
+            $logonUI.SelectedUserSID | Should -Be $UserSID
+        }
+        It "Start-Migration should NOT SET last logged on windows user to the migrated user if -SetDefaultWindowsUser is false" {
+            $Password = "Temp123!"
+            $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # Initialize a single user to migrate:
+            InitUser -UserName $user1 -Password $Password
+            #Get SID of user
+            $UserSID = Get-LocalUser -Name $migrateUser | Select-Object -ExpandProperty SID
+            # Migrate the initialized user to the second username
+            Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
+            # The HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI should be set to the migrated user
+            # Get the registry for LogonUI
+            $logonUI = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI
+            # The default user should not be the migrated user
+            $logonUI.LastLoggedOnUser | Should -not -Be ".\$migrateUser"
+            $logonUi.LastLoggedOnSAMUser | Should -not -Be ".\$migrateUser"
 
-        #Check SID
-        $UserSID = Get-LocalUser -Name $migrateUser | Select-Object -ExpandProperty SID
-        $logonUI.LastLoggedOnUserSID | Should -not -Be $UserSID
-        $logonUI.SelectedUserSID | Should -not -Be $UserSID
+            #Check SID
+            $UserSID = Get-LocalUser -Name $migrateUser | Select-Object -ExpandProperty SID
+            $logonUI.LastLoggedOnUserSID | Should -not -Be $UserSID
+            $logonUI.SelectedUserSID | Should -not -Be $UserSID
+        }
     }
 }
+
 Context 'Start-Migration Fails to Bind JumpCloud User to System and writes warning' {
     It 'user bound to system after migration' {
         $Password = "Temp123!"
