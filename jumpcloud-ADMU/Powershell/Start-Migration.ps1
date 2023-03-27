@@ -1385,8 +1385,8 @@ Function Start-Migration {
             start-sleep -seconds 20
             if ((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=1') {
                 Write-ToLog -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
-                taskkill /IM "JumpCloudInstaller.exe" /F
-                taskkill /IM "JumpCloudInstaller.tmp" /F
+                taskkill /IM "jcagent-msi-signed.msi" /F
+                taskkill /IM "jcagent-msi-signed.tmp" /F
                 Read-Host -Prompt "Press Enter to exit"
                 exit
             } elseif (((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=0')) {

@@ -449,7 +449,7 @@ Describe 'Functions' {
         }
 
         It 'Install-JumpCloudAgent - Verify Download JCAgent' {
-            Test-path 'C:\Windows\Temp\JCADMU\JumpCloudInstaller.exe' | Should -Be $true
+            Test-path 'C:\Windows\Temp\JCADMU\jcagent-msi-signed.msi' | Should -Be $true
         }
 
         It 'Install-JumpCloudAgent - Verify Install JCAgent prereq Visual C++ 2013 x64' {
