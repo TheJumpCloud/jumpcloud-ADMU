@@ -162,7 +162,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>SetDefaultWindowsUser</maml:name>
           <maml:description>
-            <maml:para>{{ Fill SetDefaultWindowsUser Description }}</maml:para>
+            <maml:para>Option to set the windows default login user to the migrated user post-migration. This parameter is not required and will default to $true (the next login window user will be the migrated user). Set to $false if you'd like to disable this functionality during migration.</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
           <dev:type>
@@ -348,7 +348,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>SetDefaultWindowsUser</maml:name>
         <maml:description>
-          <maml:para>{{ Fill SetDefaultWindowsUser Description }}</maml:para>
+          <maml:para>Option to set the windows default login user to the migrated user post-migration. This parameter is not required and will default to $true (the next login window user will be the migrated user). Set to $false if you'd like to disable this functionality during migration.</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>
