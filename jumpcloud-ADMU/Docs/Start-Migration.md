@@ -259,7 +259,7 @@ Accept wildcard characters: False
 ```
 
 ### -SetDefaultWindowsUser
-{{ Fill SetDefaultWindowsUser Description }}
+Option to set the windows default login user to the migrated user post-migration. This parameter is not required and will default to $true (the next login window user will be the migrated user). Set to $false if you'd like to disable this functionality during migration. 
 
 ```yaml
 Type: System.Boolean
