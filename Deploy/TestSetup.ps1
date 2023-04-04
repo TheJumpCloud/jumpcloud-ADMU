@@ -24,7 +24,7 @@ process {
 
   # JumpCloud Agent Installation Variables
   $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
-  $AGENT_CONF_PATH = "$($AGENT_PATH)\JumpCloud\Plugins\Contrib\jcagent.conf"
+  $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
   # $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
   $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
   # $AGENT_SERVICE_NAME = "JumpCloud-agent"
