@@ -1,3 +1,13 @@
+## 2.3.0
+
+Release Date: March 27,2023
+
+#### RELEASE NOTES
+
+```
+* Updated JumpCloud ADMU to optionally set last logged in Windows user to the migrated user
+* Updated JumpCloud ADMU installer to .msi
+```
 ## 2.2.1
 
 Release Date: February 22, 2023

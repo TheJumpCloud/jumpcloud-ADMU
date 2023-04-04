@@ -17,8 +17,8 @@ Starts the JumpCloud Active Directory Migration process.
 ```
 Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPassword <String>
  [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
- [-AutobindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-JumpCloudConnectKey <String>]
- [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>] [<CommonParameters>]
+ [-AutobindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-SetDefaultWindowsUser <Boolean>]
+ [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>] [<CommonParameters>]
 ```
 
 ### form
@@ -245,6 +245,21 @@ Accept wildcard characters: False
 ### -BindAsAdmin
 
 Option to bind user as sudo administrator or not. This parameter is not required and will default to $false (User will not be bound as admin). Set to $true if you'd like to bind the JumpCloudUserName as administrator during migration.
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -SetDefaultWindowsUser
+Option to set the windows default login user to the migrated user post-migration. This parameter is not required and will default to $true (the next login window user will be the migrated user). Set to $false if you'd like to disable this functionality during migration. 
 
 ```yaml
 Type: System.Boolean

@@ -946,6 +946,7 @@ Function Install-JumpCloudAgent(
     , [System.String]$AGENT_INSTALLER_PATH
     , [System.String]$AGENT_PATH
     , [System.String]$AGENT_BINARY_NAME
+    , [System.String]$AGENT_CONF_PATH
     , [System.String]$JumpCloudConnectKey
 ) {
     If (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x64"))) {
@@ -979,24 +980,62 @@ Function Install-JumpCloudAgent(
     If (!(Test-Path -Path:(${AGENT_PATH} + '/' + ${AGENT_BINARY_NAME}))) {
         Write-ToLog -Message:('Downloading JCAgent Installer')
         #Download Installer
-        (New-Object System.Net.WebClient).DownloadFile("${AGENT_INSTALLER_URL}", ($AGENT_INSTALLER_PATH))
-        Write-ToLog -Message:('JumpCloud Agent Download Complete')
+        if ((Test-Path $AGENT_INSTALLER_PATH)) {
+            Write-ToLog -Message:('JumpCloud Agent Already Downloaded')
+        } else {
+            (New-Object System.Net.WebClient).DownloadFile("${AGENT_INSTALLER_URL}", ($AGENT_INSTALLER_PATH))
+            Write-ToLog -Message:('JumpCloud Agent Download Complete')
+        }
         Write-ToLog -Message:('Running JCAgent Installer')
-        #Run Installer
-        $installJCParams = ("${AGENT_INSTALLER_PATH}", "-k ${JumpCloudConnectKey}", "/VERYSILENT", "/NORESTART", "/SUPRESSMSGBOXES", "/NOCLOSEAPPLICATIONS", "/NORESTARTAPPLICATIONS", "/LOG=$env:TEMP\jcUpdate.log")
-        Invoke-Expression "$installJCParams"
+        Write-ToLog -Message:("Installing JCAgent`nConnectKey: $($JumpCloudConnectKey)`nLogPath: $env:TEMP\jcUpdate.log")
+        # run .MSI installer
+        msiexec /i $AGENT_INSTALLER_PATH /quiet /L "$env:TEMP\jcUpdate.log" JCINSTALLERARGUMENTS=`"-k $($JumpCloudConnectKey) /VERYSILENT /NORESTART /NOCLOSEAPPLICATIONS`"
+        Start-Sleep 1
+        # perform installation checks:
         $timeout = 0
         while (!(Test-ProgramInstalled -programName:("JumpCloud"))) {
-            Start-Sleep 5
-            $timeout += 1
             Write-ToLog -Message:('Waiting on JCAgent Installer...')
             if ($timeout -eq 20) {
-                Write-ToLog -Message:('JCAgent did not install in the expected window')
+                Write-ToLog -Message:('JCAgent did not install in the expected window') -Level Error
                 break
             }
+            Start-Sleep 5
+            $timeout += 1
+        }
+        # wait on configuration file:
+        $config = get-content -Path $AGENT_CONF_PATH -ErrorAction Ignore
+        $regex = 'systemKey\":\"(\w+)\"'
+        $timeout = 0
+        while ([system.string]::IsNullOrEmpty($config)) {
+            $config = get-content -Path $AGENT_CONF_PATH -ErrorAction Ignore
+            Write-ToLog -Message:('Waiting for JumpCloud agent config file...')
+            if ($timeout -eq 20) {
+                Write-ToLog -Message:('JCAgent could not register the system within the expected window') -Level Error
+                break
+            }
+            Start-Sleep 5
+            $timeout += 1
+        }
+        # If config continue to try to get SystemKey; else continue
+        if ($config) {
+            # wait on connect key
+            $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+            $timeout = 0
+            while ([system.string]::IsNullOrEmpty($systemKey)) {
+                $config = get-content -Path $AGENT_CONF_PATH
+                $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+                Write-ToLog -Message:('Waiting for JumpCloud to register the local system...')
+                if ($timeout -eq 20) {
+                    Write-ToLog -Message:('JCAgent could not register the system within the expected window') -Level Error
+                    break
+                }
+                Start-Sleep 5
+                $timeout += 1
+            }
+            Write-ToLog -Message:("SystemKey Generated: $($systemKey)")
         }
     }
-    If ((Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x64")) -and (Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x86")) -and (Test-ProgramInstalled -programName:("JumpCloud"))) {
+    If ((Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x64")) -and (Test-ProgramInstalled -programName:("Microsoft Visual C\+\+ 2013 x86")) -and (Test-ProgramInstalled -programName:("JumpCloud")) -and (-not [system.string]::IsNullOrEmpty($systemKey))) {
         Return $true
     } Else {
         Return $false
@@ -1254,6 +1293,7 @@ Function Start-Migration {
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$InstallJCAgent = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AutobindJCUser = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$BindAsAdmin = $false,
+        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$SetDefaultWindowsUser = $true,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudAPIKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(24, 24)][string]$JumpCloudOrgID,
@@ -1262,7 +1302,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.2.1'
+        $admuVersion = '2.3.0'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
@@ -1337,9 +1377,10 @@ Function Start-Migration {
 
         # JumpCloud Agent Installation Variables
         $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
-        $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
-        $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/JumpCloudInstaller.exe"
-        $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\JumpCloudInstaller.exe"
+        $AGENT_BINARY_NAME = "jcagent-msi-signed.msi"
+        $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
+        $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
+        $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
         # Track migration steps
         $admuTracker = [Ordered]@{
             backupOldUserReg    = @{'pass' = $false; 'fail' = $false }
@@ -1381,16 +1422,12 @@ Function Start-Migration {
                 Remove-ItemIfExist -Path "$windowsDrive\Program Files\Jumpcloud\" -Recurse
             }
             # Agent Installer
-            Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
-            start-sleep -seconds 20
-            if ((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=1') {
-                Write-ToLog -Message:('JumpCloud agent installation failed - Check connect key is correct and network connection is active. Connectkey:' + $JumpCloudConnectKey) -Level:('Error')
-                taskkill /IM "JumpCloudInstaller.exe" /F
-                taskkill /IM "JumpCloudInstaller.tmp" /F
-                Read-Host -Prompt "Press Enter to exit"
+            $agentInstallStatus = Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
+            if ($agentInstallStatus) {
+                Write-ToLog -Message:("JumpCloud Agent Install Done")
+            } else {
+                Write-ToLog -Message:("JumpCloud Agent Install Failed") -Level Error
                 exit
-            } elseif (((Get-Content -Path ($env:LOCALAPPDATA + '\Temp\jcagent.log') -Tail 1) -match 'Agent exiting with exitCode=0')) {
-                Write-ToLog -Message:('JC Agent installed - Must be off domain to start jc agent service')
             }
         } elseif ($InstallJCAgent -eq $true -and (Test-ProgramInstalled("Jumpcloud"))) {
             Write-ToLog -Message:('JumpCloud agent is already installed on the system.')
@@ -1709,7 +1746,7 @@ Function Start-Migration {
                     Write-ToLog -message:("Property: $($item) Value: $($properties.$item)")
                 }
             } else {
-                # write-host "The ADMU Registry Key does not exist"
+                # Write-ToLog "The ADMU Registry Key does not exist"
                 # Create the new key
                 New-RegKey -keyPath $rootlessKey -registryRoot LocalMachine
                 foreach ($item in $propertyHash.Keys) {
@@ -1859,6 +1896,16 @@ Function Start-Migration {
                 Remove-ItemIfExist -Path:($jcAdmuTempPath) -Recurse
             } catch {
                 Write-ToLog -Message:('Failed to remove Temp Files & Folders.' + $jcAdmuTempPath)
+            }
+
+            # Set the last logged on user to the new user
+            if ($SetDefaultWindowsUser -eq $true) {
+                $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI"
+                Write-ToLog -Message:('Setting Last Logged on Windows User to ' + $JumpCloudUserName)
+                set-ItemProperty -Path $registryPath -Name "LastLoggedOnUserSID" -Value "$($NewUserSID)"
+                set-ItemProperty -Path $registryPath -Name "SelectedUserSID" -Value "$($NewUserSID)"
+                set-ItemProperty -Path $registryPath -Name "LastLoggedOnUser" -Value ".\$($JumpCloudUserName)"
+                set-ItemProperty -Path $registryPath -Name "LastLoggedOnSAMUser" -Value ".\$($JumpCloudUserName)"
             }
 
             if ($ForceReboot -eq $true) {
