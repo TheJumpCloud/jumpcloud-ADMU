@@ -1,8 +1,7 @@
 Param(
   [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 0)][ValidateNotNullOrEmpty()][System.String]$TestOrgConnectKey
 )
-process
-{
+process {
 
   #if (Get-Module -ListAvailable -Name pester) {
   #    Write-Host "pester module installed"
@@ -25,6 +24,7 @@ process
 
   # JumpCloud Agent Installation Variables
   $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
+  $AGENT_CONF_PATH = "$($AGENT_PATH)\JumpCloud\Plugins\Contrib\jcagent.conf"
   # $AGENT_CONF_FILE = "\Plugins\Contrib\jcagent.conf"
   $AGENT_BINARY_NAME = "JumpCloud-agent.exe"
   # $AGENT_SERVICE_NAME = "JumpCloud-agent"
@@ -47,33 +47,28 @@ process
   #     $process2.kill()
   # }
   #Clear Temp\JCADMU folder
-  if ((Test-Path 'C:\Windows\Temp\JCADMU') -eq $true)
-  {
+  if ((Test-Path 'C:\Windows\Temp\JCADMU') -eq $true) {
     remove-item -Path 'C:\windows\Temp\JCADMU' -Force -Recurse
   }
   #Recreate JCADMU folder
   New-Item -ItemType Directory -Path 'C:\windows\Temp\JCADMU' -Force
   #Is agent installed? If so uninstall it
-  if (Test-ProgramInstalled -programName:('Jumpcloud'))
-  {
+  if (Test-ProgramInstalled -programName:('Jumpcloud')) {
     #TODO: if uninstall doesn't exist, check service and stop & delete folder & regkeys
     & cmd /C 'C:\Program Files\JumpCloud\unins000.exe' /Silent
   }
   #Is vcredistx86 & vcredistx64 installed? If so uninstall it
-  if ((Test-ProgramInstalled -programName('Microsoft Visual C\+\+ 2013 x64')) -or ((Test-ProgramInstalled -programName:([Regex]'(Microsoft Visual C\+\+ 2013 Redistributable \(x86\))(.*?)'))))
-  {
+  if ((Test-ProgramInstalled -programName('Microsoft Visual C\+\+ 2013 x64')) -or ((Test-ProgramInstalled -programName:([Regex]'(Microsoft Visual C\+\+ 2013 Redistributable \(x86\))(.*?)')))) {
     Uninstall-Program -programName 'Microsoft Visual C'
   }
   #If JC directory still exists delete it
-  if (Test-Path 'C:\Program Files\JumpCloud')
-  {
+  if (Test-Path 'C:\Program Files\JumpCloud') {
     Start-Sleep -Seconds 5
     remove-item -path 'C:\Program Files\JumpCloud' -Force -Recurse
   }
   #install jcagent and prereq
-  if (!(Test-path $jcAdmuTempPath))
-  {
+  if (!(Test-path $jcAdmuTempPath)) {
     new-item -ItemType Directory -Force -Path $jcAdmuTempPath
   }
-  Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
+  Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME) -AGENT_CONF_PATH:($AGENT_CONF_PATH)
 }
