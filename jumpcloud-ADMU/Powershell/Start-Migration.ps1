@@ -946,6 +946,7 @@ Function Install-JumpCloudAgent(
     , [System.String]$AGENT_INSTALLER_PATH
     , [System.String]$AGENT_PATH
     , [System.String]$AGENT_BINARY_NAME
+    , [System.String]$AGENT_CONF_PATH
     , [System.String]$JumpCloudConnectKey
 ) {
     If (!(Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x64"))) {
@@ -1002,11 +1003,11 @@ Function Install-JumpCloudAgent(
             $timeout += 1
         }
         # wait on configuration file:
-        $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf' -ErrorAction Ignore
+        $config = get-content -Path $AGENT_CONF_PATH -ErrorAction Ignore
         $regex = 'systemKey\":\"(\w+)\"'
         $timeout = 0
         while ([system.string]::IsNullOrEmpty($config)) {
-            $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf' -ErrorAction Ignore
+            $config = get-content -Path $AGENT_CONF_PATH -ErrorAction Ignore
             Write-ToLog -Message:('Waiting for JumpCloud agent config file...')
             if ($timeout -eq 20) {
                 Write-ToLog -Message:('JCAgent could not register the system within the expected window') -Level Error
@@ -1021,7 +1022,7 @@ Function Install-JumpCloudAgent(
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
             $timeout = 0
             while ([system.string]::IsNullOrEmpty($systemKey)) {
-                $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
+                $config = get-content -Path $AGENT_CONF_PATH
                 $systemKey = [regex]::Match($config, $regex).Groups[1].Value
                 Write-ToLog -Message:('Waiting for JumpCloud to register the local system...')
                 if ($timeout -eq 20) {
@@ -1379,6 +1380,7 @@ Function Start-Migration {
         $AGENT_BINARY_NAME = "jcagent-msi-signed.msi"
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
+        $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
         # Track migration steps
         $admuTracker = [Ordered]@{
             backupOldUserReg    = @{'pass' = $false; 'fail' = $false }
@@ -1420,7 +1422,7 @@ Function Start-Migration {
                 Remove-ItemIfExist -Path "$windowsDrive\Program Files\Jumpcloud\" -Recurse
             }
             # Agent Installer
-            $agentInstallStatus = Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
+            $agentInstallStatus = Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
             if ($agentInstallStatus) {
                 Write-ToLog -Message:("JumpCloud Agent Install Done")
             } else {
