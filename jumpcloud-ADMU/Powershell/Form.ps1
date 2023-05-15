@@ -661,12 +661,17 @@ $bMigrateProfile.Add_Click( {
             } else {
                 Write-ToLog "ConnectKey is populated, JumpCloud agent will be installed"
             }
-            $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $tbJumpCloudAPIKey.Text -JumpCloudOrgID $lbl_orgId.Text -Username $tbJumpCloudUserName.Text -Prompt $true
+            $testResult, $userID, $hasLocalAccount, $jcsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $tbJumpCloudAPIKey.Text -JumpCloudOrgID $lbl_orgId.Text -Username $tbJumpCloudUserName.Text -Prompt $true
             if ($testResult) {
-                Write-ToLog "Matched $($tbJumpCloudUserName.Text) with user in the JumpCloud Console"
+                Write-ToLog "Matched $($jcsystemUserName) with user in the JumpCloud Console"
             } else {
                 Write-ToLog "$($tbJumpCloudUserName.Text) not found in the JumpCloud console"
                 return
+            }
+            if ($hasLocalAccount) {
+                Write-ToLog "User $($jcsystemUserName) has a local account on this system"
+            } else {
+                Write-ToLog "User $($jcsystemUserName) does not have a local account on this system"
             }
         }
         # Build FormResults object
@@ -682,6 +687,7 @@ $bMigrateProfile.Add_Click( {
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudConnectKey') -Value:($tbJumpCloudConnectKey.Text)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudAPIKey') -Value:($tbJumpCloudAPIKey.Text)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudOrgID') -Value:($lbl_orgId.Text)
+        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudLocalUserAccount') -Value:($jcsystemUserName)
         # Close form
         $Form.Close()
     })
