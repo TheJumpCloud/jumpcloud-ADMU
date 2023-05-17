@@ -854,17 +854,9 @@ function Test-JumpCloudUsername {
             if ($Results.results[0].systemUsername) {
                 Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].systemUsername)"
                 $hasAccount = $true
-                $message += "Selected JumpCloud User has $($Results.results[0].username) has a local user account do you want to migrate the local user profile to the JumpCloud User?"
-                $wshell = New-Object -ComObject Wscript.Shell
-                $var = $wshell.Popup("$message", 0, "JC Local User Check", 64+4)
-                # If user selects yes then migrate the local user profile to the JumpCloud User
-                if ($var -eq 6) {
-                    Write-ToLog -Message "User selected Yes, continuing with migration $($winUserResult))"
-                    return $true, $Results.results[0]._id, $hasAccount, $Results.results[0].systemUsername
-                } else {
-                    Write-ToLog -Message "User selected No"
-                    Return $false, $null, $false, $null
-                }
+                $message += "Selected JumpCloud User has $($Results.results[0].username) has a local user account $($Results.results[0].username) do you want to migrate the local user profile to the JumpCloud User?"
+                return $true, $Results.results[0]._id, $hasAccount, $Results.results[0].systemUsername
+
             } else {
                 return $true, $Results.results[0]._id, $hasAccount
             }
@@ -1935,11 +1927,11 @@ Function Start-Migration {
             # Set the last logged on user to the new user
             if ($SetDefaultWindowsUser -eq $true) {
                 $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI"
-                Write-ToLog -Message:('Setting Last Logged on Windows User to ' + $JumpCloudUserName)
+                Write-ToLog -Message:('Setting Last Logged on Windows User to ' + $systemUserName)
                 set-ItemProperty -Path $registryPath -Name "LastLoggedOnUserSID" -Value "$($NewUserSID)"
                 set-ItemProperty -Path $registryPath -Name "SelectedUserSID" -Value "$($NewUserSID)"
-                set-ItemProperty -Path $registryPath -Name "LastLoggedOnUser" -Value ".\$($JumpCloudUserName)"
-                set-ItemProperty -Path $registryPath -Name "LastLoggedOnSAMUser" -Value ".\$($JumpCloudUserName)"
+                set-ItemProperty -Path $registryPath -Name "LastLoggedOnUser" -Value ".\$($systemUserName)"
+                set-ItemProperty -Path $registryPath -Name "LastLoggedOnSAMUser" -Value ".\$($systemUserName)"
             }
 
             if ($ForceReboot -eq $true) {
