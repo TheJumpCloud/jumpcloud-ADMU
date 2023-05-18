@@ -60,6 +60,9 @@ $JCFunctionalHash = @{
         UpdateHomePath = $false
         BindAsAdmin    = $true
     }
+    # TODO: SA-3327
+    # define a new user ADMU_bind_3 here and update the first two case definitions to contain $null values for JCSystemUsername
+    # set a non-null value for ADMU_bind_3's JCSystemUsername
 }
 
 $JCReversionHash = @{

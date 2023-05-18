@@ -163,6 +163,8 @@ Describe 'Migration Test Scenarios' {
                     Write-Host "Found JumpCloud User, $($existing.Id) removing..."
                     Remove-JcSdkUser -Id $existing.Id
                 }
+                # TODO: SA-3327
+                # if $user.JCSystemUsername -ne $null; generate the user with a systemUsername, else the line below will generate the user w/o a systemUsername
                 $GeneratedUser = New-JcSdkUser -Email:("$($user.JCUsername)@jumpcloudadmu.com") -Username:("$($user.JCUsername)") -Password:("$($user.password)")
                 Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
                 Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
@@ -178,6 +180,8 @@ Describe 'Migration Test Scenarios' {
                     Write-Host "UserID $($GeneratedUser.Id) should be standard"
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
                 }
+                # TODO: SA-3327
+                # New assertion written to test that newly migrated user's username is the systemUsername not the username
             }
         }
     }
@@ -340,7 +344,7 @@ Context 'Start-Migration tests with JumpCloud user with Local User Account or sy
     It 'user has Local User Account' {
 
 
-        $headers=@{}
+        $headers = @{}
         $headers.Add("x-org-id", $env:JCORGID)
         $headers.Add("x-api-key", $env:JCApiKey)
         $headers.Add("content-type", "application/json")
