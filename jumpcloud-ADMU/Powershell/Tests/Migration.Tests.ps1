@@ -335,3 +335,29 @@ AfterAll {
         Remove-JcSdkSystem -id $system.Id
     }
 }
+
+Context 'Start-Migration tests with JumpCloud user with Local User Account or systemUsername(Get-JCUser)' {
+    It 'user has Local User Account' {
+
+
+        $headers=@{}
+        $headers.Add("x-org-id", $env:JCORGID)
+        $headers.Add("x-api-key", $env:JCApiKey)
+        $headers.Add("content-type", "application/json")
+
+        $Password = "Temp123!"
+        $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+        $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+        # Create random user variable
+        $userEmail = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+
+        $GeneratedUser = New-JcSdkUser -Email:("$($userEmail)@jumpcloudadmu.com") -Username:("$($user2)") -Password:("$($Password)")
+        Write-Host "`n## GeneratedUser ID: $($GeneratedUser.id)"
+        Write-Host "## GeneratedUser Username: $($GeneratedUser.Username)`n"
+        write-host "`nRunning: Start-Migration -JumpCloudUserName $($GeneratedUser.Username) -SelectedUserName $($user1) -TempPassword $($password)`n"
+        InitUser -UserName $user1 -Password $Password
+        { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($GeneratedUser.Username)" -SelectedUserName "$ENV:COMPUTERNAME\$($user1)" -TempPassword "$($user.password)" } | Should -Not -Throw
+        $response = Invoke-RestMethod -Uri 'https://console.jumpcloud.com/api/systemusers/$GeneratedUser.id' -Method PUT -Headers $headers -ContentType 'application/json' -Body '{"systemUsername":"ADMU"}'
+
+    }
+}

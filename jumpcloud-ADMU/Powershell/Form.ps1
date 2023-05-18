@@ -661,16 +661,17 @@ $bMigrateProfile.Add_Click( {
             } else {
                 Write-ToLog "ConnectKey is populated, JumpCloud agent will be installed"
             }
-            $testResult, $userID, $hasLocalAccount, $jcsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $tbJumpCloudAPIKey.Text -JumpCloudOrgID $lbl_orgId.Text -Username $tbJumpCloudUserName.Text -Prompt $true
+            $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $tbJumpCloudAPIKey.Text -JumpCloudOrgID $lbl_orgId.Text -Username $tbJumpCloudUserName.Text -Prompt $true
+            $jcsystemUserName = Test-JumpCloudLocalUserAccount -JumpCloudApiKey $tbJumpCloudAPIKey.Text -JumpCloudOrgID $lbl_orgId.Text -Username $tbJumpCloudUserName.Text
             if ($testResult) {
-                Write-ToLog "Matched $($jcsystemUserName) with user in the JumpCloud Console"
+                Write-ToLog "Matched $($tbJumpCloudUserName.Text) with user in the JumpCloud Console"
             } else {
                 Write-ToLog "$($tbJumpCloudUserName.Text) not found in the JumpCloud console"
                 return
             }
 
 
-            if ($hasLocalAccount) {
+            if ($jcsystemUserName) {
                 Write-ToLog "User $($jcsystemUserName) has a local account on this system"
                 $wshell = New-Object -ComObject Wscript.Shell
                 $message = "Would you like to migrate the local user profile to the JumpCloud User $($jcsystemUserName)?"

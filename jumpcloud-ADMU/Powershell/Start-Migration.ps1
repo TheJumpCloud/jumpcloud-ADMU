@@ -851,15 +851,15 @@ function Test-JumpCloudUsername {
             # write-host $Results.results[0]._id
             Write-ToLog -Message "Identified JumpCloud User`nUsername: $($Results.results[0].username)`nID: $($Results.results[0]._id)"
             # If it contains systemUsername
-            if ($Results.results[0].systemUsername) {
-                Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].systemUsername)"
-                $hasAccount = $true
-                $message += "Selected JumpCloud User has $($Results.results[0].username) has a local user account $($Results.results[0].username) do you want to migrate the local user profile to the JumpCloud User?"
-                return $true, $Results.results[0]._id, $hasAccount, $Results.results[0].systemUsername
+            # if ($Results.results[0].systemUsername) {
+            #     Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].systemUsername)"
+            #     $hasAccount = $true
+            #     $message += "Selected JumpCloud User has $($Results.results[0].username) has a local user account $($Results.results[0].username) do you want to migrate the local user profile to the JumpCloud User?"
+            #     return $true, $Results.results[0]._id, $hasAccount, $Results.results[0].systemUsername
 
-            } else {
-                return $true, $Results.results[0]._id, $hasAccount
-            }
+            # } else {
+            #     return $true, $Results.results[0]._id, $hasAccount
+            # }
 
 
         } else {
@@ -868,7 +868,70 @@ function Test-JumpCloudUsername {
                 $wshell = New-Object -ComObject Wscript.Shell
                 $var = $wshell.Popup("$message", 0, "ADMU Status", 0x0 + 0x40)
             }
+            Return $false, $null#, $false, $null
+        }
+    }
+}
+function Test-JumpCloudLocalUserAccount {
+    [CmdletBinding()]
+    [OutputType([System.Boolean])]
+    [OutputType([System.Object[]])]
+    param (
+        [Parameter()]
+        [System.String]
+        $JumpCloudApiKey,
+        [Parameter()]
+        [System.String]
+        $JumpCloudOrgID,
+        [Parameter()]
+        [System.String]
+        $Username
+    )
+    Begin {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        $Headers = @{
+            'Accept'       = 'application/json';
+            'Content-Type' = 'application/json';
+            'x-api-key'    = $JumpCloudApiKey;
+            'x-org-id'     = $JumpCloudOrgID;
+        }
+        $Form = @{
+            "filter" = @{
+                'and' = @(
+                    @{'username' = @{'$regex' = "(?i)(`^$($Username)`$)" } }
+                )
+            }
+            "fields" = "Username, systemUsername"
+        }
+        $Body = $Form | ConvertTo-Json -Depth 4
+    }
+    Process {
+        Try {
+            # Write-ToLog "Searching JC for: $Username"
+            $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/search/systemusers" -Headers $Headers -Body $Body -UseBasicParsing
+            $Results = $Response.Content | ConvertFrom-Json
+            $StatusCode = $Response.StatusCode
+        } catch {
+            $StatusCode = $_.Exception.Response.StatusCode.value__
+        }
+    }
+    End {
+        # Search User should return 200 success
+        $hasAccount = $false
+        If ($StatusCode -ne 200) {
             Return $false, $null, $false, $null
+            Write-ToLog -Message "JumpCloud username could not be found"
+        }
+        If ($Results.totalCount -eq 1 -and $Results.results[0].systemUsername) {
+            # write-host $Results.results[0]._id
+            Write-ToLog -Message "Identified JumpCloud Local User Account`nsystemUsername: $($Results.results[0].systemUsername)"
+            # If it contains systemUsername
+            Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].systemUsername)"
+            $hasAccount = $true
+
+            return $Results.results[0].systemUsername
+        } else {
+            Return $null
         }
     }
 }
@@ -1328,6 +1391,8 @@ Function Start-Migration {
                     Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
                     break
                 }
+                # TODO
+                $JumpCloudsystemUserName = Test-JumpCloudLocalUserAccount -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -JumpCloudUserName $JumpCloudUserName
             } elseif ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
                 # Attempt To Validate Org/ APIKEY & Return OrgID
                 # Error thrown in Get-mtpOrganization if MTPKEY
