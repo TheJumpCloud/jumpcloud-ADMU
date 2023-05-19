@@ -839,7 +839,7 @@ function Test-JumpCloudUsername {
                     @{'username' = @{'$regex' = "(?i)(`^$($Username)`$)" } }
                 )
             }
-            "fields" = "Username, JumpCloudUsername, _id"#TODO: SA-3327 TEST
+            "fields" = "username , systemUsername"#TODO: SA-3327 TEST
         }
         $Body = $Form | ConvertTo-Json -Depth 4
     }
@@ -855,7 +855,6 @@ function Test-JumpCloudUsername {
     }
     End {
         # Search User should return 200 success
-        $hasAccount = $false
         If ($StatusCode -ne 200) {
             Return $false, $null, $false, $null
             Write-ToLog -Message "JumpCloud username could not be found"
@@ -863,17 +862,7 @@ function Test-JumpCloudUsername {
         If ($Results.totalCount -eq 1 -and $($Results.results[0].username) -eq $Username) {
             # write-host $Results.results[0]._id
             Write-ToLog -Message "Identified JumpCloud User`nUsername: $($Results.results[0].username)`nID: $($Results.results[0]._id)"
-            # If it contains JumpCloudUsername
-            # if ($Results.results[0].JumpCloudUsername) {
-            #     Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].JumpCloudUsername)"
-            #     $hasAccount = $true
-            #     $message += "Selected JumpCloud User has $($Results.results[0].username) has a local user account $($Results.results[0].username) do you want to migrate the local user profile to the JumpCloud User?"
-            #     return $true, $Results.results[0]._id, $hasAccount, $Results.results[0].JumpCloudUsername
-
-            # } else {
-            #     return $true, $Results.results[0]._id, $hasAccount
-            # }
-            # TODO: SA-3327
+            # TODO: SA-3327 TEST
             # For a user with no JumpCloudUsername:
             # $True, 5d67fd481da3c52aa1faa883, username, $null
             # For a user with a JumpCloudUsername:
