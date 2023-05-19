@@ -50,6 +50,7 @@ $JCFunctionalHash = @{
         JCUsername     = 'ADMU_bind_1_migrated';
         UpdateHomePath = $false
         BindAsAdmin    = $false
+        JCSystemUsername = $null
     }
     testCase2 = @{
         Description    = 'Test that user is jumpcloud bound AS ADMIN to system after migration'
@@ -59,10 +60,21 @@ $JCFunctionalHash = @{
         JCUsername     = 'ADMU_bind_2_migrated';
         UpdateHomePath = $false
         BindAsAdmin    = $true
+        JCSystemUsername = $null
     }
-    # TODO: SA-3327
+    # TODO: SA-3327 TEST
     # define a new user ADMU_bind_3 here and update the first two case definitions to contain $null values for JCSystemUsername
     # set a non-null value for ADMU_bind_3's JCSystemUsername
+    testCase3 = @{
+        Description    = 'Test that user is jumpcloud local username is set'
+        Username       = 'ADMU_bind_3';
+        UserSID        = '';
+        Password       = $testUserPassword;
+        JCUsername     = 'ADMU_bind_2_systemUsername_test';
+        UpdateHomePath = $false
+        BindAsAdmin    = $true
+        JCSystemUsername = "ADMU_SystemUsername_Test"
+    }
 }
 
 $JCReversionHash = @{

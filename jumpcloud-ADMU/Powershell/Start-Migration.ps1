@@ -799,7 +799,7 @@ function Test-JumpCloudSystemKey {
     }
 }
 function Test-JumpCloudUsername {
-    # TODO: SA-3327
+    # TODO: SA-3327 TEST
     # This function should return 4 items ex:
     # For a user with no JumpCloudUsername:
     # $True, 5d67fd481da3c52aa1faa883, username, $null
@@ -895,69 +895,6 @@ function Test-JumpCloudUsername {
             # TODO: SA-3327 TEST
             # If user is not valid, return: $False, $null, $null, $null
             Return $false, $null, $null, $null
-        }
-    }
-}
-function Test-JumpCloudLocalUserAccount {
-    [CmdletBinding()]
-    [OutputType([System.Boolean])]
-    [OutputType([System.Object[]])]
-    param (
-        [Parameter()]
-        [System.String]
-        $JumpCloudApiKey,
-        [Parameter()]
-        [System.String]
-        $JumpCloudOrgID,
-        [Parameter()]
-        [System.String]
-        $Username
-    )
-    Begin {
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        $Headers = @{
-            'Accept'       = 'application/json';
-            'Content-Type' = 'application/json';
-            'x-api-key'    = $JumpCloudApiKey;
-            'x-org-id'     = $JumpCloudOrgID;
-        }
-        $Form = @{
-            "filter" = @{
-                'and' = @(
-                    @{'username' = @{'$regex' = "(?i)(`^$($Username)`$)" } }
-                )
-            }
-            "fields" = "Username, JumpCloudUsername"
-        }
-        $Body = $Form | ConvertTo-Json -Depth 4
-    }
-    Process {
-        Try {
-            # Write-ToLog "Searching JC for: $Username"
-            $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/search/systemusers" -Headers $Headers -Body $Body -UseBasicParsing
-            $Results = $Response.Content | ConvertFrom-Json
-            $StatusCode = $Response.StatusCode
-        } catch {
-            $StatusCode = $_.Exception.Response.StatusCode.value__
-        }
-    }
-    End {
-        # Search User should return 200 success
-        $hasAccount = $false
-        If ($StatusCode -ne 200) {
-            Return $false, $null, $false, $null
-            Write-ToLog -Message "JumpCloud username could not be found"
-        }
-        If ($Results.totalCount -eq 1 -and $Results.results[0].JumpCloudUsername) {
-            # write-host $Results.results[0]._id
-            Write-ToLog -Message "Identified JumpCloud Local User Account`nJumpCloudUsername: $($Results.results[0].JumpCloudUsername)"
-            # If it contains JumpCloudUsername
-            Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].JumpCloudUsername)"
-            $hasAccount = $true
-
-            return $Results.results[0].JumpCloudUsername
-        } else {
-            Return $null
         }
     }
 }

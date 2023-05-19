@@ -20,24 +20,24 @@ Describe 'Functions' {
         }
     }
     Context 'Test-JumpCloudUsername Function' {
-        # TODO: SA-3327
+        # TODO: SA-3327 TEST
         # update tests to account for four fields returned not two:
         # EX: $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $user.Username
         It 'Valid Username Returns True' {
             # Get the first user
             $user = Get-JcSdkUser | Select-Object -First 1
             # Test username w/o modification
-            $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $user.Username
+            $testResult, $userID, $FoundUsername, $FoundSystemUsername= Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $user.Username
             $testResult | Should -Be $true
             $userID | Should -Be $user.Id
             # toUpper
             $upper = ($user.Username).ToUpper()
-            $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $upper
+            $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $upper
             $testResult | Should -Be $true
             $userID | Should -Be $user.Id
             # to lower
             $lower = ($user.Username).ToLower()
-            $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $lower
+            $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $lower
             $testResult | Should -Be $true
             $userID | Should -Be $user.Id
         }
@@ -54,7 +54,7 @@ Describe 'Functions' {
     }
 
     Context 'BindUsernameToJCSystem Function' {
-        # TODO: SA-3327:
+        # TODO: SA-3327 TEST
         # BindUsernameToJCSystem should take USERID as input validated with Test-JumpCloudUsername
         BeforeAll {
             $OrgID, $OrgName = Get-mtpOrganization -apiKey $env:JCApiKey
@@ -78,7 +78,7 @@ Describe 'Functions' {
             $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
             # Begin Test
             Get-JCAssociation -Type user -Id:($($GeneratedUser.Id)) | Remove-JCAssociation -Force
-            $bind = BindUsernameToJCSystem -JcApiKey $env:JCApiKey -JcOrgId $OrgID -JumpCloudUserName $user1
+            $bind = BindUsernameToJCSystem -JcApiKey $env:JCApiKey -JcOrgId $OrgID -JumpCloudId $GeneratedUser.Id
             $bind | Should -Be $true
             $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
             $association | Should -not -BeNullOrEmpty

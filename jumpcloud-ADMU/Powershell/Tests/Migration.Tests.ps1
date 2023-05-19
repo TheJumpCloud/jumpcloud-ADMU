@@ -154,6 +154,10 @@ Describe 'Migration Test Scenarios' {
 
     Context 'Start-Migration Sucessfully Binds JumpCloud User to System' {
         It 'user bound to system after migration' {
+            $headers = @{}
+            $headers.Add("x-org-id", $env:JCORGID)
+            $headers.Add("x-api-key", $env:JCApiKey)
+            $headers.Add("content-type", "application/json")
             foreach ($user in $JCFunctionalHash.Values) {
                 Write-Host "`n## Begin Bind User Test ##"
                 Write-Host "## $($user.Username) Bound as Admin: $($user.BindAsAdmin)  ##`n"
@@ -163,16 +167,24 @@ Describe 'Migration Test Scenarios' {
                     Write-Host "Found JumpCloud User, $($existing.Id) removing..."
                     Remove-JcSdkUser -Id $existing.Id
                 }
-                # TODO: SA-3327
+                # TODO: SA-3327 TEST
                 # if $user.JCSystemUsername -ne $null; generate the user with a systemUsername, else the line below will generate the user w/o a systemUsername
                 $GeneratedUser = New-JcSdkUser -Email:("$($user.JCUsername)@jumpcloudadmu.com") -Username:("$($user.JCUsername)") -Password:("$($user.password)")
+                if ($user.JCSystemUsername -ne $null) {
+                    $systemUsernameName = "ADMU_Test_SystemUsername"
+                    $updateSystemUsername = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systemusers/$($GeneratedUser.id)" -Method PUT -Headers $headers -ContentType 'application/json' -Body "{'systemUsername':'$($systemUsernameName)'}"
+                }
+
                 Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
                 Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
                 write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
+
                 { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
                 $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+
                 Write-Host "`n## Validating sudo status on $($GeneratedUser.Id) | Should be ($($user.BindAsAdmin)) on $systemKey"
                 $association | Should -not -BeNullOrEmpty
+
                 if ($($user.BindAsAdmin)) {
                     Write-Host "UserID $($GeneratedUser.Id) should be sudo"
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
@@ -180,8 +192,10 @@ Describe 'Migration Test Scenarios' {
                     Write-Host "UserID $($GeneratedUser.Id) should be standard"
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
                 }
-                # TODO: SA-3327
+                # TODO: SA-3327 TEST
                 # New assertion written to test that newly migrated user's username is the systemUsername not the username
+                $localUser = Get-LocalUser -Name $user1 | Select-Object -ExpandProperty Name
+                $updateSystemUsername.systemUsername | Should -Be $localUser
             }
         }
     }
@@ -356,7 +370,7 @@ Context 'Start-Migration tests with JumpCloud user with Local User Account or sy
         $userEmail = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
         # Create a user with Local SystemUser
         $GeneratedUser = New-JcSdkUser -Email:("$($userEmail)@jumpcloudadmu.com") -Username:("$($user2)") -Password:("$($Password)")
-        $updateSystemUsername = Invoke-RestMethod -Uri 'https://console.jumpcloud.com/api/systemusers/$GeneratedUser.id' -Method PUT -Headers $headers -ContentType 'application/json' -Body '{"systemUsername":"ADMU Test systemUsername"}'
+        $updateSystemUsername = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systemusers/$($GeneratedUser.id)" -Method PUT -Headers $headers -ContentType 'application/json' -Body '{"systemUsername":"ADMU_Test_SystemUsername"}'
         Write-Host "`n## GeneratedUser ID: $($GeneratedUser.id)"
         Write-Host "## GeneratedUser Username: $($GeneratedUser.Username)`n"
         write-host "`nRunning: Start-Migration -JumpCloudUserName $($GeneratedUser.Username) -SelectedUserName $($user1) -TempPassword $($password)`n"
