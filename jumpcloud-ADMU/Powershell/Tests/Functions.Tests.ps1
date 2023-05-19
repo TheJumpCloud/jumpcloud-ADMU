@@ -47,7 +47,7 @@ Describe 'Functions' {
             # Append random string to username
             $newUsername = $user.Username + "jdksf45kjfds"
             # Test function
-            $testResult, $userID = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $newUsername
+            $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $newUsername
             $testResult | Should -Be $false
             $userID | Should -Be $null
         }
@@ -101,7 +101,7 @@ Describe 'Functions' {
             $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
             # Begin Test
             Get-JCAssociation -Type user -Id:($($GeneratedUser.Id)) | Remove-JCAssociation -Force
-            $bind = BindUsernameToJCSystem -JcApiKey $env:JCApiKey -JcOrgId $OrgID -JumpCloudUserName $user1 -BindAsAdmin $true
+            $bind = BindUsernameToJCSystem -JcApiKey $env:JCApiKey -JcOrgId $OrgID -JumpCloudId $GeneratedUser.Id -BindAsAdmin $true
             $bind | Should -Be $true
             # ((Get-JCAssociation -Type:user -Id:($($GeneratedUser.Id))).id).count | Should -Be '1'
             $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
@@ -112,7 +112,7 @@ Describe 'Functions' {
         }
 
         It 'APIKey not valid' {
-            $bind = BindUsernameToJCSystem -JcApiKey '1234122341234234123412341234123412341234' -JcOrgId $OrgID -JumpCloudUserName 'jsmith'
+            $bind = BindUsernameToJCSystem -JcApiKey '1234122341234234123412341234123412341234' -JcOrgId $OrgID -JumpCloudId $GeneratedUser.Id
             $bind | Should -Be $false
         }
 
@@ -121,7 +121,7 @@ Describe 'Functions' {
             if ((Test-Path -Path "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf") -eq $True) {
                 Remove-Item "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
             }
-            { BindUsernameToJCSystem -JcApiKey $env:JCApiKey -JumpCloudUserName 'jsmith' -ErrorAction Stop } | Should -Throw
+            { BindUsernameToJCSystem -JcApiKey $env:JCApiKey -JumpCloudId $GeneratedUser.Id -ErrorAction Stop } | Should -Throw
         }
     }
 
