@@ -25,6 +25,7 @@ Describe 'Migration Test Scenarios' {
                 Get-LocalUser $user.username | Should -Not -BeNullOrEmpty
             }
         }
+        # TODO: Systemuser account for
         It "Test Convert profile migration for Local users" {
             foreach ($user in $userTestingHash.Values) {
                 # Remove log before testing
@@ -33,7 +34,8 @@ Describe 'Migration Test Scenarios' {
                     Remove-Item $logPath
                     New-Item $logPath -Force -ItemType File
                 }
-                write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
+                if ($user.JCSystemUsername -eq $null) {
+                    write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
                 # Begin Test
                 { Start-Migration -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath } | Should -Not -Throw
                 # Depending on the user in the UserTestingHash, the home path will differ
@@ -58,6 +60,9 @@ Describe 'Migration Test Scenarios' {
                 Test-Path "$UserHome/NTUSER.DAT" | Should -Be $true
                 Test-Path "$UserHome/AppData/Local/Microsoft/Windows/UsrClass.DAT" | Should -Be $true
                 Test-Path "$UserHome/AppData/Local/Microsoft/Windows/UsrClass_original_$dateMatch.DAT" | Should -Be $true
+                } elseif ($user.JCSystemUsername) {
+                    <# Action when this condition is true #>
+                }
             }
         }
         It "Test UWP_JCADMU was downloaded & exists" {
