@@ -14,7 +14,7 @@ BeforeAll {
     $systemKey = [regex]::Match($config, $regex).Groups[1].Value
     # Remove users with ADMU_ prefix
     # Remove Created Users
-    Get-JCuser -username "ADMU_* "| Remove-JCuser -Force
+    Get-JCuser -username "ADMU_*"| Remove-JCuser -Force
 }
 Describe 'Migration Test Scenarios' {
     Context 'Start-Migration on local accounts (Test Functionallity)' {
@@ -257,9 +257,7 @@ Context 'Start-Migration Fails to Bind JumpCloud User to System and writes warni
         $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
         InitUser -UserName $user1 -Password $Password
         write-host "`nRunning: Start-Migration -JumpCloudUserName $($user2) -SelectedUserName $($user1) -TempPassword $($Password)`n"
-        # 24 character random id
-        $randomId = -join ((65..90) + (97..122) | Get-Random -Count 24 | ForEach-Object { [char]$_ })
-        { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user2)" -SelectedUserName "$ENV:COMPUTERNAME\$($user1)" -TempPassword "$($Password)" } | Should -Not -Throw
+        { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user2)" -SelectedUserName "$ENV:COMPUTERNAME\$($user1)" -TempPassword "$($Password)" } | Should -not -Throw
         $log = "C:\Windows\Temp\jcadmu.log"
         $regex = [regex]"jumpcloud autobind step failed"
         $match = Select-String -Path:($log) -Pattern:($regex)

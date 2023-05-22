@@ -867,9 +867,9 @@ function Test-JumpCloudUsername {
             # $True, 5d67fd481da3c52aa1faa883, username, $null
             # For a user with a JumpCloudUsername:
             # $True, 5d67fd481da3c52aa1faa883, username, user.name
-            if ($Results.results[0].JumpCloudUsername){
-                Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].JumpCloudUsername)"
-                return $true, $Results.results[0]._id, $Results.results[0].username, $Results.results[0].JumpCloudUsername
+            if ($Results.results[0].SystemUsername){
+                Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].SystemUsername)"
+                return $true, $Results.results[0]._id, $Results.results[0].username, $Results.results[0].SystemUsername
             } else {
                 return $true, $Results.results[0]._id, $Results.results[0].username, $null
             }
@@ -1383,10 +1383,12 @@ Function Start-Migration {
             # If from form, Test-JumpCloudUsername function should be used, else JumpCloudUsername will need to be calculated here if autobind is also specified
             # I think it's better to calculate the value to pass within Form.ps1
             $SelectedUserName = $inputObject.SelectedUserName
-            if (!$JumpCloudSystemUserName ){
+            if ($JumpCloudsystemUserName -eq $null) {
                 $JumpCloudUserName = $inputObject.JumpCloudUserName
+            } else {
+                $JumpCloudUserName = $JumpCloudsystemUserName
             }
-            $JumpCloudUserName = $inputObject.JumpCloudUserName
+
             $TempPassword = $inputObject.TempPassword
             if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
                 $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
