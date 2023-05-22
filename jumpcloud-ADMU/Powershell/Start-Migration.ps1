@@ -128,10 +128,10 @@ function BindUsernameToJCSystem {
     }
     Process {
         # Get UserID from JumpCloud Console
-        Write-ToLog -Message:("Searching for user: $JumpCloudUserName")
+        #Write-ToLog -Message:("Searching for user: $JumpCloudUserName")
         # TODO: SA-3327 TEST
         # break this out of the current function: if we pass in a userID we can assume it's been validated
-        $ret, $id, $systemUserJCMatch = Test-JumpCloudUsername -JumpCloudApiKey $JcApiKey -JumpCloudOrgID $JcOrgId -Username $JumpCloudUserName
+        #$ret, $id, $systemUserJCMatch = Test-JumpCloudUsername -JumpCloudApiKey $JcApiKey -JumpCloudOrgID $JcOrgId -Username $JumpCloudUserName
         if ($JumpCloudId) {
             Write-ToLog -Message:("User matched in JumpCloud")
             $Headers = @{
@@ -1334,6 +1334,7 @@ Function Start-Migration {
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
+        $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
         # validate API KEY/ OrgID if Autobind is selected
         if ($AutobindJCUser) {
             if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
@@ -1363,7 +1364,7 @@ Function Start-Migration {
             # TODO: SA-3327 TEST
             # Validate whether or not a user has a JumpCloudUsername Value
             # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
-            # $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+
             # if ($ret -eq $false) {
             #     Throw [System.Management.Automation.ValidationMetadataException] "The specified JumpCloudUsername does not exist"
             #     break
@@ -1383,7 +1384,7 @@ Function Start-Migration {
             # If from form, Test-JumpCloudUsername function should be used, else JumpCloudUsername will need to be calculated here if autobind is also specified
             # I think it's better to calculate the value to pass within Form.ps1
             $SelectedUserName = $inputObject.SelectedUserName
-            if ($JumpCloudsystemUserName -eq $null) {
+            if ([system.string]::IsNullOrEmpty($JumpCloudsystemUserName)) {
                 $JumpCloudUserName = $inputObject.JumpCloudUserName
             } else {
                 $JumpCloudUserName = $JumpCloudsystemUserName
