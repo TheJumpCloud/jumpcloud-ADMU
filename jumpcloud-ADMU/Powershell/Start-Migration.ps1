@@ -1361,6 +1361,9 @@ Function Start-Migration {
                 Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User"
                 break
             }
+            if($JumpCloudsystemUserName){
+                $JumpCloudUsername = $JumpCloudsystemUserName
+            }
             # TODO: SA-3327 TEST
             # Validate whether or not a user has a JumpCloudUsername Value
             # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
