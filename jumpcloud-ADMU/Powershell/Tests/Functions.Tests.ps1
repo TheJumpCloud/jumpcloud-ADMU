@@ -112,6 +112,9 @@ Describe 'Functions' {
         }
 
         It 'APIKey not valid' {
+            $Password = "Temp123!"
+            $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
             $bind = BindUsernameToJCSystem -JcApiKey '1234122341234234123412341234123412341234' -JcOrgId $OrgID -JumpCloudId $GeneratedUser.Id
             $bind | Should -Be $false
         }

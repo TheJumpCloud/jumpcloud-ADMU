@@ -194,8 +194,10 @@ Describe 'Migration Test Scenarios' {
                 }
                 # TODO: SA-3327 TEST
                 # New assertion written to test that newly migrated user's username is the systemUsername not the username
-                $localUser = Get-LocalUser -Name $user1 | Select-Object -ExpandProperty Name
-                $updateSystemUsername.systemUsername | Should -Be $localUser
+                $path = 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*'
+                $profiles =  Get-ItemProperty -Path $path | Select-Object -Property PSChildName, ProfileImagePath
+                # Run a match on the systemUsername to the ProfileImagePath
+                $profiles | Where-Object { $_.ProfileImagePath -match $systemUsernameName } | Should -Not -BeNullOrEmpty
             }
         }
     }
