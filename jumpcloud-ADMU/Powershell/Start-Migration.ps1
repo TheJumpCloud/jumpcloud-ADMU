@@ -1363,11 +1363,11 @@ Function Start-Migration {
             # TODO: SA-3327 TEST
             # Validate whether or not a user has a JumpCloudUsername Value
             # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
-            $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
-            if ($ret -eq $false) {
-                Throw [System.Management.Automation.ValidationMetadataException] "The specified JumpCloudUsername does not exist"
-                break
-            }
+            # $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+            # if ($ret -eq $false) {
+            #     Throw [System.Management.Automation.ValidationMetadataException] "The specified JumpCloudUsername does not exist"
+            #     break
+            # }
 
         }
         # Validate ConnectKey if Install Agent is selected
