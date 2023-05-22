@@ -266,6 +266,7 @@ Context 'Start-Migration Fails to Bind JumpCloud User to System and writes warni
         # Get the date appended to the backup registry files:
         $match.Matches | Should -Not -BeNullOrEmpty
     }
+}
 
 Context 'Start-Migration kicked off through JumpCloud agent' {
     BeforeAll {
@@ -360,6 +361,4 @@ AfterAll {
     foreach ($system in $CIsystems) {
         Remove-JcSdkSystem -id $system.Id
     }
-}
-
 }
