@@ -259,7 +259,7 @@ Context 'Start-Migration Fails to Bind JumpCloud User to System and writes warni
         write-host "`nRunning: Start-Migration -JumpCloudUserName $($user2) -SelectedUserName $($user1) -TempPassword $($Password)`n"
         # 24 character random id
         $randomId = -join ((65..90) + (97..122) | Get-Random -Count 24 | ForEach-Object { [char]$_ })
-        { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user2)" -JumpCloudId "$($randomId)" -TempPassword "$($Password)" } | Should -Not -Throw
+        { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user2)" -SelectedUserName "$ENV:COMPUTERNAME\$($user1)" -TempPassword "$($Password)" } | Should -Not -Throw
         $log = "C:\Windows\Temp\jcadmu.log"
         $regex = [regex]"jumpcloud autobind step failed"
         $match = Select-String -Path:($log) -Pattern:($regex)
