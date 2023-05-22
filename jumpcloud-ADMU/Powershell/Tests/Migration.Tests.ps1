@@ -172,7 +172,8 @@ Describe 'Migration Test Scenarios' {
                 $GeneratedUser = New-JcSdkUser -Email:("$($user.JCUsername)@jumpcloudadmu.com") -Username:("$($user.JCUsername)") -Password:("$($user.password)")
                 if ($user.JCSystemUsername -ne $null) {
                     $systemUsernameName = "ADMU_Test_SystemUsername"
-                    $updateSystemUsername = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systemusers/$($GeneratedUser.id)" -Method PUT -Headers $headers -ContentType 'application/json' -Body "{'systemUsername':'$($systemUsernameName)'}"
+                    $Body = @{"systemUsername" = $systemUsernameName} | ConvertTo-Json
+                    $updateSystemUsername = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systemusers/$($GeneratedUser.id)" -Method PUT -Headers $headers -Body $Body
                 }
 
                 Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"

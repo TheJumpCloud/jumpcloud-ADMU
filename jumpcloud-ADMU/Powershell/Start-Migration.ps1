@@ -1538,9 +1538,6 @@ Function Start-Migration {
                 }
             }
             $admuTracker.newUserInit.pass = $true
-            # Get-Local User
-            $localUsers = Get-LocalUser
-            Write-ToLog -Message:('Running Get-LocalUser: ' + $localUsers)
             ### End Create New User Region ###
 
             ### Begin backup user registry for new user
