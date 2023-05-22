@@ -12,6 +12,9 @@ BeforeAll {
     $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
     $regex = 'systemKey\":\"(\w+)\"'
     $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+    # Remove users with ADMU_ prefix
+    # Remove Created Users
+    Get-JCuser -username "ADMU_* "| Remove-JCuser -Force
 }
 Describe 'Migration Test Scenarios' {
     Context 'Start-Migration on local accounts (Test Functionallity)' {
@@ -173,7 +176,7 @@ Describe 'Migration Test Scenarios' {
                 if ($user.JCSystemUsername -ne $null) {
                     $systemUsernameName = "ADMU_Test_SystemUsername"
                     $Body = @{"systemUsername" = $systemUsernameName} | ConvertTo-Json
-                    $updateSystemUsername = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systemusers/$($GeneratedUser.id)" -Method PUT -Headers $headers -Body $Body
+                    $updateSystemUsername = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systemusers/$($GeneratedUser.id)" -Method PUT -Headers $headers -ContentType -Body $Body
                 }
 
                 Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
