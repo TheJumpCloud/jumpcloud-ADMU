@@ -176,7 +176,7 @@ Describe 'Migration Test Scenarios' {
                 if ($user.JCSystemUsername -ne $null) {
                     $systemUsernameName = "ADMU_Test_SystemUsername"
                     $Body = @{"systemUsername" = $systemUsernameName} | ConvertTo-Json
-                    $updateSystemUsername = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systemusers/$($GeneratedUser.id)" -Method PUT -Headers $headers -ContentType -Body $Body
+                    $updateSystemUsername = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systemusers/$($GeneratedUser.id)" -Method PUT -Headers $headers -Body $Body
                 }
 
                 Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
@@ -257,7 +257,9 @@ Context 'Start-Migration Fails to Bind JumpCloud User to System and writes warni
         $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
         InitUser -UserName $user1 -Password $Password
         write-host "`nRunning: Start-Migration -JumpCloudUserName $($user2) -SelectedUserName $($user1) -TempPassword $($Password)`n"
-        { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user2)" -SelectedUserName "$ENV:COMPUTERNAME\$($user1)" -TempPassword "$($Password)" } | Should -Not -Throw
+        # 24 character random id
+        $randomId = -join ((65..90) + (97..122) | Get-Random -Count 24 | ForEach-Object { [char]$_ })
+        { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user2)" -JumpCloudId "$($randomId)" -TempPassword "$($Password)" } | Should -Not -Throw
         $log = "C:\Windows\Temp\jcadmu.log"
         $regex = [regex]"jumpcloud autobind step failed"
         $match = Select-String -Path:($log) -Pattern:($regex)
