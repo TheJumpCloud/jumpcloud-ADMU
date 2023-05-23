@@ -212,28 +212,29 @@ Describe 'Migration Test Scenarios' {
                 # TODO: SA-3327 TEST
                 # if $user.JCSystemUsername -ne $null; generate the user with a systemUsername, else the line below will generate the user w/o a systemUsername
                 $GeneratedUser = New-JcSdkUser -Email:("$($user.JCUsername)@jumpcloudadmu.com") -Username:("$($user.JCUsername)") -Password:("$($user.password)")
-                if ($user.JCSystemUsername -ne $null) {
+                if ($user.JCSystemUsername) {
                     $systemUsernameName = "ADMU_Test_SystemUsername"
                     $Body = @{"systemUsername" = $systemUsernameName} | ConvertTo-Json
                     $updateSystemUsername = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systemusers/$($GeneratedUser.id)" -Method PUT -Headers $headers -Body $Body
+                    Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
+                    Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
+                    write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
+
+                    { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
+                    $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+
+                    Write-Host "`n## Validating sudo status on $($GeneratedUser.Id) | Should be ($($user.BindAsAdmin)) on $systemKey"
+                    $association | Should -not -BeNullOrEmpty
+
+                    # TODO: SA-3327 TEST
+                    # New assertion written to test that newly migrated user's username is the systemUsername not the username
+                    $path = 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*'
+                    $profiles =  Get-ItemProperty -Path $path | Select-Object -Property PSChildName, ProfileImagePath
+                    # Run a match on the systemUsername to the ProfileImagePath
+                    $profiles | Where-Object { $_.ProfileImagePath -match $systemUsernameName } | Should -Not -BeNullOrEmpty
                 }
 
-                Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
-                Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
-                write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
 
-                { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
-                $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
-
-                Write-Host "`n## Validating sudo status on $($GeneratedUser.Id) | Should be ($($user.BindAsAdmin)) on $systemKey"
-                $association | Should -not -BeNullOrEmpty
-
-                # TODO: SA-3327 TEST
-                # New assertion written to test that newly migrated user's username is the systemUsername not the username
-                $path = 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*'
-                $profiles =  Get-ItemProperty -Path $path | Select-Object -Property PSChildName, ProfileImagePath
-                # Run a match on the systemUsername to the ProfileImagePath
-                $profiles | Where-Object { $_.ProfileImagePath -match $systemUsernameName } | Should -Not -BeNullOrEmpty
         }
     }
     Context 'Set-LastLoggedOnUser Tests' {
