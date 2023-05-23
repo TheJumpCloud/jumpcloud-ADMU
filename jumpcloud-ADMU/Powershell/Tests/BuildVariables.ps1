@@ -73,7 +73,7 @@ $JCFunctionalHash = @{
         JCUsername     = 'ADMU_bind_localuser';
         UpdateHomePath = $false
         BindAsAdmin    = $true
-        JCSystemUsername = "ADMU_SystemUsername_Test"
+        JCSystemUsername = "ADMU_SystemUser"
     }
 }
 

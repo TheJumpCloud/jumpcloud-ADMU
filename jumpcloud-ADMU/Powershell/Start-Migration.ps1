@@ -1330,11 +1330,15 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
+        Write-ToLog -Message:('JumpCloud username param: ' + $JumpCloudUserName + ' Selected username param: ' + $SelectedUserName)
         $admuVersion = '2.3.0'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
         $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+
+        # Write to log all variables above
+        Write-ToLog -Message:("Ret = $($ret) , JumpCloudUserName: $($JumpCloudUserName) , JumpCloudUserId: $($JumpCloudUserId) , JumpCloudsystemUserName = $($JumpCloudsystemUserName)")
         # validate API KEY/ OrgID if Autobind is selected
         if ($AutobindJCUser) {
             if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
