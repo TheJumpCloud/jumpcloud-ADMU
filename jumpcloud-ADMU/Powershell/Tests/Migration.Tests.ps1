@@ -162,6 +162,11 @@ Describe 'Migration Test Scenarios' {
 
     Context 'Start-Migration Sucessfully Binds JumpCloud User to System' {
         It 'user bound to system after migration' {
+            $headers = @{}
+            $headers.Add("x-org-id", $env:JCORGID)
+            $headers.Add("x-api-key", $env:JCApiKey)
+            $headers.Add("content-type", "application/json")
+
             foreach ($user in $JCFunctionalHash.Values) {
                 Write-Host "`n## Begin Bind User Test ##"
                 Write-Host "## $($user.Username) Bound as Admin: $($user.BindAsAdmin)  ##`n"
@@ -173,6 +178,11 @@ Describe 'Migration Test Scenarios' {
                 }
 
                 $GeneratedUser = New-JcSdkUser -Email:("$($user.JCUsername)@jumpcloudadmu.com") -Username:("$($user.JCUsername)") -Password:("$($user.password)")
+
+                if ($user.JCSystemUsername) {
+                    $Body = @{"systemUsername" = $user.JCSystemUsername} | ConvertTo-Json
+                    $updateSystemUsername = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systemusers/$($GeneratedUser.id)" -Method PUT -Headers $headers -Body $Body
+                }
 
                 Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
                 Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
@@ -191,48 +201,8 @@ Describe 'Migration Test Scenarios' {
                     Write-Host "UserID $($GeneratedUser.Id) should be standard"
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
                 }
-            }
-        }
-    }
-    context 'Start Migration Given JCUsername and systemusername'{
-        It 'JCUser has systemusername'{
-            $headers = @{}
-            $headers.Add("x-org-id", $env:JCORGID)
-            $headers.Add("x-api-key", $env:JCApiKey)
-            $headers.Add("content-type", "application/json")
 
-            foreach ($user in $JCFunctionalHash.Values) {
-                Write-Host "`n## Begin JCSystemUsername Test ##"
-
-
-
-                # TODO: SA-3327 TEST
-                # if $user.JCSystemUsername -ne $null; generate the user with a systemUsername, else the line below will generate the user w/o a systemUsername
-
-                if ($user.JCSystemUsername) {
-                    $users = Get-JCSDKUser
-
-                    Write-Host "## $($user.Username) With JCSystemUsername $($user.JCSystemUsername)  ##`n"
-                    if ("$($user.JCUsername)" -in $users.Username) {
-                        $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
-                        Write-Host "Found JumpCloud User, $($existing.Id) removing..."
-                        Remove-JcSdkUser -Id $existing.Id
-                    }
-
-                    $GeneratedUser = New-JcSdkUser -Email:("$($user.JCUsername)@jumpcloudadmu.com") -Username:("$($user.JCUsername)") -Password:("$($user.password)")
-                    $Body = @{"systemUsername" = $user.JCSystemUsername} | ConvertTo-Json
-                    $updateSystemUsername = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systemusers/$($GeneratedUser.id)" -Method PUT -Headers $headers -Body $Body
-                    Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
-                    Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
-                    write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
-
-                    { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
-
-                    # TODO: SA-3327 TEST
-                    # New assertion written to test that newly migrated user's username is the systemUsername not the username
-                    $path = 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*'
-                    $profiles =  Get-ItemProperty -Path $path | Select-Object -Property PSChildName, ProfileImagePath
-
+                if ($user.JCSystemUsername){
                     $localUser = Get-LocalUser
                     Write-Host "`n## Validating local users $($localUser)"
                     # Run a match on the systemUsername to the ProfileImagePath
@@ -240,7 +210,46 @@ Describe 'Migration Test Scenarios' {
                 }
         }
     }
-}
+#     context 'Start Migration Given JCUsername and systemusername'{
+#         It 'JCUser has systemusername'{
+
+
+#             foreach ($user in $JCFunctionalHash.Values) {
+#                 Write-Host "`n## Begin JCSystemUsername Test ##"
+
+
+
+#                 # TODO: SA-3327 TEST
+#                 # if $user.JCSystemUsername -ne $null; generate the user with a systemUsername, else the line below will generate the user w/o a systemUsername
+
+#                 if ($user.JCSystemUsername) {
+#                     $users = Get-JCSDKUser
+
+#                     Write-Host "## $($user.Username) With JCSystemUsername $($user.JCSystemUsername)  ##`n"
+#                     if ("$($user.JCUsername)" -in $users.Username) {
+#                         $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
+#                         Write-Host "Found JumpCloud User, $($existing.Id) removing..."
+#                         Remove-JcSdkUser -Id $existing.Id
+#                     }
+
+#                     $GeneratedUser = New-JcSdkUser -Email:("$($user.JCUsername)@jumpcloudadmu.com") -Username:("$($user.JCUsername)") -Password:("$($user.password)")
+
+#                     Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
+#                     Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
+#                     write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
+
+#                     { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
+
+#                     # TODO: SA-3327 TEST
+#                     # New assertion written to test that newly migrated user's username is the systemUsername not the username
+#                     $path = 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*'
+#                     $profiles =  Get-ItemProperty -Path $path | Select-Object -Property PSChildName, ProfileImagePath
+
+
+#                 }
+#         }
+#     }
+# }
     Context 'Set-LastLoggedOnUser Tests' {
         It "Start-Migration should succesfully SET last logged on windows user to migrated user" {
             $Password = "Temp123!"
