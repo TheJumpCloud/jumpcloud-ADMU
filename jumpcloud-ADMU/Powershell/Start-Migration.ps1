@@ -1467,14 +1467,6 @@ Function Start-Migration {
         Write-ToLog -Message:($localComputerName + ' is currently Domain joined to ' + $WmiComputerSystem.Domain + ' NetBiosName is ' + $netBiosName)
     }
     Process {
-        # If local user and JumpCloud JumpCloudUsername are the same then link the user to the system
-
-        if ($JumpCloudJumpCloudUsername) {
-            Write-ToLog -Message:('JumpCloud JumpCloudUsername"' + $JumpCloudJumpCloudUsername + '')
-            $JumpCloudUsername = $JumpCloudJumpCloudUsername
-        } else {
-            $JumpCloudUsername = $JumpCloudUserName
-        }
         # Start Of Console Output
         Write-ToLog -Message:('Windows Profile "' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUsername + '"')
         #region SilentAgentInstall
