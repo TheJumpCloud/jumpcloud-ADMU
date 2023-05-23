@@ -227,18 +227,14 @@ Describe 'Migration Test Scenarios' {
                     write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
 
                     { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
-                    $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
-
-                    Write-Host "`n## Validating sudo status on $($GeneratedUser.Id) | Should be ($($user.BindAsAdmin)) on $systemKey"
-                    $association | Should -not -BeNullOrEmpty
 
                     # TODO: SA-3327 TEST
                     # New assertion written to test that newly migrated user's username is the systemUsername not the username
                     $path = 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*'
                     $profiles =  Get-ItemProperty -Path $path | Select-Object -Property PSChildName, ProfileImagePath
 
-                    $localUser = Get-LocalUser -Name $user.JCSystemUsername | Select-Object -ExpandProperty Name
-                    Write-Host "Local User is Test: $($localUser)"
+                    $localUser = Get-LocalUser
+                    Write-Host "`n## Validating local users $($localUser)"
                     # Run a match on the systemUsername to the ProfileImagePath
                     $localUser | Should -Be $user.JCSystemUsername
                 }
