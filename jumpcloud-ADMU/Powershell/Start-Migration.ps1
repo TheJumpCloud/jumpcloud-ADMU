@@ -1335,13 +1335,12 @@ Function Start-Migration {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
         Write-ToLog -Message:('JumpCloud username param: ' + $JumpCloudUserName + ' Selected username param: ' + $SelectedUserName)
-        $admuVersion = '2.3.0'
+        $admuVersion = '2.4.0'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
 
-        # Write to log all variables above
-        Write-ToLog -Message:("Ret = $($ret) , JumpCloudUserName: $($JumpCloudUserName) , JumpCloudUserId: $($JumpCloudUserId) , JumpCloudsystemUserName = $($JumpCloudsystemUserName)")
+
         # validate API KEY/ OrgID if Autobind is selected
         if ($AutobindJCUser) {
             if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
@@ -1375,6 +1374,8 @@ Function Start-Migration {
             # Validate whether or not a user has a JumpCloudUsername Value
             # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
             $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+            # Write to log all variables above
+            Write-ToLog -Message:("Ret = $($ret) , JumpCloudUserName: $($JumpCloudUserName) , JumpCloudUserId: $($JumpCloudUserId) , JumpCloudsystemUserName = $($JumpCloudsystemUserName)")
 
             if ($ret -eq $false) {
                 Throw [System.Management.Automation.ValidationMetadataException] "The specified JumpCloudUsername does not exist"

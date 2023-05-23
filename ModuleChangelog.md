@@ -1,3 +1,12 @@
+## 2.4.0
+
+Release Date: March 27,2023
+
+#### RELEASE NOTES
+
+```
+* Updated JumpCloud ADMU to use JC Local Account User instead of JCUsername for migration if it is set in the console
+```
 ## 2.3.0
 
 Release Date: March 27,2023

@@ -203,10 +203,7 @@ Describe 'Migration Test Scenarios' {
                 }
 
                 if ($user.JCSystemUsername){
-                    $localUser = Get-LocalUser
-                    Write-Host "`n## Validating local users $($localUser)"
-                    # Run a match on the systemUsername to the ProfileImagePath
-                    $localUser | Should -Be $user.JCSystemUsername
+                    Get-LocalUser | Where-Object {$_.Name -eq $user.JCSystemUsername} | Should -Not -BeNullOrEmpty
                 }
         }
     }
@@ -301,21 +298,16 @@ Describe 'Migration Test Scenarios' {
     }
 }
 
-# Context 'Start-Migration Fails to Bind JumpCloud User to System and writes warning' {
-#     It 'user bound to system after migration' {
-#         $Password = "Temp123!"
-#         $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-#         $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-#         InitUser -UserName $user1 -Password $Password
-#         write-host "`nRunning: Start-Migration -JumpCloudUserName $($user2) -SelectedUserName $($user1) -TempPassword $($Password)`n"
-#         { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user2)" -SelectedUserName "$ENV:COMPUTERNAME\$($user1)" -TempPassword "$($Password)" } | Should -Not -Throw
-#         $log = "C:\Windows\Temp\jcadmu.log"
-#         $regex = [regex]"jumpcloud autobind step failed"
-#         $match = Select-String -Path:($log) -Pattern:($regex)
-#         # Get the date appended to the backup registry files:
-#         $match.Matches | Should -Not -BeNullOrEmpty
-#     }
-# }
+Context 'Start-Migration Fails to Bind JumpCloud User to System and throws error' {
+    It 'user bound to system after migration' {
+        $Password = "Temp123!"
+        $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+        $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+        InitUser -UserName $user1 -Password $Password
+        write-host "`nRunning: Start-Migration -JumpCloudUserName $($user2) -SelectedUserName $($user1) -TempPassword $($Password)`n"
+        { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user2)" -SelectedUserName "$ENV:COMPUTERNAME\$($user1)" -TempPassword "$($Password)" } | Should -Throw
+    }
+}
 Context 'Start-Migration kicked off through JumpCloud agent' {
     BeforeAll {
         # test connection to Org
