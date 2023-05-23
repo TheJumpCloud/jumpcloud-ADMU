@@ -178,16 +178,16 @@ Describe 'Migration Test Scenarios' {
                 }
 
                 $GeneratedUser = New-JcSdkUser -Email:("$($user.JCUsername)@jumpcloudadmu.com") -Username:("$($user.JCUsername)") -Password:("$($user.password)")
-
                 if ($user.JCSystemUsername) {
                     $Body = @{"systemUsername" = $user.JCSystemUsername} | ConvertTo-Json
                     $updateSystemUsername = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systemusers/$($GeneratedUser.id)" -Method PUT -Headers $headers -Body $Body
+                    Write-Host "Updated System Username to $($updateSystemUsername)"
                 }
 
                 Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
                 Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
                 write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
-
+                # Start-Migration -JumpCloudAPIKey  -AutobindJCUser $true -JumpCloudUserName "cclemons" -SelectedUserName "AZUREAD\kentest" -TempPassword "adsdasads" -UpdateHomePath $true -BindAsAdmin $true
                 { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
                 $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
 
