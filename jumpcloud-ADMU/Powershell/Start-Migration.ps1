@@ -833,6 +833,7 @@ function Test-JumpCloudUsername {
             'x-api-key'    = $JumpCloudApiKey;
             'x-org-id'     = $JumpCloudOrgID;
         }
+
         $Form = @{
             "filter" = @{
                 'and' = @(
@@ -848,16 +849,18 @@ function Test-JumpCloudUsername {
             # Write-ToLog "Searching JC for: $Username"
             $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/search/systemusers" -Headers $Headers -Body $Body -UseBasicParsing
             $Results = $Response.Content | ConvertFrom-Json
+
             $StatusCode = $Response.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
+            Write-ToLog -Message "Status Code $($StatusCode)"
         }
     }
     End {
         # Search User should return 200 success
         If ($StatusCode -ne 200) {
-            Return $false, $null, $false, $null
             Write-ToLog -Message "JumpCloud username could not be found"
+            Return $false, $null, $null, $null
         }
         If ($Results.totalCount -eq 1 -and $($Results.results[0].username) -eq $Username) {
             # write-host $Results.results[0]._id
@@ -867,7 +870,8 @@ function Test-JumpCloudUsername {
             # $True, 5d67fd481da3c52aa1faa883, username, $null
             # For a user with a JumpCloudUsername:
             # $True, 5d67fd481da3c52aa1faa883, username, user.name
-            if ($Results.results[0].SystemUsername){
+            if ($Results.results[0].SystemUsername) {
+                Write-ToLog -Message "Identified JumpCloud User`nUsername: $($Results.results[0].username)`nID: $($Results.results[0]._id)"
                 Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].SystemUsername)"
                 return $true, $Results.results[0]._id, $Results.results[0].username, $Results.results[0].SystemUsername
             } else {
@@ -1335,7 +1339,6 @@ Function Start-Migration {
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
-        $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
 
         # Write to log all variables above
         Write-ToLog -Message:("Ret = $($ret) , JumpCloudUserName: $($JumpCloudUserName) , JumpCloudUserId: $($JumpCloudUserId) , JumpCloudsystemUserName = $($JumpCloudsystemUserName)")
@@ -1371,6 +1374,7 @@ Function Start-Migration {
             # TODO: SA-3327 TEST
             # Validate whether or not a user has a JumpCloudUsername Value
             # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
+            $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
 
             if ($ret -eq $false) {
                 Throw [System.Management.Automation.ValidationMetadataException] "The specified JumpCloudUsername does not exist"
