@@ -172,6 +172,7 @@ Describe 'Migration Test Scenarios' {
                     Remove-JcSdkUser -Id $existing.Id
                 }
 
+                $GeneratedUser = New-JcSdkUser -Email:("$($user.JCUsername)@jumpcloudadmu.com") -Username:("$($user.JCUsername)") -Password:("$($user.password)")
 
                 Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
                 Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
@@ -235,8 +236,9 @@ Describe 'Migration Test Scenarios' {
                     # New assertion written to test that newly migrated user's username is the systemUsername not the username
                     $path = 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*'
                     $profiles =  Get-ItemProperty -Path $path | Select-Object -Property PSChildName, ProfileImagePath
+                    Write-Host "Profiles: $($profiles)"
                     # Run a match on the systemUsername to the ProfileImagePath
-                    $profiles | Where-Object { $_.ProfileImagePath -match $user.JCSystemUsername } | Should -Not -BeNullOrEmpty
+                    $profiles | Where-Object { $newUserProfileImagePath -match $user.JCSystemUsername } | Should -Not -BeNullOrEmpty
                 }
         }
     }
