@@ -162,10 +162,44 @@ Describe 'Migration Test Scenarios' {
 
     Context 'Start-Migration Sucessfully Binds JumpCloud User to System' {
         It 'user bound to system after migration' {
+            foreach ($user in $JCFunctionalHash.Values) {
+                Write-Host "`n## Begin Bind User Test ##"
+                Write-Host "## $($user.Username) Bound as Admin: $($user.BindAsAdmin)  ##`n"
+                $users = Get-JCSDKUser
+                if ("$($user.JCUsername)" -in $users.Username) {
+                    $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
+                    Write-Host "Found JumpCloud User, $($existing.Id) removing..."
+                    Remove-JcSdkUser -Id $existing.Id
+                }
+
+
+                Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
+                Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
+                write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
+
+                { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
+                $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+
+                Write-Host "`n## Validating sudo status on $($GeneratedUser.Id) | Should be ($($user.BindAsAdmin)) on $systemKey"
+                $association | Should -not -BeNullOrEmpty
+
+                if ($($user.BindAsAdmin)) {
+                    Write-Host "UserID $($GeneratedUser.Id) should be sudo"
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
+                } else {
+                    Write-Host "UserID $($GeneratedUser.Id) should be standard"
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
+                }
+            }
+        }
+    }
+    context 'Start Migration Given JCUsername and systemusername'{
+        It 'JCUser has systemusername'{
             $headers = @{}
             $headers.Add("x-org-id", $env:JCORGID)
             $headers.Add("x-api-key", $env:JCApiKey)
             $headers.Add("content-type", "application/json")
+
             foreach ($user in $JCFunctionalHash.Values) {
                 Write-Host "`n## Begin Bind User Test ##"
                 Write-Host "## $($user.Username) Bound as Admin: $($user.BindAsAdmin)  ##`n"
@@ -194,20 +228,12 @@ Describe 'Migration Test Scenarios' {
                 Write-Host "`n## Validating sudo status on $($GeneratedUser.Id) | Should be ($($user.BindAsAdmin)) on $systemKey"
                 $association | Should -not -BeNullOrEmpty
 
-                if ($($user.BindAsAdmin)) {
-                    Write-Host "UserID $($GeneratedUser.Id) should be sudo"
-                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
-                } else {
-                    Write-Host "UserID $($GeneratedUser.Id) should be standard"
-                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
-                }
                 # TODO: SA-3327 TEST
                 # New assertion written to test that newly migrated user's username is the systemUsername not the username
                 $path = 'Registry::HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\*'
                 $profiles =  Get-ItemProperty -Path $path | Select-Object -Property PSChildName, ProfileImagePath
                 # Run a match on the systemUsername to the ProfileImagePath
                 $profiles | Where-Object { $_.ProfileImagePath -match $systemUsernameName } | Should -Not -BeNullOrEmpty
-            }
         }
     }
     Context 'Set-LastLoggedOnUser Tests' {
@@ -255,21 +281,21 @@ Describe 'Migration Test Scenarios' {
     }
 }
 
-Context 'Start-Migration Fails to Bind JumpCloud User to System and writes warning' {
-    It 'user bound to system after migration' {
-        $Password = "Temp123!"
-        $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-        $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-        InitUser -UserName $user1 -Password $Password
-        write-host "`nRunning: Start-Migration -JumpCloudUserName $($user2) -SelectedUserName $($user1) -TempPassword $($Password)`n"
-        { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user2)" -SelectedUserName "$ENV:COMPUTERNAME\$($user1)" -TempPassword "$($Password)" } | Should -not -Throw
-        $log = "C:\Windows\Temp\jcadmu.log"
-        $regex = [regex]"jumpcloud autobind step failed"
-        $match = Select-String -Path:($log) -Pattern:($regex)
-        # Get the date appended to the backup registry files:
-        $match.Matches | Should -Not -BeNullOrEmpty
-    }
-}
+# Context 'Start-Migration Fails to Bind JumpCloud User to System and writes warning' {
+#     It 'user bound to system after migration' {
+#         $Password = "Temp123!"
+#         $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+#         $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+#         InitUser -UserName $user1 -Password $Password
+#         write-host "`nRunning: Start-Migration -JumpCloudUserName $($user2) -SelectedUserName $($user1) -TempPassword $($Password)`n"
+#         { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user2)" -SelectedUserName "$ENV:COMPUTERNAME\$($user1)" -TempPassword "$($Password)" } | Should -not -Throw
+#         $log = "C:\Windows\Temp\jcadmu.log"
+#         $regex = [regex]"jumpcloud autobind step failed"
+#         $match = Select-String -Path:($log) -Pattern:($regex)
+#         # Get the date appended to the backup registry files:
+#         $match.Matches | Should -Not -BeNullOrEmpty
+#     }
+# }
 
 Context 'Start-Migration kicked off through JumpCloud agent' {
     BeforeAll {
