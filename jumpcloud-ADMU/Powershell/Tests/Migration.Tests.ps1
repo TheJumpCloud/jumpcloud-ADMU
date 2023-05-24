@@ -13,9 +13,9 @@ BeforeAll {
     $regex = 'systemKey\":\"(\w+)\"'
     $systemKey = [regex]::Match($config, $regex).Groups[1].Value
 
-     # Remove users with ADMU_ prefix
+    # Remove users with ADMU_ prefix
     # Remove Created Users
-    Get-JCuser -username "ADMU_*"| Remove-JCuser -Force
+    Get-JCuser -username "ADMU_*" | Remove-JCuser -Force
 }
 Describe 'Migration Test Scenarios' {
     Context 'Start-Migration on local accounts (Test Functionallity)' {
@@ -179,7 +179,7 @@ Describe 'Migration Test Scenarios' {
 
                 $GeneratedUser = New-JcSdkUser -Email:("$($user.JCUsername)@jumpcloudadmu.com") -Username:("$($user.JCUsername)") -Password:("$($user.password)")
                 if ($user.JCSystemUsername) {
-                    $Body = @{"systemUsername" = $user.JCSystemUsername} | ConvertTo-Json
+                    $Body = @{"systemUsername" = $user.JCSystemUsername } | ConvertTo-Json
                     $updateSystemUsername = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systemusers/$($GeneratedUser.id)" -Method PUT -Headers $headers -Body $Body
                     Write-Host "Updated System Username to $($updateSystemUsername)"
                 }
@@ -201,12 +201,12 @@ Describe 'Migration Test Scenarios' {
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
                 }
 
-                if ($user.JCSystemUsername){
-                    Get-LocalUser | Where-Object {$_.Name -eq $user.JCSystemUsername} | Should -Not -BeNullOrEmpty
+                if ($user.JCSystemUsername) {
+                    Get-LocalUser | Where-Object { $_.Name -eq $user.JCSystemUsername } | Should -Not -BeNullOrEmpty
                 }
+            }
         }
     }
-}
     Context 'Set-LastLoggedOnUser Tests' {
         It "Start-Migration should succesfully SET last logged on windows user to migrated user" {
             $Password = "Temp123!"
@@ -259,6 +259,7 @@ Describe 'Migration Test Scenarios' {
 
 Context 'Start-Migration Fails to Bind JumpCloud User to System and throws error' {
     It 'user bound to system after migration' {
+        Write-Host "`nBegin Test: Start-Migration Fails to Bind JumpCloud User to System and throws error"
         $Password = "Temp123!"
         $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
         $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
