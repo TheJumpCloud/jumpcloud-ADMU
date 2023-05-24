@@ -20,9 +20,6 @@ Describe 'Functions' {
         }
     }
     Context 'Test-JumpCloudUsername Function' {
-        # TODO: SA-3327 TEST
-        # update tests to account for four fields returned not two:
-        # EX: $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $user.Username
         It 'Valid Username Returns True' {
             # Get the first user
             $user = Get-JcSdkUser | Select-Object -First 1
@@ -54,7 +51,6 @@ Describe 'Functions' {
     }
 
     Context 'BindUsernameToJCSystem Function' {
-        # TODO: SA-3327 TEST
         # BindUsernameToJCSystem should take USERID as input validated with Test-JumpCloudUsername
         BeforeAll {
             $OrgID, $OrgName = Get-mtpOrganization -apiKey $env:JCApiKey

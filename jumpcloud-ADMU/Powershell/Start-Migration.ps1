@@ -107,9 +107,6 @@ function Test-RegistryValueMatch {
     }
 }
 function BindUsernameToJCSystem {
-    # TODO: SA-3327 TEST
-    # This function could be easily broken up to not require the Test-JumpCloudUsername function
-    # Instead of taking username as input we could just take userID
     param
     (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(40, 40)][string]$JcApiKey,
@@ -127,11 +124,6 @@ function BindUsernameToJCSystem {
         }
     }
     Process {
-        # Get UserID from JumpCloud Console
-        #Write-ToLog -Message:("Searching for user: $JumpCloudUserName")
-        # TODO: SA-3327 TEST
-        # break this out of the current function: if we pass in a userID we can assume it's been validated
-        #$ret, $id, $systemUserJCMatch = Test-JumpCloudUsername -JumpCloudApiKey $JcApiKey -JumpCloudOrgID $JcOrgId -Username $JumpCloudUserName
         if ($JumpCloudId) {
             Write-ToLog -Message:("User matched in JumpCloud")
             $Headers = @{
@@ -799,15 +791,6 @@ function Test-JumpCloudSystemKey {
     }
 }
 function Test-JumpCloudUsername {
-    # TODO: SA-3327 TEST
-    # This function should return 4 items ex:
-    # For a user with no JumpCloudUsername:
-    # $True, 5d67fd481da3c52aa1faa883, username, $null
-    # For a user with a JumpCloudUsername:
-    # $True, 5d67fd481da3c52aa1faa883, username, user.name
-    # These values can be used to determine migration functionality
-    # If the JumpCloudUsername value is not $null, then update the $JumpCloudUserName
-    # value to be the JumpCloudUsername value; else use the username.
     [CmdletBinding()]
     [OutputType([System.Boolean])]
     [OutputType([System.Object[]])]
@@ -840,7 +823,7 @@ function Test-JumpCloudUsername {
                     @{'username' = @{'$regex' = "(?i)(`^$($Username)`$)" } }
                 )
             }
-            "fields" = "username , systemUsername"#TODO: SA-3327 TEST
+            "fields" = "username , systemUsername"
         }
         $Body = $Form | ConvertTo-Json -Depth 4
     }
@@ -865,11 +848,6 @@ function Test-JumpCloudUsername {
         If ($Results.totalCount -eq 1 -and $($Results.results[0].username) -eq $Username) {
             # write-host $Results.results[0]._id
             Write-ToLog -Message "Identified JumpCloud User`nUsername: $($Results.results[0].username)`nID: $($Results.results[0]._id)"
-            # TODO: SA-3327 TEST
-            # For a user with no JumpCloudUsername:
-            # $True, 5d67fd481da3c52aa1faa883, username, $null
-            # For a user with a JumpCloudUsername:
-            # $True, 5d67fd481da3c52aa1faa883, username, user.name
             if ($Results.results[0].SystemUsername) {
                 Write-ToLog -Message "Identified JumpCloud User`nUsername: $($Results.results[0].username)`nID: $($Results.results[0]._id)"
                 Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].SystemUsername)"
@@ -885,8 +863,6 @@ function Test-JumpCloudUsername {
                 $wshell = New-Object -ComObject Wscript.Shell
                 $var = $wshell.Popup("$message", 0, "ADMU Status", 0x0 + 0x40)
             }
-            # TODO: SA-3327 TEST
-            # If user is not valid, return: $False, $null, $null, $null
             Return $false, $null, $null, $null
         }
     }
@@ -1367,9 +1343,6 @@ Function Start-Migration {
                 Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User"
                 break
             }
-
-            # TODO: SA-3327 TEST
-            # Validate whether or not a user has a JumpCloudUsername Value
             # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
             $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
             # Write to log all variables above
@@ -1392,10 +1365,7 @@ Function Start-Migration {
 
         # Conditional ParameterSet logic
         If ($PSCmdlet.ParameterSetName -eq "form") {
-            # TODO: SA-3327 TEST
-            # Either from Form or here we need to update the JumpCloudUsername Variable
             # If from form, Test-JumpCloudUsername function should be used, else JumpCloudUsername will need to be calculated here if autobind is also specified
-            # I think it's better to calculate the value to pass within Form.ps1
             $SelectedUserName = $inputObject.SelectedUserName
             if ([system.string]::IsNullOrEmpty($JumpCloudsystemUserName)) {
                 $JumpCloudUserName = $inputObject.JumpCloudUserName
