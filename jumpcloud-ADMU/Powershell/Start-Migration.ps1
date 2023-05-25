@@ -124,7 +124,6 @@ function BindUsernameToJCSystem {
         }
     }
     Process {
-        if ($JumpCloudId) {
             Write-ToLog -Message:("User matched in JumpCloud")
             $Headers = @{
                 'Accept'       = 'application/json';
@@ -159,9 +158,7 @@ function BindUsernameToJCSystem {
                 $StatusCode = $_.Exception.Response.StatusCode.value__
                 Write-ToLog -Message:("Could not bind user to system") -Level:('Warn')
             }
-        } else {
-            Write-ToLog -Message:("JumpCloud Username did not exist in JumpCloud Directory") -Level:('Warn')
-        }
+
     }
     End {
         # Associations post should return 204 success no content
@@ -849,7 +846,6 @@ function Test-JumpCloudUsername {
             # write-host $Results.results[0]._id
             Write-ToLog -Message "Identified JumpCloud User`nUsername: $($Results.results[0].username)`nID: $($Results.results[0]._id)"
             if ($Results.results[0].SystemUsername) {
-                Write-ToLog -Message "Identified JumpCloud User`nUsername: $($Results.results[0].username)`nID: $($Results.results[0]._id)"
                 Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].SystemUsername)"
                 return $true, $Results.results[0]._id, $Results.results[0].username, $Results.results[0].SystemUsername
             } else {
@@ -1346,7 +1342,7 @@ Function Start-Migration {
             # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
             $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
             # Write to log all variables above
-            Write-ToLog -Message:("Ret = $($ret) , JumpCloudUserName: $($JumpCloudUserName) , JumpCloudUserId: $($JumpCloudUserId) , JumpCloudsystemUserName = $($JumpCloudsystemUserName)")
+            Write-ToLog -Message:("JumpCloudUserName: $($JumpCloudUserName), JumpCloudsystemUserName = $($JumpCloudsystemUserName)")
 
             if($JumpCloudsystemUserName){
                 $JumpCloudUsername = $JumpCloudsystemUserName
@@ -1367,11 +1363,7 @@ Function Start-Migration {
         If ($PSCmdlet.ParameterSetName -eq "form") {
             # If from form, Test-JumpCloudUsername function should be used, else JumpCloudUsername will need to be calculated here if autobind is also specified
             $SelectedUserName = $inputObject.SelectedUserName
-            if ([system.string]::IsNullOrEmpty($JumpCloudsystemUserName)) {
-                $JumpCloudUserName = $inputObject.JumpCloudUserName
-            } else {
-                $JumpCloudUserName = $JumpCloudsystemUserName
-            }
+
 
             $TempPassword = $inputObject.TempPassword
             if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
@@ -1383,13 +1375,35 @@ Function Start-Migration {
             }
             $InstallJCAgent = $inputObject.InstallJCAgent
             $AutobindJCUser = $inputObject.AutobindJCUser
+
+            if ($AutoBindJCUser -eq $true) {
+                # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
+                $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+                # Write to log all variables above
+                Write-ToLog -Message:("Ret = $($ret) , JumpCloudUserName: $($JumpCloudUserName) , JumpCloudUserId: $($JumpCloudUserId) , JumpCloudsystemUserName = $($JumpCloudsystemUserName)")
+
+                if($JumpCloudsystemUserName){
+                    $JumpCloudUsername = $JumpCloudsystemUserName
+                }
+                if ($ret -eq $false) {
+                    Write-toLog ("The specified JumpCloudUsername does not exist")
+                    break
+                }
+            }
+
+            if ([system.string]::IsNullOrEmpty($JumpCloudsystemUserName)) {
+                $JumpCloudUserName = $inputObject.JumpCloudUserName
+            } else {
+                $JumpCloudUserName = $JumpCloudsystemUserName
+            }
+
             $BindAsAdmin = $inputObject.BindAsAdmin
             $LeaveDomain = $InputObject.LeaveDomain
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
             $displayGuiPrompt = $true
         }
-
+        Write-ToLog -Message:("Bindas admin = $($BindAsAdmin)")
         # Define misc static variables
         $netBiosName = Get-NetBiosName
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
@@ -1980,13 +1994,13 @@ Function Start-Migration {
             Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
             Write-ToLog -Message:('Tool options chosen were : ' + "`nInstall JC Agent = " + $InstallJCAgent + "`nLeave Domain = " + $LeaveDomain + "`nForce Reboot = " + $ForceReboot + "`nUpdate Home Path = " + $UpdateHomePath + "`nAutobind JC User = " + $AutobindJCUser)
             if ($displayGuiPrompt) {
-                Show-Result -domainUser $SelectedUserName -localUser "$($localComputerName)\$($systemUserName)" -success $true -profilePath $newUserProfileImagePath -logPath $jcAdmuLogFile
+                Show-Result -domainUser $SelectedUserName -localUser "$($localComputerName)\$($JumpCloudUserName)" -success $true -profilePath $newUserProfileImagePath -logPath $jcAdmuLogFile
             }
         } else {
             Write-ToLog -Message:("ADMU encoutered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warn
             Write-ToLog -Message:("The following migration steps were reverted to their original state: $FixedErrors") -Level Warn
             if ($displayGuiPrompt) {
-                Show-Result -domainUser $SelectedUserName -localUser "$($localComputerName)\$($systemUserName)" -success $false -profilePath $newUserProfileImagePath -admuTrackerInput $admuTracker -FixedErrors $FixedErrors -logPath $jcAdmuLogFile
+                Show-Result -domainUser $SelectedUserName -localUser "$($localComputerName)\$($JumpCloudUserName)" -success $false -profilePath $newUserProfileImagePath -admuTrackerInput $admuTracker -FixedErrors $FixedErrors -logPath $jcAdmuLogFile
             }
             throw "JumpCloud ADMU was unable to migrate $selectedUserName"
         }

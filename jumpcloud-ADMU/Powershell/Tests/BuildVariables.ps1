@@ -62,9 +62,6 @@ $JCFunctionalHash = @{
         BindAsAdmin    = $true
         JCSystemUsername = $null
     }
-    # TODO: SA-3327 TEST
-    # define a new user ADMU_bind_3 here and update the first two case definitions to contain $null values for JCSystemUsername
-    # set a non-null value for ADMU_bind_3's JCSystemUsername
     testCase3 = @{
         Description    = 'Test that user is jumpcloud local username is set'
         Username       = 'ADMU_bind_3';
