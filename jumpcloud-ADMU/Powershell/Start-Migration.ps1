@@ -106,7 +106,7 @@ function Test-RegistryValueMatch {
         }
     }
 }
-function BindUsernameToJCSystem {
+function Set-JCSystemAssociation {
     param
     (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(40, 40)][string]$JcApiKey,
@@ -1866,7 +1866,7 @@ Function Start-Migration {
 
             #region AutobindUserToJCSystem
             if ($AutobindJCUser -eq $true) {
-                $bindResult = BindUsernameToJCSystem -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JumpCloudId $JumpCloudUserId -BindAsAdmin $BindAsAdmin
+                $bindResult = Set-JCSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JumpCloudId $JumpCloudUserId -BindAsAdmin $BindAsAdmin
                 if ($bindResult) {
                     Write-ToLog -Message:('jumpcloud autobind step succeeded for user ' + $JumpCloudUserName)
                     $admuTracker.autoBind.pass = $true
