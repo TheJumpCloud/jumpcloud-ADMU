@@ -1361,10 +1361,9 @@ Function Start-Migration {
 
         # Conditional ParameterSet logic
         If ($PSCmdlet.ParameterSetName -eq "form") {
-            # If from form, Test-JumpCloudUsername function should be used, else JumpCloudUsername will need to be calculated here if autobind is also specified
             $SelectedUserName = $inputObject.SelectedUserName
 
-
+            $JumpCloudUserName = $inputObject.JumpCloudUserName
             $TempPassword = $inputObject.TempPassword
             if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
                 $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
@@ -1391,9 +1390,7 @@ Function Start-Migration {
                 }
             }
 
-            if ([system.string]::IsNullOrEmpty($JumpCloudsystemUserName)) {
-                $JumpCloudUserName = $inputObject.JumpCloudUserName
-            } else {
+            if ($JumpCloudsystemUserName) {
                 $JumpCloudUserName = $JumpCloudsystemUserName
             }
 
