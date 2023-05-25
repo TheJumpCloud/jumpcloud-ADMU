@@ -1378,7 +1378,7 @@ Function Start-Migration {
                 # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
                 $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
                 # Write to log all variables above
-                Write-ToLog -Message:("Ret = $($ret) , JumpCloudUserName: $($JumpCloudUserName) , JumpCloudUserId: $($JumpCloudUserId) , JumpCloudsystemUserName = $($JumpCloudsystemUserName)")
+                Write-ToLog -Message:("Test-JumpCloudUsername Results:`nUserFound: $($ret)`nJumpCloudUserName: $($JumpCloudUserName)`nJumpCloudUserId: $($JumpCloudUserId)`nJumpCloudsystemUserName: $($JumpCloudsystemUserName)")
 
                 if($JumpCloudsystemUserName){
                     $JumpCloudUsername = $JumpCloudsystemUserName
