@@ -5,7 +5,9 @@ Release Date: March 27,2023
 #### RELEASE NOTES
 
 ```
-* Updated JumpCloud ADMU to use JC Local Account User instead of JCUsername for migration if it is set in the console
+* When the 'Autobind JC User' option is specified, a JumpCloud user's 'Local User Account' will be used instead of it's 'username' if the 'Local User Account' value is set in the console.
+
+If a JumpCloud user has a 'Local User Account' value set and the 'Autobind JC User' option is not set, the selected user will be migrated as the username specified in the 'Local Account Username' Field.
 ```
 ## 2.3.0
 
