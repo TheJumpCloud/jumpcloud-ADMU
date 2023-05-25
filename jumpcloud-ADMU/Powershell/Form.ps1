@@ -679,7 +679,7 @@ $bMigrateProfile.Add_Click( {
                 # If user selects yes then migrate the local user profile to the JumpCloud User
 
                 if ($var -eq 6) {
-                    Write-ToLog -Message "User selected Yes, continuing with migration $($jcsystemUserName))"
+                    Write-ToLog -Message "User selected 'Yes', continuing with migration of $($SelectedUserName) to $($jcsystemUserName)"
                 } else {
                     Write-ToLog -Message "User selected No, returning to form"
                     return
