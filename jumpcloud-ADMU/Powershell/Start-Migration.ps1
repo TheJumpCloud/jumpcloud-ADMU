@@ -1306,7 +1306,6 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        Write-ToLog -Message:('JumpCloud username param: ' + $JumpCloudUserName + ' Selected username param: ' + $SelectedUserName)
         $admuVersion = '2.4.0'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
