@@ -124,40 +124,40 @@ function Set-JCSystemAssociation {
         }
     }
     Process {
-            Write-ToLog -Message:("User matched in JumpCloud")
-            $Headers = @{
-                'Accept'       = 'application/json';
-                'Content-Type' = 'application/json';
-                'x-api-key'    = $JcApiKey;
-                'x-org-id'     = $JcOrgId;
-            }
-            $Form = @{
-                'op'   = 'add';
-                'type' = 'system';
-                'id'   = "$systemKey"
-            }
-            if ($BindAsAdmin) {
-                Write-ToLog -Message:("Bind As Admin specified. Setting sudo attributes for userID: $JumpCloudId")
-                $Form.Add("attributes", @{
-                        "sudo" = @{
-                            "enabled"         = $true
-                            "withoutPassword" = $false
-                        }
+        Write-ToLog -Message:("User matched in JumpCloud")
+        $Headers = @{
+            'Accept'       = 'application/json';
+            'Content-Type' = 'application/json';
+            'x-api-key'    = $JcApiKey;
+            'x-org-id'     = $JcOrgId;
+        }
+        $Form = @{
+            'op'   = 'add';
+            'type' = 'system';
+            'id'   = "$systemKey"
+        }
+        if ($BindAsAdmin) {
+            Write-ToLog -Message:("Bind As Admin specified. Setting sudo attributes for userID: $JumpCloudId")
+            $Form.Add("attributes", @{
+                    "sudo" = @{
+                        "enabled"         = $true
+                        "withoutPassword" = $false
                     }
-                )
-            } else {
-                Write-ToLog -Message:("Bind As Admin NOT specified. userID: $id will be bound as a standard user")
-            }
-            $jsonForm = $Form | ConvertTo-Json
-            Try {
-                Write-ToLog -Message:("Attempting to bind userID: $JumpCloudId to systemID: $systemKey")
-                $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JumpCloudId/associations" -Headers $Headers -Body $jsonForm -UseBasicParsing
-                $StatusCode = $Response.StatusCode
-            } catch {
-                $errorMsg = $_.Exception.Message
-                $StatusCode = $_.Exception.Response.StatusCode.value__
-                Write-ToLog -Message:("Could not bind user to system") -Level:('Warn')
-            }
+                }
+            )
+        } else {
+            Write-ToLog -Message:("Bind As Admin NOT specified. userID: $JumpCloudId will be bound as a standard user")
+        }
+        $jsonForm = $Form | ConvertTo-Json
+        Try {
+            Write-ToLog -Message:("Attempting to bind userID: $JumpCloudId to systemID: $systemKey")
+            $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JumpCloudId/associations" -Headers $Headers -Body $jsonForm -UseBasicParsing
+            $StatusCode = $Response.StatusCode
+        } catch {
+            $errorMsg = $_.Exception.Message
+            $StatusCode = $_.Exception.Response.StatusCode.value__
+            Write-ToLog -Message:("Could not bind user to system") -Level:('Warn')
+        }
 
     }
     End {
@@ -1343,7 +1343,7 @@ Function Start-Migration {
             # Write to log all variables above
             Write-ToLog -Message:("JumpCloudUserName: $($JumpCloudUserName), JumpCloudsystemUserName = $($JumpCloudsystemUserName)")
 
-            if($JumpCloudsystemUserName){
+            if ($JumpCloudsystemUserName) {
                 $JumpCloudUsername = $JumpCloudsystemUserName
             }
             if ($ret -eq $false) {
@@ -1380,7 +1380,7 @@ Function Start-Migration {
                 # Write to log all variables above
                 Write-ToLog -Message:("Test-JumpCloudUsername Results:`nUserFound: $($ret)`nJumpCloudUserName: $($JumpCloudUserName)`nJumpCloudUserId: $($JumpCloudUserId)`nJumpCloudsystemUserName: $($JumpCloudsystemUserName)")
 
-                if($JumpCloudsystemUserName){
+                if ($JumpCloudsystemUserName) {
                     $JumpCloudUsername = $JumpCloudsystemUserName
                 }
                 if ($ret -eq $false) {
