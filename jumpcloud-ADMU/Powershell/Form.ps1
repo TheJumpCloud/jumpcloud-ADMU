@@ -671,7 +671,7 @@ $bMigrateProfile.Add_Click( {
             }
 
 
-            if ($JCSystemUsername) {
+            if ( -not [string]::isnullorempty($JCSystemUsername) ) {
 
                 # Regex to get the username from the domain\username string and compare it to JCSystemUsername
                 #Get all the local users
