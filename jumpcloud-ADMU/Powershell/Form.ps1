@@ -672,6 +672,34 @@ $bMigrateProfile.Add_Click( {
 
 
             if ($JCSystemUsername) {
+
+                # Regex to get the username from the domain\username string and compare it to JCSystemUsername
+                #Get all the local users
+                $registyProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
+                $profileList = @()
+                foreach ($profile in $registyProfiles) {
+                    $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
+                }
+                #Loop through ProfileList.profileimagepath and compare the username to the JCSystemUsername
+
+                $pattern = '\\Users\\([^\\]+)'
+                # Loop through the profile list and compare the username to the JCSystemUsername
+                foreach ($profile in $profileList.ProfileImagePath) {
+
+                    if ($profile -match $pattern) {
+                        $username = $matches[1]
+                        Write-Host "Username: $username"
+                        if ($username -eq $JCSystemUsername) {
+                            # Create a pop up that warns user then press ok to continue
+                            Write-ToLog "JCSystemUsername $($JCSystemUsername) is the same as the another profile on this system"
+                            $wshell = New-Object -ComObject Wscript.Shell
+                            $message = "The JumpCloud Local Account Username is the same as a local profile on this system. Please select a different username."
+                            $var = $wshell.Popup("$message", 0, "JC SystemUsername and Local Computer Username Check", 0)
+                            return
+                        }
+                    }
+                }
+
                 Write-ToLog "User $($JCSystemUsername) has a local account on this system"
                 $wshell = New-Object -ComObject Wscript.Shell
                 $message = "Would you like to migrate the local user profile to the JumpCloud User $($jcsystemUserName)?"

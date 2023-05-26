@@ -137,7 +137,7 @@ function Set-JCSystemAssociation {
                 'id'   = "$systemKey"
             }
             if ($BindAsAdmin) {
-                Write-ToLog -Message:("Bind As Admin specified. Setting sudo attributes for userID: $id")
+                Write-ToLog -Message:("Bind As Admin specified. Setting sudo attributes for userID: $JumpCloudId")
                 $Form.Add("attributes", @{
                         "sudo" = @{
                             "enabled"         = $true
