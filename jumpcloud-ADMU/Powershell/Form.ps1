@@ -702,17 +702,17 @@ $bMigrateProfile.Add_Click( {
 
                 Write-ToLog "User $($JCSystemUsername) has a local account on this system"
                 $wshell = New-Object -ComObject Wscript.Shell
-                $message = "The JumpCloud User: $($jcUsername) has a local account username of: $($jcsystemUserName). After migration $($SelectedUserName) would be migrated and accessible with the local account username of: $($jcsystemUserName. Would you like to continue?
+                $message = "The JumpCloud User: $($jcUsername) has a local account username of: $($jcsystemUserName). After migration $($SelectedUserName) would be migrated and accessible with the local account username of: $($jcsystemUserName). Would you like to continue?"
                 $var = $wshell.Popup("$message", 0, "JC Local User Check", 64 + 4)
                 # If user selects yes then migrate the local user profile to the JumpCloud User
 
                 if ($var -eq 6) {
-                    Write-ToLog -Message "User selected 'Yes', continuing with migration of $($SelectedUserName) to $($jcsystemUserName)"
+                    Write-ToLog -Message "User selected 'Yes', continuing with migration of $($jcsystemUserName)) to $($jcsystemUserName)"
                 } else {
                     Write-ToLog -Message "User selected 'No', returning to form"
                     return
                 }
-            } else {
+            }  else {
                 Write-ToLog "User $($jcsystemUserName) does not have a local account on this system"
             }
         }
