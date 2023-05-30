@@ -24,7 +24,7 @@ Describe 'Functions' {
             # Get the first user
             $user = Get-JcSdkUser | Select-Object -First 1
             # Test username w/o modification
-            $testResult, $userID, $FoundUsername, $FoundSystemUsername= Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $user.Username
+            $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $user.Username
             $testResult | Should -Be $true
             $userID | Should -Be $user.Id
             # toUpper
@@ -50,8 +50,8 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Set-JCSystemAssociation Function' {
-        # Set-JCSystemAssociation should take USERID as input validated with Test-JumpCloudUsername
+    Context 'Set-JCUserToSystemAssociation Function' {
+        # Set-JCUserToSystemAssociation should take USERID as input validated with Test-JumpCloudUsername
         BeforeAll {
             $OrgID, $OrgName = Get-mtpOrganization -apiKey $env:JCApiKey
 
@@ -74,7 +74,7 @@ Describe 'Functions' {
             $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
             # Begin Test
             Get-JCAssociation -Type user -Id:($($GeneratedUser.Id)) | Remove-JCAssociation -Force
-            $bind = Set-JCSystemAssociation -JcApiKey $env:JCApiKey -JcOrgId $OrgID -JumpCloudUserId $GeneratedUser.Id
+            $bind = Set-JCUserToSystemAssociation -JcApiKey $env:JCApiKey -JcOrgId $OrgID -JcUserID $GeneratedUser.Id
             $bind | Should -Be $true
             $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
             $association | Should -not -BeNullOrEmpty
@@ -97,7 +97,7 @@ Describe 'Functions' {
             $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
             # Begin Test
             Get-JCAssociation -Type user -Id:($($GeneratedUser.Id)) | Remove-JCAssociation -Force
-            $bind = Set-JCSystemAssociation -JcApiKey $env:JCApiKey -JcOrgId $OrgID -JumpCloudUserId $GeneratedUser.Id -BindAsAdmin $true
+            $bind = Set-JCUserToSystemAssociation -JcApiKey $env:JCApiKey -JcOrgId $OrgID -JcUserID $GeneratedUser.Id -BindAsAdmin $true
             $bind | Should -Be $true
             # ((Get-JCAssociation -Type:user -Id:($($GeneratedUser.Id))).id).count | Should -Be '1'
             $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
@@ -111,7 +111,7 @@ Describe 'Functions' {
             $Password = "Temp123!"
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
-            $bind = Set-JCSystemAssociation -JcApiKey '1234122341234234123412341234123412341234' -JcOrgId $OrgID -JumpCloudUserId $GeneratedUser.Id
+            $bind = Set-JCUserToSystemAssociation -JcApiKey '1234122341234234123412341234123412341234' -JcOrgId $OrgID -JcUserID $GeneratedUser.Id
             $bind | Should -Be $false
         }
 
@@ -120,7 +120,7 @@ Describe 'Functions' {
             if ((Test-Path -Path "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf") -eq $True) {
                 Remove-Item "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
             }
-            { Set-JCSystemAssociation -JcApiKey $env:JCApiKey -JumpCloudUserId $GeneratedUser.Id -ErrorAction Stop } | Should -Throw
+            { Set-JCUserToSystemAssociation -JcApiKey $env:JCApiKey -JcUserID $GeneratedUser.Id -ErrorAction Stop } | Should -Throw
         }
     }
 
