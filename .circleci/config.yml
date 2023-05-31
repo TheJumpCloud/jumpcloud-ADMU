@@ -2,17 +2,17 @@ version: 2.1
 parameters:
   buildReleaseType:
     description: "Semantic Version increment type of the release. Valid values: major, minor, patch"
-    default: "minor"
+    default: "patch"
     type: enum
     enum: ["major", "minor", "patch"]
   PublishToPSGallery:
     description: "When `true` and when run against Master branch, this workflow will publish the latest code to PSGallery"
     type: boolean
-    default: false
+    default: true
   ManualModuleVersion:
     description: "When `true` the pipeline will use the Module Version specified in JumpCloud Module JumpCloud.psd1 file"
     type: boolean
-    default: false
+    default: true
 orbs:
   win: circleci/windows@5.0.0
 build-and-sign-ADMU: &build-and-sign-ADMU
@@ -223,7 +223,7 @@ jobs:
           shell: powershell.exe
           command: |
             $ErrorActionPreference = 'Stop'
-            ./Deploy/BuildNuspecFromPsd1.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU') -buildNumber:("$Env:CIRCLE_BUILD_NUM") -commit:("$Env:CIRCLE_SHA1")
+            ./Deploy/BuildNuspecFromPsd1.ps1 -ModuleVersionType:("<< pipeline.parameters.buildReleaseType >>") -ModuleName:('JumpCloud.ADMU') -buildNumber:("$Env:CIRCLE_BUILD_NUM") -Branch:("$Env:CIRCLE_BRANCH")
       - persist_to_workspace:
           root: .
           paths:
