@@ -168,8 +168,16 @@ if ($ForceRebootAfterMigration) {
         Write-Host "JumpCloud SystemID could not be verified, exiting..."
         exit 1
     }
-    $headers = @{}
-    $headers.Add("x-api-key", $JumpCloudAPIKey)
+    if ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
+        $headers = @{
+            "x-api-key" = $JumpCloudAPIKey
+            "x-org-id"  = JumpCloudOrgID
+        }
+    } else {
+        $headers = @{
+            "x-api-key" = $JumpCloudAPIKey
+        }
+    }
     write-host "[status] invoking reboot command through JumpCloud"
     $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systems/$($systemKey)/command/builtin/restart" -Method POST -Headers $headers
 }
