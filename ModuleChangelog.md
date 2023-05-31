@@ -1,6 +1,6 @@
 ## 2.4.0
 
-Release Date: March 27,2023
+Release Date: March 31,2023
 
 #### RELEASE NOTES
 
@@ -9,6 +9,7 @@ Release Date: March 27,2023
 
 If a JumpCloud user has a 'Local User Account' value set and the 'Autobind JC User' option is not set, the selected user will be migrated as the username specified in the 'Local Account Username' Field.
 ```
+
 ## 2.3.0
 
 Release Date: March 27,2023
@@ -19,6 +20,7 @@ Release Date: March 27,2023
 * Updated JumpCloud ADMU to optionally set last logged in Windows user to the migrated user
 * Updated JumpCloud ADMU installer to .msi
 ```
+
 ## 2.2.1
 
 Release Date: February 22, 2023
