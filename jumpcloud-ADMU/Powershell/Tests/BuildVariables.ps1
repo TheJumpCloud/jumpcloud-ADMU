@@ -50,6 +50,7 @@ $JCFunctionalHash = @{
         JCUsername     = 'ADMU_bind_1_migrated';
         UpdateHomePath = $false
         BindAsAdmin    = $false
+        JCSystemUsername = $null
     }
     testCase2 = @{
         Description    = 'Test that user is jumpcloud bound AS ADMIN to system after migration'
@@ -59,6 +60,17 @@ $JCFunctionalHash = @{
         JCUsername     = 'ADMU_bind_2_migrated';
         UpdateHomePath = $false
         BindAsAdmin    = $true
+        JCSystemUsername = $null
+    }
+    testCase3 = @{
+        Description    = 'Test that user is jumpcloud local username is set'
+        Username       = 'ADMU_bind_3';
+        UserSID        = '';
+        Password       = $testUserPassword;
+        JCUsername     = 'ADMU_bind_localuser';
+        UpdateHomePath = $false
+        BindAsAdmin    = $true
+        JCSystemUsername = "ADMU_SystemUser"
     }
 }
 

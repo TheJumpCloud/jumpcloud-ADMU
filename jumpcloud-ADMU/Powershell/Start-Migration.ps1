@@ -106,12 +106,12 @@ function Test-RegistryValueMatch {
         }
     }
 }
-function BindUsernameToJCSystem {
+function Set-JCUserToSystemAssociation {
     param
     (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(40, 40)][string]$JcApiKey,
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(24, 24)][string]$JcOrgId,
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][string]$JumpCloudUserName,
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][string]$JcUserID,
         [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][bool]$BindAsAdmin
     )
     Begin {
@@ -124,47 +124,41 @@ function BindUsernameToJCSystem {
         }
     }
     Process {
-        # Get UserID from JumpCloud Console
-        Write-ToLog -Message:("Searching for user: $JumpCloudUserName")
-        $ret, $id = Test-JumpCloudUsername -JumpCloudApiKey $JcApiKey -JumpCloudOrgID $JcOrgId -Username $JumpCloudUserName
-        if ($ret -And $id) {
-            Write-ToLog -Message:("User matched in JumpCloud")
-            $Headers = @{
-                'Accept'       = 'application/json';
-                'Content-Type' = 'application/json';
-                'x-api-key'    = $JcApiKey;
-                'x-org-id'     = $JcOrgId;
-            }
-            $Form = @{
-                'op'   = 'add';
-                'type' = 'system';
-                'id'   = "$systemKey"
-            }
-            if ($BindAsAdmin) {
-                Write-ToLog -Message:("Bind As Admin specified. Setting sudo attributes for userID: $id")
-                $Form.Add("attributes", @{
-                        "sudo" = @{
-                            "enabled"         = $true
-                            "withoutPassword" = $false
-                        }
-                    }
-                )
-            } else {
-                Write-ToLog -Message:("Bind As Admin NOT specified. userID: $id will be bound as a standard user")
-            }
-            $jsonForm = $Form | ConvertTo-Json
-            Try {
-                Write-ToLog -Message:("Attempting to bind userID: $id to systemID: $systemKey")
-                $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$id/associations" -Headers $Headers -Body $jsonForm -UseBasicParsing
-                $StatusCode = $Response.StatusCode
-            } catch {
-                $errorMsg = $_.Exception.Message
-                $StatusCode = $_.Exception.Response.StatusCode.value__
-                Write-ToLog -Message:("Could not bind user to system") -Level:('Warn')
-            }
-        } else {
-            Write-ToLog -Message:("JumpCloud Username did not exist in JumpCloud Directory") -Level:('Warn')
+        Write-ToLog -Message:("User matched in JumpCloud")
+        $Headers = @{
+            'Accept'       = 'application/json';
+            'Content-Type' = 'application/json';
+            'x-api-key'    = $JcApiKey;
+            'x-org-id'     = $JcOrgId;
         }
+        $Form = @{
+            'op'   = 'add';
+            'type' = 'system';
+            'id'   = "$systemKey"
+        }
+        if ($BindAsAdmin) {
+            Write-ToLog -Message:("Bind As Admin specified. Setting sudo attributes for userID: $JcUserID")
+            $Form.Add("attributes", @{
+                    "sudo" = @{
+                        "enabled"         = $true
+                        "withoutPassword" = $false
+                    }
+                }
+            )
+        } else {
+            Write-ToLog -Message:("Bind As Admin NOT specified. userID: $JcUserID will be bound as a standard user")
+        }
+        $jsonForm = $Form | ConvertTo-Json
+        Try {
+            Write-ToLog -Message:("Attempting to bind userID: $JcUserID to systemID: $systemKey")
+            $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JcUserID/associations" -Headers $Headers -Body $jsonForm -UseBasicParsing
+            $StatusCode = $Response.StatusCode
+        } catch {
+            $errorMsg = $_.Exception.Message
+            $StatusCode = $_.Exception.Response.StatusCode.value__
+            Write-ToLog -Message:("Could not bind user to system") -Level:('Warn')
+        }
+
     }
     End {
         # Associations post should return 204 success no content
@@ -819,13 +813,14 @@ function Test-JumpCloudUsername {
             'x-api-key'    = $JumpCloudApiKey;
             'x-org-id'     = $JumpCloudOrgID;
         }
+
         $Form = @{
             "filter" = @{
                 'and' = @(
                     @{'username' = @{'$regex' = "(?i)(`^$($Username)`$)" } }
                 )
             }
-            "fields" = "username"
+            "fields" = "username , systemUsername"
         }
         $Body = $Form | ConvertTo-Json -Depth 4
     }
@@ -834,28 +829,37 @@ function Test-JumpCloudUsername {
             # Write-ToLog "Searching JC for: $Username"
             $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/search/systemusers" -Headers $Headers -Body $Body -UseBasicParsing
             $Results = $Response.Content | ConvertFrom-Json
+
             $StatusCode = $Response.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
+            Write-ToLog -Message "Status Code $($StatusCode)"
         }
     }
     End {
         # Search User should return 200 success
         If ($StatusCode -ne 200) {
-            Return $false, $null
             Write-ToLog -Message "JumpCloud username could not be found"
+            Return $false, $null, $null, $null
         }
         If ($Results.totalCount -eq 1 -and $($Results.results[0].username) -eq $Username) {
             # write-host $Results.results[0]._id
             Write-ToLog -Message "Identified JumpCloud User`nUsername: $($Results.results[0].username)`nID: $($Results.results[0]._id)"
-            return $true, $Results.results[0]._id
+            if ($Results.results[0].SystemUsername) {
+                Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].SystemUsername)"
+                return $true, $Results.results[0]._id, $Results.results[0].username, $Results.results[0].SystemUsername
+            } else {
+                return $true, $Results.results[0]._id, $Results.results[0].username, $null
+            }
+
+
         } else {
             if ($prompt) {
                 $message += "$Username is not a valid JumpCloud User`nPlease enter a valid JumpCloud Username"
                 $wshell = New-Object -ComObject Wscript.Shell
                 $var = $wshell.Popup("$message", 0, "ADMU Status", 0x0 + 0x40)
             }
-            Return $false, $null
+            Return $false, $null, $null, $null
         }
     }
 }
@@ -1302,10 +1306,12 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.3.0'
+        $admuVersion = '2.4.0'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
+
+
         # validate API KEY/ OrgID if Autobind is selected
         if ($AutobindJCUser) {
             if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
@@ -1332,6 +1338,19 @@ Function Start-Migration {
                 Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User"
                 break
             }
+            # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
+            $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+            # Write to log all variables above
+            Write-ToLog -Message:("JumpCloudUserName: $($JumpCloudUserName), JumpCloudsystemUserName = $($JumpCloudsystemUserName)")
+
+            if ($JumpCloudsystemUserName) {
+                $JumpCloudUsername = $JumpCloudsystemUserName
+            }
+            if ($ret -eq $false) {
+                Throw [System.Management.Automation.ValidationMetadataException] "The specified JumpCloudUsername does not exist"
+                break
+            }
+
         }
         # Validate ConnectKey if Install Agent is selected
         If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) {
@@ -1342,6 +1361,7 @@ Function Start-Migration {
         # Conditional ParameterSet logic
         If ($PSCmdlet.ParameterSetName -eq "form") {
             $SelectedUserName = $inputObject.SelectedUserName
+
             $JumpCloudUserName = $inputObject.JumpCloudUserName
             $TempPassword = $inputObject.TempPassword
             if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
@@ -1353,13 +1373,33 @@ Function Start-Migration {
             }
             $InstallJCAgent = $inputObject.InstallJCAgent
             $AutobindJCUser = $inputObject.AutobindJCUser
+
+            if ($AutoBindJCUser -eq $true) {
+                # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
+                $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+                # Write to log all variables above
+                Write-ToLog -Message:("Test-JumpCloudUsername Results:`nUserFound: $($ret)`nJumpCloudUserName: $($JumpCloudUserName)`nJumpCloudUserId: $($JumpCloudUserId)`nJumpCloudsystemUserName: $($JumpCloudsystemUserName)")
+
+                if ($JumpCloudsystemUserName) {
+                    $JumpCloudUsername = $JumpCloudsystemUserName
+                }
+                if ($ret -eq $false) {
+                    Write-toLog ("The specified JumpCloudUsername does not exist")
+                    break
+                }
+            }
+
+            if ($JumpCloudsystemUserName) {
+                $JumpCloudUserName = $JumpCloudsystemUserName
+            }
+
             $BindAsAdmin = $inputObject.BindAsAdmin
             $LeaveDomain = $InputObject.LeaveDomain
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
             $displayGuiPrompt = $true
         }
-
+        Write-ToLog -Message:("Bindas admin = $($BindAsAdmin)")
         # Define misc static variables
         $netBiosName = Get-NetBiosName
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
@@ -1403,7 +1443,7 @@ Function Start-Migration {
             autoBind            = @{'pass' = $false; 'fail' = $false }
         }
 
-        Write-ToLog -Message("The Selected Migration user is: $SelectedUserName")
+        Write-ToLog -Message("The Selected Migration user is: $JumpCloudUsername")
         $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
 
         Write-ToLog -Message:('Creating JCADMU Temporary Path in ' + $jcAdmuTempPath)
@@ -1414,7 +1454,7 @@ Function Start-Migration {
     }
     Process {
         # Start Of Console Output
-        Write-ToLog -Message:('Windows Profile "' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUserName + '"')
+        Write-ToLog -Message:('Windows Profile "' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUsername + '"')
         #region SilentAgentInstall
         if ($InstallJCAgent -eq $true -and (!(Test-ProgramInstalled("Jumpcloud")))) {
             #check if jc is not installed and clear folder
@@ -1437,6 +1477,8 @@ Function Start-Migration {
         $MigrateUser = $true
         while ($MigrateUser) {
 
+
+
             ### Begin Backup Registry for Selected User ###
             Write-ToLog -Message:('Creating Backup of User Registry Hive')
             # Get Profile Image Path from Registry
@@ -1454,22 +1496,24 @@ Function Start-Migration {
             ### End Backup Registry for Selected User ###
 
             ### Begin Create New User Region ###
-            Write-ToLog -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUserName)
+            Write-ToLog -Message:('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUsername)
             # Create New User
             $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
-            New-localUser -Name $JumpCloudUserName -password $newUserPassword -Description "Created By JumpCloud ADMU" -ErrorVariable userExitCode
+
+            New-localUser -Name $JumpCloudUsername -password $newUserPassword -Description "Created By JumpCloud ADMU" -ErrorVariable userExitCode
+
             if ($userExitCode) {
                 Write-ToLog -Message:("$userExitCode")
-                Write-ToLog -Message:("The user: $JumpCloudUserName could not be created, exiting")
+                Write-ToLog -Message:("The user: $JumpCloudUsername could not be created, exiting")
                 $admuTracker.newUserCreate.fail = $true
                 break
             }
             $admuTracker.newUserCreate.pass = $true
             # Initialize the Profile & Set SID
-            $NewUserSID = New-LocalUserProfile -username:($JumpCloudUserName) -ErrorVariable profileInit
+            $NewUserSID = New-LocalUserProfile -username:($JumpCloudUsername) -ErrorVariable profileInit
             if ($profileInit) {
                 Write-ToLog -Message:("$profileInit")
-                Write-ToLog -Message:("The user: $JumpCloudUserName could not be initalized, exiting")
+                Write-ToLog -Message:("The user: $JumpCloudUsername could not be initalized, exiting")
                 $admuTracker.newUserInit.fail = $true
                 break
             } else {
@@ -1477,7 +1521,7 @@ Function Start-Migration {
                 # Get profile image path for new user
                 $newUserProfileImagePath = Get-ProfileImagePath -UserSid $NewUserSID
                 if ([System.String]::IsNullOrEmpty($newUserProfileImagePath)) {
-                    Write-ToLog -Message("Could not get the profile path for $jumpcloudusername exiting...") -level Warn
+                    Write-ToLog -Message("Could not get the profile path for $JumpCloudUsername exiting...") -level Warn
                     $admuTracker.newUserInit.fail = $true
                     break
                 } else {
@@ -1486,7 +1530,6 @@ Function Start-Migration {
                 }
             }
             $admuTracker.newUserInit.pass = $true
-
             ### End Create New User Region ###
 
             ### Begin backup user registry for new user
@@ -1639,11 +1682,11 @@ Function Start-Migration {
             $admuTracker.renameBackupFiles.pass = $true
             if ($UpdateHomePath) {
                 Write-ToLog -Message:("Parameter to Update Home Path was set.")
-                Write-ToLog -Message:("Attempting to rename $oldUserProfileImagePath to: $($windowsDrive)\Users\$JumpCloudUserName.")
+                Write-ToLog -Message:("Attempting to rename $oldUserProfileImagePath to: $($windowsDrive)\Users\$JumpCloudUsername.")
                 # Test Condition for same names
                 # Check if the new user is named username.HOSTNAME or username.000, .001 etc.
                 $userCompare = $oldUserProfileImagePath.Replace("$($windowsDrive)\Users\", "")
-                if ($userCompare -eq $JumpCloudUserName) {
+                if ($userCompare -eq $JumpCloudUsername) {
                     Write-ToLog -Message:("Selected User Path and New User Path Match")
                     # Remove the New User Profile Path, we want to just use the old Path
                     try {
@@ -1656,7 +1699,7 @@ Function Start-Migration {
                         Remove-Item -Path ($newUserProfileImagePath) -Force -Recurse -ErrorAction Stop
                     } catch {
                         Write-ToLog -Message:("Remove $newUserProfileImagePath failed, renaming to ADMU_unusedProfile_$JumpCloudUserName")
-                        Rename-Item -Path $newUserProfileImagePath -NewName "ADMU_unusedProfile_$JumpCloudUserName" -ErrorAction Stop
+                        Rename-Item -Path $newUserProfileImagePath -NewName "ADMU_unusedProfile_$JumpCloudUsername" -ErrorAction Stop
                     }
                     # Set the New User Profile Image Path to Old User Profile Path (they are the same)
                     $newUserProfileImagePath = $oldUserProfileImagePath
@@ -1710,14 +1753,14 @@ Function Start-Migration {
                 $newUserProfileImagePath = $oldUserProfileImagePath
             }
 
-            Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $SelectedUserName + '.' + $NetBiosName)
+            Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUsername + '.' + $NetBiosName)
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
             # logging
             Write-ToLog -Message:('New User Profile Path: ' + $newUserProfileImagePath + ' New User SID: ' + $NewUserSID)
             Write-ToLog -Message:('Old User Profile Path: ' + $oldUserProfileImagePath + ' Old User SID: ' + $SelectedUserSID)
             Write-ToLog -Message:("NTFS ACLs on domain $windowsDrive\users\ dir")
             #ntfs acls on domain $windowsDrive\users\ dir
-            $NewSPN_Name = $env:COMPUTERNAME + '\' + $JumpCloudUserName
+            $NewSPN_Name = $env:COMPUTERNAME + '\' + $JumpCloudUsername
             $Acl = Get-Acl $newUserProfileImagePath
             $Ar = New-Object system.security.accesscontrol.filesystemaccessrule($NewSPN_Name, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
             $Acl.SetAccessRule($Ar)
@@ -1813,13 +1856,13 @@ Function Start-Migration {
 
 
             #region Add To Local Users Group
-            Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUserName -erroraction silentlycontinue
+            Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUsername -erroraction silentlycontinue
             #endregion Add To Local Users Group
             # TODO: test and return non-terminating error here
 
             #region AutobindUserToJCSystem
             if ($AutobindJCUser -eq $true) {
-                $bindResult = BindUsernameToJCSystem -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JumpCloudUserName $JumpCloudUserName -BindAsAdmin $BindAsAdmin
+                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $JumpCloudUserId -BindAsAdmin $BindAsAdmin
                 if ($bindResult) {
                     Write-ToLog -Message:('jumpcloud autobind step succeeded for user ' + $JumpCloudUserName)
                     $admuTracker.autoBind.pass = $true
@@ -1901,11 +1944,11 @@ Function Start-Migration {
             # Set the last logged on user to the new user
             if ($SetDefaultWindowsUser -eq $true) {
                 $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI"
-                Write-ToLog -Message:('Setting Last Logged on Windows User to ' + $JumpCloudUserName)
+                Write-ToLog -Message:('Setting Last Logged on Windows User to ' + $JumpCloudUsername)
                 set-ItemProperty -Path $registryPath -Name "LastLoggedOnUserSID" -Value "$($NewUserSID)"
                 set-ItemProperty -Path $registryPath -Name "SelectedUserSID" -Value "$($NewUserSID)"
-                set-ItemProperty -Path $registryPath -Name "LastLoggedOnUser" -Value ".\$($JumpCloudUserName)"
-                set-ItemProperty -Path $registryPath -Name "LastLoggedOnSAMUser" -Value ".\$($JumpCloudUserName)"
+                set-ItemProperty -Path $registryPath -Name "LastLoggedOnUser" -Value ".\$($JumpCloudUsername)"
+                set-ItemProperty -Path $registryPath -Name "LastLoggedOnSAMUser" -Value ".\$($JumpCloudUsername)"
             }
 
             if ($ForceReboot -eq $true) {
@@ -1935,82 +1978,7 @@ Function Start-Migration {
                             }
                             $FixedErrors += "$trackedStep"
                         }
-                        # 'renameOriginalFiles'
-                        # {
-                        #     Write-ToLog -Message:("Attempting to revert $($trackedStep) steps")
-                        #     ### Should we be using Rename-Item here or Move-Item to force overwrite?
-                        #     if (Test-Path "$oldUserProfileImagePath\NTUSER_original.DAT" -PathType Leaf)
-                        #     {
-                        #         try
-                        #         {
-                        #             Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT" -NewName "$oldUserProfileImagePath\NTUSER_failedCopy.DAT" -Force -ErrorAction Stop
-                        #             Rename-Item -Path "$oldUserProfileImagePath\NTUSER_original.DAT" -NewName "$oldUserProfileImagePath\NTUSER.DAT" -Force -ErrorAction Stop
-                        #             Write-ToLog -Message:("User at profile path: $oldUserProfileImagePath should be able to login")
-                        #         }
-                        #         catch
-                        #         {
-                        #             Write-ToLog -Message:("Unable to rename file $oldUserProfileImagePath\NTUSER_original.DAT") -Level Error
-                        #         }
-                        #     }
-                        #     if (Test-Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original.dat" -PathType Leaf)
-                        #     {
-                        #         try
-                        #         {
-                        #             Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_failedCopy.dat" -Force -ErrorAction Stop
-                        #             Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original.dat" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
-                        #         }
-                        #         catch
-                        #         {
-                        #             Write-ToLog -Message:("Unable to rename file $oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original.dat") -Level Error
-                        #         }
-                        #         $FixedErrors += "$trackedStep"
-                        #     }
-                        # }
-                        # 'renameBackupFiles'
-                        # {
-                        #     Write-ToLog -Message:("Attempting to revert $($trackedStep) steps")
-                        #     if (Test-Path "$oldUserProfileImagePath\NTUSER.DAT.BAK" -PathType Leaf)
-                        #     {
-                        #         try
-                        #         {
-                        #             Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT.BAK" -NewName "$oldUserProfileImagePath\NTUSER.DAT" -Force -ErrorAction Stop
-                        #         }
-                        #         catch
-                        #         {
-                        #             Write-ToLog -Message:("Unable to rename file $oldUserProfileImagePath\NTUSER.DAT.BAK") -Level Error
-                        #         }
-                        #     }
-                        #     if (Test-Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -PathType Leaf)
-                        #     {
-                        #         try
-                        #         {
-                        #             Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
-                        #         }
-                        #         catch
-                        #         {
-                        #             Write-ToLog -Message:("Unable to rename file $oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak") -Level Error
-                        #         }
-                        #     }
-                        #     $FixedErrors += "$trackedStep"
-                        # }
-                        # 'renameHomeDirectory'
-                        # {
-                        #     try
-                        #     {
-                        #         Write-ToLog -Message:("Attempting to revert RenameHomeDirectory steps")
-                        #         if (($userCompare -ne $selectedUserName) -and (test-path -Path $newUserProfileImagePath))
-                        #         {
-                        #             # Error Action stop to treat as terminating error
-                        #             Rename-Item -Path ($newUserProfileImagePath) -NewName ($selectedUserName) -ErrorAction Stop
-                        #         }
-                        #         Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value "$($oldUserProfileImagePath)"
-                        #     }
-                        #     catch
-                        #     {
-                        #         Write-ToLog -Message:("Unable to restore old user profile path and profile image path.") -Level Error
-                        #     }
-                        #     $FixedErrors += "$trackedStep"
-                        # }
+
                         Default {
                             # Write-ToLog -Message:("default error") -Level Error
                         }
