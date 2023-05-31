@@ -4,7 +4,7 @@ parameters:
     description: "Semantic Version increment type of the release. Valid values: major, minor, patch"
     default: "minor"
     type: enum
-    enum: ["major", "minor", "patch"]
+    enum: ["major", "patch", "patch"]
   PublishToPSGallery:
     description: "When `true` and when run against Master branch, this workflow will publish the latest code to PSGallery"
     type: boolean
