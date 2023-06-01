@@ -173,9 +173,9 @@ if ($ForceRebootAfterMigration) {
             "x-api-key" = $JumpCloudAPIKey
         }
     } else {
-    $headers = @{
-        "x-api-key" = $JumpCloudAPIKey
-        "x-org-id"  = $JumpCloudOrgID
+        $headers = @{
+            "x-api-key" = $JumpCloudAPIKey
+            "x-org-id"  = $JumpCloudOrgID
         }
     }
     write-host "[status] invoking reboot command through JumpCloud"
