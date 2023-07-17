@@ -772,13 +772,9 @@ $bMigrateProfile.Add_Click( {
                 $SelectedUserSID = $script:SelectedUserName
             }
                 Write-ToLog "Reverse Migrate button clicked"
-                $undo = Undo-Migration -SelectedUserSid $SelectedUserSid
-                if ($undo -eq $true) {
-                    Write-ToLog "Successfully reversed migration please reboot to complete the process"
-                    Write-Tolog "existing..."
-                    $Form.Close()
-                    exit
-                }
+                Reverse-Migration -SelectedUserSid $SelectedUserSid
+                $form.Close()
+                exit
 
             } else {
                 Write-ToLog "JumpCloud API Key, JumpCloud Username, and Autobind JumpCloud User must be populated to continue"
