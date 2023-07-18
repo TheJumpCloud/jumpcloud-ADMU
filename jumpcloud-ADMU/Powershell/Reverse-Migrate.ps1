@@ -10,7 +10,7 @@ function Get-UserHiveFile {
 
     if (-Not (Test-Path -Path $currentRegistryPath)) {
         Write-toLog "Previous SID or Profile Path does not exist in the registry. $($SelectedUserSid)"
-        exit
+        Throw "Previous SID or Profile Path does not exist in the registry. $($SelectedUserSid)"
     }
     #TODO: SID error handling
 
@@ -23,44 +23,33 @@ function Get-UserHiveFile {
     foreach ($registryBackupPath in $registryBackupPaths) {
         if (-Not (Test-Path -Path $registryBackupPath)) {
             Write-toLog "Registry backup file '$registryBackupPath' does not exist." -Level "Error"
-            return $false
+            throw "Registry backup file does not exist"
         } else {
             Write-toLog "Found registry backup file '$registryBackupPath'."
             return $true
         }
     }
 }
-function Convert-Sid {
-    [CmdletBinding()]
-    param
-    (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
-        $Sid
-    )
-    process {
-        try {
-            (New-Object System.Security.Principal.SecurityIdentifier($Sid)).Translate( [System.Security.Principal.NTAccount]).Value
-        } catch {
-            return $Sid
+function Get-Domain {
+        $dsregcmdOutput = dsregcmd /status
+
+        $properties = @{}
+
+        $dsregcmdOutput | ForEach-Object {
+            if ($_ -match '^([^:]+):\s+(.*)$') {
+                $propertyName = $Matches[1].Trim()
+                $propertyValue = $Matches[2].Trim()
+                $properties[$propertyName] = $propertyValue
+            }
         }
-    }
+        if ($properties.AzureADJoined -eq "Yes") {
+            Write-ToLog "Domain is joined to AzureAD"
+            return $true
+        } else {
+            Write-ToLog "Domain is not joined to AzureAD"
+            return $false
+        }
 }
-# function get-Domain {
-#     param (
-#         [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][string]$SelectedUserSid
-#     )
-#         $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-#         $user = $win32UserProfiles | Select-Object -ExpandProperty "SID" | Where-Object { $_ -eq $SelectedUserSid } | Convert-Sid
-#         $user
-#         # Check if $user contains a value AzureAD
-#         if ($user -like "*AzureAD*") {
-#             Write-Host "User is AzureAD"
-#             return true
-#         } else {
-#             Write-toLog "Selected user is not a part of AzureAD domain"
-#             return false
-#         }
-# }
 
 function Update-NTUserDat {
     # Get the selected user ProfileImagePath
@@ -171,16 +160,7 @@ function Update-UsrClassDat {
     }
 
 }
-function Validate-Domain {
-    $domain = Get-WmiObject -Class Win32_ComputerSystem | Select-Object -ExpandProperty Domain
-    if ($null -eq $domain) {
-        Write-toLog "This device is not connected to a domain. Please connect to a domain and try again." -Level "Error"
-        exit
-    }
-    # Return success if domain is found
-    return $true
-
-}
+#TODO: Add throws instead exit
 function Reverse-Migration {
     #parameter is SID of the user to undo the migration for
     param (
@@ -191,22 +171,36 @@ function Reverse-Migration {
         # Get the old profile path from the registry
         $CurrentProfileImagePath = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($SelectedUserSid)" -Name 'ProfileImagePath'
         Write-ToLog "Current Profile Path: $CurrentProfileImagePath"
-
+    $validateDomain = get-Domain # Exit if error
+    if ($validateDomain) {
+        Write-ToLog "This device is connected to a domain."
+    } else {
+        Write-ToLog "This device is not connected to a domain. Please connect to a domain and try again." -Level "Error"
+        Throw "Domain not found"
+    }
     if ($validateRegPath) {
         try {
-            Write-toLog "Loading registry backup hive"
-            reg load HKU\TempHive $CurrentProfileImagePath\NTUser.dat
+            # Check if the registry hive is loaded
+            $regHive = Get-Item -Path 'Registry::HKEY_USERS\TempHive'
+            if ($regHive) {
+                Write-toLog "Registry hive is already loaded. Unloading the hive."
+                reg unload HKU\TempHive
+            } else {
+                Write-toLog "Loading registry backup hive"
+                reg load HKU\TempHive $CurrentProfileImagePath\NTUser.dat
+            }
+
         }
         catch {
             Write-toLog "Failed to load registry backup hive" -Level "Error"
-            exit
+            Throw "Failed to load registry backup hive"
         }
         $backupProfileImagePath = Get-ItemPropertyValue -Path 'Registry::HKEY_USERS\TempHive\Software\JCADMU' -Name 'previousProfilePath'
         $backupProfileImageSid = Get-ItemPropertyValue -Path 'Registry::HKEY_USERS\TempHive\Software\JCADMU' -Name 'previousSID'
         if ($null -eq $backupProfileImagePath -or $null -eq $backupProfileImageSid) {
             Write-ToLog "Previous SID or Profile Path does not exist in the registry."
             reg unload HKU\TempHive
-            exit
+            Throw "Previous SID or Profile Path does not exist in the registry."
         }
         $oldProfileImagePath = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($backupProfileImageSid)" -Name 'ProfileImagePath'
 
@@ -218,7 +212,7 @@ function Reverse-Migration {
 
         if ([System.String]::IsNullOrEmpty($oldProfileImagePath) ) {
             Write-Tolog "Old Profile path does not exist in the registry." -level "error"
-            exit
+            Throw "Old Profile path does not exist in the registry."
         } else {
             Write-toLog "Old Profile path found: $oldProfileImagePath"
             # Set the backup registry profileImagePath to the current profile path
@@ -234,7 +228,7 @@ function Reverse-Migration {
                 #Reverse change if error
                 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($SelectedUserSid)" -Name "ProfileImagePath" -Value $CurrentProfileImagePath
                 reg unload HKU\TempHive
-                exit
+                throw "Profile path has not been changed."
             }
 
             # This is going to be the new profile that's going to be used
@@ -247,7 +241,7 @@ function Reverse-Migration {
                 Write-toLog "Profile path has not been changed."
                 Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($backupProfileImageSid)" -Name "ProfileImagePath" -Value $oldProfileImagePath
                 reg unload HKU\TempHive
-                exit
+                Throw "Profile path has not been changed."
             }
         }
         reg unload HKU\TempHive
@@ -258,6 +252,9 @@ function Reverse-Migration {
             Update-UsrClassDat -CurrentProfileImagePath $CurrentProfileImagePath -backupProfileImageSid $backupProfileImageSid -backupProfileImagePath $backupProfileImagePath -SelectedUserSid $SelectedUserSid
         }
 
+    } else {
+        Write-ToLog "Registry path does not exist." -Level "Error"
+        Throw "Registry path does not exist."
     }
 
 }
