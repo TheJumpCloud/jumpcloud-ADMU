@@ -21,6 +21,7 @@ Describe 'Migration Test Scenarios' {
             {Reverse-Migration -SelectedUserSID $randomSID} | Should -Throw -expectedMessage "Domain not found"
         }
     }
+    #TODO: Function test
     Context 'Reverse Migration Tests Expecting Failures' {
         # Migrate the initialized user to the second username
             It 'Validate NTUser Hive' {
@@ -31,7 +32,7 @@ Describe 'Migration Test Scenarios' {
                 InitUser -UserName $localUser1 -Password $Password
 
                 Start-Migration -AutobindJCUser $false -JumpCloudUserName $user1 -SelectedUserName "$ENV:COMPUTERNAME\$localUser1" -TempPassword "$($Password)"
-                $MigrateUserSID = Get-LocalUser -Name $User.JCUsername | Select-Object -ExpandProperty SID
+                $MigrateUserSID = Get-LocalUser -Name $user1 | Select-Object -ExpandProperty SID
 
                 Rename-Item -Path "C:\Users\$($localUser1)\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "C:\Users\$($localUser1)\AppData\Local\Microsoft\Windows\Test.dat"
 
@@ -46,7 +47,7 @@ Describe 'Migration Test Scenarios' {
                 # Rename USRClass.DAT
                 InitUser -UserName $localUser2 -Password $Password
                 Start-Migration -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$localUser1" -TempPassword "$($Password)"
-                $MigrateUserSID = Get-LocalUser -Name $User.JCUsername | Select-Object -ExpandProperty SID
+                $MigrateUserSID = Get-LocalUser -Name $user2 | Select-Object -ExpandProperty SID
                 Rename-Item -Path "C:\Users\$($localUser)\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "C:\Users\$($localUser)\AppData\Local\Microsoft\Windows\Test.dat"
 
                 Reverse-Migration -SelectedUserSid $MigrateUserSID | Should -Throw -expectedMessage "Registry backup file does not exist."
@@ -56,7 +57,7 @@ Describe 'Migration Test Scenarios' {
                 $randomSID = -join ((65..90)  + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
                 Reverse-Migration -SelectedUserSid $randomSID | Should -Throw
             }
-}
+}       #TODO: No need for hash
             Context 'Reverse Migration Succesful Test'{
                 BeforeAll{
                     $Password = "Temp123!"

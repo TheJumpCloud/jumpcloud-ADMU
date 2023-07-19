@@ -1,3 +1,5 @@
+
+# TODO: Check if user is JumpCloud bound,
 function Get-UserHiveFile {
 # Get the SID of the user to undo the migration for
     #parameter is SID of the user to undo the migration for
