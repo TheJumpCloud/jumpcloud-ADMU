@@ -14,7 +14,6 @@ BeforeAll {
 Describe 'Migration Test Scenarios' {
     Context 'Domain Test' {
         # Mock domain
-
         It 'Test Domain Error'{
             $randomSID = -join ((65..90)  + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             Mock Get-UserHiveFile {$True}
@@ -58,7 +57,7 @@ Describe 'Migration Test Scenarios' {
                 Reverse-Migration -SelectedUserSid $randomSID | Should -Throw
             }
 }
-            Context 'Reverse Migration Succesful'{
+            Context 'Reverse Migration Succesful Test'{
                 BeforeAll{
                     $Password = "Temp123!"
                     $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -77,7 +76,6 @@ Describe 'Migration Test Scenarios' {
                     # The HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI should be set to the migrated user
                     Write-Host "##### Reverse Migrate User Test $($migrateUser) #####"
                     #Check SID
-                    $MigrateUserSID = Get-LocalUser -Name $migrateUser | Select-Object -ExpandProperty SID
                     Reverse-Migration -SelectedUserSid $MigrateUserSID | Should -not -Throw
 
                     $ReverseMigratedUser = Get-LocalUser -Name $localUser | Select-Object -ExpandProperty SID
