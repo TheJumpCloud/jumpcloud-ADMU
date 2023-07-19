@@ -20,7 +20,6 @@ Describe 'Migration Test Scenarios' {
         InitUser -UserName $localUser -Password $Password
 
         # Start Migration
-        foreach
         Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)"
         $MigrateUserSID = Get-LocalUser -Name $migrateUser | Select-Object -ExpandProperty SID
     }
@@ -87,7 +86,7 @@ Describe 'Migration Test Scenarios' {
 
 }
 
-}
+
 Context 'Reverse Migration Succesfull'{
     It 'Reverse Migrate' {
         # The HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI should be set to the migrated user
@@ -112,6 +111,7 @@ Context 'Domain Test' {
 }
 
     }
+}
 AfterAll {
     $systems = Get-JCsdkSystem
     $CIsystems = $systems | Where-Object { $_.displayname -match "packer" }
