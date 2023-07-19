@@ -1,5 +1,6 @@
 
 # TODO: Check if user is JumpCloud bound,
+# TODO: Update homepath, check if current and backup registry path are not the same. Rename to Update HomePath
 function Get-UserHiveFile {
 # Get the SID of the user to undo the migration for
     #parameter is SID of the user to undo the migration for
@@ -14,6 +15,7 @@ function Get-UserHiveFile {
         Write-toLog "Previous SID or Profile Path does not exist in the registry. $($SelectedUserSid)"
         Throw "Previous SID or Profile Path does not exist in the registry"
     }
+
     # Get the backup NTUser.dat sid and profile path
     $registryBackupPaths = @(
         "$($CurrentProfileImagePath)\AppData\Local\Microsoft\Windows\UsrClass.dat",
@@ -22,7 +24,7 @@ function Get-UserHiveFile {
 
     foreach ($registryBackupPath in $registryBackupPaths) {
         if (-Not (Test-Path -Path $registryBackupPath)) {
-            Write-toLog "Registry backup file '$registryBackupPath' does not exist."
+            Write-toLog "Registry backup file '$registryBackupPath' does not exist"
             throw "Registry backup file does not exist"
         } else {
             Write-toLog "Found registry backup file '$registryBackupPath'."

@@ -106,4 +106,13 @@ $JCReverseMigrateHash = @{
         UpdateHomePath = $false
 
     }
+    # reverseMigrateTest2 = @{
+    #     Description    = 'Existing'
+    #     Username       = 'ADMU_ReverseHomePath';
+    #     UserSID        = '';
+    #     Password       = $testUserPassword;
+    #     JCUsername     = 'ADMU_ReverseHomePath2';
+    #     UpdateHomePath = $true
+
+    # }
 }

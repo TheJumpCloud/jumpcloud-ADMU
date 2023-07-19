@@ -36,7 +36,7 @@ Describe 'Migration Test Scenarios' {
 
                 Rename-Item -Path "C:\Users\$($localUser1)\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "C:\Users\$($localUser1)\AppData\Local\Microsoft\Windows\Test.dat"
 
-                Reverse-Migration -SelectedUserSid $MigrateUserSID | Should -Throw -expectedMessage "Registry backup file does not exist."
+                {Reverse-Migration -SelectedUserSid $MigrateUserSID} | Should -Throw -expectedMessage "Registry backup file does not exist"
 
             }
             It 'Validate UsrClass Hive' {
@@ -46,16 +46,16 @@ Describe 'Migration Test Scenarios' {
                 $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
                 # Rename USRClass.DAT
                 InitUser -UserName $localUser2 -Password $Password
-                Start-Migration -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$localUser1" -TempPassword "$($Password)"
+                Start-Migration -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$localUser2" -TempPassword "$($Password)"
                 $MigrateUserSID = Get-LocalUser -Name $user2 | Select-Object -ExpandProperty SID
-                Rename-Item -Path "C:\Users\$($localUser)\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "C:\Users\$($localUser)\AppData\Local\Microsoft\Windows\Test.dat"
+                Rename-Item -Path "C:\Users\$($localUser2)\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "C:\Users\$($localUser2)\AppData\Local\Microsoft\Windows\Test.dat"
 
-                Reverse-Migration -SelectedUserSid $MigrateUserSID | Should -Throw -expectedMessage "Registry backup file does not exist."
+                {Reverse-Migration -SelectedUserSid $MigrateUserSID} | Should -Throw -expectedMessage "Registry backup file does not exist."
 
             }
             It 'Failure Test using Random SID' {
                 $randomSID = -join ((65..90)  + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-                Reverse-Migration -SelectedUserSid $randomSID | Should -Throw
+                {Reverse-Migration -SelectedUserSid $randomSID} | Should -Throw
             }
 }       #TODO: No need for hash
             Context 'Reverse Migration Succesful Test'{
@@ -77,7 +77,7 @@ Describe 'Migration Test Scenarios' {
                     # The HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI should be set to the migrated user
                     Write-Host "##### Reverse Migrate User Test $($migrateUser) #####"
                     #Check SID
-                    Reverse-Migration -SelectedUserSid $MigrateUserSID | Should -not -Throw
+                    {Reverse-Migration -SelectedUserSid $MigrateUserSID} | Should -not -Throw
 
                     $ReverseMigratedUser = Get-LocalUser -Name $localUser | Select-Object -ExpandProperty SID
                     $ReverseMigratedUser | Should -not -Be $MigrateUserSID
