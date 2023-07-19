@@ -1,3 +1,12 @@
+## 2.5.0
+
+Release Date: July 19, 2023
+
+#### RELEASE NOTES
+
+```
+* Reverse Migration
+```
 ## 2.4.1
 
 Release Date: March 31,2023

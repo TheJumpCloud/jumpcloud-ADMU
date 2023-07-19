@@ -50,7 +50,7 @@ Describe 'Migration Test Scenarios' {
                 $MigrateUserSID = Get-LocalUser -Name $user2 | Select-Object -ExpandProperty SID
                 Rename-Item -Path "C:\Users\$($localUser2)\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "C:\Users\$($localUser2)\AppData\Local\Microsoft\Windows\Test.dat"
 
-                {Reverse-Migration -SelectedUserSid $MigrateUserSID} | Should -Throw -expectedMessage "Registry backup file does not exist."
+                {Reverse-Migration -SelectedUserSid $MigrateUserSID} | Should -Throw -expectedMessage "Registry backup file does not exist"
 
             }
             It 'Failure Test using Random SID' {
