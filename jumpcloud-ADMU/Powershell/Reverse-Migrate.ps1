@@ -10,7 +10,7 @@ function Get-UserHiveFile {
 
     if (-Not (Test-Path -Path $currentRegistryPath)) {
         Write-toLog "Previous SID or Profile Path does not exist in the registry. $($SelectedUserSid)"
-        Throw "Previous SID or Profile Path does not exist in the registry. $($SelectedUserSid)"
+        Throw "Previous SID or Profile Path does not exist in the registry"
     }
     # Get the backup NTUser.dat sid and profile path
     $registryBackupPaths = @(
