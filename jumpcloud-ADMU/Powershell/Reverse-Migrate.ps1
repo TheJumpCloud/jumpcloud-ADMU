@@ -12,8 +12,6 @@ function Get-UserHiveFile {
         Write-toLog "Previous SID or Profile Path does not exist in the registry. $($SelectedUserSid)"
         Throw "Previous SID or Profile Path does not exist in the registry. $($SelectedUserSid)"
     }
-    #TODO: SID error handling
-
     # Get the backup NTUser.dat sid and profile path
     $registryBackupPaths = @(
         "$($CurrentProfileImagePath)\AppData\Local\Microsoft\Windows\UsrClass.dat",
@@ -64,7 +62,6 @@ function Update-NTUserDat {
     )
     process {
         ##### Rename the NTUser.dat files in User's profile
-        #TODO: Error check when renaming reverse also
         $renameDate = Get-Date -UFormat "%Y-%m-%d-%H%M%S"
         Rename-Item -Path "$($CurrentProfileImagePath)\NTUser.dat" -NewName "NTUser_old_$renameDate.dat"
         # Validate if the rename was successful
@@ -73,7 +70,7 @@ function Update-NTUserDat {
             # Revert the migration
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($SelectedUserSid)" -Name 'ProfileImagePath' -Value $CurrentProfileImagePath
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($backupProfileImageSid)" -Name 'ProfileImagePath' -Value $backupProfileImagePath
-            exit
+            throw
         } else {
             Write-toLog "Renamed NTUser.dat to NTUser_old_$renameDate.dat"
         }
@@ -88,7 +85,7 @@ function Update-NTUserDat {
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($SelectedUserSid)" -Name 'ProfileImagePath' -Value $CurrentProfileImagePath
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($backupProfileImageSid)" -Name 'ProfileImagePath' -Value $backupProfileImagePath
 
-            exit
+            throw
         } else {
             Write-toLog "Found Profile backup file '$NTbackupFile'."
         }
@@ -99,7 +96,7 @@ function Update-NTUserDat {
             # Revert the migration
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($SelectedUserSid)" -Name 'ProfileImagePath' -Value $CurrentProfileImagePath
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($backupProfileImageSid)" -Name 'ProfileImagePath' -Value $backupProfileImagePath
-            exit
+            throw
         } else {
             Write-toLog "Found NTUser.dat file."
             return $true
@@ -115,6 +112,7 @@ function Update-UsrClassDat {
         [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][string]$backupProfileImagePath
     )
     process {
+        $renameDate = Get-Date -UFormat "%Y-%m-%d-%H%M%S"
         ##### Rename the UsrClass.dat files in User's profile
         Rename-Item -Path "$($CurrentProfileImagePath)\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "UsrClass_old_$($renameDate).dat"
         # Validate if the rename was successful
@@ -123,14 +121,11 @@ function Update-UsrClassDat {
             # Revert the migration
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($SelectedUserSid)" -Name 'ProfileImagePath' -Value $CurrentProfileImagePath
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($backupProfileImageSid)" -Name 'ProfileImagePath' -Value $backupProfileImagePath
-            exit
+            Throw
         } else {
             Write-toLog "Renamed UsrClass.dat to UsrClass_old_$($renameDate).dat"
         }
 
-
-        #TODO: Return errors -Level "error"
-        #TODO: Check if only one file exists
         $pattern = "UsrClass_Original_*"
         $replacement = "UsrClass.dat"
         $UsrbackupFile = Get-ChildItem -Path "$($CurrentProfileImagePath)\AppData\Local\Microsoft\Windows\" -Filter $pattern -Force
@@ -140,7 +135,7 @@ function Update-UsrClassDat {
             # Revert the migration
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($SelectedUserSid)" -Name 'ProfileImagePath' -Value $CurrentProfileImagePath
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($backupProfileImageSid)" -Name 'ProfileImagePath' -Value $backupProfileImagePath
-            exit
+            Throw
         } else {
             Write-toLog "Found Profile backup file '$UsrbackupFile'."
         }
@@ -152,7 +147,7 @@ function Update-UsrClassDat {
             # Revert the migration
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($SelectedUserSid)" -Name 'ProfileImagePath' -Value $CurrentProfileImagePath
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($backupProfileImageSid)" -Name 'ProfileImagePath' -Value $backupProfileImagePath
-            exit
+            Throw
         } else {
             Write-toLog "Found UsrClass.dat file."
             return $true
@@ -160,7 +155,6 @@ function Update-UsrClassDat {
     }
 
 }
-#TODO: Add throws instead exit
 function Reverse-Migration {
     #parameter is SID of the user to undo the migration for
     param (
@@ -189,7 +183,6 @@ function Reverse-Migration {
                 Write-toLog "Loading registry backup hive"
                 reg load HKU\TempHive $CurrentProfileImagePath\NTUser.dat
             }
-
         }
         catch {
             Write-toLog "Failed to load registry backup hive" -Level "Error"

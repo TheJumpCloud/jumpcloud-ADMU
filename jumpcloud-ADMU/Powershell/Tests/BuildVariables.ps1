@@ -99,10 +99,10 @@ $JCExistingHash = @{
 $JCReverseMigrateHash = @{
     reverseMigrateTest = @{
         Description    = 'Existing'
-        Username       = 'ADMU_ReverseMigrateUser';
+        Username       = 'ADMU_ReverseTest';
         UserSID        = '';
         Password       = $testUserPassword;
-        JCUsername     = 'ADMU_ReverseMigrateUser2';
+        JCUsername     = 'ADMU_ReverseTest2';
         UpdateHomePath = $false
 
     }
