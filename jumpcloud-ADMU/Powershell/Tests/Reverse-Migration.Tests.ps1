@@ -57,20 +57,47 @@ Describe 'Migration Test Scenarios' {
                 $randomSID = -join ((65..90)  + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
                 {Reverse-Migration -SelectedUserSid $randomSID} | Should -Throw
             }
-}       #TODO: No need for hash
+            It 'Test Updated Homepath'{
+                BeforeAll{
+                    $Password = "Temp123!"
+                    $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+                    $jcUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+                    $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+
+                    InitUser -UserName $localUser -Password $Password
+                        # Start Migration
+
+                    Start-Migration -AutobindJCUser $false -JumpCloudUserName $jcUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -UpdateHomePath $true
+                    $MigrateUserSID = Get-LocalUser -Name $User| Select-Object -ExpandProperty SID
+                }
+                It 'Reverse Migrate User with Updated Homepath' {
+
+                    # The HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI should be set to the migrated user
+                    Write-Host "##### Reverse Migrate User Test $($migrateUser) #####"
+                    # Get local path
+                    $updatedHomePath = Get-LocalUser -Name $localUser | Select-Object -ExpandProperty ProfilePath
+                    #Check SID
+                    {Reverse-Migration -SelectedUserSid $MigrateUserSID} | Should -not -Throw
+
+                    $ReverseMigratedUserHomepath = Get-LocalUser -Name $localUser | Select-Object -ExpandProperty ProfilePath
+                    $ReverseMigratedUserHomepath | Should -not -Be $updatedHomePath
+
+            }
+
+}
             Context 'Reverse Migration Succesful Test'{
                 BeforeAll{
                     $Password = "Temp123!"
                     $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+                    $jcUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
                     $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
                     # Initialize a single user to migrate:
 
                     InitUser -UserName $localUser -Password $Password
                     # Start Migration
-                    foreach ($User in $JCReverseMigrateHash.Values) {
-                        Start-Migration -AutobindJCUser $false -JumpCloudUserName $User.JCUsername -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)"
-                        $MigrateUserSID = Get-LocalUser -Name $User.JCUsername | Select-Object -ExpandProperty SID
-                }
+
+                    Start-Migration -AutobindJCUser $false -JumpCloudUserName $jcUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)"
+                    $MigrateUserSID = Get-LocalUser -Name $jcUser | Select-Object -ExpandProperty SID
                 }
                 It 'Reverse Migrate' {
 
@@ -83,6 +110,7 @@ Describe 'Migration Test Scenarios' {
                     $ReverseMigratedUser | Should -not -Be $MigrateUserSID
             }
             }
+}
 }
 AfterAll {
     $systems = Get-JCsdkSystem

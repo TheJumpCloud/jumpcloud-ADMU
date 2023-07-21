@@ -638,29 +638,43 @@ $lvProfileList.Add_SelectionChanged( {
         } catch {
             $SelectedUserSID = $script:SelectedUserName
         }
-        $hku = ('HKU:\' + $SelectedUserSID)
-
-
-        #TODO: If Reverse Migrate is selected, change the button text to "Reverse Migrate"
         # Load NTUSER.DAT then get the previousProfilePath
         # If previousProfilePath is not null, then change the button text to "Reverse Migrate"
         # Get the current profile path, if it matches the previousProfilePath, then change the button text to "Reverse Migrate"
         $CurrentProfileImagePath = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($SelectedUserSid)" -Name 'ProfileImagePath'
+        $currentProfileSID = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($SelectedUserSid)" -Name 'SID' -ErrorAction SilentlyContinue 2>&1
         #Load the NTUSER.DAT file
-        reg load HKU\TempHiveTest $CurrentProfileImagePath\NTUser.dat
-        # Get the value of the hive
+        # Check if the NTUSER.DAT file exists and able to be loaded
+        Write-Host "Loading NTUSER.DAT file $($CurrentProfileImagePath)"
+
+        # Check if the NTUSER.DAT file exists and able to be loaded
+        if (Test-Path HKU:\TempHive) {
+            reg unload HKU\TempHive
+        }
+
         try {
-            $backupProfileImagePath = Get-ItemPropertyValue -Path 'Registry::HKEY_USERS\TempHiveTest\Software\JCADMU' -Name 'previousProfilePath' -ErrorAction "SilentlyContinue" 2>&1
-            Write-Output "Backup profilePath found $backupProfileImagePath"
+            reg load HKU\TempHive $CurrentProfileImagePath\NTUSER.DAT
+
+            $backupProfileImagePath = Get-ItemPropertyValue -Path 'Registry::HKEY_USERS\TempHive\Software\JCADMU' -Name 'previousProfilePath' -ErrorAction SilentlyContinue 2>&1
+            $backupProfileImageSid = Get-ItemPropertyValue -Path 'Registry::HKEY_USERS\TempHive\Software\JCADMU' -Name 'previousSID' -ErrorAction SilentlyContinue 2>&1
         }
-        catch [System.Management.Automation.ItemNotFoundException] {
-            Write-Output "No backup profilePath found"
+        catch {
+            Write-Tolog "Selected user does not have a previous profile path"
+        }
+        # Write-Tolog "$($backupProfileImageSid) Backup Home Path"
+        # Write-Tolog "$($SelectedUserSID) SID Home Path"
+        if (-not [string]::isnullorempty($backupProfileImageSid)) {
+            $validateHomePath = Validate-UpdatedHomepath -backupProfileSID $backupProfileImageSid -currentProfileSID $SelectedUserSid
+            Write-Tolog "Validate Updated Homepath: $($validateHomePath)"
         }
 
-        # Unload the hive
-        reg unload HKU\TempHiveTest
-
-
+        # Validate if the hive is loaded
+        if (Test-Path -Path "Registry::HKEY_USERS\TempHive") {
+            reg unload HKU\TempHive
+        }
+        Write-Tolog "$($validateHomePath) Validate Home Path"
+        $hku = ('HKU:\' + $SelectedUserSID)
+        Write-tolog "Loading: $($backupProfileImagePath)"
         if ($backupProfileImagePath -eq $CurrentProfileImagePath) {
             $script:bMigrateProfile.Content = "Reverse Migrate"
             $script:bMigrateProfile.IsEnabled = $false
@@ -672,11 +686,22 @@ $lvProfileList.Add_SelectionChanged( {
             $script:cb_autobindjcuser.IsEnabled = $false
             $script:cb_installjcagent.IsEnabled = $false
             $script:cb_forcereboot.IsEnabled = $false
-
+        } elseif ($validateHomePath){
+            $script:bMigrateProfile.Content = "Reverse Migrate"
+            $script:bMigrateProfile.IsEnabled = $false
+            $script:tbJumpCloudUserName.IsEnabled = $false
+            $script:cb_reverseMigrate.IsEnabled = $true
+            $script:tbTempPassword.IsEnabled = $false
+            $script:cb_bindasAdmin.IsEnabled = $false
+            $script:cb_leavedomain.IsEnabled = $false
+            $script:cb_autobindjcuser.IsEnabled = $false
+            $script:cb_installjcagent.IsEnabled = $false
+            $script:cb_forcereboot.IsEnabled = $false
         } elseif (Test-Path -Path $hku) {
             $script:bMigrateProfile.Content = "User Registry Loaded"
             $script:bMigrateProfile.IsEnabled = $false
             $script:tbJumpCloudUserName.IsEnabled = $false
+            $script:cb_reverseMigrate.IsEnabled = $false
             $script:tbTempPassword.IsEnabled = $false
             $script:cb_leavedomain.IsEnabled = $true
             $script:cb_autobindjcuser.IsEnabled = $true
@@ -772,7 +797,16 @@ $bMigrateProfile.Add_Click( {
                 $SelectedUserSID = $script:SelectedUserName
             }
                 Write-ToLog "Reverse Migrate button clicked"
-                Reverse-Migration -SelectedUserSid $SelectedUserSid
+                try {
+                    Reverse-Migration -SelectedUserSid $SelectedUserSid
+                }
+                catch {
+                    Write-ToLog "Reverse Migration failed"
+                    # Exit
+                    $Form.Close()
+                    exit
+                }
+
                 $form.Close()
                 exit
 
