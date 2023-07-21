@@ -217,16 +217,18 @@ function Reverse-Migration {
             Throw "Previous SID or Profile Path does not exist in the registry."
         }
 
-
         $validateHomePath = Validate-UpdatedHomepath -backupProfileSID $backupProfileImageSid -currentProfileSID $SelectedUserSid
 
         $renameProfileImagePath = $CurrentProfileImagePath
+        Write-Tolog "Current Profile Path: $renameProfileImagePath"
+        # TODO: Rename folder if homepath is different
         if ($validateHomePath) {
             Write-ToLog "Homepath is different from the backup. Updating homepath..."
             # Set the current profile path to the backup registry profile path
 
             $CurrentProfileImagePath = $backupProfileImagePath
             Write-Tolog "The current profile path is $CurrentProfileImagePath"
+            # Rename the user folder $renameProfileImagePath to $CurrentProfileImagePath
         }
 
         $oldProfileImagePath = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($backupProfileImageSid)" -Name 'ProfileImagePath'
@@ -272,11 +274,17 @@ function Reverse-Migration {
         reg unload HKU\TempHive
         Write-Tolog "$($oldProfileImagePath)"
         $updateNTUserDat = Update-NTUserDat -CurrentProfileImagePath $renameProfileImagePath -backupProfileImageSid $backupProfileImageSid -oldProfileImagePath $oldProfileImagePath -SelectedUserSid $SelectedUserSid
-
         if ($updateUserDat) {
-            Update-UsrClassDat -CurrentProfileImagePath $renameProfileImagePath -backupProfileImageSid $backupProfileImageSid -oldProfileImagePath $oldProfileImagePath -SelectedUserSid $SelectedUserSid
+            $updateUsrClassDat = Update-UsrClassDat -CurrentProfileImagePath $renameProfileImagePath -backupProfileImageSid $backupProfileImageSid -oldProfileImagePath $oldProfileImagePath -SelectedUserSid $SelectedUserSid
         }
+        if ($updateUsrClassDat) {
+            Write-Tolog "Successfully updated NTUser.dat and UsrClass.dat files."
+            if ($validateHomePath) {
+                Write-Tolog "Renaming user folder..."
+                Rename-Item -Path $renameProfileImagePath -NewName $CurrentProfileImagePath -Force
 
+            }
+        }
     } else {
         Write-ToLog "Registry path does not exist."
         Throw "Registry path does not exist."

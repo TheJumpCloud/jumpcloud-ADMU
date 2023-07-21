@@ -651,10 +651,22 @@ $lvProfileList.Add_SelectionChanged( {
         if (Test-Path HKU:\TempHive) {
             reg unload HKU\TempHive
         }
+        # reg load HKU\TempHive $CurrentProfileImagePath\NTUSER.DAT
+        # $backupProfileImagePath = Get-ItemPropertyValue -Path 'Registry::HKEY_USERS\TempHive\Software\JCADMU' -Name 'previousProfilePath' -ErrorAction SilentlyContinue 2>&1
+        # $backupProfileImageSid = Get-ItemPropertyValue -Path 'Registry::HKEY_USERS\TempHive\Software\JCADMU' -Name 'previousSID' -ErrorAction SilentlyContinue 2>&1
+
+        #TODO:
+        # $results = REG LOAD HKU\$($UserSid)_admu "$ProfilePath\NTUSER.DAT.BAK" *>&1
+        #         if ($?) {
+        #             Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
+        #         } else {
+        #             Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
+        #         }
+
 
         try {
+            #TODO: Figure out error handling where we are able to get values from the registry
             reg load HKU\TempHive $CurrentProfileImagePath\NTUSER.DAT
-
             $backupProfileImagePath = Get-ItemPropertyValue -Path 'Registry::HKEY_USERS\TempHive\Software\JCADMU' -Name 'previousProfilePath' -ErrorAction SilentlyContinue 2>&1
             $backupProfileImageSid = Get-ItemPropertyValue -Path 'Registry::HKEY_USERS\TempHive\Software\JCADMU' -Name 'previousSID' -ErrorAction SilentlyContinue 2>&1
         }
@@ -672,9 +684,7 @@ $lvProfileList.Add_SelectionChanged( {
         if (Test-Path -Path "Registry::HKEY_USERS\TempHive") {
             reg unload HKU\TempHive
         }
-        Write-Tolog "$($validateHomePath) Validate Home Path"
         $hku = ('HKU:\' + $SelectedUserSID)
-        Write-tolog "Loading: $($backupProfileImagePath)"
         if ($backupProfileImagePath -eq $CurrentProfileImagePath) {
             $script:bMigrateProfile.Content = "Reverse Migrate"
             $script:bMigrateProfile.IsEnabled = $false
