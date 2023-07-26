@@ -491,6 +491,7 @@ Function Test-UserRegistryLoadState {
 
 }
 
+
 Function Backup-RegistryHive {
     [CmdletBinding()]
     param (
@@ -1283,7 +1284,34 @@ namespace CosmosKey.Powershell.InvokeAsSystemSvc
         Import-Clixml -Path $outPath
     }
 }
+# Function to validate if NTUser.dat has SYSTEM, Administrators, and the specified user as full control
+function Validate-DATFiles {
+    param (
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $path
+    )
 
+    $acl = Get-Acl $path
+
+    $systemRule = $acl.Access | Where-Object { $_.IdentityReference -match "SYSTEM" -and $_.FileSystemRights -eq "FullControl" }
+    $administratorsRule = $acl.Access | Where-Object { $_.IdentityReference -match "Administrators" -and $_.FileSystemRights -eq "FullControl" }
+    $specifiedUserRule = $acl.Access | Where-Object { $_.IdentityReference -match $UserProfilePath -and $_.FileSystemRights -eq "FullControl" }
+
+    $results = @{
+        "SystemPermissions" = if ($systemRule) { $true } else { $false }
+        "AdministratorsPermissions" = if ($administratorsRule) { $true } else { $false }
+        "SpecifiedUserPermissions" = if ($specifiedUserRule) { $true } else { $false }
+    }
+
+    # If all rules are true, return true
+    if (($results.SystemPermissions -eq $true) -and ($results.AdministratorsPermissions -eq $true) -and ($results.SpecifiedUserPermissions -eq $true)) {
+        return $true
+    } else {
+        return $false
+    }
+
+}
 #endregion Agent Install Helper Functions
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
@@ -1559,9 +1587,40 @@ Function Start-Migration {
             ### End Test Registry
 
             Write-ToLog -Message:('Begin new local user registry copy')
+            $filepath = "$($newUserProfileImagePath)"
+            ####### REMOVE THIS SECTION AFTER TESTING #######
+            # Create the file using New-Item cmdlet
+            icacls $filePath /setowner "NT AUTHORITY\SYSTEM"
+            icacls $filePath /grant "NT AUTHORITY\SYSTEM:(F)"
+            icacls $filePath /remove "BUILTIN\Administrators"
+            icacls $filePath /remove "BUILTIN\Users"
+            icacls $filePath /remove "BUILTIN\Authenticated Users"
+            icacls $filePath /inheritance:r
+            ####### REMOVE THIS SECTION AFTER TESTING  END #######
             # Give us admin rights to modify
             Write-ToLog -Message:("Take Ownership of $($newUserProfileImagePath)")
-            $path = takeown /F "$($newUserProfileImagePath)" /r /d Y
+            $path = takeown /F "$($newUserProfileImagePath)" /r /d Y 2>&1
+            # Check if any error occurred
+            if ($LASTEXITCODE -ne 0) {
+                # Store the error output in the variable
+                $pattern = 'INFO: (.+?\( "[^"]+" \))'
+                $matches = [regex]::Matches($path, $pattern)
+                Write-ToLog "Matches: $($matches)"
+                if ($matches.Count -gt 0) {
+                    foreach ($match in $matches) {
+                        Write-ToLog "Error Occured: $($match.Groups[1].Value)"
+                    }
+                }
+            }
+
+            # Display the error output if there was any
+            # if ($errorOutput) {
+            #     Write-Tolog "Error occurred: $errorOutput"
+            # }
+                        # Get the error for $path = takeown /F "$($newUserProfileImagePath)" /r /d Y and put it to Write-ToLog
+
+
+
             Write-ToLog -Message:("Get ACLs for $($newUserProfileImagePath)")
             $acl = Get-Acl ($newUserProfileImagePath)
             Write-ToLog -Message:("Current ACLs: $($acl.access)")
@@ -1755,6 +1814,23 @@ Function Start-Migration {
 
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUsername + '.' + $NetBiosName)
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
+            # Validate if NTUSER.DAT has correct permissions
+            $validateNTUserDatPermissions = Validate-DATFiles -path "$newUserProfileImagePath\NTUSER.DAT"
+            $validateUsrClassDatPermissions = Validate-DATFiles -path "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat"
+            if ($validateDatPermissions ) {
+                Write-ToLog -Message:("NTUSER.DAT Permissions are correct")
+            } else {
+                Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($newUserProfileImagePath)\NTUSER.DAT to ensure Administrators, System, and selected user have have Full Control")
+                $admuTracker.ntfsPermissions.fail = $true
+                break
+            }
+            if ($validateUsrClassDatPermissions) {
+                Write-ToLog -Message:("UsrClass.dat Permissions are correct")
+            } else {
+                Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($newUserProfileImagePath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control")
+                $admuTracker.ntfsPermissions.fail = $true
+                break
+            }
             # logging
             Write-ToLog -Message:('New User Profile Path: ' + $newUserProfileImagePath + ' New User SID: ' + $NewUserSID)
             Write-ToLog -Message:('Old User Profile Path: ' + $oldUserProfileImagePath + ' Old User SID: ' + $SelectedUserSID)
