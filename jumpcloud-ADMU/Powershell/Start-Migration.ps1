@@ -1785,6 +1785,7 @@ Function Start-Migration {
                         # Rename the old user profile path to the new name
                         # -ErrorAction Stop; Rename-Item doesn't throw terminating errors
                         Rename-Item -Path $oldUserProfileImagePath -NewName $JumpCloudUserName -ErrorAction Stop
+                        $datPath = "$($windowsDrive)\Users\$JumpCloudUserName"
                     } catch {
                         Write-ToLog -Message:("Unable to rename user profile path to new name - $JumpCloudUserName.")
                         $admuTracker.renameHomeDirectory.fail = $true
@@ -1796,6 +1797,7 @@ Function Start-Migration {
             } else {
                 Write-ToLog -Message:("Parameter to Update Home Path was not set.")
                 Write-ToLog -Message:("The $JumpCloudUserName account will point to $oldUserProfileImagePath profile path")
+                $datPath = $oldUserProfileImagePath
                 try {
                     Write-ToLog -Message:("Attempting to remove newly created $newUserProfileImagePath")
                     start-sleep 1
@@ -1811,26 +1813,21 @@ Function Start-Migration {
                 # Set the New User Profile Image Path to Old User Profile Path (they are the same)
                 $newUserProfileImagePath = $oldUserProfileImagePath
             }
-
-            Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUsername + '.' + $NetBiosName)
-            Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
-            # Validate if NTUSER.DAT has correct permissions
-            $validateNTUserDatPermissions = Validate-DATFiles -path "$newUserProfileImagePath\NTUSER.DAT"
-            $validateUsrClassDatPermissions = Validate-DATFiles -path "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat"
-            if ($validateDatPermissions ) {
-                Write-ToLog -Message:("NTUSER.DAT Permissions are correct")
+            # Validate if .DAT has correct permissions
+            $validateNTUserDatPermissions = Validate-DATFiles -path "$datPath\NTUSER.DAT"
+            $validateUsrClassDatPermissions = Validate-DATFiles -path "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat"
+            if ($validateNTUserDatPermissions ) {
+                Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath)")
             } else {
-                Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($newUserProfileImagePath)\NTUSER.DAT to ensure Administrators, System, and selected user have have Full Control")
-                $admuTracker.ntfsPermissions.fail = $true
-                break
+                Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($datPath)\NTUSER.DAT to ensure Administrators, System, and selected user have have Full Control") -level Error
             }
             if ($validateUsrClassDatPermissions) {
-                Write-ToLog -Message:("UsrClass.dat Permissions are correct")
+                Write-ToLog -Message:("UsrClass.dat Permissions are correct $($datPath)")
             } else {
-                Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($newUserProfileImagePath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control")
-                $admuTracker.ntfsPermissions.fail = $true
-                break
+                Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control") -level Error
             }
+            Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUsername + '.' + $NetBiosName)
+            Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
             # logging
             Write-ToLog -Message:('New User Profile Path: ' + $newUserProfileImagePath + ' New User SID: ' + $NewUserSID)
             Write-ToLog -Message:('Old User Profile Path: ' + $oldUserProfileImagePath + ' Old User SID: ' + $SelectedUserSID)
