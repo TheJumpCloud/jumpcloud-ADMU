@@ -1285,23 +1285,37 @@ namespace CosmosKey.Powershell.InvokeAsSystemSvc
     }
 }
 # Function to validate if NTUser.dat has SYSTEM, Administrators, and the specified user as full control
-function Validate-DATFiles {
+function Test-DATFilePermission {
     param (
         [Parameter(Mandatory = $true)]
         [System.String]
-        $path
+        $path,
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $username
     )
 
     $acl = Get-Acl $path
 
     $systemRule = $acl.Access | Where-Object { $_.IdentityReference -match "SYSTEM" -and $_.FileSystemRights -eq "FullControl" }
     $administratorsRule = $acl.Access | Where-Object { $_.IdentityReference -match "Administrators" -and $_.FileSystemRights -eq "FullControl" }
-    $specifiedUserRule = $acl.Access | Where-Object { $_.IdentityReference -match $UserProfilePath -and $_.FileSystemRights -eq "FullControl" }
-
+    $specifiedUserRule = $acl.Access | Where-Object { $_.IdentityReference -match $username -and $_.FileSystemRights -eq "FullControl" }
     $results = @{
-        "SystemPermissions" = if ($systemRule) { $true } else { $false }
-        "AdministratorsPermissions" = if ($administratorsRule) { $true } else { $false }
-        "SpecifiedUserPermissions" = if ($specifiedUserRule) { $true } else { $false }
+        "SystemPermissions"         = if ($systemRule) {
+            $true
+        } else {
+            $false
+        }
+        "AdministratorsPermissions" = if ($administratorsRule) {
+            $true
+        } else {
+            $false
+        }
+        "SpecifiedUserPermissions"  = if ($specifiedUserRule) {
+            $true
+        } else {
+            $false
+        }
     }
 
     # If all rules are true, return true
@@ -1310,7 +1324,6 @@ function Validate-DATFiles {
     } else {
         return $false
     }
-
 }
 #endregion Agent Install Helper Functions
 Function Start-Migration {
@@ -1617,7 +1630,7 @@ Function Start-Migration {
             # if ($errorOutput) {
             #     Write-Tolog "Error occurred: $errorOutput"
             # }
-                        # Get the error for $path = takeown /F "$($newUserProfileImagePath)" /r /d Y and put it to Write-ToLog
+            # Get the error for $path = takeown /F "$($newUserProfileImagePath)" /r /d Y and put it to Write-ToLog
 
 
 
@@ -1813,19 +1826,7 @@ Function Start-Migration {
                 # Set the New User Profile Image Path to Old User Profile Path (they are the same)
                 $newUserProfileImagePath = $oldUserProfileImagePath
             }
-            # Validate if .DAT has correct permissions
-            $validateNTUserDatPermissions = Validate-DATFiles -path "$datPath\NTUSER.DAT"
-            $validateUsrClassDatPermissions = Validate-DATFiles -path "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat"
-            if ($validateNTUserDatPermissions ) {
-                Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath)")
-            } else {
-                Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($datPath)\NTUSER.DAT to ensure Administrators, System, and selected user have have Full Control") -level Error
-            }
-            if ($validateUsrClassDatPermissions) {
-                Write-ToLog -Message:("UsrClass.dat Permissions are correct $($datPath)")
-            } else {
-                Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control") -level Error
-            }
+
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUsername + '.' + $NetBiosName)
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
             # logging
@@ -1839,7 +1840,19 @@ Function Start-Migration {
             $Acl.SetAccessRule($Ar)
             $Acl | Set-Acl -Path $newUserProfileImagePath
             #TODO: reverse track this if we fail later
-
+            # Validate if .DAT has correct permissions
+            $validateNTUserDatPermissions = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName
+            $validateUsrClassDatPermissions = Test-DATFilePermission -path "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat" -username $JumpCloudUserName
+            if ($validateNTUserDatPermissions ) {
+                Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath)")
+            } else {
+                Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($datPath)\NTUSER.DAT to ensure Administrators, System, and selected user have have Full Control") -level Error
+            }
+            if ($validateUsrClassDatPermissions) {
+                Write-ToLog -Message:("UsrClass.dat Permissions are correct $($datPath)")
+            } else {
+                Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control") -level Error
+            }
             ## End Regedit Block ##
 
             ### Active Setup Registry Entry ###
