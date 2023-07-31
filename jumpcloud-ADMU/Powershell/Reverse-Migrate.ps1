@@ -16,10 +16,10 @@ function Get-UserHiveFile {
         Throw "Previous SID or Profile Path does not exist in the registry"
     }
 
-    # Get the backup NTUser.dat sid and profile path
+    # Get the backup NTUSER.DAT sid and profile path
     $registryBackupPaths = @(
         "$($CurrentProfileImagePath)\AppData\Local\Microsoft\Windows\UsrClass.dat",
-        "$($CurrentProfileImagePath)\NTUser.dat"
+        "$($CurrentProfileImagePath)\NTUSER.DAT"
     )
 
     foreach ($registryBackupPath in $registryBackupPaths) {
@@ -86,23 +86,23 @@ function Update-NTUserDat {
     process {
         Write-ToLog "Old Profile Path: $oldProfileImagePath"
         Write-ToLog "$($backupProfileImageSid)"
-        ##### Rename the NTUser.dat files in User's profile
+        ##### Rename the NTUSER.DAT files in User's profile
         $renameDate = Get-Date -UFormat "%Y-%m-%d-%H%M%S"
-        Rename-Item -Path "$($CurrentProfileImagePath)\NTUser.dat" -NewName "NTUser_old_$renameDate.dat" #Test
-        # Check if NTUser.dat file exists
+        Rename-Item -Path "$($CurrentProfileImagePath)\NTUSER.DAT" -NewName "NTUser_old_$renameDate.dat" #Test
+        # Check if NTUSER.DAT file exists
         # Validate if the rename was successful
         if (-Not (Test-Path -Path "$($CurrentProfileImagePath)\NTUser_old_$renameDate.dat")) {
-            Write-toLog "Failed to rename NTUser.dat to NTUser_old_$renameDate.dat"
+            Write-toLog "Failed to rename NTUSER.DAT to NTUser_old_$renameDate.dat"
             # Revert the migration
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($SelectedUserSid)" -Name 'ProfileImagePath' -Value $CurrentProfileImagePath
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($backupProfileImageSid)" -Name "ProfileImagePath" -Value $oldProfileImagePath
             throw
         } else {
-            Write-toLog "Renamed NTUser.dat to NTUser_old_$renameDate.dat"
+            Write-toLog "Renamed NTUSER.DAT to NTUser_old_$renameDate.dat"
         }
-        # Find and rename C:\Users\kentest\NTUser_Original_2021-03-24-142959.dat to NTUser.dat regex
+        # Find and rename C:\Users\kentest\NTUser_Original_2021-03-24-142959.dat to NTUSER.DAT regex
         $pattern = "NTUser_Original_*"
-        $replacement = "NTUser.dat"
+        $replacement = "NTUSER.DAT"
         #TODO: Check if only one file exists
         $NTbackupFile = Get-ChildItem -Path $CurrentProfileImagePath -Filter $pattern -Force
         if ([System.String]::IsNullOrEmpty($NTbackupFile) -or $NTbackupFile.Count -gt 1) {
@@ -116,15 +116,15 @@ function Update-NTUserDat {
             Write-toLog "Found Profile backup file '$NTbackupFile'."
         }
         $NTbackupFile | Rename-Item -NewName { $_.name -replace $NTbackupFile.Name, $replacement }
-        # Validate if NTUser.dat file exists
-        if (-Not (Test-Path -Path "$($CurrentProfileImagePath)\NTUser.dat")) {
-            Write-toLog "NTUser.dat file does not exist"
+        # Validate if NTUSER.DAT file exists
+        if (-Not (Test-Path -Path "$($CurrentProfileImagePath)\NTUSER.DAT")) {
+            Write-toLog "NTUSER.DAT file does not exist"
             # Revert the migration
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($SelectedUserSid)" -Name 'ProfileImagePath' -Value $CurrentProfileImagePath
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($backupProfileImageSid)" -Name 'ProfileImagePath' -Value $oldProfileImagePath
             throw
         } else {
-            Write-toLog "Found NTUser.dat file."
+            Write-toLog "Found NTUSER.DAT file."
             return $true
         }
     }
@@ -181,14 +181,13 @@ function Update-UsrClassDat {
     }
 
 }
-function Reverse-Migration {
+function Undo-Migration {
     #parameter is SID of the user to undo the migration for
     param (
         [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][string]$SelectedUserSid
     )
 
     $validateRegPath, $CurrentProfileImagePath = Get-UserHiveFile -SelectedUserSid $SelectedUserSid # Exit if error
-        # Get the old profile path from the registry
 
     $validateDomain = get-Domain # Exit if error
     if ($validateDomain) {
@@ -197,13 +196,12 @@ function Reverse-Migration {
         Write-ToLog "This device is not connected to a domain. Please connect to a domain and try again."
         Throw "Domain not found"
     }
-    # $CurrentProfileImagePath = Get-ItemPropertyValue -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($SelectedUserSid)" -Name 'ProfileImagePath'
-    # Write-ToLog "Current Profile Path: $CurrentProfileImagePath"
+
     if ($validateRegPath) {
         try {
             # Check if the registry hive is loaded
             Write-toLog "Loading registry backup hive"
-            reg load HKU\TempHive $CurrentProfileImagePath\NTUser.dat
+            reg load HKU\TempHive $CurrentProfileImagePath\NTUSER.DAT
         }
         catch {
             Write-toLog "Failed to load registry backup hive"
@@ -221,7 +219,6 @@ function Reverse-Migration {
 
         $renameProfileImagePath = $CurrentProfileImagePath
         Write-Tolog "Current Profile Path: $renameProfileImagePath"
-        # TODO: Rename folder if homepath is different
         if ($validateHomePath) {
             Write-ToLog "Homepath is different from the backup. Updating homepath..."
             # Set the current profile path to the backup registry profile path
@@ -278,7 +275,7 @@ function Reverse-Migration {
             $updateUsrClassDat = Update-UsrClassDat -CurrentProfileImagePath $renameProfileImagePath -backupProfileImageSid $backupProfileImageSid -oldProfileImagePath $oldProfileImagePath -SelectedUserSid $SelectedUserSid
         }
         if ($updateUsrClassDat) {
-            Write-Tolog "Successfully updated NTUser.dat and UsrClass.dat files."
+            Write-Tolog "Successfully updated NTUSER.DAT and UsrClass.dat files."
             if ($validateHomePath) {
                 Write-Tolog "Renaming user folder..."
                 Rename-Item -Path $renameProfileImagePath -NewName $CurrentProfileImagePath -Force
