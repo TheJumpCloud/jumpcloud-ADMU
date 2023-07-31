@@ -526,7 +526,6 @@ Describe 'Functions' {
         It 'Should return false when a users hive permissions are correct' {
             $datUserFalse = "ADMU_DATPermission" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             InitUser -UserName $datUserFalse -Password $Password
-            $datUserFalse = 'ADMU_bind_2'
             $filePaths = @("C:\Users\$datUserFalse\AppData\Local\Microsoft\Windows\UsrClass.dat", "C:\Users\$datUserFalse\NTUser.DAT")
             $requiredAccounts = @("SYSTEM", "Administrators", "$datUserFalse")
             foreach ($FilePath in $filePaths) {
