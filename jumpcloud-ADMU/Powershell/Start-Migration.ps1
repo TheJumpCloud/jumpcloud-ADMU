@@ -1617,7 +1617,15 @@ Function Start-Migration {
 
             Write-ToLog -Message:("Get ACLs for $($newUserProfileImagePath)")
             $acl = Get-Acl ($newUserProfileImagePath)
-            Write-ToLog -Message:("Current ACLs: $($acl.access)")
+            Write-ToLog -Message:("Current ACLs:")
+            foreach ($accessItem in $acl.access) {
+                write-ToLog "FileSystemRights: $($accessItem.FileSystemRights)"
+                write-ToLog "AccessControlType: $($accessItem.AccessControlType)"
+                write-ToLog "IdentityReference: $($accessItem.IdentityReference)"
+                write-ToLog "IsInherited: $($accessItem.IsInherited)"
+                write-ToLog "InheritanceFlags: $($accessItem.InheritanceFlags)"
+                write-ToLog "PropagationFlags: $($accessItem.PropagationFlags)`n"
+            }
             Write-ToLog -Message:("Setting Administrator Group Access Rule on: $($newUserProfileImagePath)")
             $AdministratorsGroupSIDName = ([wmi]"Win32_SID.SID='S-1-5-32-544'").AccountName
             $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($AdministratorsGroupSIDName, "FullControl", "Allow")

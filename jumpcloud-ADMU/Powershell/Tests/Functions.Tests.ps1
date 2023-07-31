@@ -514,6 +514,7 @@ Describe 'Functions' {
     Context 'Validates that the Registry Hive Permissions are correct, given a username' {
         It 'Should return true when a users hive permissions are correct' {
             $datUserTrue = "ADMU_DATPermission" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $password = '$T#st1234'
             InitUser -UserName $datUserTrue -Password $Password
 
             # Test NTUser dat permissions
@@ -525,6 +526,7 @@ Describe 'Functions' {
         }
         It 'Should return false when a users hive permissions are correct' {
             $datUserFalse = "ADMU_DATPermission" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $password = '$T#st1234'
             InitUser -UserName $datUserFalse -Password $Password
             $filePaths = @("C:\Users\$datUserFalse\AppData\Local\Microsoft\Windows\UsrClass.dat", "C:\Users\$datUserFalse\NTUSER.DAT")
             $requiredAccounts = @("SYSTEM", "Administrators", "$datUserFalse")
