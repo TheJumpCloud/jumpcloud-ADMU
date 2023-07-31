@@ -1,3 +1,13 @@
+## 2.4.2
+
+Release Date: Aug 31,2023
+
+#### RELEASE NOTES
+
+```
+* Add additional logging and validate file permissions when migrating.
+```
+
 ## 2.4.1
 
 Release Date: March 31,2023

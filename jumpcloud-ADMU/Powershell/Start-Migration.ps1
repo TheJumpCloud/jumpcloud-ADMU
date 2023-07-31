@@ -1347,7 +1347,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.4.1'
+        $admuVersion = '2.4.2'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
@@ -1600,16 +1600,6 @@ Function Start-Migration {
             ### End Test Registry
 
             Write-ToLog -Message:('Begin new local user registry copy')
-            $filepath = "$($newUserProfileImagePath)"
-            ####### REMOVE THIS SECTION AFTER TESTING #######
-            # Create the file using New-Item cmdlet
-            icacls $filePath /setowner "NT AUTHORITY\SYSTEM"
-            icacls $filePath /grant "NT AUTHORITY\SYSTEM:(F)"
-            icacls $filePath /remove "BUILTIN\Administrators"
-            icacls $filePath /remove "BUILTIN\Users"
-            icacls $filePath /remove "BUILTIN\Authenticated Users"
-            icacls $filePath /inheritance:r
-            ####### REMOVE THIS SECTION AFTER TESTING  END #######
             # Give us admin rights to modify
             Write-ToLog -Message:("Take Ownership of $($newUserProfileImagePath)")
             $path = takeown /F "$($newUserProfileImagePath)" /r /d Y 2>&1
@@ -1617,22 +1607,13 @@ Function Start-Migration {
             if ($LASTEXITCODE -ne 0) {
                 # Store the error output in the variable
                 $pattern = 'INFO: (.+?\( "[^"]+" \))'
-                $matches = [regex]::Matches($path, $pattern)
-                Write-ToLog "Matches: $($matches)"
-                if ($matches.Count -gt 0) {
-                    foreach ($match in $matches) {
-                        Write-ToLog "Error Occured: $($match.Groups[1].Value)"
+                $errmatches = [regex]::Matches($path, $pattern)
+                if ($errmatches.Count -gt 0) {
+                    foreach ($match in $errmatches) {
+                        Write-ToLog "Takeown could not set permissions for: $($match.Groups[1].Value)"
                     }
                 }
             }
-
-            # Display the error output if there was any
-            # if ($errorOutput) {
-            #     Write-Tolog "Error occurred: $errorOutput"
-            # }
-            # Get the error for $path = takeown /F "$($newUserProfileImagePath)" /r /d Y and put it to Write-ToLog
-
-
 
             Write-ToLog -Message:("Get ACLs for $($newUserProfileImagePath)")
             $acl = Get-Acl ($newUserProfileImagePath)
