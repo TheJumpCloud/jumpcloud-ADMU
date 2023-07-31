@@ -1294,36 +1294,43 @@ function Test-DATFilePermission {
         [System.String]
         $username
     )
+    begin {
+        $aclUser = "$($Env:ComputerName)\$username)"
+    }
+    process {
 
-    $acl = Get-Acl $path
+        $acl = Get-Acl $path
 
-    $systemRule = $acl.Access | Where-Object { $_.IdentityReference -match "SYSTEM" -and $_.FileSystemRights -eq "FullControl" }
-    $administratorsRule = $acl.Access | Where-Object { $_.IdentityReference -match "Administrators" -and $_.FileSystemRights -eq "FullControl" }
-    $specifiedUserRule = $acl.Access | Where-Object { $_.IdentityReference -match $username -and $_.FileSystemRights -eq "FullControl" }
-    $results = @{
-        "SystemPermissions"         = if ($systemRule) {
-            $true
-        } else {
-            $false
+        $systemRule = $acl.Access | Where-Object { $_.IdentityReference -eq "NT Authority\SYSTEM" -and $_.FileSystemRights -eq "FullControl" }
+        $administratorsRule = $acl.Access | Where-Object { $_.IdentityReference -eq "BUILTIN\Administrators" -and $_.FileSystemRights -eq "FullControl" }
+        $specifiedUserRule = $acl.Access | Where-Object { $_.IdentityReference -eq $($aclUser) -and $_.FileSystemRights -eq "FullControl" }
+        $results = @{
+            "SystemPermissions"         = if ($systemRule) {
+                $true
+            } else {
+                $false
+            }
+            "AdministratorsPermissions" = if ($administratorsRule) {
+                $true
+            } else {
+                $false
+            }
+            "SpecifiedUserPermissions"  = if ($specifiedUserRule) {
+                $true
+            } else {
+                $false
+            }
         }
-        "AdministratorsPermissions" = if ($administratorsRule) {
-            $true
+    }
+    end {
+        # If all rules are true, return true
+        if (($results.SystemPermissions -eq $true) -and ($results.AdministratorsPermissions -eq $true) -and ($results.SpecifiedUserPermissions -eq $true)) {
+            return $true
         } else {
-            $false
-        }
-        "SpecifiedUserPermissions"  = if ($specifiedUserRule) {
-            $true
-        } else {
-            $false
+            return $false
         }
     }
 
-    # If all rules are true, return true
-    if (($results.SystemPermissions -eq $true) -and ($results.AdministratorsPermissions -eq $true) -and ($results.SpecifiedUserPermissions -eq $true)) {
-        return $true
-    } else {
-        return $false
-    }
 }
 #endregion Agent Install Helper Functions
 Function Start-Migration {
