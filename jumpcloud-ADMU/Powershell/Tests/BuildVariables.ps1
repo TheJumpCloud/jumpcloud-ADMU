@@ -96,3 +96,23 @@ $JCExistingHash = @{
 
     }
 }
+$JCReverseMigrateHash = @{
+    reverseMigrateTest = @{
+        Description    = 'Existing'
+        Username       = 'ADMU_ReverseTest';
+        UserSID        = '';
+        Password       = $testUserPassword;
+        JCUsername     = 'ADMU_ReverseTest2';
+        UpdateHomePath = $false
+
+    }
+    # reverseMigrateTest2 = @{
+    #     Description    = 'Existing'
+    #     Username       = 'ADMU_ReverseHomePath';
+    #     UserSID        = '';
+    #     Password       = $testUserPassword;
+    #     JCUsername     = 'ADMU_ReverseHomePath2';
+    #     UpdateHomePath = $true
+
+    # }
+}
