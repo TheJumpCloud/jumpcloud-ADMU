@@ -1295,7 +1295,7 @@ function Test-DATFilePermission {
         $username
     )
     begin {
-        $aclUser = "$($Env:ComputerName)\$username)"
+        $aclUser = "$($Env:ComputerName)\$username"
     }
     process {
 
