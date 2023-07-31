@@ -651,21 +651,7 @@ $lvProfileList.Add_SelectionChanged( {
         if (Test-Path HKU:\TempHive) {
             reg unload HKU\TempHive
         }
-        # reg load HKU\TempHive $CurrentProfileImagePath\NTUSER.DAT
-        # $backupProfileImagePath = Get-ItemPropertyValue -Path 'Registry::HKEY_USERS\TempHive\Software\JCADMU' -Name 'previousProfilePath' -ErrorAction SilentlyContinue 2>&1
-        # $backupProfileImageSid = Get-ItemPropertyValue -Path 'Registry::HKEY_USERS\TempHive\Software\JCADMU' -Name 'previousSID' -ErrorAction SilentlyContinue 2>&1
-
-        #TODO:
-        # $results = REG LOAD HKU\$($UserSid)_admu "$ProfilePath\NTUSER.DAT.BAK" *>&1
-        #         if ($?) {
-        #             Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
-        #         } else {
-        #             Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
-        #         }
-
-
         try {
-            #TODO: Figure out error handling where we are able to get values from the registry
             reg load HKU\TempHive $CurrentProfileImagePath\NTUSER.DAT
             $backupProfileImagePath = Get-ItemPropertyValue -Path 'Registry::HKEY_USERS\TempHive\Software\JCADMU' -Name 'previousProfilePath' -ErrorAction SilentlyContinue 2>&1
             $backupProfileImageSid = Get-ItemPropertyValue -Path 'Registry::HKEY_USERS\TempHive\Software\JCADMU' -Name 'previousSID' -ErrorAction SilentlyContinue 2>&1
@@ -673,8 +659,7 @@ $lvProfileList.Add_SelectionChanged( {
         catch {
             Write-Tolog "Selected user does not have a previous profile path"
         }
-        # Write-Tolog "$($backupProfileImageSid) Backup Home Path"
-        # Write-Tolog "$($SelectedUserSID) SID Home Path"
+
         if (-not [string]::isnullorempty($backupProfileImageSid)) {
             $validateHomePath = Validate-UpdatedHomepath -backupProfileSID $backupProfileImageSid -currentProfileSID $SelectedUserSid
             Write-Tolog "Validate Updated Homepath: $($validateHomePath)"
