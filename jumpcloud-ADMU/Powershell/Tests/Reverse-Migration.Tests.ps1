@@ -18,7 +18,7 @@ Describe 'Migration Test Scenarios' {
             $randomSID = -join ((65..90)  + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             Mock Get-UserHiveFile {$True}
             Mock Get-Domain {$False}
-            {Reverse-Migration -SelectedUserSID $randomSID} | Should -Throw -expectedMessage "Domain not found"
+            {Undo-Migration -SelectedUserSID $randomSID} | Should -Throw -expectedMessage "Domain not found"
         }
     }
     #TODO: Function test
@@ -36,7 +36,7 @@ Describe 'Migration Test Scenarios' {
 
                 Rename-Item -Path "C:\Users\$($localUser1)\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "C:\Users\$($localUser1)\AppData\Local\Microsoft\Windows\Test.dat"
 
-                {Reverse-Migration -SelectedUserSid $MigrateUserSID} | Should -Throw -expectedMessage "Registry backup file does not exist"
+                {Undo-Migration -SelectedUserSid $MigrateUserSID} | Should -Throw -expectedMessage "Registry backup file does not exist"
 
             }
             It 'Validate UsrClass Hive' {
@@ -50,12 +50,12 @@ Describe 'Migration Test Scenarios' {
                 $MigrateUserSID = Get-LocalUser -Name $user2 | Select-Object -ExpandProperty SID
                 Rename-Item -Path "C:\Users\$($localUser2)\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "C:\Users\$($localUser2)\AppData\Local\Microsoft\Windows\Test.dat"
 
-                {Reverse-Migration -SelectedUserSid $MigrateUserSID} | Should -Throw -expectedMessage "Registry backup file does not exist"
+                {Undo-Migration -SelectedUserSid $MigrateUserSID} | Should -Throw -expectedMessage "Registry backup file does not exist"
 
             }
             It 'Failure Test using Random SID' {
                 $randomSID = -join ((65..90)  + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-                {Reverse-Migration -SelectedUserSid $randomSID} | Should -Throw
+                {Undo-Migration -SelectedUserSid $randomSID} | Should -Throw
             }
             It 'Test Updated Homepath'{
                 BeforeAll{
@@ -77,7 +77,7 @@ Describe 'Migration Test Scenarios' {
                     # Get local path
                     $updatedHomePath = Get-LocalUser -Name $localUser | Select-Object -ExpandProperty ProfilePath
                     #Check SID
-                    {Reverse-Migration -SelectedUserSid $MigrateUserSID} | Should -not -Throw
+                    {Undo-Migration -SelectedUserSid $MigrateUserSID} | Should -not -Throw
 
                     $ReverseMigratedUserHomepath = Get-LocalUser -Name $localUser | Select-Object -ExpandProperty ProfilePath
                     $ReverseMigratedUserHomepath | Should -not -Be $updatedHomePath
@@ -104,7 +104,7 @@ Describe 'Migration Test Scenarios' {
                     # The HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI should be set to the migrated user
                     Write-Host "##### Reverse Migrate User Test $($migrateUser) #####"
                     #Check SID
-                    {Reverse-Migration -SelectedUserSid $MigrateUserSID} | Should -not -Throw
+                    {Undo-Migration -SelectedUserSid $MigrateUserSID} | Should -not -Throw
 
                     $ReverseMigratedUser = Get-LocalUser -Name $localUser | Select-Object -ExpandProperty SID
                     $ReverseMigratedUser | Should -not -Be $MigrateUserSID

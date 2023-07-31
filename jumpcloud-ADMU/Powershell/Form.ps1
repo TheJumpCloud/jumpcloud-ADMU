@@ -808,7 +808,7 @@ $bMigrateProfile.Add_Click( {
             }
                 Write-ToLog "Reverse Migrate button clicked"
                 try {
-                    Reverse-Migration -SelectedUserSid $SelectedUserSid
+                    Undo-Migration -SelectedUserSid $SelectedUserSid
                 }
                 catch {
                     Write-ToLog "Reverse Migration failed"
