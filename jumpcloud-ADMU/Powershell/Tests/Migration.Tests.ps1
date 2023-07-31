@@ -8,6 +8,23 @@ BeforeAll {
     # setup tests (This creates any of the users in the build vars dictionary)
     write-host "Running SetupAgent Script:"
     . $PSScriptRoot\SetupAgent.ps1
+    # For each user in testing hash, create new user with the specified password and init the account
+    forEach ($User in $userTestingHash.Values) {
+        InitUser -UserName $($User.Username) -Password $($User.Password)
+    }
+    forEach ($User in $JCCommandTestingHash.Values) {
+        InitUser -UserName $($User.Username) -Password $($User.Password)
+    }
+    ForEach ($User in $JCFunctionalHash.Values) {
+        InitUser -UserName $($User.Username) -Password $($User.Password)
+    }
+    ForEach ($User in $JCReversionHash.Values) {
+        InitUser -UserName $($User.Username) -Password $($User.Password)
+    }
+    ForEach ($User in $JCExistingHash.Values) {
+        InitUser -UserName $($User.Username) -Password $($User.Password)
+    }
+    # End region for test user generation
 
     $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
     $regex = 'systemKey\":\"(\w+)\"'

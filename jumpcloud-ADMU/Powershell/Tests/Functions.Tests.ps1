@@ -2,6 +2,9 @@ BeforeAll {
     Write-Host "Script Location: $PSScriptRoot"
     Write-Host "Dot-Sourcing Start-Migration Script"
     . $PSScriptRoot\..\Start-Migration.ps1
+    Write-Host "Dot-Sourcing Test Functions"
+    . $PSScriptRoot\SetupAgent.ps1
+    Write-Host "Running Connect-JCOnline"
     Connect-JCOnline -JumpCloudApiKey $env:JCApiKey -JumpCloudOrgId $env:JCOrgId -Force
 }
 Describe 'Functions' {
@@ -505,6 +508,68 @@ Describe 'Functions' {
     Context 'Restart-ComputerWithDelay Function' -Skip {
         # Test Manually
         It 'Restart-ComputerWithDelay' {
+        }
+    }
+
+    Context 'Validates that the Registry Hive Permissions are correct, given a username' {
+        It 'Should return true when a users hive permissions are correct' {
+            $datUserTrue = "ADMU_DATPermission" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            InitUser -UserName $datUserTrue -Password $Password
+
+            # Test NTUser dat permissions
+            $NTUser = Test-DATFilePermission -Path "C:\Users\$datUserTrue\NTUser.DAT" -username $datUserTrue
+            # Test UsrClass dat permissions
+            $UsrClass = Test-DATFilePermission -Path "C:\Users\$datUserTrue\AppData\Local\Microsoft\Windows\UsrClass.dat" -username $datUserTrue
+            $NTUser | Should -Be $true
+            $UsrClass | Should -Be $true
+        }
+        It 'Should return false when a users hive permissions are correct' {
+            $datUserFalse = "ADMU_DATPermission" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            InitUser -UserName $datUserFalse -Password $Password
+            $datUserFalse = 'ADMU_bind_2'
+            $filePaths = @("C:\Users\$datUserFalse\AppData\Local\Microsoft\Windows\UsrClass.dat", "C:\Users\$datUserFalse\NTUser.DAT")
+            $requiredAccounts = @("SYSTEM", "Administrators", "$datUserFalse")
+            foreach ($FilePath in $filePaths) {
+
+                # Get current access control list:
+                $FileACL = (Get-Item $FilePath -Force).GetAccessControl('Access')
+
+                # Remove inheritance but preserve existing entries
+                $FileACL.SetAccessRuleProtection($true, $true)
+                Set-Acl $FilePath -AclObject $FileACL
+
+                # Retrieve new explicit set of permissions
+                $FileACL = Get-Acl $FilePath
+
+                foreach ($requiredAccount in $requiredAccounts) {
+                    # Retrieve one of the required rules
+                    Write-Host "removing: $($requiredAccount) Access"
+                    $ruleToRemove = $FileACL.GetAccessRules($true, $true, [System.Security.Principal.NTAccount]) | Where-Object { $_.IdentityReference -match $requiredAccount }
+
+                    # Remove it - or modify it and use SetAccessRule() instead
+                    $FileACL.RemoveAccessRule($ruleToRemove)
+
+                    # Set ACL on file again
+                    Set-Acl $FilePath -AclObject $FileACL
+
+                    # Test NTUser dat permissions
+                    $NTUser = Test-DATFilePermission -Path $FilePath -username $datUserFalse
+                    Write-Host "this should be false: $NTUser"
+                    $NTUser | Should -Be $false
+
+                    # Retrieve new explicit set of permissions
+                    $FileACL = Get-Acl $FilePath
+
+                    # Add the rule again
+                    $FileACL.SetAccessRule($ruleToRemove)
+                    # Set ACL on file again
+                    Set-Acl $FilePath -AclObject $FileACL
+                    $NTUser = Test-DATFilePermission -Path $FilePath -username $datUserFalse
+                    Write-Host "this should be true: $NTUser"
+                    # Test UsrClass dat permissions
+                    $NTUser | Should -Be $true
+                }
+            }
         }
     }
 }
