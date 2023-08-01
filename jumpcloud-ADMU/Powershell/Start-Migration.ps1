@@ -911,7 +911,7 @@ function Get-mtpOrganization {
     process {
         # if there's only one org return found org, else prompt for selection
         if (($results.count -eq 1) -And ($($results._id))) {
-            Write-ToLog -Message "API Key Validated`nOrgName: $($results.DisplayName)`nOrgID: $($results._id)"
+            Write-ToLog -Message "API Key Validated`nOrgName: $($results.DisplayName)"
             $orgs = $results._id, $results.DisplayName
         } elseif (($results.count -gt 1)) {
             Write-ToLog -Message "Found $($results.count) orgs with the specifed API Key"
@@ -920,7 +920,7 @@ function Get-mtpOrganization {
                 $true {
                     Write-ToLog -Message "Prompting for MTP Admin Selection"
                     $orgs = show-mtpSelection -Orgs $results
-                    Write-ToLog -Message "API Key Validated`nOrgName: $($orgs[1])`nOrgID: $($orgs[0])"
+                    Write-ToLog -Message "API Key Validated`nOrgName: $($orgs[1])"
                 }
                 Default {
                     Write-ToLog -Message "API Key appears to be a MTP Admin Key. Please specify the JumpCloudOrgID Parameter and try again"
@@ -1292,18 +1292,32 @@ function Test-DATFilePermission {
         $path,
         [Parameter(Mandatory = $true)]
         [System.String]
-        $username
+        $username,
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $type
+
     )
     begin {
         $aclUser = "$($Env:ComputerName)\$username"
+        switch ($type) {
+            'registry' {
+                $FilePermissionType = 'RegistryRights'
+            }
+            'ntfs' {
+                $FilePermissionType = 'FileSystemRights'
+            }
+        }
     }
     process {
 
         $acl = Get-Acl $path
-
-        $systemRule = $acl.Access | Where-Object { $_.IdentityReference -eq "NT Authority\SYSTEM" -and $_.FileSystemRights -eq "FullControl" }
-        $administratorsRule = $acl.Access | Where-Object { $_.IdentityReference -eq "BUILTIN\Administrators" -and $_.FileSystemRights -eq "FullControl" }
-        $specifiedUserRule = $acl.Access | Where-Object { $_.IdentityReference -eq $($aclUser) -and $_.FileSystemRights -eq "FullControl" }
+        # TODO: re-write this to check that that each user has an entry and that their access control type is 'allow'
+        # Throw error if they have two entries and one of those is an explicit deny
+        # Throw error if one of those user entries is missing
+        $systemRule = $acl.Access | Where-Object { $_.IdentityReference -eq "NT Authority\SYSTEM" -and $_.$($FilePermissionType) -eq "FullControl" -and ($_.AccessControlType -ne "Allow") }
+        $administratorsRule = $acl.Access | Where-Object { $_.IdentityReference -eq "BUILTIN\Administrators" -and $_.$($FilePermissionType) -eq "FullControl" -and ($_.AccessControlType -ne "Allow") }
+        $specifiedUserRule = $acl.Access | Where-Object { $_.IdentityReference -eq $($aclUser) -and $_.$($FilePermissionType) -eq "FullControl" -and ($_.AccessControlType -eq "Allow") }
         $results = @{
             "SystemPermissions"         = if ($systemRule) {
                 $true
@@ -1665,6 +1679,15 @@ Function Start-Migration {
                 $admuTracker.copyRegistry.fail = $true
                 break
             }
+            # Validate file permissions on registry item
+            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
+                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+            }
+            # TODO: save to variable, write-toLog whether or not the tests were validated
+            Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_admu" -username $jumpcloudUsername -type 'registry'
+            Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_Classes_admu" -username $jumpcloudUsername -type 'registry'
+
             $admuTracker.copyRegistry.pass = $true
 
             # Copy the profile containing the correct access and data to the destination profile
@@ -1672,10 +1695,6 @@ Function Start-Migration {
 
             # Set Registry Check Key for New User
             # Check that the installed components key does not exist
-            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
-                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
-            }
             $ADMU_PackageKey = "HKEY_USERS:\$($newusersid)_admu\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
             if (Get-Item $ADMU_PackageKey -ErrorAction SilentlyContinue) {
                 # If the account to be converted already has this key, reset the version
@@ -1837,8 +1856,8 @@ Function Start-Migration {
             $Acl | Set-Acl -Path $newUserProfileImagePath
             #TODO: reverse track this if we fail later
             # Validate if .DAT has correct permissions
-            $validateNTUserDatPermissions = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName
-            $validateUsrClassDatPermissions = Test-DATFilePermission -path "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat" -username $JumpCloudUserName
+            $validateNTUserDatPermissions = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'
+            $validateUsrClassDatPermissions = Test-DATFilePermission -path "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat" -username $JumpCloudUserName -type 'ntfs'
             if ($validateNTUserDatPermissions ) {
                 Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath)")
             } else {

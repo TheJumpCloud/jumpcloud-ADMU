@@ -120,7 +120,7 @@ function show-mtpSelection {
     end {
         $combobox.Add_SelectedIndexChanged({
                 #output the selected value and text
-                $dynamicLabel.Text = "OrgName: $($combobox.SelectedItem['Text'])`nOrgID: $($combobox.SelectedItem['Value'])"
+                $dynamicLabel.Text = "OrgName: $($combobox.SelectedItem['Text'])"
                 $dynamicLabel.Refresh();
                 # write-host $combobox.SelectedItem["Value"] $combobox.SelectedItem["Text"]
             })
