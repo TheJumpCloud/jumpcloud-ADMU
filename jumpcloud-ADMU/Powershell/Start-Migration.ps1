@@ -1312,39 +1312,157 @@ function Test-DATFilePermission {
     process {
 
         $acl = Get-Acl $path
-        # TODO: re-write this to check that that each user has an entry and that their access control type is 'allow'
-        # Throw error if they have two entries and one of those is an explicit deny
-        # Throw error if one of those user entries is missing
-        $systemRule = $acl.Access | Where-Object { $_.IdentityReference -eq "NT Authority\SYSTEM" -and $_.$($FilePermissionType) -eq "FullControl" -and ($_.AccessControlType -ne "Allow") }
-        $administratorsRule = $acl.Access | Where-Object { $_.IdentityReference -eq "BUILTIN\Administrators" -and $_.$($FilePermissionType) -eq "FullControl" -and ($_.AccessControlType -ne "Allow") }
-        $specifiedUserRule = $acl.Access | Where-Object { $_.IdentityReference -eq $($aclUser) -and $_.$($FilePermissionType) -eq "FullControl" -and ($_.AccessControlType -eq "Allow") }
-        $results = @{
-            "SystemPermissions"         = if ($systemRule) {
-                $true
-            } else {
-                $false
-            }
-            "AdministratorsPermissions" = if ($administratorsRule) {
-                $true
-            } else {
-                $false
-            }
-            "SpecifiedUserPermissions"  = if ($specifiedUserRule) {
-                $true
-            } else {
-                $false
+        #$acl.access
+        # Using AccessControlType to check if it's a deny rule instead of allow since, with NTFS permissions, even if a user/admin is denied, there will still be an allow rule for them and not null
+        $systemRule = $acl.Access | Where-Object { $_.IdentityReference -eq "NT AUTHORITY\SYSTEM" -and $_.$($FilePermissionType) -eq "FullControl"} # and not $null
+        $administratorsRule = $acl.Access | Where-Object { $_.IdentityReference -eq "BUILTIN\Administrators" -and $_.$($FilePermissionType) -eq "FullControl"}
+        $specifiedUserRule = $acl.Access | Where-Object { $_.IdentityReference -eq $($aclUser) -and $_.$($FilePermissionType) -eq "FullControl"}
+
+    $permissionsHash = @{}
+
+if ($systemRule) {
+    # Check if it is greater than 1
+    $systemRule.Count
+    if ($systemRule.Count -ge 1) {
+        foreach ($rule in $systemRule) {
+            if ($rule.AccessControlType -eq "Deny") {
+                $systemPermissions = [PSCustomObject]@{
+                    access             = $rule.AccessControlType
+                    permissionType     = $rule.$($FilePermissionType)
+                    identityReference  = $rule.IdentityReference
+                }
+                if(-not $permissionsHash.ContainsKey("systemPermissions")){
+                    $permissionsHash.Add("systemPermissions", $systemPermissions)
+                }else {
+                    $permissionsHash["systemPermissions"] = $systemPermissions
+                }
+            } elseif ($rule.AccessControlType -eq "Allow" -and $systemRule.count -eq 1) {
+            # Custom object to hold the permissions
+                $systemPermissions = [PSCustomObject]@{
+                    access             = $rule.AccessControlType
+                    permissionType     = $rule.$($FilePermissionType)
+                    identityReference  = $rule.IdentityReference
+                }
+                if(-not $permissionsHash.ContainsKey("systemPermissions")){
+                    $permissionsHash.Add("systemPermissions", $systemPermissions)
+                }else {
+                    $permissionsHash["systemPermissions"] = $systemPermissions
+                }
             }
         }
+    }
+} elseif($null -eq $systemRule) {
+    Write-ToLog "System permissions is NULL" -level Error
+    if(-not $permissionsHash.ContainsKey("systemPermissions")){
+        $systemPermissions = [PSCustomObject]@{
+            access             = $null
+            permissionType     = $null
+            identityReference  = $null
+        }
+        $permissionsHash.Add("systemPermissions", $systemPermissions)
+    }else {
+        $permissionsHash["systemPermissions"] = $systemPermissions
+    }
+}
+
+if ($administratorsRule) {
+    if ($administratorsRule.Count -ge 1) {
+        foreach ($rule in $administratorsRule) {
+            if ($rule.AccessControlType -eq "Deny") {
+                Write-ToLog "Administrators permissions set to Deny" -level Error
+                $adminPermissions = [PSCustomObject]@{
+                    access             = $rule.AccessControlType
+                    permissionType     = $rule.$($FilePermissionType)
+                    identityReference  = $rule.IdentityReference
+                }
+                if(-not $permissionsHash.ContainsKey("systemPermissions")){
+                    $permissionsHash.Add("adminPermissions", $adminPermissions)
+                }else {
+                    $permissionsHash["adminPermissions"] = $adminPermissions
+                }
+            } elseif ($rule.AccessControlType -eq "Allow" -and $administratorsRule.Count -eq 1) {
+                $adminPermissions = [PSCustomObject]@{
+                    access             = $rule.AccessControlType
+                    permissionType     = $rule.$($FilePermissionType)
+                    identityReference  = $rule.IdentityReference
+                }
+                if(-not $permissionsHash.ContainsKey("systemPermissions")){
+                    $permissionsHash.Add("adminPermissions", $adminPermissions)
+                }else {
+                    $permissionsHash["adminPermissions"] = $adminPermissions
+                }
+            }
+        }
+    }
+} elseif($null -eq $administratorsRule) {
+    Write-ToLog "Administrators permissions is NULL" -Level Error
+    $adminPermissions = [PSCustomObject]@{
+        access             = $null
+        permissionType     = $null
+        identityReference  = $null
+    }
+    if(-not $permissionsHash.ContainsKey("adminPermissions")){
+        $permissionsHash.Add("adminPermissions", $adminPermissions)
+    }else {
+        $permissionsHash["adminPermissions"] = $adminPermissions
+    }
+}
+
+if ($specifiedUserRule) {
+    if ($specifiedUserRule.Count -ge 1) {
+        foreach ($rule in $specifiedUserRule) {
+            if ($rule.AccessControlType -eq "Deny") {
+                Write-ToLog "Specified User permissions set to Deny" -level Error
+                $userPermissions = [PSCustomObject]@{
+                    access             = $rule.AccessControlType
+                    permissionType     = $rule.$($FilePermissionType)
+                    identityReference  = $rule.IdentityReference
+                }
+                if(-not $permissionsHash.ContainsKey("systemPermissions")){
+                    $permissionsHash.Add("userPermissions", $userPermissions)
+                }else {
+                    $permissionsHash["userPermissions"] = $userPermissions
+                }
+            } elseif ($rule.AccessControlType -eq "Allow" -and $specifiedUserRule.Count -eq 1) {
+                $userPermissions = [PSCustomObject]@{
+                    access             = $rule.AccessControlType
+                    permissionType     = $rule.$($FilePermissionType)
+                    identityReference  = $rule.IdentityReference
+                }
+                if(-not $permissionsHash.ContainsKey("systemPermissions")){
+                    $permissionsHash.Add("userPermissions", $userPermissions)
+                }else {
+                    $permissionsHash["userPermissions"] = $userPermissions
+                }
+            }
+        }
+    }
+} elseif($null -eq $specifiedUserRule) {
+    Write-ToLog "Specified User permissions is gone" -level Error
+    $userPermissions = [PSCustomObject]@{
+        access             = $null
+        permissionType     = $null
+        identityReference  = $null
+    }
+    if(-not $permissionsHash.ContainsKey("userPermissions")){
+        $permissionsHash.Add("userPermissions", $userPermissions)
+    }else {
+        $permissionsHash["userPermissions"] = $userPermissions
+    }
+}
+
     }
     end {
+        $systemPerm = $permissionsHash.systemPermissions.Access
+        $adminPerm = $permissionsHash.adminPermissions.access
+        $userPerm = $permissionsHash.userPermissions.access
         # If all rules are true, return true
-        if (($results.SystemPermissions -eq $true) -and ($results.AdministratorsPermissions -eq $true) -and ($results.SpecifiedUserPermissions -eq $true)) {
-            return $true
+        if (($systemPerm -eq "Allow") -and ($adminPerm -eq "Allow") -and ($userPerm -eq "Allow")) {
+            return $true, $permissionsHash.Values
         } else {
-            return $false
+            return $false, $permissionsHash.Values
         }
     }
-
 }
 #endregion Agent Install Helper Functions
 Function Start-Migration {
@@ -1684,9 +1802,20 @@ Function Start-Migration {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }
-            # TODO: save to variable, write-toLog whether or not the tests were validated
-            Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_admu" -username $jumpcloudUsername -type 'registry'
-            Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_Classes_admu" -username $jumpcloudUsername -type 'registry'
+            $validateRegistryPermission, $validateRegistryPermissionResult = Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_admu" -username $jumpcloudUsername -type 'registry'
+            $validateRegistryPermissionClasses, $validateRegistryPermissionClassesResult = Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_Classes_admu" -username $jumpcloudUsername -type 'registry'
+
+            if ($validateRegistryPermission) {
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are correct `n$($validateRegistryPermissionResult | Out-String)")
+                $validateRegistryPermissionResult
+            } else {
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and selected user have have Full Control `n$($validateRegistryPermissionResult | Out-String)") -Level Error
+            }
+            if ($validateRegistryPermissionClasses) {
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are correct `n$($validateRegistryPermissionClassesResult)")
+            } else {
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and selected user have have Full Control `n$($validateRegistryPermissionClassesResult | Out-String)") -Level Error
+            }
 
             $admuTracker.copyRegistry.pass = $true
 
@@ -1856,17 +1985,17 @@ Function Start-Migration {
             $Acl | Set-Acl -Path $newUserProfileImagePath
             #TODO: reverse track this if we fail later
             # Validate if .DAT has correct permissions
-            $validateNTUserDatPermissions = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'
-            $validateUsrClassDatPermissions = Test-DATFilePermission -path "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat" -username $JumpCloudUserName -type 'ntfs'
+            $validateNTUserDatPermissions, $validateNTUserDatPermissionsResults  = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'
+            $validateUsrClassDatPermissions, $validateUsrClassDatPermissionsResults = Test-DATFilePermission -path "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat" -username $JumpCloudUserName -type 'ntfs'
             if ($validateNTUserDatPermissions ) {
-                Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath)")
+                Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath) `n$($validateNTUserDatPermissionsResults | Out-String)")
             } else {
-                Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($datPath)\NTUSER.DAT to ensure Administrators, System, and selected user have have Full Control") -level Error
+                Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($datPath)\NTUSER.DAT to ensure Administrators, System, and selected user have have Full Control `n$($validateNTUserDatPermissionsResults | Out-String)") -level Error
             }
             if ($validateUsrClassDatPermissions) {
-                Write-ToLog -Message:("UsrClass.dat Permissions are correct $($datPath)")
+                Write-ToLog -Message:("UsrClass.dat Permissions are correct $($datPath)`n$($validateUsrClassDatPermissionsResults)")
             } else {
-                Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control") -level Error
+                Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control `n$($validateUsrClassDatPermissionsResults |Out-String)") -level Error
             }
             ## End Regedit Block ##
 
