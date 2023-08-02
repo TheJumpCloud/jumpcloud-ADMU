@@ -992,7 +992,7 @@ Function Install-JumpCloudAgent(
             Write-ToLog -Message:('JumpCloud Agent Download Complete')
         }
         Write-ToLog -Message:('Running JCAgent Installer')
-        Write-ToLog -Message:("Installing JCAgent`nConnectKey: $($JumpCloudConnectKey)`nLogPath: $env:TEMP\jcUpdate.log")
+        Write-ToLog -Message:("LogPath: $env:TEMP\jcUpdate.log")
         # run .MSI installer
         msiexec /i $AGENT_INSTALLER_PATH /quiet /L "$env:TEMP\jcUpdate.log" JCINSTALLERARGUMENTS=`"-k $($JumpCloudConnectKey) /VERYSILENT /NORESTART /NOCLOSEAPPLICATIONS`"
         Start-Sleep 1
