@@ -616,7 +616,7 @@ Describe 'Functions' {
                     Set-Acl $REGFilePath -AclObject $FileACL
 
                     # Test registry dat permissions
-                    $NTUser, $permissionHash = Test-DATFilePermission -Path $REGFilePath -username $datUserTrue -type 'registry'
+                    $NTUser, $permissionHash = Test-DATFilePermission -Path $REGFilePath -username $datUserFalse -type 'registry'
                     $NTUser | Should -Be $false
 
                     # Retrieve new explicit set of permissions
