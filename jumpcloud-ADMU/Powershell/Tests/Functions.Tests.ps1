@@ -593,17 +593,17 @@ Describe 'Functions' {
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }
             foreach ($FilePath in $filePaths) {
-                REG LOAD "HKU\tempPath" "$ilePath" *>&1
-                $FilePath = "HKEY_USERS:\tempPath"
+                REG LOAD "HKU\tempPath" "$FilePath" *>&1
+                $REGFilePath = "HKEY_USERS:\tempPath"
                 # Get current access control list:
-                $FileACL = (Get-Item $FilePath -Force).GetAccessControl('Access')
+                $FileACL = (Get-Item $REGFilePath -Force).GetAccessControl('Access')
 
                 # Remove inheritance but preserve existing entries
                 $FileACL.SetAccessRuleProtection($true, $true)
-                Set-Acl $FilePath -AclObject $FileACL
+                Set-Acl $REGFilePath -AclObject $FileACL
 
                 # Retrieve new explicit set of permissions
-                $FileACL = Get-Acl $FilePath
+                $FileACL = Get-Acl $REGFilePath
                 foreach ($requiredAccount in $requiredAccounts) {
                     # Retrieve one of the required rules
                     Write-Host "removing: $($requiredAccount) Access"
@@ -613,23 +613,25 @@ Describe 'Functions' {
                     $FileACL.RemoveAccessRule($ruleToRemove)
 
                     # Set ACL on file again
-                    Set-Acl $FilePath -AclObject $FileACL
+                    Set-Acl $REGFilePath -AclObject $FileACL
 
                     # Test registry dat permissions
-                    $NTUser, $permissionHash = Test-DATFilePermission -Path $FilePath -username $datUserTrue -type 'registry'
+                    $NTUser, $permissionHash = Test-DATFilePermission -Path $REGFilePath -username $datUserTrue -type 'registry'
                     $NTUser | Should -Be $false
 
                     # Retrieve new explicit set of permissions
-                    $FileACL = Get-Acl $FilePath
+                    $FileACL = Get-Acl $REGFilePath
 
                     # Add the rule again
                     $FileACL.SetAccessRule($ruleToRemove)
                     # Set ACL on file again
-                    Set-Acl $FilePath -AclObject $FileACL
-                    $NTUser, $permissionHashClasses = Test-DATFilePermission -Path $FilePath -username $datUserFalse -type 'registry'
+                    Set-Acl $REGFilePath -AclObject $FileACL
+                    $NTUser, $permissionHashClasses = Test-DATFilePermission -Path $REGFilePath -username $datUserFalse -type 'registry'
                     # Test UsrClass dat permissions
                     $NTUser | Should -Be $true
                 }
+                REG UNLOAD "HKU\tempPath" *>&1
+
             }
         }
     }
