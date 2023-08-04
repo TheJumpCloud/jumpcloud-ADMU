@@ -388,7 +388,7 @@ $lbTenantName.Content = $TenantName
 
 Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKey, [object]$tbTempPassword, [object]$lvProfileList, [object]$tbJumpCloudAPIKey) {
     If (![System.String]::IsNullOrEmpty($lvProfileList.SelectedItem.UserName)) {
-        If (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
+        If (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) -and (($($tbJumpCloudUserName.Text).length) -le 20) `
                 -and ((Test-CharLen -len 40 -testString $tbJumpCloudConnectKey.Password) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Password) -and ($cb_installjcagent.IsChecked -eq $true))`
                 -and ((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Password) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Password) -and ($cb_autobindjcuser.IsChecked -eq $true))`
                 -and ((Test-CharLen -len 24 -testString $Env:selectedOrgID) -and (Test-HasNoSpace $Env:selectedOrgID) -and ($cb_autobindjcuser.IsChecked -eq $true))`
@@ -398,14 +398,14 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
             $script:bMigrateProfile.Content = "Migrate Profile"
             $script:bMigrateProfile.IsEnabled = $true
             Return $true
-        } ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
+        } ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) -and (($($tbJumpCloudUserName.Text).length) -le 20) `
                 -and ((Test-CharLen -len 40 -testString $tbJumpCloudConnectKey.Password) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Password) -and ($cb_installjcagent.IsChecked -eq $true) -and ($cb_autobindjcuser.IsChecked -eq $false))`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
                 -and !(Test-Localusername $tbJumpCloudUserName.Text)) {
             $script:bMigrateProfile.Content = "Migrate Profile"
             $script:bMigrateProfile.IsEnabled = $true
             Return $true
-        } ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
+        } ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) -and (($($tbJumpCloudUserName.Text).length) -le 20) `
                 -and ((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Password) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Password) -and ($cb_autobindjcuser.IsChecked -eq $true) -and ($cb_installjcagent.IsChecked -eq $false))`
                 -and ((Test-CharLen -len 24 -testString $Env:selectedOrgID) -and (Test-HasNoSpace $Env:selectedOrgID) -and ($cb_autobindjcuser.IsChecked -eq $true) -and ($cb_installjcagent.IsChecked -eq $false))`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
@@ -413,7 +413,7 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
             $script:bMigrateProfile.Content = "Migrate Profile"
             $script:bMigrateProfile.IsEnabled = $true
             Return $true
-        } Elseif (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) `
+        } Elseif (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) -and (($($tbJumpCloudUserName.Text).length) -le 20)`
                 -and ($cb_installjcagent.IsChecked -eq $false) -and ($cb_autobindjcuser.IsChecked -eq $false)`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
                 -and !($lvProfileList.selectedItem.Username -match $WmiComputerSystem.Name)`
@@ -546,11 +546,11 @@ $cb_forcereboot.Add_Unchecked( { $script:ForceReboot = $false })
 
 $tbJumpCloudUserName.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If ((Test-IsNotEmpty $tbJumpCloudUserName.Text) -or (!(Test-HasNoSpace $tbJumpCloudUserName.Text)) -or (Test-Localusername $tbJumpCloudUserName.Text)) {
+        If ((Test-IsNotEmpty $tbJumpCloudUserName.Text) -or (!(Test-HasNoSpace $tbJumpCloudUserName.Text)) -or (Test-Localusername $tbJumpCloudUserName.Text) -or (($tbJumpCloudUserName.Text).Length -gt 20)) {
             $tbJumpCloudUserName.Background = "#FFC6CBCF"
             $tbJumpCloudUserName.BorderBrush = "#FFF90000"
             $img_localaccount_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
-            $img_localaccount_valid.ToolTip = "Local account username can't be empty, contain spaces, already exist on the local system or match the local computer name."
+            $img_localaccount_valid.ToolTip = "Local account username can't be empty, contain spaces, already exist on the local system or match the local computer name. Username must only be 20 characters long"
         } Else {
             $tbJumpCloudUserName.Background = "white"
             $tbJumpCloudUserName.FontWeight = "Normal"
