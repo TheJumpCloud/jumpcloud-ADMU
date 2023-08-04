@@ -1,3 +1,14 @@
+## 2.4.2
+
+Release Date: Aug 4,2023
+
+#### RELEASE NOTES
+
+```
+* Add additional logging and validate file permissions when migrating.
+* The GUI From now validates that windows usernames be a max length of 20 characters.
+```
+
 ## 2.4.1
 
 Release Date: March 31,2023

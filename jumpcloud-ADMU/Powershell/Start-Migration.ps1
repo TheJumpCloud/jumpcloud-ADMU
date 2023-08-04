@@ -491,6 +491,7 @@ Function Test-UserRegistryLoadState {
 
 }
 
+
 Function Backup-RegistryHive {
     [CmdletBinding()]
     param (
@@ -910,7 +911,7 @@ function Get-mtpOrganization {
     process {
         # if there's only one org return found org, else prompt for selection
         if (($results.count -eq 1) -And ($($results._id))) {
-            Write-ToLog -Message "API Key Validated`nOrgName: $($results.DisplayName)`nOrgID: $($results._id)"
+            Write-ToLog -Message "API Key Validated`nOrgName: $($results.DisplayName)"
             $orgs = $results._id, $results.DisplayName
         } elseif (($results.count -gt 1)) {
             Write-ToLog -Message "Found $($results.count) orgs with the specifed API Key"
@@ -919,7 +920,7 @@ function Get-mtpOrganization {
                 $true {
                     Write-ToLog -Message "Prompting for MTP Admin Selection"
                     $orgs = show-mtpSelection -Orgs $results
-                    Write-ToLog -Message "API Key Validated`nOrgName: $($orgs[1])`nOrgID: $($orgs[0])"
+                    Write-ToLog -Message "API Key Validated`nOrgName: $($orgs[1])"
                 }
                 Default {
                     Write-ToLog -Message "API Key appears to be a MTP Admin Key. Please specify the JumpCloudOrgID Parameter and try again"
@@ -991,7 +992,7 @@ Function Install-JumpCloudAgent(
             Write-ToLog -Message:('JumpCloud Agent Download Complete')
         }
         Write-ToLog -Message:('Running JCAgent Installer')
-        Write-ToLog -Message:("Installing JCAgent`nConnectKey: $($JumpCloudConnectKey)`nLogPath: $env:TEMP\jcUpdate.log")
+        Write-ToLog -Message:("LogPath: $env:TEMP\jcUpdate.log")
         # run .MSI installer
         msiexec /i $AGENT_INSTALLER_PATH /quiet /L "$env:TEMP\jcUpdate.log" JCINSTALLERARGUMENTS=`"-k $($JumpCloudConnectKey) /VERYSILENT /NORESTART /NOCLOSEAPPLICATIONS`"
         Start-Sleep 1
@@ -1283,6 +1284,100 @@ namespace CosmosKey.Powershell.InvokeAsSystemSvc
         Import-Clixml -Path $outPath
     }
 }
+# Function to validate if NTUser.dat has SYSTEM, Administrators, and the specified user as full control
+function Test-DATFilePermission {
+    param (
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $path,
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $username,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("registry", "ntfs")]
+        [System.String]
+        $type
+
+    )
+    begin {
+        $aclUser = "$($Env:ComputerName)\$username"
+        # ACL naming differs on registry/ ntfs file system, set the correct type
+        switch ($type) {
+            'registry' {
+                $FilePermissionType = 'RegistryRights'
+            }
+            'ntfs' {
+                $FilePermissionType = 'FileSystemRights'
+            }
+        }
+        # define empty list
+        $permissionsHash = @{}
+        # define required list to test
+        $requiredAccess = @{
+            "NT AUTHORITY\SYSTEM"    = @{
+                name = "System"
+            };
+            "BUILTIN\Administrators" = @{
+                name = "Administrators"
+            };
+            "$($aclUser)"            = @{
+                name = "$username"
+            }
+        }
+        # Get the path
+        $ACL = Get-Acl $path
+    }
+    process {
+        # Using AccessControlType to check if it's a deny rule instead of allow since, with NTFS permissions, even if a user/admin is denied, there will still be an allow rule for them and not null
+        foreach ($requiredRule in $requiredAccess.keys) {
+            # foreach ($requiredRule in $systemRule, $administratorsRule, $specifiedUserRule) {
+            # write-ToLog "Begin testing: $($requiredRule)"
+            $FileACLs = $acl.Access | Where-Object { $_.IdentityReference -eq "$($requiredRule)" }
+            # write-ToLog "$($requiredRule) access count: $($FileACLs.Count)"
+            foreach ($fileACL in $FileACLs) {
+                $rulePermissions = [PSCustomObject]@{
+                    access            = $FileACL.AccessControlType
+                    permissionType    = $FileACL.$($FilePermissionType)
+                    identityReference = $FileACL.IdentityReference
+                    ValidPermissions  = $true
+                }
+                # There will sometimes be multiple FileACLs if an identity is denied access, in which case just break
+                if ($FileACL.AccessControlType -contains 'Deny') {
+                    $rulePermissions.ValidPermissions = $false
+                    $permissionsHash.Add("$($requiredAccess["$($requiredRule)"].name)", $rulePermissions) | Out-Null
+                    break
+                }
+                # if fullControl access is not grated, just break
+                if ($FileACL.$($FilePermissionType) -notcontains 'FullControl') {
+                    $rulePermissions.ValidPermissions = $false
+                    $permissionsHash.Add("$($requiredAccess["$($requiredRule)"].name)", $rulePermissions) | Out-Null
+                    break
+                }
+                # else record the access rule and assume it's valid
+                $permissionsHash.Add("$($requiredAccess["$($requiredRule)"].name)", $rulePermissions) | Out-Null
+            }
+            # if the access is not explicitly granted, record the missing value so we can make use of it later
+            if (-not $FileACLs) {
+                $rulePermissions = [PSCustomObject]@{
+                    access            = $null
+                    permissionType    = $null
+                    identityReference = $requiredRule
+                    ValidPermissions  = $false
+                }
+                $permissionsHash.Add("$($requiredAccess["$($requiredRule)"].name)", $rulePermissions) | Out-Null
+            }
+        }
+
+    }
+    end {
+        # if the validPermission block contains any 'false' entries, return false + values, else return true + values
+        if (($permissionsHash.Values.ValidPermissions -contains $false)) {
+            return $false, $permissionsHash.Values
+        } else {
+            return $true, $permissionsHash.Values
+        }
+    }
+}
 
 #endregion Agent Install Helper Functions
 Function Start-Migration {
@@ -1306,7 +1401,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.4.1'
+        $admuVersion = '2.4.2'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
@@ -1376,7 +1471,7 @@ Function Start-Migration {
 
             if ($AutoBindJCUser -eq $true) {
                 # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
-                $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+                $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $ValidatedJumpCloudOrgID -Username $JumpCloudUserName
                 # Write to log all variables above
                 Write-ToLog -Message:("Test-JumpCloudUsername Results:`nUserFound: $($ret)`nJumpCloudUserName: $($JumpCloudUserName)`nJumpCloudUserId: $($JumpCloudUserId)`nJumpCloudsystemUserName: $($JumpCloudsystemUserName)")
 
@@ -1561,10 +1656,30 @@ Function Start-Migration {
             Write-ToLog -Message:('Begin new local user registry copy')
             # Give us admin rights to modify
             Write-ToLog -Message:("Take Ownership of $($newUserProfileImagePath)")
-            $path = takeown /F "$($newUserProfileImagePath)" /r /d Y
+            $path = takeown /F "$($newUserProfileImagePath)" /r /d Y 2>&1
+            # Check if any error occurred
+            if ($LASTEXITCODE -ne 0) {
+                # Store the error output in the variable
+                $pattern = 'INFO: (.+?\( "[^"]+" \))'
+                $errmatches = [regex]::Matches($path, $pattern)
+                if ($errmatches.Count -gt 0) {
+                    foreach ($match in $errmatches) {
+                        Write-ToLog "Takeown could not set permissions for: $($match.Groups[1].Value)"
+                    }
+                }
+            }
+
             Write-ToLog -Message:("Get ACLs for $($newUserProfileImagePath)")
             $acl = Get-Acl ($newUserProfileImagePath)
-            Write-ToLog -Message:("Current ACLs: $($acl.access)")
+            Write-ToLog -Message:("Current ACLs:")
+            foreach ($accessItem in $acl.access) {
+                write-ToLog "FileSystemRights: $($accessItem.FileSystemRights)"
+                write-ToLog "AccessControlType: $($accessItem.AccessControlType)"
+                write-ToLog "IdentityReference: $($accessItem.IdentityReference)"
+                write-ToLog "IsInherited: $($accessItem.IsInherited)"
+                write-ToLog "InheritanceFlags: $($accessItem.InheritanceFlags)"
+                write-ToLog "PropagationFlags: $($accessItem.PropagationFlags)`n"
+            }
             Write-ToLog -Message:("Setting Administrator Group Access Rule on: $($newUserProfileImagePath)")
             $AdministratorsGroupSIDName = ([wmi]"Win32_SID.SID='S-1-5-32-544'").AccountName
             $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($AdministratorsGroupSIDName, "FullControl", "Allow")
@@ -1597,6 +1712,25 @@ Function Start-Migration {
                 $admuTracker.copyRegistry.fail = $true
                 break
             }
+            # Validate file permissions on registry item
+            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
+                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+            }
+            $validateRegistryPermission, $validateRegistryPermissionResult = Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_admu" -username $jumpcloudUsername -type 'registry'
+            $validateRegistryPermissionClasses, $validateRegistryPermissionClassesResult = Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_Classes_admu" -username $jumpcloudUsername -type 'registry'
+
+            if ($validateRegistryPermission) {
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are correct `n$($validateRegistryPermissionResult | Out-String)")
+            } else {
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and selected user have have Full Control `n$($validateRegistryPermissionResult | Out-String)") -Level Error
+            }
+            if ($validateRegistryPermissionClasses) {
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are correct `n$($validateRegistryPermissionClassesResult | out-string)")
+            } else {
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and selected user have have Full Control `n$($validateRegistryPermissionClassesResult | Out-String)") -Level Error
+            }
+
             $admuTracker.copyRegistry.pass = $true
 
             # Copy the profile containing the correct access and data to the destination profile
@@ -1604,10 +1738,6 @@ Function Start-Migration {
 
             # Set Registry Check Key for New User
             # Check that the installed components key does not exist
-            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
-                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
-            }
             $ADMU_PackageKey = "HKEY_USERS:\$($newusersid)_admu\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
             if (Get-Item $ADMU_PackageKey -ErrorAction SilentlyContinue) {
                 # If the account to be converted already has this key, reset the version
@@ -1726,6 +1856,7 @@ Function Start-Migration {
                         # Rename the old user profile path to the new name
                         # -ErrorAction Stop; Rename-Item doesn't throw terminating errors
                         Rename-Item -Path $oldUserProfileImagePath -NewName $JumpCloudUserName -ErrorAction Stop
+                        $datPath = "$($windowsDrive)\Users\$JumpCloudUserName"
                     } catch {
                         Write-ToLog -Message:("Unable to rename user profile path to new name - $JumpCloudUserName.")
                         $admuTracker.renameHomeDirectory.fail = $true
@@ -1737,6 +1868,7 @@ Function Start-Migration {
             } else {
                 Write-ToLog -Message:("Parameter to Update Home Path was not set.")
                 Write-ToLog -Message:("The $JumpCloudUserName account will point to $oldUserProfileImagePath profile path")
+                $datPath = $oldUserProfileImagePath
                 try {
                     Write-ToLog -Message:("Attempting to remove newly created $newUserProfileImagePath")
                     start-sleep 1
@@ -1766,7 +1898,19 @@ Function Start-Migration {
             $Acl.SetAccessRule($Ar)
             $Acl | Set-Acl -Path $newUserProfileImagePath
             #TODO: reverse track this if we fail later
-
+            # Validate if .DAT has correct permissions
+            $validateNTUserDatPermissions, $validateNTUserDatPermissionsResults = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'
+            $validateUsrClassDatPermissions, $validateUsrClassDatPermissionsResults = Test-DATFilePermission -path "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat" -username $JumpCloudUserName -type 'ntfs'
+            if ($validateNTUserDatPermissions ) {
+                Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath) `n$($validateNTUserDatPermissionsResults | Out-String)")
+            } else {
+                Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($datPath)\NTUSER.DAT to ensure Administrators, System, and selected user have have Full Control `n$($validateNTUserDatPermissionsResults | Out-String)") -level Error
+            }
+            if ($validateUsrClassDatPermissions) {
+                Write-ToLog -Message:("UsrClass.dat Permissions are correct $($datPath)`n$($validateUsrClassDatPermissionsResults | out-string)")
+            } else {
+                Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control `n$($validateUsrClassDatPermissionsResults | Out-String)") -level Error
+            }
             ## End Regedit Block ##
 
             ### Active Setup Registry Entry ###
