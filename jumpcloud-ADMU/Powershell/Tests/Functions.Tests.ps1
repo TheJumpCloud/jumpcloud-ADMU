@@ -539,8 +539,8 @@ Describe 'Functions' {
             $UsrClass | Should -Be $true
 
             # unload registry files
-            REG UNLOAD HKU\$($datUserTrue) *>&1
-            REG UNLOAD HKU\$($datUserTrue)_classes *>&1
+            # REG UNLOAD HKU\$($datUserTrue) *>&1
+            # REG UNLOAD HKU\$($datUserTrue)_classes *>&1
         }
         It 'Should return false when a users ntfs permissions are correct' {
             $datUserFalse = "ADMU_dat_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -593,8 +593,13 @@ Describe 'Functions' {
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }
             foreach ($FilePath in $filePaths) {
-                REG LOAD "HKU\tempPath" "$FilePath" *>&1
-                $REGFilePath = "HKEY_USERS:\tempPath"
+                if ($filePath -match 'usrclass') {
+                    REG LOAD "HKU\tempPath_classes" "$FilePath" *>&1
+                    $REGFilePath = "HKEY_USERS:\tempPath_classes"
+                } else {
+                    REG LOAD "HKU\tempPath" "$FilePath" *>&1
+                    $REGFilePath = "HKEY_USERS:\tempPath"
+                }
                 # Get current access control list:
                 $FileACL = (Get-Item $REGFilePath -Force).GetAccessControl('Access')
 
@@ -630,7 +635,7 @@ Describe 'Functions' {
                     # Test UsrClass dat permissions
                     $NTUser | Should -Be $true
                 }
-                REG UNLOAD "HKU\tempPath" *>&1
+                # REG UNLOAD "HKU\tempPath" *>&1
 
             }
         }
