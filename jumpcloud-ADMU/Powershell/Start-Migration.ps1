@@ -1722,7 +1722,6 @@ Function Start-Migration {
 
             if ($validateRegistryPermission) {
                 Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are correct `n$($validateRegistryPermissionResult | Out-String)")
-                $validateRegistryPermissionResult
             } else {
                 Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and selected user have have Full Control `n$($validateRegistryPermissionResult | Out-String)") -Level Error
             }
