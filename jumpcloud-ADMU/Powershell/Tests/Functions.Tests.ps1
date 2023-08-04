@@ -547,7 +547,7 @@ Describe 'Functions' {
             $password = '$T#st1234'
             InitUser -UserName $datUserFalse -Password $Password
             $filePaths = @("C:\Users\$datUserFalse\AppData\Local\Microsoft\Windows\UsrClass.dat", "C:\Users\$datUserFalse\NTUSER.DAT")
-            $requiredAccounts = @("SYSTEM", "Administrators", "$datUserFalse")
+            $requiredAccounts = @("SYSTEM", "$datUserFalse")
             # NTFS Validations:
             foreach ($FilePath in $filePaths) {
                 # Get current access control list:
@@ -635,8 +635,6 @@ Describe 'Functions' {
                     # Test UsrClass dat permissions
                     $NTUser | Should -Be $true
                 }
-                # REG UNLOAD "HKU\tempPath" *>&1
-
             }
         }
     }
