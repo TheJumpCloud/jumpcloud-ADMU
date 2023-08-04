@@ -1331,9 +1331,9 @@ function Test-DATFilePermission {
         # Using AccessControlType to check if it's a deny rule instead of allow since, with NTFS permissions, even if a user/admin is denied, there will still be an allow rule for them and not null
         foreach ($requiredRule in $requiredAccess.keys) {
             # foreach ($requiredRule in $systemRule, $administratorsRule, $specifiedUserRule) {
-            write-ToLog "Begin testing: $($requiredRule)"
+            # write-ToLog "Begin testing: $($requiredRule)"
             $FileACLs = $acl.Access | Where-Object { $_.IdentityReference -eq "$($requiredRule)" }
-            write-ToLog "$($requiredRule) access count: $($FileACLs.Count)"
+            # write-ToLog "$($requiredRule) access count: $($FileACLs.Count)"
             foreach ($fileACL in $FileACLs) {
                 $rulePermissions = [PSCustomObject]@{
                     access            = $FileACL.AccessControlType
@@ -1727,7 +1727,7 @@ Function Start-Migration {
                 Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and selected user have have Full Control `n$($validateRegistryPermissionResult | Out-String)") -Level Error
             }
             if ($validateRegistryPermissionClasses) {
-                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are correct `n$($validateRegistryPermissionClassesResult | Out-String))")
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are correct `n$($validateRegistryPermissionClassesResult | out-string)")
             } else {
                 Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and selected user have have Full Control `n$($validateRegistryPermissionClassesResult | Out-String)") -Level Error
             }
@@ -1908,7 +1908,7 @@ Function Start-Migration {
                 Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($datPath)\NTUSER.DAT to ensure Administrators, System, and selected user have have Full Control `n$($validateNTUserDatPermissionsResults | Out-String)") -level Error
             }
             if ($validateUsrClassDatPermissions) {
-                Write-ToLog -Message:("UsrClass.dat Permissions are correct $($datPath)`n$($validateUsrClassDatPermissionsResults | Out-String))")
+                Write-ToLog -Message:("UsrClass.dat Permissions are correct $($datPath)`n$($validateUsrClassDatPermissionsResults | out-string)")
             } else {
                 Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control `n$($validateUsrClassDatPermissionsResults | Out-String)") -level Error
             }
