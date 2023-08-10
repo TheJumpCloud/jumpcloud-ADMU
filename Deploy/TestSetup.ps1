@@ -15,12 +15,6 @@ process {
 
   #USMT & VC Variables
   $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
-  $msvc2013x64File = 'vc_redist.x64.exe'
-  $msvc2013x86File = 'vc_redist.x86.exe'
-  $msvc2013x86Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x86.exe'
-  $msvc2013x64Link = 'http://download.microsoft.com/download/0/5/6/056dcda9-d667-4e27-8001-8a0c6971d6b1/vcredist_x64.exe'
-  $msvc2013x86Install = "$jcAdmuTempPath$msvc2013x86File /install /quiet /norestart"
-  $msvc2013x64Install = "$jcAdmuTempPath$msvc2013x64File /install /quiet /norestart"
 
   # JumpCloud Agent Installation Variables
   $AGENT_PATH = "${env:ProgramFiles}\JumpCloud"
@@ -52,15 +46,6 @@ process {
   }
   #Recreate JCADMU folder
   New-Item -ItemType Directory -Path 'C:\windows\Temp\JCADMU' -Force
-  #Is agent installed? If so uninstall it
-  if (Test-ProgramInstalled -programName:('Jumpcloud')) {
-    #TODO: if uninstall doesn't exist, check service and stop & delete folder & regkeys
-    & cmd /C 'C:\Program Files\JumpCloud\unins000.exe' /Silent
-  }
-  #Is vcredistx86 & vcredistx64 installed? If so uninstall it
-  if ((Test-ProgramInstalled -programName('Microsoft Visual C\+\+ 2013 x64')) -or ((Test-ProgramInstalled -programName:([Regex]'(Microsoft Visual C\+\+ 2013 Redistributable \(x86\))(.*?)')))) {
-    Uninstall-Program -programName 'Microsoft Visual C'
-  }
   #If JC directory still exists delete it
   if (Test-Path 'C:\Program Files\JumpCloud') {
     Start-Sleep -Seconds 5
@@ -70,5 +55,5 @@ process {
   if (!(Test-path $jcAdmuTempPath)) {
     new-item -ItemType Directory -Force -Path $jcAdmuTempPath
   }
-  Install-JumpCloudAgent -msvc2013x64link:($msvc2013x64Link) -msvc2013path:($jcAdmuTempPath) -msvc2013x64file:($msvc2013x64File) -msvc2013x64install:($msvc2013x64Install) -msvc2013x86link:($msvc2013x86Link) -msvc2013x86file:($msvc2013x86File) -msvc2013x86install:($msvc2013x86Install) -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME) -AGENT_CONF_PATH:($AGENT_CONF_PATH)
+  Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME) -AGENT_CONF_PATH:($AGENT_CONF_PATH)
 }
