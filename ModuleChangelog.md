@@ -1,3 +1,14 @@
+## 2.4.3
+
+Release Date: Aug 14,2023
+
+#### RELEASE NOTES
+
+```
+* Remove Microsoft Visual C++ 2013 dependencies that are not needed for JCAgent installation
+* Fixed incorrect agent binary name causing incorrect installation checks
+* Add validation of JCAgent using Service instead of file path for installation
+```
 ## 2.4.2
 
 Release Date: Aug 4,2023
