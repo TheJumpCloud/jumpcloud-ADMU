@@ -44,6 +44,51 @@ Describe 'Migration Test Scenarios' {
             }
         }
 
+        It "Tests for the Scheduled Task already enabled" {
+            # Create a scheduled task
+            $action = New-ScheduledTaskAction -Execute "powershell.exe"
+            $trigger = New-ScheduledTaskTrigger -AtLogon
+            $settings = New-ScheduledTaskSettingsSet
+            $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
+            Register-ScheduledTask "TestTask" -InputObject $task
+
+            $Password = "Temp123!"
+            $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # Initialize a single user to migrate:
+            InitUser -UserName $user1 -Password $Password
+            # Migrate the initialized user to the second username
+            { Start-Migration -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$user1" -TempPassword "$($Password)" } | Should -Not -Throw
+
+            # Get the scheduled task
+            $task = Get-ScheduledTask -TaskName "TestTask"
+            # Task state should be ready
+            $task.State | Should -Be "Ready"
+
+
+        }
+        It "Tests for the Scheduled Task disabled" {
+            # Task should be enabled after migration
+            # Create a scheduled task
+            $action = New-ScheduledTaskAction -Execute "powershell.exe"
+            $trigger = New-ScheduledTaskTrigger -AtLogon
+            $settings = New-ScheduledTaskSettingsSet
+            $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
+            Register-ScheduledTask "TestTask" -InputObject $task
+            Disable-ScheduledTask -TaskName "TestTaskDisabled" | Should -Not -Throw
+
+            $Password = "Temp123!"
+            $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # Initialize a single user to migrate:
+            InitUser -UserName $user1 -Password $Password
+            # Migrate the initialized user to the second username
+            { Start-Migration -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$user1" -TempPassword "$($Password)" } | Should -Not -Throw
+            # Get the scheduled task
+            $task = Get-ScheduledTask -TaskName "TestTask"
+            # Task state should be ready
+            $task.State | Should -Be "Ready"
+        }
         It "Test Convert profile migration for Local users" {
             foreach ($user in $userTestingHash.Values) {
                 # Remove log before testing
