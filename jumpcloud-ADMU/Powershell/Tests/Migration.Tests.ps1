@@ -74,7 +74,7 @@ Describe 'Migration Test Scenarios' {
             $trigger = New-ScheduledTaskTrigger -AtLogon
             $settings = New-ScheduledTaskSettingsSet
             $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
-            Register-ScheduledTask "TestTask" -InputObject $task
+            Register-ScheduledTask "TestTaskDisabled" -InputObject $task
             Disable-ScheduledTask -TaskName "TestTaskDisabled" | Should -Not -Throw
 
             $Password = "Temp123!"
