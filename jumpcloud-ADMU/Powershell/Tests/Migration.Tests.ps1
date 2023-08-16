@@ -75,7 +75,7 @@ Describe 'Migration Test Scenarios' {
             $settings = New-ScheduledTaskSettingsSet
             $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
             Register-ScheduledTask "TestTaskDisabled" -InputObject $task
-            Disable-ScheduledTask -TaskName "TestTaskDisabled" | Should -Not -Throw
+            {Disable-ScheduledTask -TaskName "TestTaskDisabled"} | Should -Not -Throw
 
             $Password = "Temp123!"
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -85,7 +85,7 @@ Describe 'Migration Test Scenarios' {
             # Migrate the initialized user to the second username
             { Start-Migration -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$user1" -TempPassword "$($Password)" } | Should -Not -Throw
             # Get the scheduled task
-            $task = Get-ScheduledTask -TaskName "TestTask"
+            $task = Get-ScheduledTask -TaskName "TestTaskDisabled"
             # Task state should be ready
             $task.State | Should -Be "Ready"
         }
