@@ -179,7 +179,7 @@ Describe 'Migration Test Scenarios' {
                     Write-Host "Job Completed"
                 }) -ArgumentList:($($user.Username), ($($user.password)), $($user.JCUsername))
             # Begin job to kick off Start-Migration
-            write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
+            write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password) Testing Reverse`n"
             { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $false -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath } | Should -Throw
             # Receive the wait-job to the ci logs
             Write-Host "Job Details:"
@@ -188,8 +188,10 @@ Describe 'Migration Test Scenarios' {
             "C:\Users\$($user.username)" | Should -Exist
             # NewUserInit should be reverted and the new user profile path should not exist
             "C:\Users\$($user.JCUsername)" | Should -Not -Exist
+        }
+        It "Failed migration should revert original scheduled tasks state" {
+            $task = Get-ScheduledTask -TaskName "TestTaskFail"
             Get-ScheduledTask
-            $task = Get-ScheduledTask -TaskName "TestTask"
             # Task state should be ready
             $task.State | Should -Be "Ready"
         }
