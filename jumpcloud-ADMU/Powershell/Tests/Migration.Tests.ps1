@@ -139,6 +139,11 @@ Describe 'Migration Test Scenarios' {
             Remove-Item $logPath
             New-Item $logPath -Force -ItemType File
         }
+        $action = New-ScheduledTaskAction -Execute "powershell.exe"
+        $trigger = New-ScheduledTaskTrigger -AtLogon
+        $settings = New-ScheduledTaskSettingsSet
+        $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
+        Register-ScheduledTask "TestTaskFail" -InputObject $task
         # This test contains a job which will load the migration user's profile
         # into memory and effectively break the migration process. This test
         # simulates the case where a process is loaded 'during' migration.
@@ -183,6 +188,10 @@ Describe 'Migration Test Scenarios' {
             "C:\Users\$($user.username)" | Should -Exist
             # NewUserInit should be reverted and the new user profile path should not exist
             "C:\Users\$($user.JCUsername)" | Should -Not -Exist
+            Get-ScheduledTask
+            $task = Get-ScheduledTask -TaskName "TestTask"
+            # Task state should be ready
+            $task.State | Should -Be "Ready"
         }
     }
     It "Account of a prior migration can be sucessfully migrated again and not overwrite registry backup files" {
