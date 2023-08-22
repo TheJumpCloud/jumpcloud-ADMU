@@ -1499,7 +1499,7 @@ Function Start-Migration {
         $netBiosName = Get-NetBiosName
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
         $localComputerName = $WmiComputerSystem.Name
-        $systemVersion = [version](Get-CimInstance Win32_OperatingSystem).version
+        $systemVersion = Get-ComputerInfo | Select-Object OSName, OSVersion, OsHardwareAbstractionLayer
         $windowsDrive = Get-WindowsDrive
         $jcAdmuTempPath = "$windowsDrive\Windows\Temp\JCADMU\"
         $jcAdmuLogFile = "$windowsDrive\Windows\Temp\jcAdmu.log"
@@ -1707,7 +1707,7 @@ Function Start-Migration {
             }
 
             # for Windows 10 devices, force refresh of start/ search app:
-            If ($systemVersion.Major -eq 10) {
+            If ($systemVersion.OSName -Match "Windows 10") {
                 Write-ToLog -Message:('Windows 10 System, removing start and search reg keys to force refresh of those apps')
                 $regKeyClear = @(
                     "SOFTWARE\Microsoft\Windows\CurrentVersion\StartLayout",
