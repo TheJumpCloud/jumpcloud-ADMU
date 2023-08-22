@@ -1499,6 +1499,7 @@ Function Start-Migration {
         $netBiosName = Get-NetBiosName
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
         $localComputerName = $WmiComputerSystem.Name
+        $systemVersion = [version](Get-CimInstance Win32_OperatingSystem).version
         $windowsDrive = Get-WindowsDrive
         $jcAdmuTempPath = "$windowsDrive\Windows\Temp\JCADMU\"
         $jcAdmuLogFile = "$windowsDrive\Windows\Temp\jcAdmu.log"
@@ -1704,6 +1705,27 @@ Function Start-Migration {
                 $admuTracker.copyRegistry.fail = $true
                 break
             }
+
+            # for Windows 10 devices, force refresh of start/ search app:
+            If ($systemVersion.Major -eq 10) {
+                Write-ToLog -Message:('Windows 10 System, removing start and search reg keys to force refresh of those apps')
+                $regKeyClear = @(
+                    "SOFTWARE\Microsoft\Windows\CurrentVersion\StartLayout",
+                    "SOFTWARE\Microsoft\Windows\CurrentVersion\Start",
+                    "SOFTWARE\Microsoft\Windows\CurrentVersion\SearchSettings",
+                    "SOFTWARE\Microsoft\Windows\CurrentVersion\Search"
+                )
+
+                foreach ($key in $regKeyClear) {
+                    if (reg query "HKU\$($NewUserSID)_admu\$($key)") {
+                        write-ToLog -Message:("removing key: $key")
+                        reg delete "HKU\$($NewUserSID)_admu\$($key)" /f
+                    } else {
+                        write-ToLog -Message:("key not found $key")
+                    }
+                }
+            }
+
             reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
             if ($?) {
                 Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
