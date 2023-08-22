@@ -1401,7 +1401,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.4.2'
+        $admuVersion = '2.4.3'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
@@ -1986,7 +1986,7 @@ Function Start-Migration {
                 }
             } else {
                 try {
-                    $appxList = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
+                    $appxList = Get-AppXpackage -user (Convert-Sid $SelectedUserSID) | Select-Object InstallLocation
                 } catch {
                     Write-ToLog -Message "Could not determine AppXPackages for selected user, this is okay. Rebuilding UWP Apps from AllUsers list"
                 }

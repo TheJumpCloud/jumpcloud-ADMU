@@ -1,3 +1,13 @@
+## 2.4.3
+
+Release Date: Aug 23,2023
+
+#### RELEASE NOTES
+
+```
+* Fixed an issue with Windows 10 devices, where migrated users would no longer be able to access their start menu and search bars
+```
+
 ## 2.4.2
 
 Release Date: Aug 4,2023
