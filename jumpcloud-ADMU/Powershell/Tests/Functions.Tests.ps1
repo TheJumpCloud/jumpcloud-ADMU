@@ -431,6 +431,17 @@ Describe 'Functions' {
     }
 
     Context 'Install-JumpCloudAgent Function' {
+        BeforeAll {
+            $windowsDrive = Get-WindowsDrive
+            $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
+            $AGENT_INSTALLER_PATH
+            $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
+            $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
+            $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
+
+            # now go install the agent
+            Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
+        }
 
         It 'Install-JumpCloudAgent - Verify Download JCAgent Path' {
             Test-path 'C:\Windows\Temp\JCADMU\jcagent-msi-signed.msi' | Should -Be $true
