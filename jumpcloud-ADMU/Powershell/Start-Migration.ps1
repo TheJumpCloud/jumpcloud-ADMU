@@ -939,9 +939,9 @@ Function Install-JumpCloudAgent(
         # run .MSI installer
         msiexec /i $AGENT_INSTALLER_PATH /quiet /L "$env:TEMP\jcUpdate.log" JCINSTALLERARGUMENTS=`"-k $($JumpCloudConnectKey) /VERYSILENT /NORESTART /NOCLOSEAPPLICATIONS`"
         # perform installation checks:
-        for ($i = 0; $i -lt 60; $i++) {
+        for ($i = 0; $i -le 17; $i++) {
             Write-ToLog -Message:('Waiting on JCAgent Installer...')
-            Start-Sleep -Seconds 1
+            Start-Sleep -Seconds 10
             #Output the errors encountered
             $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
             if ($AgentService.Status -eq 'Running') {
@@ -949,7 +949,7 @@ Function Install-JumpCloudAgent(
                 $agentInstalled = $true
                 break
             }
-            if (($i -eq 59) -and ($AgentService.Status -ne 'Running')) {
+            if (($i -eq 17) -and ($AgentService.Status -ne 'Running')) {
                 Write-ToLog -Message:('JCAgent did not install in the expected window') -Level Error
                 $agentInstalled = $false
             }
