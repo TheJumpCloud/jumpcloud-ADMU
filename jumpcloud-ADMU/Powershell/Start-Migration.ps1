@@ -1401,7 +1401,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.4.2'
+        $admuVersion = '2.4.3'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
@@ -1499,6 +1499,7 @@ Function Start-Migration {
         $netBiosName = Get-NetBiosName
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
         $localComputerName = $WmiComputerSystem.Name
+        $systemVersion = Get-ComputerInfo | Select-Object OSName, OSVersion, OsHardwareAbstractionLayer
         $windowsDrive = Get-WindowsDrive
         $jcAdmuTempPath = "$windowsDrive\Windows\Temp\JCADMU\"
         $jcAdmuLogFile = "$windowsDrive\Windows\Temp\jcAdmu.log"
@@ -1704,6 +1705,27 @@ Function Start-Migration {
                 $admuTracker.copyRegistry.fail = $true
                 break
             }
+
+            # for Windows 10 devices, force refresh of start/ search app:
+            If ($systemVersion.OSName -Match "Windows 10") {
+                Write-ToLog -Message:('Windows 10 System, removing start and search reg keys to force refresh of those apps')
+                $regKeyClear = @(
+                    "SOFTWARE\Microsoft\Windows\CurrentVersion\StartLayout",
+                    "SOFTWARE\Microsoft\Windows\CurrentVersion\Start",
+                    "SOFTWARE\Microsoft\Windows\CurrentVersion\SearchSettings",
+                    "SOFTWARE\Microsoft\Windows\CurrentVersion\Search"
+                )
+
+                foreach ($key in $regKeyClear) {
+                    if (reg query "HKU\$($NewUserSID)_admu\$($key)") {
+                        write-ToLog -Message:("removing key: $key")
+                        reg delete "HKU\$($NewUserSID)_admu\$($key)" /f
+                    } else {
+                        write-ToLog -Message:("key not found $key")
+                    }
+                }
+            }
+
             reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
             if ($?) {
                 Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
@@ -1955,14 +1977,19 @@ Function Start-Migration {
                 New-Item -ItemType Directory -Force -Path $path
             }
             $appxList = @()
+
+            # Get Azure AD Status
+
             $ADStatus = dsregcmd.exe /status
             foreach ($line in $ADStatus) {
                 if ($line -match "AzureADJoined : ") {
                     $AzureADStatus = ($line.trimstart('AzureADJoined : '))
                 }
             }
+            
             Write-ToLog "AzureAD Status: $AzureADStatus"
             if ($AzureADStatus -eq 'YES' -or $netBiosName -match 'AzureAD') {
+
                 # Find Appx User Apps by Username
                 try {
                     $appxList = Get-AppXpackage -user (Convert-Sid $SelectedUserSID) | Select-Object InstallLocation
@@ -1971,7 +1998,7 @@ Function Start-Migration {
                 }
             } else {
                 try {
-                    $appxList = Get-AppXpackage -user $SelectedUserSID | Select-Object InstallLocation
+                    $appxList = Get-AppXpackage -user (Convert-Sid $SelectedUserSID) | Select-Object InstallLocation
                 } catch {
                     Write-ToLog -Message "Could not determine AppXPackages for selected user, this is okay. Rebuilding UWP Apps from AllUsers list"
                 }
@@ -2027,12 +2054,6 @@ Function Start-Migration {
             #region Leave Domain or AzureAD
 
             if ($LeaveDomain -eq $true) {
-                # Get Azure AD Status
-                foreach ($line in $AzureADInfo) {
-                    if ($line -match "AzureADJoined : ") {
-                        $AzureADStatus = ($line.trimstart('AzureADJoined : '))
-                    }
-                }
                 if ($AzureADStatus -match 'YES') {
                     # Check if user is not NTAUTHORITY\SYSTEM
                     if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false) {

@@ -1,3 +1,18 @@
+## 2.4.3
+
+Release Date: Aug 23,2023
+
+#### RELEASE NOTES
+
+```
+* Fixed an issue with Windows 10 devices, where migrated users would no longer be able to access their start menu and search bars.
+* Remove Microsoft Visual C++ 2013 dependencies that are not needed for JCAgent installation.
+* Fixed incorrect agent binary name causing incorrect installation checks.
+* Add validation of JCAgent using Service instead of file path for installation.
+* Fixed an issue when Migrating from AzureAD users where their AppxPackages were not properly identified.
+* Fixed an issue when leaving an AzureAD domain where the tool would not leave the domain.
+```
+
 ## 2.4.2
 
 Release Date: Aug 4,2023
