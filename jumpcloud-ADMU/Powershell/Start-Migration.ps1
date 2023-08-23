@@ -1977,6 +1977,13 @@ Function Start-Migration {
                 New-Item -ItemType Directory -Force -Path $path
             }
             $appxList = @()
+            # Get Azure AD Status
+            $ADStatus = dsregcmd.exe /status
+            foreach ($line in $ADStatus) {
+                if ($line -match "AzureADJoined : ") {
+                    $AzureADStatus = ($line.trimstart('AzureADJoined : '))
+                }
+            }
             if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD') {
                 # Find Appx User Apps by Username
                 try {
@@ -2042,12 +2049,6 @@ Function Start-Migration {
             #region Leave Domain or AzureAD
 
             if ($LeaveDomain -eq $true) {
-                # Get Azure AD Status
-                foreach ($line in $AzureADInfo) {
-                    if ($line -match "AzureADJoined : ") {
-                        $AzureADStatus = ($line.trimstart('AzureADJoined : '))
-                    }
-                }
                 if ($AzureADStatus -match 'YES') {
                     # Check if user is not NTAUTHORITY\SYSTEM
                     if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false) {
