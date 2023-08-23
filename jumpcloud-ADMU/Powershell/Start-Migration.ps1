@@ -917,7 +917,7 @@ function Get-mtpOrganization {
 }
 
 Function Install-JumpCloudAgent(
-      [System.String]$AGENT_INSTALLER_URL
+    [System.String]$AGENT_INSTALLER_URL
     , [System.String]$AGENT_INSTALLER_PATH
     , [System.String]$AGENT_PATH
     , [System.String]$AGENT_BINARY_NAME
@@ -941,7 +941,7 @@ Function Install-JumpCloudAgent(
         # perform installation checks:
         for ($i = 0; $i -le 17; $i++) {
             Write-ToLog -Message:('Waiting on JCAgent Installer...')
-            Start-Sleep -Seconds 10
+            Start-Sleep -Seconds 30
             #Output the errors encountered
             $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
             if ($AgentService.Status -eq 'Running') {
@@ -1930,7 +1930,7 @@ Function Start-Migration {
                     $AzureADStatus = ($line.trimstart('AzureADJoined : '))
                 }
             }
-            
+
             Write-ToLog "AzureAD Status: $AzureADStatus"
             if ($AzureADStatus -eq 'YES' -or $netBiosName -match 'AzureAD') {
 
