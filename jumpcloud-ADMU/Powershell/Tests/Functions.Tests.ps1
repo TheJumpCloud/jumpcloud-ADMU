@@ -317,21 +317,6 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Test-ProgramInstalled Function' {
-
-        It 'Test-ProgramInstalled x64 - PowerShell 7-x64' {
-            test-programinstalled -programName 'PowerShell 7-x64' | Should -Be $true
-        }
-
-        It 'Test-ProgramInstalled x32 - WinAppDeploy' {
-            Test-ProgramInstalled -programName 'WinAppDeploy' | Should -Be $true
-        }
-
-        It 'Test-ProgramInstalled - Program Name Does Not Exist' {
-            Test-ProgramInstalled -programName 'Google Chrome1' | Should -Be $false
-        }
-    }
-
     Context 'Uninstall-Program Function' {
 
         It 'Uninstall - aws command line interface' -Skip {
@@ -446,29 +431,24 @@ Describe 'Functions' {
     }
 
     Context 'Install-JumpCloudAgent Function' {
-        #Already installed on circleci
-        It 'Install-JumpCloudAgent - Verify Download JCAgent prereq Visual C++ 2013 x64' -skip {
-            Test-path 'C:\Windows\Temp\JCADMU\vc_redist.x64.exe' | Should -Be $true
-        }
-        #Already installed on circleci
-        It 'Install-JumpCloudAgent - Verify Download JCAgent prereq Visual C++ 2013 x86' -skip {
-            Test-path 'C:\Windows\Temp\JCADMU\vc_redist.x86.exe' | Should -Be $true
+        BeforeAll {
+            $windowsDrive = Get-WindowsDrive
+            $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
+            $AGENT_INSTALLER_PATH
+            $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
+            $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
+            $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
+
+            # now go install the agent
+            Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
         }
 
-        It 'Install-JumpCloudAgent - Verify Download JCAgent' {
+        It 'Install-JumpCloudAgent - Verify Download JCAgent Path' {
             Test-path 'C:\Windows\Temp\JCADMU\jcagent-msi-signed.msi' | Should -Be $true
         }
 
-        It 'Install-JumpCloudAgent - Verify Install JCAgent prereq Visual C++ 2013 x64' {
-            (Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x64")) | Should -Be $true
-        }
-
-        It 'Install-JumpCloudAgent - Verify Install JCAgent prereq Visual C++ 2013 x86' {
-            (Test-ProgramInstalled("Microsoft Visual C\+\+ 2013 x86")) | Should -Be $true
-        }
-
         It 'Install-JumpCloudAgent - Verify Install JCAgent' {
-            (Test-ProgramInstalled("JumpCloud")) | Should -Be $true
+            Get-Service -Name "jumpcloud-agent" | Should -Not -Be $null
         }
     }
 
