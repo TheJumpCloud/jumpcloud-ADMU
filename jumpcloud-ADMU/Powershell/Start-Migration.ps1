@@ -1977,14 +1977,19 @@ Function Start-Migration {
                 New-Item -ItemType Directory -Force -Path $path
             }
             $appxList = @()
+
             # Get Azure AD Status
+
             $ADStatus = dsregcmd.exe /status
             foreach ($line in $ADStatus) {
                 if ($line -match "AzureADJoined : ") {
                     $AzureADStatus = ($line.trimstart('AzureADJoined : '))
                 }
             }
-            if ($AzureADProfile -eq $true -or $netBiosName -match 'AzureAD') {
+            
+            Write-ToLog "AzureAD Status: $AzureADStatus"
+            if ($AzureADStatus -eq 'YES' -or $netBiosName -match 'AzureAD') {
+
                 # Find Appx User Apps by Username
                 try {
                     $appxList = Get-AppXpackage -user (Convert-Sid $SelectedUserSID) | Select-Object InstallLocation
