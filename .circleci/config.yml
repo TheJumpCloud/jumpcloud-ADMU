@@ -8,7 +8,7 @@ parameters:
   PublishToPSGallery:
     description: "When `true` and when run against Master branch, this workflow will publish the latest code to PSGallery"
     type: boolean
-    default: true
+    default: false
   ManualModuleVersion:
     description: "When `true` the pipeline will use the Module Version specified in JumpCloud Module JumpCloud.psd1 file"
     type: boolean
@@ -101,12 +101,16 @@ release: &release
         - Build
         - Build Module
         - Build Nuspec
-  # - Start Sign Job:
-  #     requires:
-  #       - Build
-  #       - Build Module
-  #       - Invoke Git Commit
-  #       - Upload Artifact
+# - Start Sign Job:
+#     requires:
+
+#       - Build
+
+#       - Build Module
+
+#       - Invoke Git Commit
+
+#       - Upload Artifact
 workflows:
   version: 2
   ci:
