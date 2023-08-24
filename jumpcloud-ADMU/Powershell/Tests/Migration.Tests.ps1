@@ -75,7 +75,7 @@ Describe 'Migration Test Scenarios' {
             $settings = New-ScheduledTaskSettingsSet
             $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
             Register-ScheduledTask "TestTaskDisabled" -InputObject $task
-            {Disable-ScheduledTask -TaskName "TestTaskDisabled"} | Should -Not -Throw
+            { Disable-ScheduledTask -TaskName "TestTaskDisabled" } | Should -Not -Throw
 
             $Password = "Temp123!"
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -139,11 +139,7 @@ Describe 'Migration Test Scenarios' {
             Remove-Item $logPath
             New-Item $logPath -Force -ItemType File
         }
-        $action = New-ScheduledTaskAction -Execute "powershell.exe"
-        $trigger = New-ScheduledTaskTrigger -AtLogon
-        $settings = New-ScheduledTaskSettingsSet
-        $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
-        Register-ScheduledTask "TestTaskFail" -InputObject $task
+
         # This test contains a job which will load the migration user's profile
         # into memory and effectively break the migration process. This test
         # simulates the case where a process is loaded 'during' migration.
@@ -180,21 +176,59 @@ Describe 'Migration Test Scenarios' {
                 }) -ArgumentList:($($user.Username), ($($user.password)), $($user.JCUsername))
             # Begin job to kick off Start-Migration
             write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password) Testing Reverse`n"
-            { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $false -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath } | Should -Throw
+            waitStartMigrationJob = Start-Job -ScriptBlock:( {
+                    param (
+                        [Parameter()]
+                        [string]
+                        $JCAPIKEY,
+                        [Parameter()]
+                        [string]
+                        $JCUSERNAME,
+                        [Parameter()]
+                        [string]
+                        $SELECTEDCOMPUTERNAME,
+                        [Parameter()]
+                        [string]
+                        $TEMPPASS
+                    )
+                    $date = Get-Date -UFormat "%D %r"
+                    Write-Host "$date - Starting Start migration:"
+                    { Start-Migration -JumpCloudAPIKey $JCAPIKEY -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)" } | Should -Throw
+                    $date = Get-Date -UFormat "%D %r"
+                    Write-Host "$date - Start migration complete"
+                }) -ArgumentList:($($env:JCApiKey), ($($user.JCUsername)), $($user.username), $($user.password))
             # Receive the wait-job to the ci logs
+
+            waitTaskJob = Start-Job -ScriptBlock:( {
+                    $action = New-ScheduledTaskAction -Execute "powershell.exe"
+                    $trigger = New-ScheduledTaskTrigger -AtLogon
+                    $settings = New-ScheduledTaskSettingsSet
+                    $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
+                    Register-ScheduledTask "TestTaskFail" -InputObject $task
+
+                    $task = Get-ScheduledTask -TaskName "TestTaskFail"
+                    while ($task.state -ne "Ready") {
+                        $date = Get-Date -UFormat "%D %r"
+                        Write-Host "$date - Task has changed state"
+                        Start-Sleep -Seconds:(1)
+
+                    }
+                    Write-Host "Task State: $($task.State)"
+                    $task.state | should -be "Disabled"
+                })
             Write-Host "Job Details:"
             Receive-Job -Job $waitJob -Keep
+            Receive-Job -Job $waitStartMigrationJob -Keep
+            Receive-Job -Job $waitTaskJob -Keep
             # The original user should exist
             "C:\Users\$($user.username)" | Should -Exist
             # NewUserInit should be reverted and the new user profile path should not exist
             "C:\Users\$($user.JCUsername)" | Should -Not -Exist
-        }
-        It "Failed migration should revert original scheduled tasks state" {
             $task = Get-ScheduledTask -TaskName "TestTaskFail"
-            Get-ScheduledTask
-            # Task state should be ready
             $task.State | Should -Be "Ready"
+
         }
+
     }
     It "Account of a prior migration can be sucessfully migrated again and not overwrite registry backup files" {
         $Password = "Temp123!"
