@@ -86,8 +86,8 @@ Describe 'Migration Test Scenarios' {
             { Start-Migration -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$user1" -TempPassword "$($Password)" } | Should -Not -Throw
             # Get the scheduled task
             $task = Get-ScheduledTask -TaskName "TestTaskDisabled"
-            # Task state should be ready
-            $task.State | Should -Be "Ready"
+            # Task state should still be disabled
+            $task.State | Should -Be "Disabled"
         }
         It "Test Convert profile migration for Local users" {
             foreach ($user in $userTestingHash.Values) {
@@ -191,7 +191,6 @@ Describe 'Migration Test Scenarios' {
         }
         It "Failed migration should revert original scheduled tasks state" {
             $task = Get-ScheduledTask -TaskName "TestTaskFail"
-            Get-ScheduledTask
             # Task state should be ready
             $task.State | Should -Be "Ready"
         }

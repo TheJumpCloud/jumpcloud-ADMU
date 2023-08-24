@@ -2172,7 +2172,7 @@ Function Start-Migration {
             }
             throw "JumpCloud ADMU was unable to migrate $selectedUserName"
         }
-        $ScheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*"}
+        # Create a list of scheduled tasks that are disabled
         try {
             $scheduledTasks | ForEach-Object {
                 Write-ToLog -message("Enabling Scheduled Task: $($_.TaskName)")
