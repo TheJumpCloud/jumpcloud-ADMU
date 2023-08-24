@@ -139,95 +139,97 @@ Describe 'Migration Test Scenarios' {
             Remove-Item $logPath
             New-Item $logPath -Force -ItemType File
         }
+        it "Tests that the tool can recover when the start migration script fails" {
 
-        # This test contains a job which will load the migration user's profile
-        # into memory and effectively break the migration process. This test
-        # simulates the case where a process is loaded 'during' migration.
-        foreach ($user in $JCReversionHash.Values) {
-            # Begin background job before Start-Migration
-            $waitJob = Start-Job -ScriptBlock:( {
-                    [CmdletBinding()]
-                    param (
-                        [Parameter()]
-                        [string]
-                        $UserName,
-                        [Parameter()]
-                        [string]
-                        $Password,
-                        [Parameter()]
-                        [string]
-                        $JCUserName
-                    )
-                    $file = "C:\Users\$JCUserName"
-                    # wait for the new user
-                    while (!(Test-Path -Path $file -ErrorAction SilentlyContinue)) {
+            # This test contains a job which will load the migration user's profile
+            # into memory and effectively break the migration process. This test
+            # simulates the case where a process is loaded 'during' migration.
+            foreach ($user in $JCReversionHash.Values) {
+                # Begin background job before Start-Migration
+                $waitJob = Start-Job -ScriptBlock:( {
+                        [CmdletBinding()]
+                        param (
+                            [Parameter()]
+                            [string]
+                            $UserName,
+                            [Parameter()]
+                            [string]
+                            $Password,
+                            [Parameter()]
+                            [string]
+                            $JCUserName
+                        )
+                        $file = "C:\Users\$JCUserName"
+                        # wait for the new user
+                        while (!(Test-Path -Path $file -ErrorAction SilentlyContinue)) {
+                            $date = Get-Date -UFormat "%D %r"
+                            Write-Host "$date - waiting for file:"
+                            Start-Sleep -Seconds:(1)
+                        }
                         $date = Get-Date -UFormat "%D %r"
-                        Write-Host "$date - waiting for file:"
-                        Start-Sleep -Seconds:(1)
-                    }
-                    $date = Get-Date -UFormat "%D %r"
-                    Write-Host "$date - Starting Process:"
-                    # Start Process on the migration user to get the migration to fail
-                    $credentials = New-Object System.Management.Automation.PSCredential -ArgumentList @($UserName, (ConvertTo-SecureString -String $Password -AsPlainText -Force))
-                    # trigger PowerShell session
-                    Start-Process powershell.exe -Credential ($credentials) -WorkingDirectory "C:\windows\system32" -ArgumentList ('-WindowStyle Hidden')
-                    # write out job complete, if the job completes we should see it in the ci logs
-                    Write-Host "Job Completed"
-                }) -ArgumentList:($($user.Username), ($($user.password)), $($user.JCUsername))
-            # Begin job to kick off Start-Migration
-            write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password) Testing Reverse`n"
-            waitStartMigrationJob = Start-Job -ScriptBlock:( {
-                    param (
-                        [Parameter()]
-                        [string]
-                        $JCAPIKEY,
-                        [Parameter()]
-                        [string]
-                        $JCUSERNAME,
-                        [Parameter()]
-                        [string]
-                        $SELECTEDCOMPUTERNAME,
-                        [Parameter()]
-                        [string]
-                        $TEMPPASS
-                    )
-                    $date = Get-Date -UFormat "%D %r"
-                    Write-Host "$date - Starting Start migration:"
-                    { Start-Migration -JumpCloudAPIKey $JCAPIKEY -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)" } | Should -Throw
-                    $date = Get-Date -UFormat "%D %r"
-                    Write-Host "$date - Start migration complete"
-                }) -ArgumentList:($($env:JCApiKey), ($($user.JCUsername)), $($user.username), $($user.password))
-            # Receive the wait-job to the ci logs
-
-            waitTaskJob = Start-Job -ScriptBlock:( {
-                    $action = New-ScheduledTaskAction -Execute "powershell.exe"
-                    $trigger = New-ScheduledTaskTrigger -AtLogon
-                    $settings = New-ScheduledTaskSettingsSet
-                    $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
-                    Register-ScheduledTask "TestTaskFail" -InputObject $task
-
-                    $task = Get-ScheduledTask -TaskName "TestTaskFail"
-                    while ($task.state -ne "Ready") {
+                        Write-Host "$date - Starting Process:"
+                        # Start Process on the migration user to get the migration to fail
+                        $credentials = New-Object System.Management.Automation.PSCredential -ArgumentList @($UserName, (ConvertTo-SecureString -String $Password -AsPlainText -Force))
+                        # trigger PowerShell session
+                        Start-Process powershell.exe -Credential ($credentials) -WorkingDirectory "C:\windows\system32" -ArgumentList ('-WindowStyle Hidden')
+                        # write out job complete, if the job completes we should see it in the ci logs
+                        Write-Host "Job Completed"
+                    }) -ArgumentList:($($user.Username), ($($user.password)), $($user.JCUsername))
+                # Begin job to kick off Start-Migration
+                write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password) Testing Reverse`n"
+                waitStartMigrationJob = Start-Job -ScriptBlock:( {
+                        param (
+                            [Parameter()]
+                            [string]
+                            $JCAPIKEY,
+                            [Parameter()]
+                            [string]
+                            $JCUSERNAME,
+                            [Parameter()]
+                            [string]
+                            $SELECTEDCOMPUTERNAME,
+                            [Parameter()]
+                            [string]
+                            $TEMPPASS
+                        )
                         $date = Get-Date -UFormat "%D %r"
-                        Write-Host "$date - Task has changed state"
-                        Start-Sleep -Seconds:(1)
+                        Write-Host "$date - Starting Start migration:"
+                        Start-Migration -JumpCloudAPIKey $JCAPIKEY -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)"
+                        $date = Get-Date -UFormat "%D %r"
+                        Write-Host "$date - Start migration complete"
+                    }) -ArgumentList:($($env:JCApiKey), ($($user.JCUsername)), $($user.username), $($user.password))
+                # Receive the wait-job to the ci logs
 
-                    }
-                    Write-Host "Task State: $($task.State)"
-                    $task.state | should -be "Disabled"
-                })
-            Write-Host "Job Details:"
-            Receive-Job -Job $waitJob -Keep
-            Receive-Job -Job $waitStartMigrationJob -Keep
-            Receive-Job -Job $waitTaskJob -Keep
-            # The original user should exist
-            "C:\Users\$($user.username)" | Should -Exist
-            # NewUserInit should be reverted and the new user profile path should not exist
-            "C:\Users\$($user.JCUsername)" | Should -Not -Exist
-            $task = Get-ScheduledTask -TaskName "TestTaskFail"
-            # Task state should be ready
-            $task.State | Should -Be "Ready"
+                waitTaskJob = Start-Job -ScriptBlock:( {
+                        $action = New-ScheduledTaskAction -Execute "powershell.exe"
+                        $trigger = New-ScheduledTaskTrigger -AtLogon
+                        $settings = New-ScheduledTaskSettingsSet
+                        $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
+                        Register-ScheduledTask "TestTaskFail" -InputObject $task
 
+                        $task = Get-ScheduledTask -TaskName "TestTaskFail"
+                        while ($task.state -ne "Ready") {
+                            $date = Get-Date -UFormat "%D %r"
+                            Write-Host "$date - Task has changed state"
+                            Start-Sleep -Seconds:(1)
+
+                        }
+                        Write-Host "Task State: $($task.State)"
+                        $task.state | should -be "Disabled"
+                    })
+                Write-Host "Job Details:"
+                Receive-Job -Job $waitJob -Keep
+                Receive-Job -Job $waitStartMigrationJob -Keep
+                Receive-Job -Job $waitTaskJob -Keep
+                # The original user should exist
+                "C:\Users\$($user.username)" | Should -Exist
+                # NewUserInit should be reverted and the new user profile path should not exist
+                "C:\Users\$($user.JCUsername)" | Should -Not -Exist
+                $task = Get-ScheduledTask -TaskName "TestTaskFail"
+                # Task state should be ready
+                $task.State | Should -Be "Ready"
+
+            }
         }
 
     }

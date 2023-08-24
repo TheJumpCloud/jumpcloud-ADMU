@@ -1401,7 +1401,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.4.2'
+        $admuVersion = '2.4.4'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
@@ -1548,7 +1548,7 @@ Function Start-Migration {
         Write-ToLog -Message:($localComputerName + ' is currently Domain joined to ' + $WmiComputerSystem.Domain + ' NetBiosName is ' + $netBiosName)
 
         # Get all schedule tasks that have State of "Running " and "Ready" and not disabled
-        $ScheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*"  -and $_.State -ne "Disabled"}
+        $ScheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -ne "Disabled" }
         # Disable tasks before migration
         Write-ToLog -message:("Disabling Scheduled Tasks...")
         try {
@@ -1570,8 +1570,7 @@ Function Start-Migration {
                     Write-ToLog -message:("Failed to disable task: $($_.TaskName) with state $($task.state)") -Level Warn
                 }
             }
-        }
-        catch {
+        } catch {
             Write-ToLog -message:("Failed to disable Scheduled Tasks $($_.Exception.Message)")
         }
     }
@@ -2185,8 +2184,7 @@ Function Start-Migration {
                     Write-ToLog -message("Scheduled Task: $($_.TaskName) is not enabled")
                 }
             }
-        }
-        catch {
+        } catch {
             Write-ToLog -message("Could not enable Scheduled Task: $($_.TaskName)") -Level Warn
         }
 
