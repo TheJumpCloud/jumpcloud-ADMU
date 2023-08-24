@@ -86,8 +86,8 @@ Describe 'Migration Test Scenarios' {
             { Start-Migration -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$user1" -TempPassword "$($Password)" } | Should -Not -Throw
             # Get the scheduled task
             $task = Get-ScheduledTask -TaskName "TestTaskDisabled"
-            # Task state should be ready
-            $task.State | Should -Be "Ready"
+            # Task state should still be disabled
+            $task.State | Should -Be "Disabled"
         }
         It "Test Convert profile migration for Local users" {
             foreach ($user in $userTestingHash.Values) {
@@ -225,6 +225,7 @@ Describe 'Migration Test Scenarios' {
             # NewUserInit should be reverted and the new user profile path should not exist
             "C:\Users\$($user.JCUsername)" | Should -Not -Exist
             $task = Get-ScheduledTask -TaskName "TestTaskFail"
+            # Task state should be ready
             $task.State | Should -Be "Ready"
 
         }
