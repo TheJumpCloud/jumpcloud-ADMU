@@ -235,7 +235,9 @@ Describe 'Migration Test Scenarios' {
                         }
                     })
                 Write-Host "Job Details:"
-                Receive-Job -Job $waitJob -Keep
+                # wait until the start task job starts:
+                Wait-Job -Job $waitJob | Out-Null
+                Receive-Job -job $waitJob -Keep
                 # wait until this task step finishes or a min passes
                 Wait-Job -Job $waitTaskJob | Out-Null
                 $taskData = Receive-Job -job $waitTaskJob -Keep
