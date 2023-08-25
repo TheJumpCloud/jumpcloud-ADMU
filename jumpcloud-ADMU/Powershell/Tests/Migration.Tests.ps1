@@ -187,8 +187,7 @@ Describe 'Migration Test Scenarios' {
                         # wait for the new user
                         do {
                             $date = Get-Date -UFormat "%D %r"
-                            Write-Host "$date - waiting for file:"
-                            # Start-Sleep -Seconds:(1)
+                            Start-Sleep -Seconds:(1)
                         }
                         Until ((Test-Path -Path $file -ErrorAction SilentlyContinue)) {
                         }
