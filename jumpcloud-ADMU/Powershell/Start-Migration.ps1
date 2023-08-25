@@ -1553,19 +1553,19 @@ Function Start-Migration {
         Write-ToLog -message:("Disabling Scheduled Tasks...")
         try {
             $scheduledTasks | ForEach-Object {
-                Write-ToLog -message:("Disabling Scheduled Task: $($_.TaskName)")
+                # Write-ToLog -message:("Disabling Scheduled Task: $($_.TaskName)")
                 # If state is running stop it
                 if ($_.State -eq "Running") {
                     Write-ToLog -message:("Task is still running, stopping... $($_.TaskName)")
-                    Stop-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
-                    Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
+                    # Stop-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
+                    # Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
                 } else {
                     Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
                 }
                 # Check task is disabled
                 $task = Get-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
                 if ($task.State -eq "Disabled") {
-                    Write-ToLog -message:("Task Disabled Successfully")
+                    # Write-ToLog -message:("Task Disabled Successfully")
                 } else {
                     Write-ToLog -message:("Failed to disable task: $($_.TaskName) with state $($task.state)") -Level Warn
                 }
@@ -2104,6 +2104,23 @@ Function Start-Migration {
                 $admuTracker.leaveDomain.pass = $true
             }
 
+            # re-enable scheduled tasks if they were disabled
+            # Create a list of scheduled tasks that are disabled
+            try {
+                $scheduledTasks | ForEach-Object {
+                    # Write-ToLog -message("Enabling Scheduled Task: $($_.TaskName)")
+                    Enable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
+                    # Check if running
+                    $taskStatus = Get-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
+                    # if ($taskStatus.State -eq "Ready") {
+                    #     # Write-ToLog -message("Scheduled Task: $($_.TaskName) is now enabled")
+                    # } else {
+                    #     Write-ToLog -message("Scheduled Task: $($_.TaskName) is not enabled")
+                    # }
+                }
+            } catch {
+                Write-ToLog -message("Could not enable Scheduled Task: $($_.TaskName)") -Level Warn
+            }
             # Cleanup Folders Again Before Reboot
             Write-ToLog -Message:('Removing Temp Files & Folders.')
             try {
@@ -2148,6 +2165,22 @@ Function Start-Migration {
                                 Write-ToLog -Message:("Could not remove the $JumpCloudUserName profile and user account") -Level Error
                             }
                             $FixedErrors += "$trackedStep"
+                            # Create a list of scheduled tasks that are disabled
+                            try {
+                                $scheduledTasks | ForEach-Object {
+                                    # Write-ToLog -message("Enabling Scheduled Task: $($_.TaskName)")
+                                    Enable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
+                                    # Check if running
+                                    $taskStatus = Get-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
+                                    # if ($taskStatus.State -eq "Ready") {
+                                    #     # Write-ToLog -message("Scheduled Task: $($_.TaskName) is now enabled")
+                                    # } else {
+                                    #     Write-ToLog -message("Scheduled Task: $($_.TaskName) is not enabled")
+                                    # }
+                                }
+                            } catch {
+                                Write-ToLog -message("Could not enable Scheduled Task: $($_.TaskName)") -Level Warn
+                            }
                         }
 
                         Default {
@@ -2171,22 +2204,7 @@ Function Start-Migration {
             }
             throw "JumpCloud ADMU was unable to migrate $selectedUserName"
         }
-        # Create a list of scheduled tasks that are disabled
-        try {
-            $scheduledTasks | ForEach-Object {
-                Write-ToLog -message("Enabling Scheduled Task: $($_.TaskName)")
-                Enable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
-                # Check if running
-                $taskStatus = Get-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
-                if ($taskStatus.State -eq "Ready") {
-                    Write-ToLog -message("Scheduled Task: $($_.TaskName) is now enabled")
-                } else {
-                    Write-ToLog -message("Scheduled Task: $($_.TaskName) is not enabled")
-                }
-            }
-        } catch {
-            Write-ToLog -message("Could not enable Scheduled Task: $($_.TaskName)") -Level Warn
-        }
+
 
     }
 }
