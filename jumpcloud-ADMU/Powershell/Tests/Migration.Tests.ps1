@@ -200,12 +200,12 @@ Describe 'Migration Test Scenarios' {
                     }) -ArgumentList:($($env:JCApiKey), ($($user.JCUsername)), $($user.username), $($user.password))
                 # Receive the wait-job to the ci logs
 
-                waitTaskJob = Start-Job -ScriptBlock:( {
-                        $action = New-ScheduledTaskAction -Execute "powershell.exe"
-                        $trigger = New-ScheduledTaskTrigger -AtLogon
-                        $settings = New-ScheduledTaskSettingsSet
-                        $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
-                        Register-ScheduledTask "TestTaskFail" -InputObject $task
+                $waitTaskJob = Start-Job -ScriptBlock:( {
+                        # $action = New-ScheduledTaskAction -Execute "powershell.exe"
+                        # $trigger = New-ScheduledTaskTrigger -AtLogon
+                        # $settings = New-ScheduledTaskSettingsSet
+                        # $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
+                        # Register-ScheduledTask "TestTaskFail" -InputObject $task
 
                         $task = Get-ScheduledTask -TaskName "TestTaskFail"
                         while ($task.state -ne "Ready") {
