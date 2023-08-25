@@ -208,19 +208,31 @@ Describe 'Migration Test Scenarios' {
                         Register-ScheduledTask "TestTaskFail" -InputObject $task
 
                         $task = Get-ScheduledTask -TaskName "TestTaskFail"
-                        while ($task.state -ne "Ready") {
+                        $timeout = 0
+                        do {
+                            $task = Get-ScheduledTask -TaskName "TestTaskFail"
                             $date = Get-Date -UFormat "%D %r"
-                            Write-Host "$date - Task has changed state"
+                            Write-Host "$date - Task State: $($task.state)"
+                            $timeout += 1
                             Start-Sleep -Seconds:(1)
 
                         }
-                        Write-Host "Task State: $($task.State)"
-                        $task.state | should -be "Disabled"
+                        Until (($task.state -eq "Disabled") -or ($timeout -ge 60))
+                        if ($task.state -eq "Disabled") {
+                            Write-Host "Task State: $($task.State)"
+                            return $true
+                        } else {
+                            return $false
+                        }
                     })
                 Write-Host "Job Details:"
                 Receive-Job -Job $waitJob -Keep
+                # wait until this task step finishes or a min passes
+                Wait-Job -Job $waitTaskJob | Out-Null
+                $taskData = Receive-Job -job $waitTaskJob -Keep
+                # if taskData is $true, the task was disabled during start-migration
+                $taskData | should -be $true
                 Receive-Job -Job $waitStartMigrationJob -Keep
-                Receive-Job -Job $waitTaskJob -Keep
                 # The original user should exist
                 "C:\Users\$($user.username)" | Should -Exist
                 # NewUserInit should be reverted and the new user profile path should not exist
