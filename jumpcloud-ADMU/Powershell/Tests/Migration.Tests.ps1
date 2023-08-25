@@ -177,7 +177,7 @@ Describe 'Migration Test Scenarios' {
                     }) -ArgumentList:($($user.Username), ($($user.password)), $($user.JCUsername))
                 # Begin job to kick off Start-Migration
                 write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password) Testing Reverse`n"
-                waitStartMigrationJob = Start-Job -ScriptBlock:( {
+                $waitStartMigrationJob = Start-Job -ScriptBlock:( {
                         param (
                             [Parameter()]
                             [string]
