@@ -201,11 +201,11 @@ Describe 'Migration Test Scenarios' {
                 # Receive the wait-job to the ci logs
 
                 $waitTaskJob = Start-Job -ScriptBlock:( {
-                        # $action = New-ScheduledTaskAction -Execute "powershell.exe"
-                        # $trigger = New-ScheduledTaskTrigger -AtLogon
-                        # $settings = New-ScheduledTaskSettingsSet
-                        # $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
-                        # Register-ScheduledTask "TestTaskFail" -InputObject $task
+                        $action = New-ScheduledTaskAction -Execute "powershell.exe"
+                        $trigger = New-ScheduledTaskTrigger -AtLogon
+                        $settings = New-ScheduledTaskSettingsSet
+                        $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
+                        Register-ScheduledTask "TestTaskFail" -InputObject $task
 
                         $task = Get-ScheduledTask -TaskName "TestTaskFail"
                         while ($task.state -ne "Ready") {
