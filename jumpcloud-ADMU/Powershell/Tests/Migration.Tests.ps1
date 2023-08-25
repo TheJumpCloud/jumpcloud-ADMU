@@ -183,6 +183,7 @@ Describe 'Migration Test Scenarios' {
                 Register-ScheduledTask "TestTaskFail" -InputObject $task
                 # Begin job to kick off Start-Migration
                 write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password) Testing Reverse`n"
+                $pathToSM = "$PSScriptRoot\..\Start-Migration.ps1"
                 $waitStartMigrationJob = Start-Job -ScriptBlock:( {
                         param (
                             [Parameter()]
@@ -196,14 +197,24 @@ Describe 'Migration Test Scenarios' {
                             $SELECTEDCOMPUTERNAME,
                             [Parameter()]
                             [string]
-                            $TEMPPASS
+                            $TEMPPASS,
+                            [Parameter()]
+                            [string]
+                            $SMPath
                         )
                         $date = Get-Date -UFormat "%D %r"
                         Write-Host "$date - Starting Start migration:"
+                        Write-Host "$date - path: $SMPath"
+                        . $SMPath
+                        if ($?) {
+                            Write-Host "imported start migration"
+                        } else {
+                            write-host "could not import start migration script path"
+                        }
                         Start-Migration -JumpCloudAPIKey $JCAPIKEY -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)"
                         $date = Get-Date -UFormat "%D %r"
                         Write-Host "$date - Start migration complete"
-                    }) -ArgumentList:($($env:JCApiKey), ($($user.JCUsername)), $($user.username), $($user.password))
+                    }) -ArgumentList:($($env:JCApiKey), ($($user.JCUsername)), $($user.username), $($user.password), $pathToSM)
                 $waitTaskJob = Start-Job -ScriptBlock:( {
                         $task = Get-ScheduledTask -TaskName "TestTaskFail"
                         $timeout = 0
