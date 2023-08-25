@@ -1560,7 +1560,7 @@ Function Start-Migration {
                     # Stop-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
                     # Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
                 } else {
-                    Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
+                    Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
                 }
                 # Check task is disabled
                 $task = Get-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
@@ -2109,7 +2109,7 @@ Function Start-Migration {
             try {
                 $scheduledTasks | ForEach-Object {
                     # Write-ToLog -message("Enabling Scheduled Task: $($_.TaskName)")
-                    Enable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
+                    Enable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
                     # Check if running
                     $taskStatus = Get-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
                     # if ($taskStatus.State -eq "Ready") {
@@ -2169,7 +2169,7 @@ Function Start-Migration {
                             try {
                                 $scheduledTasks | ForEach-Object {
                                     # Write-ToLog -message("Enabling Scheduled Task: $($_.TaskName)")
-                                    Enable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
+                                    Enable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
                                     # Check if running
                                     $taskStatus = Get-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
                                     # if ($taskStatus.State -eq "Ready") {

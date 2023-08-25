@@ -215,10 +215,11 @@ Describe 'Migration Test Scenarios' {
                         if ($?) {
                             Write-Host "imported start migration"
                         } else {
-                            write-host "naw"
+                            write-host "failed to import start migration script"
                         }
-                        { Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)" } | Should -Throw
-                        if ($?) {
+                        Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)"
+                        $logContent = Get-Content -Tail 1 C:\Windows\Temp\Jcadmu.log
+                        if ($logContent -match "The following migration steps were reverted to their original state: newUserInit") {
                             write-host "Start Migration Task Failed Sucessfully"
                             return $true
                         } else {
