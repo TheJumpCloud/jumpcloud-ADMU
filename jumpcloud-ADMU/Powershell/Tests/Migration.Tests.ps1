@@ -53,7 +53,7 @@ Describe 'Migration Test Scenarios' {
     Enable-TestNameAsVariablePlugin
     BeforeEach {
         Write-Host "---------------------------"
-        Write-Host "Begin Test: $testName"
+        Write-Host "Begin Test: $testName`n"
     }
     Context 'Start-Migration on local accounts (Test Functionallity)' {
         It "username extists for testing" {
@@ -237,7 +237,8 @@ Describe 'Migration Test Scenarios' {
                         } else {
                             write-host "failed to import start migration script"
                         }
-                        Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)"
+                        Write-Host "Running Migration, $JCUSERNAME, $SELECTEDCOMPUTERNAME, $TEMPPASS"
+                        { Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)" } | Should -Throw
                         $logContent = Get-Content -Tail 1 C:\Windows\Temp\Jcadmu.log
                         if ($logContent -match "The following migration steps were reverted to their original state: newUserInit") {
                             write-host "Start Migration Task Failed Sucessfully"
@@ -254,8 +255,6 @@ Describe 'Migration Test Scenarios' {
                         $task = Get-ScheduledTask -TaskName "TestTaskFail"
                         do {
                             $task = Get-ScheduledTask -TaskName "TestTaskFail"
-                            $date = Get-Date -UFormat "%D %r"
-                            Write-Host "$date - Task State: $($task.state)"
                             Start-Sleep -Seconds:(1)
 
                         }
@@ -523,7 +522,7 @@ Describe 'Migration Test Scenarios' {
         }
     }
     AfterEach {
-        Write-Host "End Test: $testName"
+        Write-Host "`nEnd Test: $testName"
         Write-Host "---------------------------`n"
     }
 }
