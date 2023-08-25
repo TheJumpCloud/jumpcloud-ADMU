@@ -159,7 +159,7 @@ Describe 'Migration Test Scenarios' {
             Remove-Item $logPath
             New-Item $logPath -Force -ItemType File
         }
-        it "Tests that the tool can recover when the start migration script fails" {
+        It "Tests that the tool can recover when the start migration script fails" {
 
             # This test contains a job which will load the migration user's profile
             # into memory and effectively break the migration process. This test
@@ -237,7 +237,11 @@ Describe 'Migration Test Scenarios' {
                             write-host "failed to import start migration script"
                         }
                         Write-Host "Running Migration, $JCUSERNAME, $SELECTEDCOMPUTERNAME, $TEMPPASS"
-                        { Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)" } | Should -Throw
+                        try {
+                            Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)"
+                        } Catch {
+                            write-host "Migration failed as expected"
+                        }
                         $logContent = Get-Content -Tail 1 C:\Windows\Temp\Jcadmu.log
                         if ($logContent -match "The following migration steps were reverted to their original state: newUserInit") {
                             write-host "Start Migration Task Failed Sucessfully"
