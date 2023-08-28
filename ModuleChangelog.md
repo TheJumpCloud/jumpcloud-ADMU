@@ -1,25 +1,13 @@
-## 2.4.4
+## 2.5.0
 
 Release Date: August 28, 2023
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+* Added disable scheduled task functionality during migration
+  - Disables scheduled task that is on "Ready" state
 ```
-
-#### FEATURES:
-
-{{Fill in the Features}}
-
-#### IMPROVEMENTS:
-
-{{Fill in the Improvements}}
-
-#### BUG FIXES:
-
-{{Fill in the Bug Fixes}}
-
 ## 2.4.2
 
 Release Date: Aug 4,2023

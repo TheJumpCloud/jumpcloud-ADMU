@@ -1378,7 +1378,39 @@ function Test-DATFilePermission {
         }
     }
 }
-
+function DisableScheduledTask {
+    # Pass in an array of objects with TaskName and TaskPath
+    param (
+        [Parameter(Mandatory = $true)]
+        [System.Object[]]
+        $scheduledTasks
+    )
+    # Disable tasks before migration
+    Write-ToLog -message:("Disabling Scheduled Tasks...")
+    try {
+        $scheduledTasks | ForEach-Object {
+            Write-ToLog -message:("Disabling Scheduled Task: $($_.TaskName)")
+            Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
+        }
+    } catch {
+        Write-ToLog -message:("Failed to disable Scheduled Tasks $($_.Exception.Message)")
+    }
+}
+function EnableScheduledTask {
+    param (
+        [Parameter(Mandatory = $true)]
+        [System.Object[]]
+        $scheduledTasks
+    )
+    try {
+        $scheduledTasks | ForEach-Object {
+            Write-ToLog -message("Enabling Scheduled Task: $($_.TaskName)")
+            Enable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
+        }
+    } catch {
+        Write-ToLog -message("Could not enable Scheduled Task: $($_.TaskName)") -Level Warn
+    }
+}
 #endregion Agent Install Helper Functions
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
@@ -1551,23 +1583,7 @@ Function Start-Migration {
         $ScheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -ne "Disabled" -and $_.state -ne "Running" }
         # Disable tasks before migration
         Write-ToLog -message:("Disabling Scheduled Tasks...")
-        try {
-            $scheduledTasks | ForEach-Object {
-                Write-ToLog -message:("Disabling Scheduled Task: $($_.TaskName)")
-
-                Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
-
-                # Check task is disabled
-                $task = Get-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
-                if ($task.State -eq "Disabled") {
-                    # Write-ToLog -message:("Task Disabled Successfully")
-                } else {
-                    Write-ToLog -message:("Failed to disable task: $($_.TaskName) with state $($task.state)") -Level Warn
-                }
-            }
-        } catch {
-            Write-ToLog -message:("Failed to disable Scheduled Tasks $($_.Exception.Message)")
-        }
+        DisableScheduledTask -scheduledTasks $ScheduledTasks
     }
     Process {
         # Start Of Console Output
@@ -2100,22 +2116,7 @@ Function Start-Migration {
             }
 
             # re-enable scheduled tasks if they were disabled
-            # Create a list of scheduled tasks that are disabled
-            try {
-                $scheduledTasks | ForEach-Object {
-                    # Write-ToLog -message("Enabling Scheduled Task: $($_.TaskName)")
-                    Enable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
-                    # Check if running
-                    $taskStatus = Get-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
-                    # if ($taskStatus.State -eq "Ready") {
-                    #     # Write-ToLog -message("Scheduled Task: $($_.TaskName) is now enabled")
-                    # } else {
-                    #     Write-ToLog -message("Scheduled Task: $($_.TaskName) is not enabled")
-                    # }
-                }
-            } catch {
-                Write-ToLog -message("Could not enable Scheduled Task: $($_.TaskName)") -Level Warn
-            }
+            EnableScheduledTask -scheduledTasks $ScheduledTasks
             # Cleanup Folders Again Before Reboot
             Write-ToLog -Message:('Removing Temp Files & Folders.')
             try {
@@ -2161,21 +2162,7 @@ Function Start-Migration {
                             }
                             $FixedErrors += "$trackedStep"
                             # Create a list of scheduled tasks that are disabled
-                            try {
-                                $scheduledTasks | ForEach-Object {
-                                    # Write-ToLog -message("Enabling Scheduled Task: $($_.TaskName)")
-                                    Enable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
-                                    # Check if running
-                                    $taskStatus = Get-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
-                                    # if ($taskStatus.State -eq "Ready") {
-                                    #     # Write-ToLog -message("Scheduled Task: $($_.TaskName) is now enabled")
-                                    # } else {
-                                    #     Write-ToLog -message("Scheduled Task: $($_.TaskName) is not enabled")
-                                    # }
-                                }
-                            } catch {
-                                Write-ToLog -message("Could not enable Scheduled Task: $($_.TaskName)") -Level Warn
-                            }
+                            EnableScheduledTask -scheduledTasks $ScheduledTasks
                         }
 
                         Default {
