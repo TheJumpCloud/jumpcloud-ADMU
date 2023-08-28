@@ -1378,39 +1378,42 @@ function Test-DATFilePermission {
         }
     }
 }
-function DisableScheduledTask {
-    # Pass in an array of objects with TaskName and TaskPath
+function SetScheduledTask {
+    # Param op "disable" or "enable" then -tasks (array of tasks)
     param (
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("disable", "enable")]
+        [System.String]
+        $op,
         [Parameter(Mandatory = $true)]
         [System.Object[]]
         $scheduledTasks
     )
-    # Disable tasks before migration
-    Write-ToLog -message:("Disabling Scheduled Tasks...")
-    try {
-        $scheduledTasks | ForEach-Object {
-            Write-ToLog -message:("Disabling Scheduled Task: $($_.TaskName)")
-            Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
+
+    # Switch op
+    switch ($op) {
+        "disable" {
+            try {
+                $scheduledTasks | ForEach-Object {
+                    Write-ToLog -message:("Disabling Scheduled Task: $($_.TaskName)")
+                    Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
+                }
+            } catch {
+                Write-ToLog -message:("Failed to disable Scheduled Tasks $($_.Exception.Message)")
+            }
         }
-    } catch {
-        Write-ToLog -message:("Failed to disable Scheduled Tasks $($_.Exception.Message)")
-    }
-}
-function EnableScheduledTask {
-    param (
-        [Parameter(Mandatory = $true)]
-        [System.Object[]]
-        $scheduledTasks
-    )
-    try {
-        $scheduledTasks | ForEach-Object {
-            Write-ToLog -message("Enabling Scheduled Task: $($_.TaskName)")
-            Enable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
+        "enable" {
+            try {
+                $scheduledTasks | ForEach-Object {
+                    Write-ToLog -message("Enabling Scheduled Task: $($_.TaskName)")
+                    Enable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
+                }
+            } catch {
+                Write-ToLog -message("Could not enable Scheduled Task: $($_.TaskName)") -Level Warn
+            }
         }
-    } catch {
-        Write-ToLog -message("Could not enable Scheduled Task: $($_.TaskName)") -Level Warn
     }
-}
+ }
 #endregion Agent Install Helper Functions
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
@@ -1583,7 +1586,7 @@ Function Start-Migration {
         $ScheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -ne "Disabled" -and $_.state -ne "Running" }
         # Disable tasks before migration
         Write-ToLog -message:("Disabling Scheduled Tasks...")
-        DisableScheduledTask -scheduledTasks $ScheduledTasks
+        SetScheduledTask -op "disable" -scheduledTasks $ScheduledTasks
     }
     Process {
         # Start Of Console Output
@@ -2116,7 +2119,7 @@ Function Start-Migration {
             }
 
             # re-enable scheduled tasks if they were disabled
-            EnableScheduledTask -scheduledTasks $ScheduledTasks
+            SetScheduledTask -op "enable" -scheduledTasks $ScheduledTasks
             # Cleanup Folders Again Before Reboot
             Write-ToLog -Message:('Removing Temp Files & Folders.')
             try {
@@ -2162,7 +2165,7 @@ Function Start-Migration {
                             }
                             $FixedErrors += "$trackedStep"
                             # Create a list of scheduled tasks that are disabled
-                            EnableScheduledTask -scheduledTasks $ScheduledTasks
+                            SetScheduledTask -op "enable" -scheduledTasks $ScheduledTasks
                         }
 
                         Default {
