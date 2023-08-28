@@ -1547,21 +1547,16 @@ Function Start-Migration {
         }
         Write-ToLog -Message:($localComputerName + ' is currently Domain joined to ' + $WmiComputerSystem.Domain + ' NetBiosName is ' + $netBiosName)
 
-        # Get all schedule tasks that have State of "Running " and "Ready" and not disabled
-        $ScheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -ne "Disabled" }
+        # Get all schedule tasks that have State of "Ready" and not disabled and "Running"
+        $ScheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -ne "Disabled" -and $_.state -ne "Running" }
         # Disable tasks before migration
         Write-ToLog -message:("Disabling Scheduled Tasks...")
         try {
             $scheduledTasks | ForEach-Object {
-                # Write-ToLog -message:("Disabling Scheduled Task: $($_.TaskName)")
-                # If state is running stop it
-                if ($_.State -eq "Running") {
-                    Write-ToLog -message:("Task is still running, stopping... $($_.TaskName)")
-                    # Stop-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
-                    # Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
-                } else {
-                    Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
-                }
+                Write-ToLog -message:("Disabling Scheduled Task: $($_.TaskName)")
+
+                Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
+
                 # Check task is disabled
                 $task = Get-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath
                 if ($task.State -eq "Disabled") {
