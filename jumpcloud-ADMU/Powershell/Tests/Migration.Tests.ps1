@@ -207,7 +207,7 @@ Describe 'Migration Test Scenarios' {
                         $trigger = New-ScheduledTaskTrigger -AtLogon
                         $settings = New-ScheduledTaskSettingsSet
                         $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
-                        Register-ScheduledTask "TestTaskFail" -InputObject $task
+                        Register-ScheduledTask "TestTaskFail" -InputObject $task | Out-Null
                         $task = Get-ScheduledTask -TaskName "TestTaskFail"
                         do {
                             $task = Get-ScheduledTask -TaskName "TestTaskFail"
