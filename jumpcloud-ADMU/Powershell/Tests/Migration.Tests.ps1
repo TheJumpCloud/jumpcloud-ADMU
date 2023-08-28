@@ -202,12 +202,26 @@ Describe 'Migration Test Scenarios' {
                     }) -ArgumentList:($($user.Username), $($user.password), $($user.JCUsername))
                 # create the task before start-migration:
                 Write-Host "$(Get-Date -UFormat "%D %r") - Create scheduled task"
+                $waitTaskJob = Start-Job -ScriptBlock:( {
+                        $action = New-ScheduledTaskAction -Execute "powershell.exe"
+                        $trigger = New-ScheduledTaskTrigger -AtLogon
+                        $settings = New-ScheduledTaskSettingsSet
+                        $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
+                        Register-ScheduledTask "TestTaskFail" -InputObject $task
+                        $task = Get-ScheduledTask -TaskName "TestTaskFail"
+                        do {
+                            $task = Get-ScheduledTask -TaskName "TestTaskFail"
+                            Start-Sleep -Seconds:(1)
 
-                $action = New-ScheduledTaskAction -Execute "powershell.exe"
-                $trigger = New-ScheduledTaskTrigger -AtLogon
-                $settings = New-ScheduledTaskSettingsSet
-                $task = New-ScheduledTask -Action $action -Trigger $trigger -Settings $settings
-                Register-ScheduledTask "TestTaskFail" -InputObject $task
+                        }
+                        Until ($task.state -eq "Disabled")
+                        if ($task.state -eq "Disabled") {
+                            Write-Host "Task State: $($task.State)"
+                            return $true
+                        } else {
+                            return $false
+                        }
+                    })
                 # Begin job to kick off Start-Migration
 
                 Write-Host "$(Get-Date -UFormat "%D %r") - Start parallel job for start-migration script"
@@ -238,7 +252,7 @@ Describe 'Migration Test Scenarios' {
                         }
                         Write-Host "Running Migration, $JCUSERNAME, $SELECTEDCOMPUTERNAME, $TEMPPASS"
                         try {
-                            Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)"
+                            Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)" | Out-Null
                         } Catch {
                             write-host "Migration failed as expected"
                         }
@@ -254,21 +268,7 @@ Describe 'Migration Test Scenarios' {
                     }) -ArgumentList:($($user.JCUsername), $($user.username), $($user.password), $pathToSM)
                 Write-Host "$(Get-Date -UFormat "%D %r") - Start parallel job to wait for task to be disabled"
 
-                $waitTaskJob = Start-Job -ScriptBlock:( {
-                        $task = Get-ScheduledTask -TaskName "TestTaskFail"
-                        do {
-                            $task = Get-ScheduledTask -TaskName "TestTaskFail"
-                            Start-Sleep -Seconds:(1)
 
-                        }
-                        Until ($task.state -eq "Disabled")
-                        if ($task.state -eq "Disabled") {
-                            Write-Host "Task State: $($task.State)"
-                            return $true
-                        } else {
-                            return $false
-                        }
-                    })
                 Write-Host "Job Details:"
                 # Wait for the job to start a new process
                 Wait-Job -Job $waitJob -Timeout 200 | Out-Null
