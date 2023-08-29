@@ -160,7 +160,7 @@ Describe 'Migration Test Scenarios' {
             Remove-Item $logPath
             New-Item $logPath -Force -ItemType File
         }
-        It "Tests that the tool can recover when the start migration script fails" {
+        It "Tests that the tool can recover when the start migration script fails and that scheduled tasks are returned to their previous state" {
 
             # This test contains a job which will load the migration user's profile
             # into memory and effectively break the migration process. This test
