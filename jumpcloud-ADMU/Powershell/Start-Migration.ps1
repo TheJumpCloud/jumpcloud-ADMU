@@ -1378,7 +1378,7 @@ function Test-DATFilePermission {
         }
     }
 }
-function SetScheduledTask {
+function Set-ADMUScheduledTask {
     # Param op "disable" or "enable" then -tasks (array of tasks)
     param (
         [Parameter(Mandatory = $true)]
@@ -1588,7 +1588,7 @@ Function Start-Migration {
         Write-ToLog -message:("Disabling Scheduled Tasks...")
         # Check if $ScheduledTasks is not null
         if ($ScheduledTasks) {
-            SetScheduledTask -op "disable" -scheduledTasks $ScheduledTasks
+            Set-ADMUScheduledTask -op "disable" -scheduledTasks $ScheduledTasks
         } else {
             Write-ToLog -message:("No Scheduled Tasks to disable")
         }
@@ -2125,7 +2125,7 @@ Function Start-Migration {
 
             # re-enable scheduled tasks if they were disabled
             if ($ScheduledTasks) {
-                SetScheduledTask -op "enable" -scheduledTasks $ScheduledTasks
+                Set-ADMUScheduledTask -op "enable" -scheduledTasks $ScheduledTasks
             } else {
                 Write-ToLog -Message:('No Scheduled Tasks to enable')
             }
@@ -2176,7 +2176,7 @@ Function Start-Migration {
                             $FixedErrors += "$trackedStep"
                             # Create a list of scheduled tasks that are disabled
                             if ($ScheduledTasks) {
-                                SetScheduledTask -op "enable" -scheduledTasks $ScheduledTasks
+                                Set-ADMUScheduledTask -op "enable" -scheduledTasks $ScheduledTasks
                             } else {
                                 Write-ToLog -Message:('No Scheduled Tasks to enable')
                             }
