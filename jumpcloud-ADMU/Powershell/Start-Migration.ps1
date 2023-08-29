@@ -1586,7 +1586,12 @@ Function Start-Migration {
         $ScheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -ne "Disabled" -and $_.state -ne "Running" }
         # Disable tasks before migration
         Write-ToLog -message:("Disabling Scheduled Tasks...")
-        SetScheduledTask -op "disable" -scheduledTasks $ScheduledTasks
+        # Check if $ScheduledTasks is not null
+        if ($ScheduledTasks) {
+            SetScheduledTask -op "disable" -scheduledTasks $ScheduledTasks
+        } else {
+            Write-ToLog -message:("No Scheduled Tasks to disable")
+        }
     }
     Process {
         # Start Of Console Output
