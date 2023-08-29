@@ -88,7 +88,7 @@ Describe 'Migration Test Scenarios' {
 
 
         }
-        It "Tests for the Scheduled Task disabled" {
+        It "Tests that a previously disable Scheduled Task is disabled after migration" {
             # Task should be enabled after migration
             # Create a scheduled task
             $action = New-ScheduledTaskAction -Execute "powershell.exe"
