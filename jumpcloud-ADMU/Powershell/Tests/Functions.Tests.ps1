@@ -510,10 +510,10 @@ Describe 'Functions' {
         It 'Restart-ComputerWithDelay' {
         }
     }
-    Context 'Test SetScheduledTask'{
+    Context 'Test Set-ADMUScheduledTask'{
         BeforeAll {
             $scheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -ne "Disabled" -and $_.state -ne "Running" }
-            SetScheduledTask -op "disable" -scheduledTasks $scheduledTasks
+            Set-ADMUScheduledTask -op "disable" -scheduledTasks $scheduledTasks
         }
         It 'Should disabled tasks'{
             # Disable tasks that are ready to run
@@ -526,7 +526,7 @@ Describe 'Functions' {
             }
         }
         It 'Should Enable tasks'{
-            SetScheduledTask -op "enable" -scheduledTasks $scheduledTasks
+            Set-ADMUScheduledTask -op "enable" -scheduledTasks $scheduledTasks
             # Validate that the tasks are enabled
             $afterEnable = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -eq "Ready" }
             # Compare $scheduledTasks and $afterDisable state should not be equal
