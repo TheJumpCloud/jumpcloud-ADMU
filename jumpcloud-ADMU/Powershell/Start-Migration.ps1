@@ -2124,7 +2124,12 @@ Function Start-Migration {
             }
 
             # re-enable scheduled tasks if they were disabled
-            SetScheduledTask -op "enable" -scheduledTasks $ScheduledTasks
+            if ($ScheduledTasks) {
+                SetScheduledTask -op "enable" -scheduledTasks $ScheduledTasks
+            } else {
+                Write-ToLog -Message:('No Scheduled Tasks to enable')
+            }
+
             # Cleanup Folders Again Before Reboot
             Write-ToLog -Message:('Removing Temp Files & Folders.')
             try {
@@ -2170,7 +2175,11 @@ Function Start-Migration {
                             }
                             $FixedErrors += "$trackedStep"
                             # Create a list of scheduled tasks that are disabled
-                            SetScheduledTask -op "enable" -scheduledTasks $ScheduledTasks
+                            if ($ScheduledTasks) {
+                                SetScheduledTask -op "enable" -scheduledTasks $ScheduledTasks
+                            } else {
+                                Write-ToLog -Message:('No Scheduled Tasks to enable')
+                            }
                         }
 
                         Default {
