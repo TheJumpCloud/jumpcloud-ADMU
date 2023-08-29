@@ -65,7 +65,7 @@ Describe 'Migration Test Scenarios' {
             }
         }
 
-        It "Tests for the Scheduled Task already enabled" {
+        It "Tests that a previously enabled Scheduled Task is enabled at the end of user migration" {
             # Create a scheduled task
             $action = New-ScheduledTaskAction -Execute "powershell.exe"
             $trigger = New-ScheduledTaskTrigger -AtLogon
