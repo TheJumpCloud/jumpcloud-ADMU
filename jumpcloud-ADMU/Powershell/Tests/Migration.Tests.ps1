@@ -12,7 +12,8 @@ function Enable-TestNameAsVariablePlugin {
         $state.Plugin += New-PluginObject @PluginParams
     }
 }
-
+# Add test name as variable
+# https://github.com/pester/Pester/issues/1611
 BeforeAll {
     # import build variables for test cases
     write-host "Importing Build Variables:"
@@ -64,7 +65,7 @@ Describe 'Migration Test Scenarios' {
             }
         }
 
-        It "Tests for the Scheduled Task already enabled" {
+        It "Tests that a previously enabled Scheduled Task is enabled at the end of user migration" {
             # Create a scheduled task
             $action = New-ScheduledTaskAction -Execute "powershell.exe"
             $trigger = New-ScheduledTaskTrigger -AtLogon
@@ -87,7 +88,7 @@ Describe 'Migration Test Scenarios' {
 
 
         }
-        It "Tests for the Scheduled Task disabled" {
+        It "Tests that a previously disable Scheduled Task is disabled after migration" {
             # Task should be enabled after migration
             # Create a scheduled task
             $action = New-ScheduledTaskAction -Execute "powershell.exe"
@@ -159,7 +160,7 @@ Describe 'Migration Test Scenarios' {
             Remove-Item $logPath
             New-Item $logPath -Force -ItemType File
         }
-        It "Tests that the tool can recover when the start migration script fails" {
+        It "Tests that the tool can recover when the start migration script fails and that scheduled tasks are returned to their previous state" {
 
             # This test contains a job which will load the migration user's profile
             # into memory and effectively break the migration process. This test
