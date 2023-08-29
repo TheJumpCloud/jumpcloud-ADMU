@@ -510,7 +510,33 @@ Describe 'Functions' {
         It 'Restart-ComputerWithDelay' {
         }
     }
-
+    Context 'Test SetScheduledTask'{
+        BeforeAll {
+            $scheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -ne "Disabled" -and $_.state -ne "Running" }
+            SetScheduledTask -op "disable" -scheduledTasks $scheduledTasks
+        }
+        It 'Should disabled tasks'{
+            # Disable tasks that are ready to run
+            $afterDisable = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -eq "Disabled" }
+            # Compare $scheduledTasks and $afterDisable state should not be equal
+            $scheduledTasks | ForEach-Object {
+                $task = $_
+                # Check that the task is disabled
+                $afterDisable | Where-Object { $_.TaskName -eq $task.TaskName -and $_.State -eq "Disabled" } | Should -Not -BeNullOrEmpty
+            }
+        }
+        It 'Should Enable tasks'{
+            SetScheduledTask -op "enable" -scheduledTasks $scheduledTasks
+            # Validate that the tasks are enabled
+            $afterEnable = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -eq "Ready" }
+            # Compare $scheduledTasks and $afterDisable state should not be equal
+            $scheduledTasks | ForEach-Object {
+                $task = $_
+                # Check that the task is disabled
+                $afterEnable | Where-Object { $_.TaskName -eq $task.TaskName -and $_.State -eq "Ready" } | Should -Not -BeNullOrEmpty
+            }
+        }
+    }
     Context 'Validates that the  Registry Hive Permissions are correct, given a username' {
         It 'Should return true when a users ntfs permissions are correct' {
             $datUserTrue = "ADMU_dat_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
