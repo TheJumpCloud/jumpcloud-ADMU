@@ -12,7 +12,8 @@ function Enable-TestNameAsVariablePlugin {
         $state.Plugin += New-PluginObject @PluginParams
     }
 }
-
+# Add test name as variable
+# https://github.com/pester/Pester/issues/1611
 BeforeAll {
     # import build variables for test cases
     write-host "Importing Build Variables:"
