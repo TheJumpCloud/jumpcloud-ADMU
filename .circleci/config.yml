@@ -101,12 +101,16 @@ release: &release
         - Build
         - Build Module
         - Build Nuspec
-  - Start Sign Job:
-      requires:
-        - Build
-        - Build Module
-        - Invoke Git Commit
-        - Upload Artifact
+# - Start Sign Job:
+#     requires:
+
+#       - Build
+
+#       - Build Module
+
+#       - Invoke Git Commit
+
+#       - Upload Artifact
 workflows:
   version: 2
   ci:
