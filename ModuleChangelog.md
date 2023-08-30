@@ -1,3 +1,13 @@
+## 2.5.0
+
+Release Date: August 30, 2023
+
+#### RELEASE NOTES
+
+```
+* The ADMU now checks for scheduled tasks before migration and attempts to disable any non-microsoft task. Scheduled tasks which load a user's registry into memory have been reported to have locked a user's registry into memory which will prevent the ADMU from functioning. This release of ADMU will attempt to disable any root level scheduled tasks and will re-enable these tasks after migration or if the ADMU fails to migrate.
+  - Only tasks that are in a "Ready" state will be disabled, currently running tasks are not stopped.
+```
 ## 2.4.3
 
 Release Date: Aug 23,2023

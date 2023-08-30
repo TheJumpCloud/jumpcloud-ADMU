@@ -11,7 +11,7 @@
     # Only diagnostic records of the specified severity will be generated.
     # Uncomment the following line if you only want Errors and Warnings but
     # not Information diagnostic records.
-    Severity = @('Error','Warning')
+    Severity     = @('Error', 'Warning')
 
     # Analyze **only** the following rules. Use IncludeRules when you want
     # to invoke only a small subset of the default rules.
@@ -32,15 +32,16 @@
     # Note: if a rule is in both IncludeRules and ExcludeRules, the rule
     # will be excluded.
     ExcludeRules = @('PSUseShouldProcessForStateChangingFunctions',
-                    'PSAvoidUsingWriteHost',
-                    'PSAvoidUsingConvertToSecureStringWithPlainText'
-                    'PSAvoidUsingPlainTextForPassword',
-                    'PSAvoidUsingUsernameAndPasswordParams',
-                    'PSAvoidUsingWMICmdlet',
-                    'PSAvoidUsingInvokeExpression',
-                    'PSUseDeclaredVarsMoreThanAssignments',
-                    'PSUseBOMForUnicodeEncodedFile'
-                    )
+        'PSAvoidUsingWriteHost',
+        'PSAvoidUsingConvertToSecureStringWithPlainText'
+        'PSAvoidUsingPlainTextForPassword',
+        'PSAvoidUsingUsernameAndPasswordParams',
+        'PSAvoidUsingWMICmdlet',
+        'PSAvoidUsingInvokeExpression',
+        'PSUseDeclaredVarsMoreThanAssignments',
+        'PSUseBOMForUnicodeEncodedFile',
+        'PSAvoidGlobalVars'
+    )
 
     # You can use rule configuration to configure rules that support it:
     #Rules = @{
