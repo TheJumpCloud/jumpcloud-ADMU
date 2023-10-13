@@ -1,0 +1,24 @@
+name: Release and Publish PSModule
+on:
+  pull_request:
+    types:
+      - closed
+    paths:
+      - "PowerShell/Deploy/**"
+      - "PowerShell/JumpCloud Module/**"
+      - "PowerShell/ModuleChangelog.md"
+    branches:
+      - master
+jobs:
+  Check-If-Merged:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if Merged
+        run: echo {GITHUB_HEAD_REF} merged into master
+
+  Filter-Branch:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'ADMU')
+    steps:
+      - run: echo "Building JumpCloud Module 'ADMU'"
