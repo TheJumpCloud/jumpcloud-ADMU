@@ -29,7 +29,7 @@ $NewContent = $NewContent + "`n" + '}'
 $NewContent = $NewContent -split "`n" | ForEach-Object { If ($_.Trim()) {
         $_
     } }
-If (-Not Get-InstalledModule -Name ps2exe) {
+If (-Not (Get-InstalledModule -Name ps2exe)) {
     Install-Module -Name ps2exe -RequiredVersion '1.0.13'
 }
 Import-Module -Name ps2exe
