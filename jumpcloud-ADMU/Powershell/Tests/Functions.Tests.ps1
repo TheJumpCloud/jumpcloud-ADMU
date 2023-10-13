@@ -1,11 +1,15 @@
 BeforeAll {
+    # Install JCAgent on this build server:
+    If ($env:CI) {
+        . $PSScriptRoot\..\..\..\Deploy\TestSetup.ps1 -TestOrgConnectKey $env:PESTER_CONNECTKEY
+    }
     Write-Host "Script Location: $PSScriptRoot"
     Write-Host "Dot-Sourcing Start-Migration Script"
     . $PSScriptRoot\..\Start-Migration.ps1
     Write-Host "Dot-Sourcing Test Functions"
     . $PSScriptRoot\SetupAgent.ps1
     Write-Host "Running Connect-JCOnline"
-    Connect-JCOnline -JumpCloudApiKey $env:JCApiKey -JumpCloudOrgId $env:JCOrgId -Force
+    Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
 }
 Describe 'Functions' {
     Context 'Show-Result Function' -Skip {
@@ -27,17 +31,17 @@ Describe 'Functions' {
             # Get the first user
             $user = Get-JcSdkUser | Select-Object -First 1
             # Test username w/o modification
-            $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $user.Username
+            $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:PESTER_APIKEY -Username $user.Username
             $testResult | Should -Be $true
             $userID | Should -Be $user.Id
             # toUpper
             $upper = ($user.Username).ToUpper()
-            $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $upper
+            $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:PESTER_APIKEY -Username $upper
             $testResult | Should -Be $true
             $userID | Should -Be $user.Id
             # to lower
             $lower = ($user.Username).ToLower()
-            $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $lower
+            $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:PESTER_APIKEY -Username $lower
             $testResult | Should -Be $true
             $userID | Should -Be $user.Id
         }
@@ -47,7 +51,7 @@ Describe 'Functions' {
             # Append random string to username
             $newUsername = $user.Username + "jdksf45kjfds"
             # Test function
-            $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:JCApiKey -Username $newUsername
+            $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:PESTER_APIKEY -Username $newUsername
             $testResult | Should -Be $false
             $userID | Should -Be $null
         }
@@ -56,7 +60,7 @@ Describe 'Functions' {
     Context 'Set-JCUserToSystemAssociation Function' {
         # Set-JCUserToSystemAssociation should take USERID as input validated with Test-JumpCloudUsername
         BeforeAll {
-            $OrgID, $OrgName = Get-mtpOrganization -apiKey $env:JCApiKey
+            $OrgID, $OrgName = Get-mtpOrganization -apiKey $env:PESTER_APIKEY
 
             $config = get-content "$WindowsDrive\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
             $regex = 'systemKey\":\"(\w+)\"'
@@ -77,7 +81,7 @@ Describe 'Functions' {
             $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
             # Begin Test
             Get-JCAssociation -Type user -Id:($($GeneratedUser.Id)) | Remove-JCAssociation -Force
-            $bind = Set-JCUserToSystemAssociation -JcApiKey $env:JCApiKey -JcOrgId $OrgID -JcUserID $GeneratedUser.Id
+            $bind = Set-JCUserToSystemAssociation -JcApiKey $env:PESTER_APIKEY -JcOrgId $OrgID -JcUserID $GeneratedUser.Id
             $bind | Should -Be $true
             $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
             $association | Should -not -BeNullOrEmpty
@@ -100,7 +104,7 @@ Describe 'Functions' {
             $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
             # Begin Test
             Get-JCAssociation -Type user -Id:($($GeneratedUser.Id)) | Remove-JCAssociation -Force
-            $bind = Set-JCUserToSystemAssociation -JcApiKey $env:JCApiKey -JcOrgId $OrgID -JcUserID $GeneratedUser.Id -BindAsAdmin $true
+            $bind = Set-JCUserToSystemAssociation -JcApiKey $env:PESTER_APIKEY -JcOrgId $OrgID -JcUserID $GeneratedUser.Id -BindAsAdmin $true
             $bind | Should -Be $true
             # ((Get-JCAssociation -Type:user -Id:($($GeneratedUser.Id))).id).count | Should -Be '1'
             $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
@@ -123,7 +127,7 @@ Describe 'Functions' {
             if ((Test-Path -Path "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf") -eq $True) {
                 Remove-Item "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
             }
-            { Set-JCUserToSystemAssociation -JcApiKey $env:JCApiKey -JcUserID $GeneratedUser.Id -ErrorAction Stop } | Should -Throw
+            { Set-JCUserToSystemAssociation -JcApiKey $env:PESTER_APIKEY -JcUserID $GeneratedUser.Id -ErrorAction Stop } | Should -Throw
         }
     }
 
@@ -490,12 +494,12 @@ Describe 'Functions' {
         It 'Restart-ComputerWithDelay' {
         }
     }
-    Context 'Test Set-ADMUScheduledTask'{
+    Context 'Test Set-ADMUScheduledTask' {
         BeforeAll {
             $scheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -ne "Disabled" -and $_.state -ne "Running" }
             Set-ADMUScheduledTask -op "disable" -scheduledTasks $scheduledTasks
         }
-        It 'Should disabled tasks'{
+        It 'Should disabled tasks' {
             # Disable tasks that are ready to run
             $afterDisable = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -eq "Disabled" }
             # Compare $scheduledTasks and $afterDisable state should not be equal
@@ -505,7 +509,7 @@ Describe 'Functions' {
                 $afterDisable | Where-Object { $_.TaskName -eq $task.TaskName -and $_.State -eq "Disabled" } | Should -Not -BeNullOrEmpty
             }
         }
-        It 'Should Enable tasks'{
+        It 'Should Enable tasks' {
             Set-ADMUScheduledTask -op "enable" -scheduledTasks $scheduledTasks
             # Validate that the tasks are enabled
             $afterEnable = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -eq "Ready" }

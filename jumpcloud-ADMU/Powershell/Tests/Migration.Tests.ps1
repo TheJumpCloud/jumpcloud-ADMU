@@ -325,7 +325,7 @@ Describe 'Migration Test Scenarios' {
         InitUser -UserName $user2 -Password $Password
 
         # attempt to migrate to user from previous step
-        { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$user1" -TempPassword "$($Password)" } | Should -Throw
+        { Start-Migration -JumpCloudAPIKey $env:PESTER_APIKEY -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$user1" -TempPassword "$($Password)" } | Should -Throw
         # The original user should exist
         "C:\Users\$user1" | Should -Exist
         # The user we are migrating to existed before the test, it should also exist after
@@ -335,8 +335,8 @@ Describe 'Migration Test Scenarios' {
     Context 'Start-Migration Sucessfully Binds JumpCloud User to System' {
         It 'user bound to system after migration' {
             $headers = @{}
-            $headers.Add("x-org-id", $env:JCORGID)
-            $headers.Add("x-api-key", $env:JCApiKey)
+            $headers.Add("x-org-id", $env:PESTER_ORGID)
+            $headers.Add("x-api-key", $env:PESTER_APIKEY)
             $headers.Add("content-type", "application/json")
 
             foreach ($user in $JCFunctionalHash.Values) {
@@ -359,7 +359,7 @@ Describe 'Migration Test Scenarios' {
                 Write-Host "`n## GeneratedUser ID: $($generatedUser.id)"
                 Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
                 write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
-                { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
+                { Start-Migration -JumpCloudAPIKey $env:PESTER_APIKEY -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
                 $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
 
                 Write-Host "`n## Validating sudo status on $($GeneratedUser.Id) | Should be ($($user.BindAsAdmin)) on $systemKey"
@@ -435,7 +435,7 @@ Describe 'Migration Test Scenarios' {
             $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             InitUser -UserName $user1 -Password $Password
             write-host "`nRunning: Start-Migration -JumpCloudUserName $($user2) -SelectedUserName $($user1) -TempPassword $($Password)`n"
-            { Start-Migration -JumpCloudAPIKey $env:JCApiKey -AutobindJCUser $true -JumpCloudUserName "$($user2)" -SelectedUserName "$ENV:COMPUTERNAME\$($user1)" -TempPassword "$($Password)" } | Should -Throw
+            { Start-Migration -JumpCloudAPIKey $env:PESTER_APIKEY -AutobindJCUser $true -JumpCloudUserName "$($user2)" -SelectedUserName "$ENV:COMPUTERNAME\$($user1)" -TempPassword "$($Password)" } | Should -Throw
         }
     }
     Context 'Start-Migration kicked off through JumpCloud agent' {
@@ -497,7 +497,7 @@ Describe 'Migration Test Scenarios' {
                 write-host "Running: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)"
                 $headers = @{
                     'Accept'    = "application/json"
-                    'x-api-key' = $env:JCApiKey
+                    'x-api-key' = $env:PESTER_APIKEY
                 }
                 $Form = @{
                     '$JcUserName'       = $user.JCUsername;

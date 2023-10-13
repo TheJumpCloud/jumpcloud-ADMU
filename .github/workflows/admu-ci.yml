@@ -123,6 +123,9 @@ jobs:
         shell: powershell
         env:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
+          PESTER_APIKEY: ${{ secrets.PESTER_APIKEY }}
+          PESTER_ORGID: ${{ secrets.PESTER_ORGID }}
+          PESTER_CONNECTKEY: ${{ secrets.PESTER_CONNECTKEY }}
         run: |
           $env:job_group = ${{ matrix.job_group }}
           # build before test

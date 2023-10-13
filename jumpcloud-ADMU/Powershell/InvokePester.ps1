@@ -24,13 +24,13 @@ If ($env:CI) {
     $jobMatrixSet = @{
         0 = @{
             'filePath' = @(
-                "$PSScriptRoot/Tests/Migration.Tests.ps1",
                 "$PSScriptRoot/Tests/Functions.Tests.ps1",
-                "$PSScriptRoot/Tests/PSScriptAnalyzer.Tests.ps1"
+                "$PSScriptRoot/Tests/Migration.Tests.ps1"
             )
         }
         1 = @{
             'filePath' = @(
+                "$PSScriptRoot/Tests/PSScriptAnalyzer.Tests.ps1",
                 "$PSScriptRoot/Tests/Build.Tests.ps1"
             )
         }
