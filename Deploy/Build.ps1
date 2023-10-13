@@ -48,5 +48,9 @@ If (-not [System.String]::IsNullOrEmpty($NewContent)) {
 # Use Git to figure out changes
 $uwpPath = $RootPath + '\Deploy\uwp_jcadmu.ps1'
 # Always generate a new UWP EXE
-Invoke-ps2exe -inputFile ($uwpPath) -outputFile ($RootPath + '\jumpcloud-ADMU\exe\uwp_jcadmu.exe') -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright "(c) $year" -version $Version.Matches.Value -company 'JumpCloud' -iconfile ($RootPath + '\Deploy\admu.ico')
-Write-Host "upw_jcadmu.exe was generated successfully"
+try {
+    Invoke-ps2exe -inputFile ($uwpPath) -outputFile ($RootPath + '\jumpcloud-ADMU\exe\uwp_jcadmu.exe') -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright "(c) $year" -version $Version.Matches.Value -company 'JumpCloud' -iconfile ($RootPath + '\Deploy\admu.ico')
+    Write-Host "upw_jcadmu.exe was generated successfully"
+} catch {
+    Throw "upw_jcadmu.exe was not generated"
+}

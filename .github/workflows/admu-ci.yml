@@ -127,5 +127,6 @@ jobs:
         run: |
           $env:job_group = ${{ matrix.job_group }}
           # build before test
+          Get-module ps2exe
           . "./Deploy/build.ps1"
           . "./jumpcloud-ADMU/Powershell/InvokePester.ps1" $env:RELEASE_TYPE
