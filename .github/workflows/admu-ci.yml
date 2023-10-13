@@ -1,0 +1,131 @@
+name: ADMU Module CI
+
+# env:
+# define env vars
+
+on:
+  pull_request:
+    branches:
+      - master
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+# define jobs
+jobs:
+  Filter-Branch:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'ADMU')
+    steps:
+      - run: echo "Building JumpCloud Module Event 'ADMU"
+  Check-PR-Labels:
+    needs: ["Filter-Branch"]
+    runs-on: ubuntu-latest
+    outputs:
+      RELEASE_TYPE: ${{ steps.validate.outputs.RELEASE_TYPE }}
+    steps:
+      - name: Validate-PR-Version-Labels
+        id: validate
+        shell: pwsh
+        run: |
+          $PR_LABEL_LIST=$(curl -s "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" | jq -r '.[].name')
+          if ("ADMU" -in $PR_LABEL_LIST) {
+              write-host "Starting Build for PowerShell Module Release"
+          }
+          # validate type from label list:
+          $types = @('major', 'minor', 'patch')
+          $typeCount = 0
+          foreach ($item in $PR_LABEL_LIST) {
+              if ($item -in $types) {
+                  write-host "$item"
+                  $typeCount += 1
+                  $RELEASE_TYPE = $item
+              }
+          }
+
+          if ($typeCount -eq 1) {
+              echo "RELEASE_TYPE=$RELEASE_TYPE" >> $env:GITHUB_OUTPUT
+          } else {
+              throw "Multiple or invalid release types were found on PR"
+              exit 1
+          }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  Validate-Env-Variables:
+    needs: ["Filter-Branch", "Check-PR-Labels"]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
+        shell: pwsh
+        run: |
+          # validate release type variables
+          $env:OVERRIDE_VERSION | Should -BeIn @('true', 'false')
+          $env:RELEASE_TYPE |  Should -BeIn @('major','minor','patch')
+  Setup-Build-Dependancies:
+    needs: ["Filter-Branch", "Check-PR-Labels", "Validate-Env-Variables"]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PowerShell Module Cache
+        id: cacher
+        uses: actions/cache@v3
+        with:
+          path: "/home/runner/.local/share/powershell/Modules/"
+          key: PS-Dependancies
+      - name: Install dependencies
+        if: steps.cacher.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+
+          If (!(Get-PackageProvider -Name:('NuGet') -ListAvailable -ErrorAction:('SilentlyContinue'))) {
+              Write-Host ('[status]Installing package provider NuGet');
+              Install-PackageProvider -Name:('NuGet') -Scope:('CurrentUser') -Force
+          }
+          # define dependancies for this ci workflow:
+          $PSDependencies = @{
+              'PowerShellGet'                         = @{Repository = 'PSGallery'; RequiredVersion = '3.0.12-beta' }
+              'ps2exe'                                = @{Repository = 'PSGallery'; RequiredVersion = '1.0.13' }
+              'PlatyPS'                               = @{Repository = 'PSGallery'; RequiredVersion = '0.14.2' }
+              'AWS.Tools.Common'                      = @{Repository = 'PSGallery'; RequiredVersion = '4.1.430' }
+              'AWS.Tools.CodeArtifact'                = @{Repository = 'PSGallery'; RequiredVersion = '4.1.430' }
+              'JumpCloud.SDK.V1'                      = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
+              'JumpCloud.SDK.V2'                      = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
+              'JumpCloud.SDK.DirectoryInsights'       = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
+          }
+          foreach ($RequiredModule in $PSDependencies.Keys) {
+              If ([System.String]::IsNullOrEmpty((Get-InstalledModule | Where-Object { $_.Name -eq $RequiredModule }))) {
+                  $latestModule = find-module $RequiredModule
+                  Write-Host "[status] latest module: $RequiredModule; latest version: $($latestModule.Version)"
+                  Write-Host("[status] Installing module: '$RequiredModule'; version: $($PSDependencies[$RequiredModule].RequiredVersion) from $($PSDependencies[$RequiredModule].Repository)")
+                  if ($($PSDependencies[$RequiredModule].RequiredVersion) -eq "latest"){
+                    Install-Module -Name $RequiredModule -Repository:($($PSDependencies[$RequiredModule].Repository))-Force
+                  } else {
+                    Install-Module -Name $RequiredModule -Repository:($($PSDependencies[$RequiredModule].Repository)) -RequiredVersion:($($PSDependencies[$RequiredModule].RequiredVersion)) -AllowPrerelease -Force
+                  }
+              }
+          }
+  Test-Module:
+    needs: ["Setup-Build-Dependancies", "Check-PR-Labels"]
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    strategy:
+      matrix:
+        job_group: [0, 1]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            PowerShell
+      - uses: actions/cache@v3
+        with:
+          path: "/home/runner/.local/share/powershell/Modules/"
+          key: PS-Dependancies
+      - name: Test PWSH Module
+        shell: pwsh
+        env:
+          RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
+        run: |
+          . "./jumpcloud-ADMU/Powershell/InvokePester.ps1" $env:RELEASE_TYPE
