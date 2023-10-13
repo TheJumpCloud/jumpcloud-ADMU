@@ -20,7 +20,7 @@ if (-not (Test-Path $PesterResultsFileXmldir)) {
 }
 
 # Define CI Matrix Job Set:
-If ($CI) {
+If ($env:CI) {
     $jobMatrixSet = @{
         0 = @{
             'filePath' = @(
@@ -33,13 +33,11 @@ If ($CI) {
             )
         }
     }
-    write-host "running CI job group: $job_group"
+    write-host "running CI job group: $env:job_group"
     $configRunPath = $jobMatrixSet[$env:job_group].filePath
 } else {
-    configRunPath = "$PSScriptRoot/Tests/"
+    $configRunPath = "$PSScriptRoot/Tests/"
 }
-
-break
 
 $configuration = New-PesterConfiguration
 $configuration.Run.Path = $configRunPath
