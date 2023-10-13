@@ -115,9 +115,6 @@ jobs:
         job_group: [0, 1]
     steps:
       - uses: actions/checkout@v4
-        with:
-          sparse-checkout: |
-            PowerShell
       - uses: actions/cache@v3
         with:
           path: "/home/runner/.local/share/powershell/Modules/"
@@ -127,4 +124,4 @@ jobs:
         env:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
         run: |
-          . ".${{ github.workspace }}/jumpcloud-ADMU/Powershell/InvokePester.ps1" $env:RELEASE_TYPE
+          . "./jumpcloud-ADMU/Powershell/InvokePester.ps1" $env:RELEASE_TYPE
