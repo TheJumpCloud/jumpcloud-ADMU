@@ -127,4 +127,4 @@ jobs:
         env:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
         run: |
-          . "./jumpcloud-ADMU/Powershell/InvokePester.ps1" $env:RELEASE_TYPE
+          . ".${{ github.workspace }}/jumpcloud-ADMU/Powershell/InvokePester.ps1" $env:RELEASE_TYPE
