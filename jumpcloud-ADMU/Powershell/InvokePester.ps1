@@ -24,7 +24,9 @@ If ($env:CI) {
     $jobMatrixSet = @{
         0 = @{
             'filePath' = @(
-                "$PSScriptRoot/Tests/Migration.Tests.ps1"
+                "$PSScriptRoot/Tests/Migration.Tests.ps1",
+                "$PSScriptRoot/Tests/Functions.Tests.ps1",
+                "$PSScriptRoot/Tests/PSScriptAnalyzer.Tests.ps1"
             )
         }
         1 = @{
@@ -34,11 +36,12 @@ If ($env:CI) {
         }
     }
     write-host "running CI job group: $env:job_group"
-    $configRunPath = $jobMatrixSet[$env:job_group].filePath
+    $configRunPath = $jobMatrixSet[[int]$($env:job_group)].filePath
+    Write-Host "testing paths: $configRunPath"
 } else {
     $configRunPath = "$PSScriptRoot/Tests/"
 }
-
+# break
 $configuration = New-PesterConfiguration
 $configuration.Run.Path = $configRunPath
 $configuration.Should.ErrorAction = 'Continue'
