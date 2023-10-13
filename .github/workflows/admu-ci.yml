@@ -93,7 +93,7 @@ jobs:
               'JumpCloud.SDK.V1'                      = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
               'JumpCloud.SDK.V2'                      = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
               'JumpCloud.SDK.DirectoryInsights'       = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
-              'Jumpcloud'                             = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
+              'JumpCloud'                             = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
           }
           foreach ($RequiredModule in $PSDependencies.Keys) {
               If ([System.String]::IsNullOrEmpty((Get-InstalledModule | Where-Object { $_.Name -eq $RequiredModule }))) {
