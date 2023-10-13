@@ -75,7 +75,7 @@ jobs:
           key: PS-Dependancies
       - name: Install dependencies
         if: steps.cacher.outputs.cache-hit != 'true'
-        shell: pwsh
+        shell: powershell
         run: |
           Set-PSRepository PSGallery -InstallationPolicy Trusted
 
@@ -121,7 +121,7 @@ jobs:
           path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
           key: PS-Dependancies
       - name: Test PWSH Module
-        shell: pwsh
+        shell: powershell
         env:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
         run: |
