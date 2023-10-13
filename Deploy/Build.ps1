@@ -30,7 +30,7 @@ $NewContent = $NewContent -split "`n" | ForEach-Object { If ($_.Trim()) {
         $_
     } }
 If (-Not (Get-InstalledModule -Name ps2exe -ErrorAction Ignore)) {
-    Install-Module -Name ps2exe -RequiredVersion '1.0.13'
+    Install-Module -Name ps2exe -RequiredVersion '1.0.13' -force
 }
 Import-Module -Name ps2exe
 # Export combined file

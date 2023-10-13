@@ -130,6 +130,7 @@ jobs:
           $installedModules = Get-ChildItem "C:\Users\runneradmin\Documents\PowerShell\Modules\"
           Write-Host "InstalledModules:"
           $installedModules
+          Import-Module -Path "C:\Users\runneradmin\Documents\PowerShell\Modules\ps2exe\1.0.13\ps2exe.psd1" -force
           Write-Host "[Status] Begin Build.ps1"
           . "./Deploy/build.ps1"
           . "./jumpcloud-ADMU/Powershell/InvokePester.ps1" $env:RELEASE_TYPE
