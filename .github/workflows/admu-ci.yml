@@ -88,8 +88,6 @@ jobs:
               'PowerShellGet'                         = @{Repository = 'PSGallery'; RequiredVersion = '3.0.12-beta' }
               'ps2exe'                                = @{Repository = 'PSGallery'; RequiredVersion = '1.0.13' }
               'PlatyPS'                               = @{Repository = 'PSGallery'; RequiredVersion = '0.14.2' }
-              'AWS.Tools.Common'                      = @{Repository = 'PSGallery'; RequiredVersion = '4.1.430' }
-              'AWS.Tools.CodeArtifact'                = @{Repository = 'PSGallery'; RequiredVersion = '4.1.430' }
               'JumpCloud.SDK.V1'                      = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
               'JumpCloud.SDK.V2'                      = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
               'JumpCloud.SDK.DirectoryInsights'       = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
