@@ -93,6 +93,7 @@ jobs:
               'JumpCloud.SDK.V1'                      = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
               'JumpCloud.SDK.V2'                      = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
               'JumpCloud.SDK.DirectoryInsights'       = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
+              'Jumpcloud'                             = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
           }
           foreach ($RequiredModule in $PSDependencies.Keys) {
               If ([System.String]::IsNullOrEmpty((Get-InstalledModule | Where-Object { $_.Name -eq $RequiredModule }))) {
@@ -128,9 +129,15 @@ jobs:
           $env:job_group = ${{ matrix.job_group }}
           # build before test
           $installedModules = Get-ChildItem "C:\Users\runneradmin\Documents\PowerShell\Modules\"
-          Write-Host "InstalledModules:"
+          Write-Host "[status] InstalledModules:"
           $installedModules
-          Import-Module "C:\Users\runneradmin\Documents\PowerShell\Modules\ps2exe\1.0.13\ps2exe.psd1" -force
+          # Explicitly import required modules for powershell shell:
+          $requiredModules = ('ps2exe', 'JumpCloud.SDK.DirectoryInsights', 'JumpCloud.SDK.V1', 'JumpCloud.SDK.V2', 'JumpCloud')
+          foreach ($module in $requiredModules){
+              $modulePSD1 = Get-ChildItem "C:\Users\runneradmin\Documents\PowerShell\Modules\$module" -Recurse -filter "*.psd1"
+              Write-Host "[status] Importing: $module at path $($modulePSD1.fullname)"
+              Import-Module "$($modulePSD1.fullname)" -force
+          }
           Write-Host "[Status] Begin Build.ps1"
           . "./Deploy/build.ps1"
           . "./jumpcloud-ADMU/Powershell/InvokePester.ps1" $env:RELEASE_TYPE
