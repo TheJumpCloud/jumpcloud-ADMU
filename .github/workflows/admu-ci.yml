@@ -75,7 +75,7 @@ jobs:
           key: PS-Dependancies
       - name: Install dependencies
         if: steps.cacher.outputs.cache-hit != 'true'
-        shell: powershell
+        shell: pwsh
         run: |
           Set-PSRepository PSGallery -InstallationPolicy Trusted
 
