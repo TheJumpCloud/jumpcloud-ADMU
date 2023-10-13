@@ -63,7 +63,7 @@ jobs:
           $env:RELEASE_TYPE |  Should -BeIn @('major','minor','patch')
   Setup-Build-Dependancies:
     needs: ["Filter-Branch", "Check-PR-Labels", "Validate-Env-Variables"]
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -71,7 +71,7 @@ jobs:
         id: cacher
         uses: actions/cache@v3
         with:
-          path: "/home/runner/.local/share/powershell/Modules/"
+          path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
           key: PS-Dependancies
       - name: Install dependencies
         if: steps.cacher.outputs.cache-hit != 'true'
@@ -108,16 +108,17 @@ jobs:
           }
   Test-Module:
     needs: ["Setup-Build-Dependancies", "Check-PR-Labels"]
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 75
     strategy:
+      fail-fast: false
       matrix:
         job_group: [0, 1]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
         with:
-          path: "/home/runner/.local/share/powershell/Modules/"
+          path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
           key: PS-Dependancies
       - name: Test PWSH Module
         shell: pwsh
@@ -125,4 +126,6 @@ jobs:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
         run: |
           $env:job_group = ${{ matrix.job_group }}
+          # build before test
+          . "./Deploy/build.ps1"
           . "./jumpcloud-ADMU/Powershell/InvokePester.ps1" $env:RELEASE_TYPE

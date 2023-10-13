@@ -1,17 +1,16 @@
-[CmdletBinding()]
-param (
-    [Parameter(Mandatory = $true)]
-    [System.string]
-    $RootPath
-)
-
+# [CmdletBinding()]
+# param (
+#     [Parameter(Mandatory = $true)]
+#     [System.string]
+#     $RootPath
+# )
+$RootPath = "$($PSScriptRoot)/../"
 $Output = $RootPath + '\Deploy\ADMU.ps1'
 $FormPath = $RootPath + '\jumpcloud-ADMU\Powershell\Form.ps1'
 $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )([0-9]+)\.([0-9]+)\.([0-9]+)'
 $year = Get-Date -Format "yyyy"
 # Clear existing file
-If (Test-Path -Path:($Output))
-{
+If (Test-Path -Path:($Output)) {
     Remove-Item -Path:($Output)
 }
 
@@ -25,30 +24,23 @@ $NewContent = $NewContent.Replace('# Get script path' + "`n", '')
 $NewContent = $NewContent.Replace('$scriptPath = (Split-Path -Path:($MyInvocation.MyCommand.Path))' + "`n", '')
 $NewContent = $NewContent.Replace('. ($scriptPath + ''\Start-Migration.ps1'')', $Functions)
 $NewContent = $NewContent.Replace('$formResults = Invoke-Expression -Command:(''. "'' + $scriptPath + ''\Form.ps1"'')' + "`n", $Form)
-$NewContent = $NewContent.Replace('Return $FormResults' + "`n" + '}', '')
+$NewContent = $NewContent.Replace('Return $FormResults' + "`n" + ' }', '')
 $NewContent = $NewContent + "`n" + '}'
-$NewContent = $NewContent -split "`n" | ForEach-Object { If ($_.Trim())
-    {
+$NewContent = $NewContent -split "`n" | ForEach-Object { If ($_.Trim()) {
         $_
     } }
 # Export combined file
-If (-not [System.String]::IsNullOrEmpty($NewContent))
-{
+If (-not [System.String]::IsNullOrEmpty($NewContent)) {
     $NewContent | Out-File -FilePath:($Output)
     #Build exe
     $Version = Select-String -Path:($FormPath) -Pattern:($VersionRegex)
-    If (-not [System.String]::IsNullOrEmpty($Version))
-    {
+    If (-not [System.String]::IsNullOrEmpty($Version)) {
         ps2exe -inputFile $Output -outputFile ($RootPath + '\jumpcloud-ADMU\exe\gui_jcadmu.exe') -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright "(c) $year" -version $Version.Matches.Value -company 'JumpCloud' -requireAdmin -iconfile '.\Deploy\admu.ico'
         Write-Host "gui_jcadmu.exe was generated successfully"
-    }
-    Else
-    {
+    } Else {
         Write-Error ('Unable to find version number in "' + $FormPath + '" using regex "' + $VersionRegex + '"')
     }
-}
-Else
-{
+} Else {
     Write-Error ('Build.ps1 failed. Transform process outputted an empty ADMU.ps1 file.')
 }
 
