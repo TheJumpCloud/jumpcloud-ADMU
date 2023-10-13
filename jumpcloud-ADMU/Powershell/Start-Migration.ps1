@@ -1362,7 +1362,7 @@ function Set-ADMUScheduledTask {
             }
         }
     }
- }
+}
 #endregion Agent Install Helper Functions
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
@@ -1385,7 +1385,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.5.0'
+        $admuVersion = '2.5.1'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
