@@ -35,7 +35,7 @@ If (-not [System.String]::IsNullOrEmpty($NewContent)) {
     #Build exe
     $Version = Select-String -Path:($FormPath) -Pattern:($VersionRegex)
     If (-not [System.String]::IsNullOrEmpty($Version)) {
-        ps2exe -inputFile $Output -outputFile ($RootPath + '\jumpcloud-ADMU\exe\gui_jcadmu.exe') -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright "(c) $year" -version $Version.Matches.Value -company 'JumpCloud' -requireAdmin -iconfile '.\Deploy\admu.ico'
+        Invoke-ps2exe -inputFile $Output -outputFile ($RootPath + '\jumpcloud-ADMU\exe\gui_jcadmu.exe') -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright "(c) $year" -version $Version.Matches.Value -company 'JumpCloud' -requireAdmin -iconfile '.\Deploy\admu.ico'
         Write-Host "gui_jcadmu.exe was generated successfully"
     } Else {
         Write-Error ('Unable to find version number in "' + $FormPath + '" using regex "' + $VersionRegex + '"')
