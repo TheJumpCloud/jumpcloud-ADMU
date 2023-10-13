@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     if: contains(github.event.pull_request.labels.*.name, 'ADMU')
     steps:
-      - run: echo "Building JumpCloud Module Event 'ADMU"
+      - run: echo "Building JumpCloud Module Event ADMU"
   Check-PR-Labels:
     needs: ["Filter-Branch"]
     runs-on: ubuntu-latest
@@ -60,7 +60,6 @@ jobs:
         shell: pwsh
         run: |
           # validate release type variables
-          $env:OVERRIDE_VERSION | Should -BeIn @('true', 'false')
           $env:RELEASE_TYPE |  Should -BeIn @('major','minor','patch')
   Setup-Build-Dependancies:
     needs: ["Filter-Branch", "Check-PR-Labels", "Validate-Env-Variables"]
