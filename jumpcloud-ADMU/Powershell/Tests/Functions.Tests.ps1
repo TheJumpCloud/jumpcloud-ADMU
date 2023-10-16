@@ -16,7 +16,7 @@ BeforeAll {
 }
 Describe 'Functions' {
     BeforeAll {
-        Mock Get-WindowsDrive {return "C:"}
+        Mock Get-WindowsDrive { return "C:" }
     }
     Context 'Show-Result Function' -Skip {
         # This is a GUI test, check manually before release
@@ -67,7 +67,7 @@ Describe 'Functions' {
         # Set-JCUserToSystemAssociation should take USERID as input validated with Test-JumpCloudUsername
         BeforeAll {
             $OrgID, $OrgName = Get-mtpOrganization -apiKey $env:PESTER_APIKEY
-
+            Mock Get-WindowsDrive { return "C:" }
             $config = get-content "$WindowsDrive\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
             $regex = 'systemKey\":\"(\w+)\"'
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
