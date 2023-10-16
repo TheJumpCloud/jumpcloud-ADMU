@@ -10,8 +10,14 @@ BeforeAll {
     . $PSScriptRoot\SetupAgent.ps1
     Write-Host "Running Connect-JCOnline"
     Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
+    Function Get-WindowsDrive {
+        return 'drive'
+    }
 }
 Describe 'Functions' {
+    BeforeAll {
+        Mock Get-WindowsDrive {return "C:"}
+    }
     Context 'Show-Result Function' -Skip {
         # This is a GUI test, check manually before release
     }
@@ -208,9 +214,11 @@ Describe 'Functions' {
     }
 
     Context 'Get-SID Function' {
-        It 'Profile exists and sid returned' {
-            # SID of circleCI user should match SID regex pattern
-            Get-SID -User:'circleci' -cnotmatch "^S-\d-\d+-(\d+-){1,14}\d+$" | Should -Be $true
+        It 'Tests that Get-SID returns a valid regex matched SID for the current user' {
+            # SID of current user should match SID regex pattern
+            $currentUser = $(whoami) -replace "$(hostname)\\", ("")
+            $currentSID = Get-SID -User:($currentUser)
+            $currentSID | Should -Match "^S-\d-\d+-(\d+-){1,14}\d+$"
         }
     }
 
@@ -411,8 +419,8 @@ Describe 'Functions' {
     Context 'Test-Localusername Function' {
 
         It 'Test-Localusername - exists' {
-
-            Test-Localusername -field 'circleci' | Should -Be $true
+            $currentUser = $(whoami) -replace "$(hostname)\\", ("")
+            Test-Localusername -field $currentUser | Should -Be $true
         }
 
         It 'Test-Localusername - does not exist' {
