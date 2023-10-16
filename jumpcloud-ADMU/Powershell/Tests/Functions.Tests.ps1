@@ -444,6 +444,7 @@ Describe 'Functions' {
 
     Context 'Install-JumpCloudAgent Function' {
         BeforeAll {
+            Mock Get-WindowsDrive {Return "C:"}
             $windowsDrive = Get-WindowsDrive
             $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
             $AGENT_INSTALLER_PATH
