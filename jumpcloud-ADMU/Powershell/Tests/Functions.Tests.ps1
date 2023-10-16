@@ -68,6 +68,8 @@ Describe 'Functions' {
         BeforeAll {
             $OrgID, $OrgName = Get-mtpOrganization -apiKey $env:PESTER_APIKEY
             Mock Get-WindowsDrive { return "C:" }
+            $windowsDrive = Get-WindowsDrive
+
             $config = get-content "$WindowsDrive\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
             $regex = 'systemKey\":\"(\w+)\"'
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
