@@ -22,7 +22,7 @@ $year = Get-Date -Format "yyyy"
 Update-ModuleManifest -Path $PSD1Path
 # Update Change Log File:
 $ModuleChangelog = Get-Content -Path:($FilePath_ModuleChangelog)
-. "/Users/jworkman/Documents/GitHub/jumpcloud-ADMU/Deploy/Functions/New-ModuleChangLog.ps1"
+. "$RootPath/Deploy/Functions/New-ModuleChangLog.ps1"
 $NewModuleChangelogRecord = New-ModuleChangelog -LatestVersion:($PSD1Version) -ReleaseNotes:('{{Fill in the Release Notes}}') -Features:('{{Fill in the Features}}') -Improvements:('{{Fill in the Improvements}}') -BugFixes('{{Fill in the Bug Fixes}}')
 If ($ModuleChangelogVersion -ne $PSD1Version) {
     # add a new version section to the module changelog
