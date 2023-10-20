@@ -452,8 +452,16 @@ Describe 'Migration Test Scenarios' {
 
             # variables for test
             $CommandBody = '
-            . "D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Start-Migration.ps1"
-            . "C:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Start-Migration.ps1"
+            try {
+                . "D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Start-Migration.ps1"
+            } catch {
+                Write-Host "no file exists"
+            }
+            try {
+                . "C:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Start-Migration.ps1"
+            } catch {
+                Write-Host "no file exists"
+            }
             # Trim env vars with hardcoded ""
             $JCU = ${ENV:$JcUserName}.Trim([char]0x0022)
             $SU = ${ENV:$SelectedUserName}.Trim([char]0x0022)
