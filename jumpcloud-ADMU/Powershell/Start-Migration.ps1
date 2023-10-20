@@ -1303,7 +1303,9 @@ function Test-DATFilePermission {
                     break
                 }
                 # else record the access rule and assume it's valid
-                $permissionsHash.Add("$($requiredAccess["$($requiredRule)"].name)", $rulePermissions) | Out-Null
+                if ("$($requiredAccess["$($requiredRule)"].name)" -notin $permissionsHash.Keys) {
+                    $permissionsHash.Add("$($requiredAccess["$($requiredRule)"].name)", $rulePermissions) | Out-Null
+                }
             }
             # if the access is not explicitly granted, record the missing value so we can make use of it later
             if (-not $FileACLs) {
@@ -1313,7 +1315,9 @@ function Test-DATFilePermission {
                     identityReference = $requiredRule
                     ValidPermissions  = $false
                 }
-                $permissionsHash.Add("$($requiredAccess["$($requiredRule)"].name)", $rulePermissions) | Out-Null
+                if ("$($requiredAccess["$($requiredRule)"].name)" -notin $permissionsHash.Keys) {
+                    $permissionsHash.Add("$($requiredAccess["$($requiredRule)"].name)", $rulePermissions) | Out-Null
+                }
             }
         }
 

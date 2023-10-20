@@ -533,7 +533,7 @@ Describe 'Migration Test Scenarios' {
 
 AfterAll {
     $systems = Get-JCsdkSystem
-    $CIsystems = $systems | Where-Object { $_.displayname -match "packer" }
+    $CIsystems = $systems | Where-Object { $_.displayname -match "fv-az*" }
     foreach ($system in $CIsystems) {
         Remove-JcSdkSystem -id $system.Id
     }

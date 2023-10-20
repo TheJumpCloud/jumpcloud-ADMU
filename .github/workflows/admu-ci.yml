@@ -33,7 +33,7 @@ jobs:
               write-host "Starting Build for PowerShell Module Release"
           }
           # validate type from label list:
-          $types = @('major', 'minor', 'patch')
+          $types = @('major', 'minor', 'patch', 'manual')
           $typeCount = 0
           foreach ($item in $PR_LABEL_LIST) {
               if ($item -in $types) {
@@ -60,7 +60,7 @@ jobs:
         shell: pwsh
         run: |
           # validate release type variables
-          $env:RELEASE_TYPE |  Should -BeIn @('major','minor','patch')
+          $env:RELEASE_TYPE |  Should -BeIn @('major','minor','patch','manual')
   Setup-Build-Dependancies:
     needs: ["Filter-Branch", "Check-PR-Labels", "Validate-Env-Variables"]
     runs-on: windows-latest
