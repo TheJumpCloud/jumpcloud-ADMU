@@ -23,7 +23,9 @@ BeforeAll {
     write-host "Running SetupAgent Script:"
     . $PSScriptRoot\SetupAgent.ps1
     # End region for test user generation
-
+    ForEach ($User in $JCReversionHash.Values) {
+        InitUser -UserName $($User.Username) -Password $($User.Password)
+    }
     $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
     $regex = 'systemKey\":\"(\w+)\"'
     $systemKey = [regex]::Match($config, $regex).Groups[1].Value
