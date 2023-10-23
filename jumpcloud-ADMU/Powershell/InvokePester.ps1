@@ -8,6 +8,7 @@ $env:ModuleVersionType = $ModuleVersionType
 # Load functions
 . "$PSScriptRoot/Start-Migration.ps1"
 
+
 # Import pester module
 $PesterInstalledVersion = Get-InstalledModule -Name Pester
 Import-Module -Name Pester -RequiredVersion $PesterInstalledVersion.Version
@@ -32,6 +33,17 @@ If ($env:CI) {
             'filePath' = @(
                 "$PSScriptRoot/Tests/PSScriptAnalyzer.Tests.ps1",
                 "$PSScriptRoot/Tests/Build.Tests.ps1"
+            )
+        }
+        2 = @{
+            'filePath' = @(
+                "$PSScriptRoot/Tests/MigrateThroughJCAgentTest.Tests.ps1",
+                "$PSScriptRoot/Tests/ScheduledTaskTest.Tests.ps1"
+            )
+        }
+        3 = @{
+            'filePath' = @(
+                "$PSScriptRoot/Tests/SetLastLoggedOnUserTest.Tests.ps1",
             )
         }
     }
