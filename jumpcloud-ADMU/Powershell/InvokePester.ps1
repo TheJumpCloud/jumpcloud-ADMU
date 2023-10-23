@@ -26,24 +26,16 @@ If ($env:CI) {
         0 = @{
             'filePath' = @(
                 "$PSScriptRoot/Tests/Functions.Tests.ps1",
-                "$PSScriptRoot/Tests/Migration.Tests.ps1"
+                "$PSScriptRoot/Tests/Migration.Tests.ps1",
+                "$PSScriptRoot/Tests/SetLastLoggedOnUserTest.Tests.ps1"
             )
         }
         1 = @{
             'filePath' = @(
                 "$PSScriptRoot/Tests/PSScriptAnalyzer.Tests.ps1",
-                "$PSScriptRoot/Tests/Build.Tests.ps1"
-            )
-        }
-        2 = @{
-            'filePath' = @(
+                "$PSScriptRoot/Tests/Build.Tests.ps1",
                 "$PSScriptRoot/Tests/MigrationThroughJCAgentTest.Tests.ps1",
                 "$PSScriptRoot/Tests/ScheduledTaskTest.Tests.ps1"
-            )
-        }
-        3 = @{
-            'filePath' = @(
-                "$PSScriptRoot/Tests/SetLastLoggedOnUserTest.Tests.ps1"
             )
         }
     }
