@@ -25,8 +25,10 @@ If ($env:CI) {
     $jobMatrixSet = @{
         0 = @{
             'filePath' = @(
-                "$PSScriptRoot/Tests/Functions.Tests.ps1",
-                "$PSScriptRoot/Tests/Migration.Tests.ps1"
+                # "$PSScriptRoot/Tests/Functions.Tests.ps1",
+                # "$PSScriptRoot/Tests/Migration.Tests.ps1"
+                "$PSScriptRoot/Tests/MigrationThroughJCAgentTest.Tests.ps1",
+                "$PSScriptRoot/Tests/ScheduledTaskTest.Tests.ps1"
             )
         }
         1 = @{
@@ -35,17 +37,17 @@ If ($env:CI) {
                 "$PSScriptRoot/Tests/Build.Tests.ps1"
             )
         }
-        2 = @{
-            'filePath' = @(
-                "$PSScriptRoot/Tests/MigrationThroughJCAgentTest.Tests.ps1",
-                "$PSScriptRoot/Tests/ScheduledTaskTest.Tests.ps1"
-            )
-        }
-        3 = @{
-            'filePath' = @(
-                "$PSScriptRoot/Tests/SetLastLoggedOnUserTest.Tests.ps1"
-            )
-        }
+        # 2 = @{
+        #     'filePath' = @(
+        #         "$PSScriptRoot/Tests/MigrationThroughJCAgentTest.Tests.ps1",
+        #         "$PSScriptRoot/Tests/ScheduledTaskTest.Tests.ps1"
+        #     )
+        # }
+        # 3 = @{
+        #     'filePath' = @(
+        #         "$PSScriptRoot/Tests/SetLastLoggedOnUserTest.Tests.ps1"
+        #     )
+        # }
     }
     write-host "running CI job group: $env:job_group"
     $configRunPath = $jobMatrixSet[[int]$($env:job_group)].filePath

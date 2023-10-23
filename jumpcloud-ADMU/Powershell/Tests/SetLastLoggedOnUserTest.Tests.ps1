@@ -34,7 +34,7 @@ BeforeAll {
     # Remove Created Users
     Get-JCuser -username "ADMU_*" | Remove-JCuser -Force
 }
-Describe Set-LastLoggedOnUser Test Scenarios{
+Describe 'Set-LastLoggedOnUser Test Scenarios'{
     Enable-TestNameAsVariablePlugin
     BeforeEach {
         Write-Host "---------------------------"
