@@ -26,9 +26,9 @@ If ($env:CI) {
         0 = @{
             'filePath' = @(
                 # "$PSScriptRoot/Tests/Functions.Tests.ps1",
-                # "$PSScriptRoot/Tests/Migration.Tests.ps1"
-                "$PSScriptRoot/Tests/MigrationThroughJCAgentTest.Tests.ps1",
-                "$PSScriptRoot/Tests/ScheduledTaskTest.Tests.ps1"
+                "$PSScriptRoot/Tests/Migration.Tests.ps1"
+                # "$PSScriptRoot/Tests/MigrationThroughJCAgentTest.Tests.ps1",
+                # "$PSScriptRoot/Tests/ScheduledTaskTest.Tests.ps1"
             )
         }
         1 = @{
