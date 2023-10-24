@@ -28,7 +28,7 @@ BeforeAll {
     # Remove Created Users
     Get-JCuser -username "ADMU_*" | Remove-JCuser -Force
 }
-Describe 'ScheduleTask Test Scenarios'{
+Describe 'ScheduleTask Test Scenarios' {
     Enable-TestNameAsVariablePlugin
     BeforeEach {
         Write-Host "---------------------------"
@@ -79,6 +79,17 @@ Describe 'ScheduleTask Test Scenarios'{
             $task = Get-ScheduledTask -TaskName "TestTaskDisabled"
             # Task state should still be disabled
             $task.State | Should -Be "Disabled"
+        }
+
+    }
+
+    Context 'Start-Migration on Local Accounts Expecting Failed Results (Test Reversal Functionallity)' {
+        BeforeEach {
+            # Remove the log from previous runs
+            # Not necessary but will be used in future tests to check log results
+            $logPath = "C:\Windows\Temp\jcadmu.log"
+            Remove-Item $logPath
+            New-Item $logPath -Force -ItemType File
         }
         It "Tests that the tool can recover when the start migration script fails and that scheduled tasks are returned to their previous state" {
 
@@ -213,5 +224,6 @@ Describe 'ScheduleTask Test Scenarios'{
                 $task.State | Should -Be "Ready"
             }
         }
+
     }
 }
