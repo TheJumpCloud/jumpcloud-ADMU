@@ -4,6 +4,9 @@ BeforeAll {
     if ($env:ModuleVersionType -eq "patch") {
         $env:ModuleVersionType = "build"
     }
+    # Get Latest Module Version
+    $lastestModule = Find-Module -Name JumpCloud.ADMU
+
 }
 Describe 'Build Tests' {
 
@@ -54,9 +57,25 @@ Describe 'Build Tests' {
             $exeversion | Should -BeGreaterThan $masterformversion
             $exeversion.$($env:ModuleVersionType) | Should -Be ($masterformversion.$($env:ModuleVersionType) + 1)
         }
+    }
 
-        It 'gui_jcadmu.exe signature valid' -skip {
-            #(Get-AuthenticodeSignature ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\exe\gui_jcadmu.exe')).Status  | Should -Be 'Valid'
+    Context 'Module Changelog Validation' {
+        BeforeAll {
+            # Get Module Changelog Version:
+            $FilePath_ModuleChangelog = "$PSScriptRoot\..\..\..\ModuleChangelog.md"
+            $ModuleChangelogContent = Get-Content -Path:($FilePath_ModuleChangelog)
+
+        }
+        It 'Module Changlog Version should be correct' {
+            $ModuleChangelogVersionRegex = "([0-9]+)\.([0-9]+)\.([0-9]+)"
+            $ModuleChangelogVersionMatch = ($ModuleChangelogContent | Select-Object -First 1) | Select-String -Pattern:($ModuleChangelogVersionRegex)
+            $ModuleChangelogVersion = $ModuleChangelogVersionMatch.Matches.Value
+            # Compare
+            ([version]$ModuleChangelogVersion).$($env:ModuleVersionType) | Should -Be ($lastestModule.version.$($env:ModuleVersionType) + 1)
+
+        }
+        It 'Module Changelog should not contain placeholder values' {
+            $ModuleChangelogContent | Should -not -Match "{{Fill in the"
 
         }
     }
