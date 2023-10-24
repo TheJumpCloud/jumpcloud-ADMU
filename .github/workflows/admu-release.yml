@@ -1,4 +1,4 @@
-name: Release and Publish PSModule
+name: Release and Publish ADMU Module
 on:
   pull_request:
     branches:
@@ -151,16 +151,16 @@ jobs:
         run: |
           curl -X GET  https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -H "x-api-key:%SM_API_KEY%" -o smtools-windows-x64.msi
           msiexec /i smtools-windows-x64.msi /quiet /qn
-          smksp_registrar.exe list
-          smctl.exe keypair ls
+          smksp_registrar.exe list > nul 2>&1
+          smctl.exe keypair ls > nul 2>&1
           C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user
-          smksp_cert_sync.exe
-      - name: sign steps
+          smksp_cert_sync.exe > nul 2>&1
+      - name: Sign ADMU EXE
         shell: pwsh
         env:
           SM_CODE_SIGNING_CERT_SHA1_HASH: ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}
         run: |
-          ./sign.ps1
+          ${{ github.workspace }}/Deploy/Sign.ps1
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v3
         with:
