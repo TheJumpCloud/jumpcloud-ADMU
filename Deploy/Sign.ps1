@@ -5,8 +5,8 @@
 # Sign Variables
 $signpath = 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtool.exe'
 $RootPath = Split-Path (Split-Path $PSScriptRoot -Parent)
-$GUI_JCADMU = "$RootPath\jumpcloud-ghactions-testing\jumpcloud-ghactions-testing\gui_jcadmu_unsigned.exe"
-$UWP_JCADMU = "$RootPath\jumpcloud-ghactions-testing\jumpcloud-ghactions-testing\uwp_jcadmu_unsigned.exe"
+$GUI_JCADMU = "$RootPath\jumpcloud-ADMU\Exe\gui_jcadmu.exe"
+$UWP_JCADMU = "$RootPath\jumpcloud-ADMU\Exe\uwp_jcadmu.exe"
 
 Write-Output "Signing binaries"
 New-Variable -Name MaxAttempts -Option Constant -Value 5
@@ -24,7 +24,6 @@ $filesToSign = @(
 
 Write-Output "Signing with Production Cert"
 $codeSigningCertHash = $env:SM_CODE_SIGNING_CERT_SHA1_HASH
-
 
 foreach ($file in $filesToSign) {
     If (Test-Path -Path ($file)) {
