@@ -26,7 +26,7 @@ BeforeAll {
 
     # Remove users with ADMU_ prefix
     # Remove Created Users
-    Get-JCuser -username "ADMU_*" | Remove-JCuser -Force
+    #Get-JCuser -username "ADMU_*" | Remove-JCuser -Force
 }
 Describe 'ScheduleTask Test Scenarios' {
     Enable-TestNameAsVariablePlugin
