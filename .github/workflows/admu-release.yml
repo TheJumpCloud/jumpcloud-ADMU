@@ -174,11 +174,11 @@ jobs:
     needs: [Build-Sign-ADMU]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Download ADMU artifact
         uses: actions/download-artifact@v3
         with:
           name: jumpcloud-admu
-      - uses: actions/checkout@v4
       - name: Build Draft Release
         run: |
           VERSION=$(grep -Po '(\d+\.\d+\.\d+)' ${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.psd1)
@@ -203,10 +203,10 @@ jobs:
     needs: [Manual-Approval-Release, Build-Sign-ADMU]
     runs-on: ubuntu-latest
     steps:
-      - name: Download nupkg artifact
+      - name: Download ADMU artifact
         uses: actions/download-artifact@v3
         with:
-          name: jumpcloud-module-nupkg
+          name: jumpcloud-admu
       - name: Publish
         shell: pwsh
         run: |
