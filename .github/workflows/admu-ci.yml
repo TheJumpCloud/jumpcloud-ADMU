@@ -120,7 +120,7 @@ jobs:
         env:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
         run: |
-          . "${{ github.workspace }}/Deploy/build.ps1"
+          . "${{ github.workspace }}/Deploy/build.ps1" -ModuleVersionType $env:RELEASE_TYPE -ModuleName "JumpCloud.ADMU"
       - name: Upload Nuspec
         uses: actions/upload-artifact@v3
         with:
