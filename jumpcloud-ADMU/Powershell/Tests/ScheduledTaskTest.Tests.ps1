@@ -24,10 +24,6 @@ BeforeAll {
     . $PSScriptRoot\SetupAgent.ps1
     # End region for test user generation
 
-    $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
-    $regex = 'systemKey\":\"(\w+)\"'
-    $systemKey = [regex]::Match($config, $regex).Groups[1].Value
-
     # Remove users with ADMU_ prefix
     # Remove Created Users
     Get-JCuser -username "ADMU_*" | Remove-JCuser -Force
@@ -37,6 +33,11 @@ Describe 'ScheduleTask Test Scenarios'{
     BeforeEach {
         Write-Host "---------------------------"
         Write-Host "Begin Test: $testName`n"
+        # Remove the log from previous runs
+            # Not necessary but will be used in future tests to check log results
+        $logPath = "C:\Windows\Temp\jcadmu.log"
+        Remove-Item $logPath
+        New-Item $logPath -Force -ItemType File
     }
     Context 'Scheduled-Task Tests' {
         It "Tests that a previously enabled Scheduled Task is enabled at the end of user migration" {

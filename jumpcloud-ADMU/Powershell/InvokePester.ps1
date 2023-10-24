@@ -41,11 +41,16 @@ If ($env:CI) {
                 "$PSScriptRoot/Tests/MigrationThroughJCAgentTest.Tests.ps1"
             )
         }
-        # 3 = @{
-        #     'filePath' = @(
-        #         "$PSScriptRoot/Tests/SetLastLoggedOnUserTest.Tests.ps1"
-        #     )
-        # }
+        3 = @{
+            'filePath' = @(
+                "$PSScriptRoot/Tests/SetLastLoggedOnUserTest.Tests.ps1"
+            )
+        }
+        4 = @{
+            'filePath' = @(
+                "$PSScriptRoot/Tests/ScheduledTaskTest.Tests.ps1"
+            )
+        }
     }
     write-host "running CI job group: $env:job_group"
     $configRunPath = $jobMatrixSet[[int]$($env:job_group)].filePath

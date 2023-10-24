@@ -26,9 +26,6 @@ BeforeAll {
     ForEach ($User in $JCReversionHash.Values) {
         InitUser -UserName $($User.Username) -Password $($User.Password)
     }
-    $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
-    $regex = 'systemKey\":\"(\w+)\"'
-    $systemKey = [regex]::Match($config, $regex).Groups[1].Value
 
     # Remove users with ADMU_ prefix
     # Remove Created Users
