@@ -23,9 +23,7 @@ BeforeAll {
     write-host "Running SetupAgent Script:"
     . $PSScriptRoot\SetupAgent.ps1
     # End region for test user generation
-    ForEach ($User in $JCReversionHash.Values) {
-        InitUser -UserName $($User.Username) -Password $($User.Password)
-    }
+
 
     # Remove users with ADMU_ prefix
     # Remove Created Users

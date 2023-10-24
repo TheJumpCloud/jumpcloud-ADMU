@@ -31,6 +31,9 @@ BeforeAll {
     ForEach ($User in $JCFunctionalHash.Values) {
         InitUser -UserName $($User.Username) -Password $($User.Password)
     }
+    ForEach ($User in $JCReversionHash.Values) {
+        InitUser -UserName $($User.Username) -Password $($User.Password)
+    }
 
     $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
     $regex = 'systemKey\":\"(\w+)\"'
