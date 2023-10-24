@@ -12,7 +12,11 @@ param (
     [System.string]
     $branch
 )
-. $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
+Write-Host "======= Begin Build-Nuspec ======="
+
+If (-not $ADMUGetConfig) {
+    . $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
+}
 # Get PSD1
 $ManifestPath = "$($FilePath_psd1)"
 $OutputPath = "$($FolderPath_Module)"
@@ -188,3 +192,4 @@ function New-NuspecFile {
 }
 
 New-NuspecFile -OutputPath $OutputPath -Id $Id -Version $Version -Description $Description -Authors $Authors -Owners $Owners -ReleaseNotes $ReleaseNotes -Copyright $Copyright -Tags $Tags -LicenseUrl $LicenseUrl -ProjectUrl $ProjectUrl -IconUrl $IconUrl -Dependencies $Dependencies
+Write-Host "======= End Build-Nuspec ======="

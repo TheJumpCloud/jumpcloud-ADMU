@@ -126,7 +126,7 @@ jobs:
         with:
           name: jumpcloud-admu-build
           path: |
-            ${{ github.workspace }}/Jumpcloud-ADMU/.*.nuspec
+            ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec
             ${{ github.workspace }}/Jumpcloud-ADMU/Docs/*.md
             ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe
             ${{ github.workspace }}/Jumpcloud-ADMU/Powershell/Form.ps1

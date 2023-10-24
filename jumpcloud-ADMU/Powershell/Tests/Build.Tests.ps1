@@ -14,14 +14,16 @@ Describe "Module Validation Tests" {
         Context 'Validate EXE Files Exist and were re-generated' {
 
             It 'gui_jcadmu.exe exists and was generated today' {
-                guiPath = ("$PSScriptRoot\..\..\Exe\gui_jcadmu.exe")
-            (Test-Path -Path $guiPath) | Should -Be $true
-                Get-ChildItem -Path
+                $guiPath = ("$PSScriptRoot\..\..\Exe\gui_jcadmu.exe")
+                (Test-Path -Path $guiPath) | Should -Be $true
+                $binaryFile = Get-ChildItem -Path $guiPath
+                [datetime]$binaryFile.LastWriteTime | Should -BeGreaterThan (Get-Date -Format "dddd MM/dd/yyyy")
             }
             It 'uwp_jcadmu.exe exists and was generated today' {
-                guiPath = ("$PSScriptRoot\..\..\Exe\uwp_jcadmu.exe")
-            (Test-Path -Path $guiPath) | Should -Be $true
-                Get-ChildItem -Path
+                $uwpPath = ("$PSScriptRoot\..\..\Exe\uwp_jcadmu.exe")
+                (Test-Path -Path $uwpPath) | Should -Be $true
+                $binaryFile = Get-ChildItem -Path $uwpPath
+                [datetime]$binaryFile.LastWriteTime | Should -BeGreaterThan (Get-Date -Format "dddd MM/dd/yyyy")
             }
         }
     }
