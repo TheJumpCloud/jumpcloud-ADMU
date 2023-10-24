@@ -1,17 +1,19 @@
 name: Release and Publish PSModule
 on:
   pull_request:
-    types:
-      - closed
-    paths:
-      - "PowerShell/Deploy/**"
-      - "PowerShell/JumpCloud Module/**"
-      - "PowerShell/ModuleChangelog.md"
     branches:
       - master
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  # will be switched to:
+  # pull_request:
+  #   types:
+  #     - closed
+  #   branches:
+  #     - master
 jobs:
   Check-If-Merged:
-    if: github.event.pull_request.merged == true
+    # will be switched to true
+    if: github.event.pull_request.merged == false
     runs-on: ubuntu-latest
     steps:
       - name: Check if Merged
@@ -22,3 +24,201 @@ jobs:
     if: contains(github.event.pull_request.labels.*.name, 'ADMU')
     steps:
       - run: echo "Building JumpCloud Module 'ADMU'"
+  Check-PR-Labels:
+    needs: ["Filter-Branch", "Check-If-Merged"]
+    runs-on: ubuntu-latest
+    outputs:
+      RELEASE_TYPE: ${{ steps.validate.outputs.RELEASE_TYPE }}
+    steps:
+      - name: Validate-PR-Version-Labels
+        id: validate
+        shell: pwsh
+        run: |
+          $PR_LABEL_LIST=$(curl -s "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" | jq -r '.[].name')
+          if ("ADMU" -in $PR_LABEL_LIST) {
+              write-host "Starting Build for ADMU Module Release"
+          }
+          # validate type from label list:
+          $types = @('major', 'minor', 'patch', 'manual')
+          $typeCount = 0
+          foreach ($item in $PR_LABEL_LIST) {
+              if ($item -in $types) {
+                  write-host "$item"
+                  $typeCount += 1
+                  $RELEASE_TYPE = $item
+              }
+          }
+
+          if ($typeCount -eq 1) {
+              echo "RELEASE_TYPE=$RELEASE_TYPE" >> $env:GITHUB_OUTPUT
+          } else {
+              throw "Multiple or invalid release types were found on PR"
+              exit 1
+          }
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  Setup-Build-Dependancies:
+    needs: ["Filter-Branch", "Check-PR-Labels"]
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup PowerShell Module Cache
+        id: cacher
+        uses: actions/cache@v3
+        with:
+          path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
+          key: PS-Dependancies
+      - name: Install dependencies
+        if: steps.cacher.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+
+          If (!(Get-PackageProvider -Name:('NuGet') -ListAvailable -ErrorAction:('SilentlyContinue'))) {
+              Write-Host ('[status]Installing package provider NuGet');
+              Install-PackageProvider -Name:('NuGet') -Scope:('CurrentUser') -Force
+          }
+          # define dependancies for this ci workflow:
+          $PSDependencies = @{
+              'PowerShellGet'                         = @{Repository = 'PSGallery'; RequiredVersion = '3.0.12-beta' }
+              'ps2exe'                                = @{Repository = 'PSGallery'; RequiredVersion = '1.0.13' }
+              'PlatyPS'                               = @{Repository = 'PSGallery'; RequiredVersion = '0.14.2' }
+              'JumpCloud.SDK.V1'                      = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
+              'JumpCloud.SDK.V2'                      = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
+              'JumpCloud.SDK.DirectoryInsights'       = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
+              'JumpCloud'                             = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
+          }
+          foreach ($RequiredModule in $PSDependencies.Keys) {
+              If ([System.String]::IsNullOrEmpty((Get-InstalledModule | Where-Object { $_.Name -eq $RequiredModule }))) {
+                  $latestModule = find-module $RequiredModule
+                  Write-Host "[status] latest module: $RequiredModule; latest version: $($latestModule.Version)"
+                  Write-Host("[status] Installing module: '$RequiredModule'; version: $($PSDependencies[$RequiredModule].RequiredVersion) from $($PSDependencies[$RequiredModule].Repository)")
+                  if ($($PSDependencies[$RequiredModule].RequiredVersion) -eq "latest"){
+                    Install-Module -Name $RequiredModule -Repository:($($PSDependencies[$RequiredModule].Repository))-Force
+                  } else {
+                    Install-Module -Name $RequiredModule -Repository:($($PSDependencies[$RequiredModule].Repository)) -RequiredVersion:($($PSDependencies[$RequiredModule].RequiredVersion)) -AllowPrerelease -Force
+                  }
+              }
+          }
+  Build-Sign-ADMU:
+    runs-on: windows-latest
+    needs: ["Setup-Build-Dependancies", "Check-PR-Labels"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        with:
+          path: "/home/runner/.local/share/powershell/Modules/"
+          key: PS-Dependancies
+      - name: Build ADMU Module
+        shell: powershell
+        env:
+          RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
+        run: |
+          . "${{ github.workspace }}/Deploy/build.ps1" -ModuleVersionType $env:RELEASE_TYPE -ModuleName "JumpCloud.ADMU"
+      - name: Pack nuspec
+        shell: pwsh
+        run: |
+          nuget pack "${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.nuspec"
+      - name: Validate NuPkg File
+        shell: pwsh
+        run: |
+          $NupkgPathDirectory = (Get-ChildItem -Path:("./*.nupkg")).Directory
+          $nupkgPath = (Get-ChildItem -Path:("./*.nupkg")).FullName
+          Write-Host "NuPkg Path: $nupkgPath"
+          mkdir $NupkgPathDirectory/nupkg_module
+          unzip $nupkgPath -d $NupkgPathDirectory/nupkg_module
+          $moduleRootFiles = Get-ChildItem -File -Path:("$NupkgPathDirectory/nupkg_module")
+          $moduleRootDirectories = Get-ChildItem -Directory -Path:("$NupkgPathDirectory/nupkg_module")
+          Write-Host "Module Files:\n$moduleRootFiles"
+          Write-Host "Module Directories:\n$moduleRootDirectories"
+      - name: Setup Code Signing Variables
+        shell: bash
+        run: |
+          # Create Client Cert File
+          echo "${{ secrets.SM_CLIENT_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
+          # Create Environment Variables
+          echo "::set-output name=version::${GITHUB_REF#refs/tags/v}"
+          echo "SM_HOST=${{ secrets.SM_HOST }}" >> "$GITHUB_ENV"
+          echo "SM_API_KEY=${{ secrets.SM_API_KEY }}" >> "$GITHUB_ENV"
+          echo "SM_CLIENT_CERT_FILE=D:\\Certificate_pkcs12.p12" >> "$GITHUB_ENV"
+          echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_CLIENT_CERT_PASSWORD }}" >> "$GITHUB_ENV"
+          echo "C:\Program Files (x86)\Windows Kits\10\App Certification Kit" >> $GITHUB_PATH
+          echo "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools" >> $GITHUB_PATH
+          echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools" >> $GITHUB_PATH
+      - name: Setup SSM KSP for Code Signing
+        shell: cmd
+        run: |
+          curl -X GET  https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -H "x-api-key:%SM_API_KEY%" -o smtools-windows-x64.msi
+          msiexec /i smtools-windows-x64.msi /quiet /qn
+          smksp_registrar.exe list
+          smctl.exe keypair ls
+          C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user
+          smksp_cert_sync.exe
+      - name: sign steps
+        shell: pwsh
+        env:
+          SM_CODE_SIGNING_CERT_SHA1_HASH: ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}
+        run: |
+          ./sign.ps1
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: jumpcloud-admu
+          path: |
+            ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe
+            ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec
+            ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.*.nupkg
+
+  Draft-GH-Release:
+    needs: [Build-Sign-ADMU]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download ADMU artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: jumpcloud-admu
+      - uses: actions/checkout@v4
+      - name: Build Draft Release
+        run: |
+          VERSION=$(grep -Po '(\d+\.\d+\.\d+)' ${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.psd1)
+          TITLE="JumpCloud ADMU v$VERSION"
+          CHANGELOG=$(cat ${{ github.workspace }}/ModuleChangelog.md |awk "/^## $VERSION/{ f = 1; next } /## [0-9]+.[0-9]+.[0-9]+/{ f = 0 } f")
+          TAG="v$VERSION"
+          BODY="$TITLE $CHANGELOG"
+          # draft release
+          (gh release view $TAG && echo "Release exists for $TAG") || gh release create $TAG --title "$TITLE" --notes "$BODY" --draft
+          # upload signed artifacts
+          gh release upload $TAG ${{ github.workspace }}/jumpcloud-ADMU/Exe/gui_jcadmu.exe ${{ github.workspace }}/jumpcloud-ADMU/Exe/uwp_jcadmu.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  Manual-Approval-Release:
+    needs: ["Draft-GH-Release"]
+    environment: PublishToPSGallery
+    runs-on: ubuntu-latest
+    steps:
+      - name: Manual Approval for Release
+        run: echo "Awaiting approval from required reviewers before continuing"
+  Deploy-Nupkg:
+    needs: [Manual-Approval-Release, Build-Sign-ADMU]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download nupkg artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: jumpcloud-module-nupkg
+      - name: Publish
+        shell: pwsh
+        run: |
+          # add nuget source for PSGallery:
+          dotnet nuget add source "https://www.powershellgallery.com/api/v2/package" --name PSGallery
+          # get nupkg artifact:
+          $nupkgPath = (Get-ChildItem -Path:("./*.nupkg")).FullName
+          # test
+          $nupkgPath | Should -Exist
+          Write-Host "Nupkg Artifact Restored: $nupkgPath"
+          # nuget push from here:
+          # TODO: TO PUBLISH UNCOMMENT BELOW:
+          # dotnet nuget push $nupkgPath --source PSGallery --api-key $env:NuGetApiKey
+        env:
+          NuGetApiKey: ${{ secrets.NUGETAPIKEY }}
