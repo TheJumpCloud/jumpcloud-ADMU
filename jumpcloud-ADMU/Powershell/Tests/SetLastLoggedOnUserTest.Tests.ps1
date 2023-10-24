@@ -29,7 +29,7 @@ BeforeAll {
 
     # Remove users with ADMU_ prefix
     # Remove Created Users
-    Get-JCuser -username "ADMU_*" | Remove-JCuser -Force
+    #Get-JCuser -username "ADMU_*" | Remove-JCuser -Force
 }
 Describe 'Set-LastLoggedOnUser Test Scenarios'{
     Enable-TestNameAsVariablePlugin
