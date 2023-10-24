@@ -1,24 +1,16 @@
 ## 2.5.1
 
-Release Date: October 20, 2023
+Release Date: October 24, 2023
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Migrate the CI workflow from CircleCI to GitHub Actions
 ```
 
-#### FEATURES:
+#### Bug Fixes:
 
-{{Fill in the Features}}
-
-#### IMPROVEMENTS:
-
-{{Fill in the Improvements}}
-
-#### BUG FIXES:
-
-{{Fill in the Bug Fixes}}
+Additional tests written to validate module before release
 
 ## 2.5.0
 

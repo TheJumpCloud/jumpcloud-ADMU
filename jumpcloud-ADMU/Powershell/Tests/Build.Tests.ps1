@@ -1,25 +1,29 @@
-BeforeAll {
-    Write-Host "Script Location: $PSScriptRoot"
-    # translate $ModuleVersionType for [version] string matching module
-    if ($env:ModuleVersionType -eq "patch") {
-        $env:ModuleVersionType = "build"
+Describe "Module Validation Tests" {
+    BeforeAll {
+        Write-Host "Script Location: $PSScriptRoot"
+        # translate $ModuleVersionType for [version] string matching module
+        if ($env:ModuleVersionType -eq "patch") {
+            $env:ModuleVersionType = "build"
+        }
+        # Get Latest Module Version
+        $lastestModule = Find-Module -Name JumpCloud.ADMU
+
     }
-    # Get Latest Module Version
-    $lastestModule = Find-Module -Name JumpCloud.ADMU
+    Describe 'Build EXE Tests' {
 
-}
-Describe 'Build Tests' {
+        Context 'Validate EXE Files Exist and were re-generated' {
 
-    Context 'Check EXE Files Exist' {
-
-        It 'gui_jcadmu.exe exists' {
-            (Test-Path -Path ("$PSScriptRoot\..\..\Exe\gui_jcadmu.exe")) | Should -Be $true
+            It 'gui_jcadmu.exe exists and was generated today' {
+                guiPath = ("$PSScriptRoot\..\..\Exe\gui_jcadmu.exe")
+            (Test-Path -Path $guiPath) | Should -Be $true
+                Get-ChildItem -Path
+            }
+            It 'uwp_jcadmu.exe exists and was generated today' {
+                guiPath = ("$PSScriptRoot\..\..\Exe\uwp_jcadmu.exe")
+            (Test-Path -Path $guiPath) | Should -Be $true
+                Get-ChildItem -Path
+            }
         }
-
-        It 'uwp_jcadmu.exe exists' {
-            (Test-Path -Path ("$PSScriptRoot\..\..\Exe\uwp_jcadmu.exe")) | Should -Be $true
-        }
-
     }
 
     Context 'Check Versioning & Signature' {
@@ -61,7 +65,7 @@ Describe 'Build Tests' {
 
     Context 'Module Changelog Validation' {
         BeforeAll {
-            # Get Module Changelog Version:
+            # Get ModuleChangelog.md Version:
             $FilePath_ModuleChangelog = "$PSScriptRoot\..\..\..\ModuleChangelog.md"
             $ModuleChangelogContent = Get-Content -Path:($FilePath_ModuleChangelog)
 
@@ -76,7 +80,23 @@ Describe 'Build Tests' {
         }
         It 'Module Changelog should not contain placeholder values' {
             $ModuleChangelogContent | Should -not -Match "{{Fill in the"
+        }
+    }
 
+    Context 'Module Help Files' {
+        It 'Validates no new changes should be committed after running Build.ps1' {
+            # Get Docs Directory:
+            $FolderPath_Docs = "$PSScriptRoot\..\..\Docs\"
+            $Docs = Get-ChildItem -Path $FolderPath_Docs -Filter "*.md"
+            Write-Host $Docs
+            foreach ($item in $Docs) {
+                Write-Host "testing ::::: $($item)"
+                $diff = git diff -- $item.fullname
+                if ($diff) {
+                    write-warning "diff found in file: $($item.fullname) when we expected none to exist; have you run build.ps1 and committed the resulting changes?"
+                }
+                $diff | Should -BeNullOrEmpty
+            }
         }
     }
 }
