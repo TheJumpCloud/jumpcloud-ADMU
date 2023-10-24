@@ -21,14 +21,8 @@ If (-not $ADMUGetConfig) {
 $ManifestPath = "$($FilePath_psd1)"
 $OutputPath = "$($FolderPath_Module)"
 $Psd1 = Import-PowerShellDataFile -Path:($ManifestPath)
-# Determine Nuspec Version string:
-if ($branch -eq "master") {
-    # Nuspec version should be psd1 version
-    $Version = $Psd1.ModuleVersion
-} else {
-    # Nuspec version should contain build number for code artifact repo
-    $Version = $Psd1.ModuleVersion + ".$buildNumber"
-}
+$Version = $Psd1.ModuleVersion
+Write-Host "[status] Nuspec Version: $Version"
 
 # Set Variables for New-NuspecFile
 $Id = $(Get-Item ($ManifestPath)).BaseName
