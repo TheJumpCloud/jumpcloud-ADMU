@@ -23,7 +23,7 @@ $nuspecFiles = @(
     @{src = "Powershell/Start-Migration.ps1"; target = "Powershell" },
     @{src = "Docs/.md"; target = "Docs" },
     @{src = "JumpCloud.ADMU.psd1" },
-    @{src = "JumpCloud.ADMU.psm1" },
+    @{src = "JumpCloud.ADMU.psm1" }
 )
 # Get PSD1
 $ManifestPath = "$($FilePath_psd1)"
