@@ -19,11 +19,11 @@ If (-not $ADMUGetConfig) {
 }
 
 $nuspecFiles = @(
-    @{src = "en-Us/**/*.*"; target = "en-Us" },
-    @{src = "Powershell/Start-Migration.ps1"; target = "Powershell" },
-    @{src = "Docs/*.md"; target = "Docs" },
-    @{src = "JumpCloud.ADMU.psd1" },
-    @{src = "JumpCloud.ADMU.psm1" }
+    @{src = "./jumpcloud-ADMU/en-Us/JumpCloud.ADMU-help.xml"; target = "./" },
+    @{src = "./jumpcloud-ADMU/Powershell/Start-Migration.ps1"; target = "./Public" },
+    @{src = "./jumpcloud-ADMU/Docs/*.md"; target = "./Docs" },
+    @{src = "./jumpcloud-ADMU/JumpCloud.ADMU.psd1" },
+    @{src = "./jumpcloud-ADMU/JumpCloud.ADMU.psm1" }
 )
 # Get PSD1
 $ManifestPath = "$($FilePath_psd1)"
