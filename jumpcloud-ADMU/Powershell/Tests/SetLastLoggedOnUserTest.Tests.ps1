@@ -24,7 +24,6 @@ BeforeAll {
     . $PSScriptRoot\SetupAgent.ps1
     # End region for test user generation
 
-
     # Remove users with ADMU_ prefix
     # Remove Created Users
     #Get-JCuser -username "ADMU_*" | Remove-JCuser -Force
