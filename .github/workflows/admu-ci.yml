@@ -139,7 +139,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        job_group: [0, 1]
+        job_group: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v4
       - name: Download artifacts
