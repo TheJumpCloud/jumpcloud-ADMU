@@ -80,6 +80,5 @@ Describe 'ScheduleTask Test Scenarios' {
             # Task state should still be disabled
             $task.State | Should -Be "Disabled"
         }
-
     }
 }
