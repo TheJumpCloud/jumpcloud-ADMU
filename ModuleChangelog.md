@@ -1,6 +1,6 @@
 ## 2.5.1
 
-Release Date: October 24, 2023
+Release Date: October 25, 2023
 
 #### RELEASE NOTES
 
