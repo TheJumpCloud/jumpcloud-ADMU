@@ -17,6 +17,14 @@ Write-Host "======= Begin Build-Nuspec ======="
 If (-not $ADMUGetConfig) {
     . $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 }
+
+$nuspecFiles = @(
+    @{src = "en-Us/**/*.*"; target = "en-Us" },
+    @{src = "Powershell/Start-Migration.ps1"; target = "Powershell" },
+    @{src = "Docs/.md"; target = "Docs" },
+    @{src = "JumpCloud.ADMU.psd1" },
+    @{src = "JumpCloud.ADMU.psm1" },
+)
 # Get PSD1
 $ManifestPath = "$($FilePath_psd1)"
 $OutputPath = "$($FolderPath_Module)"
@@ -185,5 +193,5 @@ function New-NuspecFile {
     Write-Output $nuspecFullName
 }
 
-New-NuspecFile -OutputPath $OutputPath -Id $Id -Version $Version -Description $Description -Authors $Authors -Owners $Owners -ReleaseNotes $ReleaseNotes -Copyright $Copyright -Tags $Tags -LicenseUrl $LicenseUrl -ProjectUrl $ProjectUrl -IconUrl $IconUrl -Dependencies $Dependencies
+New-NuspecFile -OutputPath $OutputPath -Id $Id -Version $Version -Description $Description -Authors $Authors -Owners $Owners -ReleaseNotes $ReleaseNotes -Copyright $Copyright -Tags $Tags -LicenseUrl $LicenseUrl -ProjectUrl $ProjectUrl -IconUrl $IconUrl -Dependencies $Dependencies -Files $nuspecFiles
 Write-Host "======= End Build-Nuspec ======="
