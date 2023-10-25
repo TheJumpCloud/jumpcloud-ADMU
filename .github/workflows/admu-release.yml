@@ -189,6 +189,7 @@ jobs:
           # draft release
           (gh release view $TAG && echo "Release exists for $TAG") || gh release create $TAG --title "$TITLE" --notes "$BODY" --draft
           # upload signed artifacts
+          ls -la ${{ github.workspace }}/jumpcloud-ADMU/Exe/
           gh release upload $TAG ${{ github.workspace }}/jumpcloud-ADMU/Exe/gui_jcadmu.exe ${{ github.workspace }}/jumpcloud-ADMU/Exe/uwp_jcadmu.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
