@@ -70,7 +70,15 @@ If ($PSVersion.PSEdition -eq "Core") {
     }
     Import-Module -Name ps2exe
     If (-not [System.String]::IsNullOrEmpty($PSD1Version)) {
-        Invoke-ps2exe -inputFile $Output -outputFile ($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\exe\gui_jcadmu.exe') -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright "(c) $year" -version $Psd1Version -company 'JumpCloud' -requireAdmin -iconfile '.\Deploy\admu.ico'
+        $guiOutputPath = ($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\exe\gui_jcadmu.exe')
+        Invoke-ps2exe -inputFile $Output -outputFile $guiOutputPath -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright "(c) $year" -version $Psd1Version -company 'JumpCloud' -requireAdmin -iconfile '.\Deploy\admu.ico'
+        $guiExeFile = Get-Item $guiOutputPath
+        $guiHash = (get-filehash -algorithm SHA256 -path $guiExeFile).Hash
+        Write-Host "==== GUI_JCADMU.EXE Build Status ===="
+        Write-Host "Version: $($guiExeFile.VersionInfo.FileVersionRaw)"
+        Write-Host "Build Date: $($guiExeFile.CreationTime)"
+        Write-Host "Size (bytes): $($guiExeFile.Length)"
+        Write-Host "SHA256 Hash: $guiHash"
         Write-Host "gui_jcadmu.exe was generated successfully"
     } Else {
         Write-Error ('Unable to find version number in "' + $PSD1Path + '" using regex "' + $VersionPsd1Regex + '"')
@@ -79,7 +87,15 @@ If ($PSVersion.PSEdition -eq "Core") {
     $uwpPath = $FolderPath_ModuleRootPath + '\Deploy\uwp_jcadmu.ps1'
     # Always generate a new UWP EXE
     try {
-        Invoke-ps2exe -inputFile ($uwpPath) -outputFile ($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\exe\uwp_jcadmu.exe') -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright "(c) $year" -version $Psd1Version -company 'JumpCloud' -iconfile ($FolderPath_ModuleRootPath + '\Deploy\admu.ico')
+        $uwpOutputPath = ($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\exe\uwp_jcadmu.exe')
+        Invoke-ps2exe -inputFile ($uwpPath) -outputFile $uwpOutputPath -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright "(c) $year" -version $Psd1Version -company 'JumpCloud' -iconfile ($FolderPath_ModuleRootPath + '\Deploy\admu.ico')
+        $uwpExeFile = Get-Item $uwpOutputPath
+        $uwpHash = (get-filehash -algorithm MD5 -path $uwpExeFile).Hash
+        Write-Host "==== UWP_JCADMU.EXE Build Status ===="
+        Write-Host "Version: $($uwpExeFile.VersionInfo.FileVersionRaw)"
+        Write-Host "Build Date: $($uwpExeFile.CreationTime)"
+        Write-Host "Size (bytes): $($uwpExeFile.Length)"
+        Write-Host "MD5 Hash: $uwpHash"
         Write-Host "upw_jcadmu.exe was generated successfully"
     } catch {
         Write-Error ('Unable to find version number in "' + $PSD1Path + '" using regex "' + $VersionPsd1Regex + '"')

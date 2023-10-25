@@ -68,6 +68,15 @@ foreach ($file in $filesToSign) {
         } Else {
             Break
         }
+        $signedFile = Get-Content -Path $file
+        $hash = (get-filehash -algorithm SHA256 -path $file).Hash
+
+        Write-Host "==== $filename Sign Status ===="
+        Write-Host "Version: $($signedFile.VersionInfo.FileVersionRaw)"
+        Write-Host "Build Date: $($signedFile.CreationTime)"
+        Write-Host "Size (bytes): $($signedFile.Length)"
+        Write-Host "SHA256 Hash: $hash"
+        Write-Host "$filename was signed successfully"
     }
 }
 

@@ -168,7 +168,7 @@ jobs:
           path: |
             ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec
-            ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.*.nupkg
+            ${{ github.workspace }}/JumpCloud.ADMU.*.nupkg
 
   Draft-GH-Release:
     needs: [Build-Sign-ADMU]
@@ -179,6 +179,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: jumpcloud-admu
+          path: admu-artifacts/
       - name: Build Draft Release
         run: |
           VERSION=$(grep -Po '(\d+\.\d+\.\d+)' ${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.psd1)
@@ -189,8 +190,8 @@ jobs:
           # draft release
           (gh release view $TAG && echo "Release exists for $TAG") || gh release create $TAG --title "$TITLE" --notes "$BODY" --draft
           # upload signed artifacts
-          ls -la ${{ github.workspace }}/jumpcloud-ADMU/Exe/
-          gh release upload $TAG ${{ github.workspace }}/jumpcloud-ADMU/Exe/gui_jcadmu.exe ${{ github.workspace }}/jumpcloud-ADMU/Exe/uwp_jcadmu.exe
+          ls -la ${{ github.workspace }}/admu-artifacts/Exe/
+          gh release upload $TAG ${{ github.workspace }}/admu-artifacts/Exe/gui_jcadmu.exe ${{ github.workspace }}/admu-artifacts/Exe/uwp_jcadmu.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   Manual-Approval-Release:
@@ -208,6 +209,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: jumpcloud-admu
+          path: admu-artifacts/
       - name: Publish
         shell: pwsh
         run: |
