@@ -4,4 +4,4 @@
 test_results
 JumpCloud.ADMU.nuspec
 **/.nupkg
-ADMU.ps1
+Deploy/ADMU.ps1
