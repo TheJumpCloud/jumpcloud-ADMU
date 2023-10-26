@@ -56,6 +56,8 @@ New-ModuleManifest -Path:($FilePath_psd1) `
 If ($ModuleChangelogVersion -ne $PSD1Version) {
     # add a new version section to the module ModuleChangelog.md
     Write-Host "[Status]: Appending new changelog for version: $PSD1Version"
+    $NewModuleChangelogRecord = New-ModuleChangelog -LatestVersion:($PSD1Version) -ReleaseNotes:('{{Fill in the Release Notes}}') -Features:('{{Fill in the Features}}') -Improvements:('{{Fill in the Improvements}}') -BugFixes('{{Fill in the Bug Fixes}}')
+
     ($NewModuleChangelogRecord + ($ModuleChangelog | Out-String)).Trim() | Set-Content -Path:($FilePath_ModuleChangelog) -Force
 } else {
     # Get content between latest version and last
