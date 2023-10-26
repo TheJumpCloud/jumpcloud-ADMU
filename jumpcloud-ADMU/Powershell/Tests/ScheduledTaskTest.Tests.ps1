@@ -22,11 +22,6 @@ BeforeAll {
     # setup tests (This creates any of the users in the build vars dictionary)
     write-host "Running SetupAgent Script:"
     . $PSScriptRoot\SetupAgent.ps1
-    # End region for test user generation
-
-    # Remove users with ADMU_ prefix
-    # Remove Created Users
-    #Get-JCuser -username "ADMU_*" | Remove-JCuser -Force
 }
 Describe 'ScheduleTask Test Scenarios' {
     Enable-TestNameAsVariablePlugin
@@ -55,8 +50,6 @@ Describe 'ScheduleTask Test Scenarios' {
             $task = Get-ScheduledTask -TaskName "TestTask"
             # Task state should be ready
             $task.State | Should -Be "Ready"
-
-
         }
         It "Tests that a previously disable Scheduled Task is disabled after migration" {
             # Task should be enabled after migration
