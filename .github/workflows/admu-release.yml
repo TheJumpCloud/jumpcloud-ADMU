@@ -1,19 +1,13 @@
 name: Release and Publish ADMU Module
 on:
   pull_request:
+    types:
+      - closed
     branches:
       - master
-    types: [opened, synchronize, reopened, labeled, unlabeled]
-  # will be switched to:
-  # pull_request:
-  #   types:
-  #     - closed
-  #   branches:
-  #     - master
 jobs:
   Check-If-Merged:
-    # will be switched to true
-    if: github.event.pull_request.merged == false
+    if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: Check if Merged
