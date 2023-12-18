@@ -1303,7 +1303,9 @@ function Test-DATFilePermission {
                     break
                 }
                 # else record the access rule and assume it's valid
-                $permissionsHash.Add("$($requiredAccess["$($requiredRule)"].name)", $rulePermissions) | Out-Null
+                if ("$($requiredAccess["$($requiredRule)"].name)" -notin $permissionsHash.Keys) {
+                    $permissionsHash.Add("$($requiredAccess["$($requiredRule)"].name)", $rulePermissions) | Out-Null
+                }
             }
             # if the access is not explicitly granted, record the missing value so we can make use of it later
             if (-not $FileACLs) {
@@ -1313,7 +1315,9 @@ function Test-DATFilePermission {
                     identityReference = $requiredRule
                     ValidPermissions  = $false
                 }
-                $permissionsHash.Add("$($requiredAccess["$($requiredRule)"].name)", $rulePermissions) | Out-Null
+                if ("$($requiredAccess["$($requiredRule)"].name)" -notin $permissionsHash.Keys) {
+                    $permissionsHash.Add("$($requiredAccess["$($requiredRule)"].name)", $rulePermissions) | Out-Null
+                }
             }
         }
 
@@ -1362,7 +1366,7 @@ function Set-ADMUScheduledTask {
             }
         }
     }
- }
+}
 #endregion Agent Install Helper Functions
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
@@ -1385,7 +1389,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.5.0'
+        $admuVersion = '2.5.1'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')

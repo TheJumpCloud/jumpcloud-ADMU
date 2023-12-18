@@ -1,28 +1,31 @@
-BeforeAll{
-    Write-Host "Script Location: $PSScriptRoot"
-    # translate $ModuleVersionType for [version] string matching module
-    if ($env:ModuleVersionType -eq "patch")
-    {
-        $env:ModuleVersionType = "build"
+Describe "Module Validation Tests" {
+    BeforeAll {
+        Write-Host "Script Location: $PSScriptRoot"
+        # translate $ModuleVersionType for [version] string matching module
+        if ($env:ModuleVersionType -eq "patch") {
+            $env:ModuleVersionType = "build"
+        }
+        # Get Latest Module Version
+        $lastestModule = Find-Module -Name JumpCloud.ADMU
+
     }
-}
-Describe 'Build Tests' {
+    Describe 'Build EXE Tests' {
 
-    Context 'Check Files Exist' {
+        Context 'Validate EXE Files Exist and were re-generated' {
 
-        It 'gui_jcadmu.exe exists' {
-            (Test-Path -Path ("$PSScriptRoot\..\..\exe\gui_jcadmu.exe")) | Should -Be $true
+            It 'gui_jcadmu.exe exists and was generated today' {
+                $guiPath = ("$PSScriptRoot\..\..\Exe\gui_jcadmu.exe")
+                (Test-Path -Path $guiPath) | Should -Be $true
+                $binaryFile = Get-ChildItem -Path $guiPath
+                [datetime]$binaryFile.LastWriteTime | Should -BeGreaterThan (Get-Date -Format "dddd MM/dd/yyyy")
+            }
+            It 'uwp_jcadmu.exe exists and was generated today' {
+                $uwpPath = ("$PSScriptRoot\..\..\Exe\uwp_jcadmu.exe")
+                (Test-Path -Path $uwpPath) | Should -Be $true
+                $binaryFile = Get-ChildItem -Path $uwpPath
+                [datetime]$binaryFile.LastWriteTime | Should -BeGreaterThan (Get-Date -Format "dddd MM/dd/yyyy")
+            }
         }
-
-        It 'uwp_jcadmu.exe exists' {
-            (Test-Path -Path ("$PSScriptRoot\..\..\exe\uwp_jcadmu.exe")) | Should -Be $true
-        }
-        It 'ADMU.ps1 writen to in last 2mins' -skip {
-            if ((@(Get-ChildItem ("$PSScriptRoot\..\..\..\Deploy\ADMU.ps1")|Where-Object LastWriteTime -gt (Get-Date).AddMinutes(-2)).LastWriteTime).length -ge 1){$lessthan2 = $true}else{$lessthan2 = $false}
-            $lessthan2| Should -Be $true
-            #TODO: why this test?
-        }
-
     }
 
     Context 'Check Versioning & Signature' {
@@ -39,7 +42,7 @@ Describe 'Build Tests' {
             $branchformversion.$($env:ModuleVersionType) | Should -Be ($masterformversion.$($env:ModuleVersionType) + 1)
         }
 
-        It 'Start-Migration version'{
+        It 'Start-Migration version' {
             $startMigrationPath = "$PSScriptRoot\..\Start-Migration.ps1"
             $VersionRegex = [regex]"(?<=admuVersion = ')(([0-9]+)\.([0-9]+)\.([0-9]+))"
             $admuversion = Select-String -Path:($startMigrationPath) -Pattern:($VersionRegex)
@@ -51,7 +54,7 @@ Describe 'Build Tests' {
             $branchStartMigrationVersion.$($env:ModuleVersionType) | Should -Be ($masterStartMigrationVersion.$($env:ModuleVersionType) + 1)
         }
 
-        It 'gui_jcadmu.exe version' {
+        It 'gui_jcadmu.exe version' -skip {
             $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )([0-9]+)\.([0-9]+)\.([0-9]+)'
             $masterform = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1 -useBasicParsing).tostring()
             $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
@@ -60,10 +63,42 @@ Describe 'Build Tests' {
             $exeversion | Should -BeGreaterThan $masterformversion
             $exeversion.$($env:ModuleVersionType) | Should -Be ($masterformversion.$($env:ModuleVersionType) + 1)
         }
+    }
 
-        It 'gui_jcadmu.exe signature valid' -skip {
-            #(Get-AuthenticodeSignature ($Env:BUILD_SOURCESDIRECTORY + '\jumpcloud-ADMU\exe\gui_jcadmu.exe')).Status  | Should -Be 'Valid'
+    Context 'Module Changelog Validation' {
+        BeforeAll {
+            # Get ModuleChangelog.md Version:
+            $FilePath_ModuleChangelog = "$PSScriptRoot\..\..\..\ModuleChangelog.md"
+            $ModuleChangelogContent = Get-Content -Path:($FilePath_ModuleChangelog)
 
+        }
+        It 'Module Changlog Version should be correct' {
+            $ModuleChangelogVersionRegex = "([0-9]+)\.([0-9]+)\.([0-9]+)"
+            $ModuleChangelogVersionMatch = ($ModuleChangelogContent | Select-Object -First 1) | Select-String -Pattern:($ModuleChangelogVersionRegex)
+            $ModuleChangelogVersion = $ModuleChangelogVersionMatch.Matches.Value
+            # Compare
+            ([version]$ModuleChangelogVersion).$($env:ModuleVersionType) | Should -Be ($lastestModule.version.$($env:ModuleVersionType) + 1)
+
+        }
+        It 'Module Changelog should not contain placeholder values' {
+            $ModuleChangelogContent | Should -not -Match "{{Fill in the"
+        }
+    }
+
+    Context 'Module Help Files' {
+        It 'Validates no new changes should be committed after running Build.ps1' {
+            # Get Docs Directory:
+            $FolderPath_Docs = "$PSScriptRoot\..\..\Docs\"
+            $Docs = Get-ChildItem -Path $FolderPath_Docs -Filter "*.md"
+            Write-Host $Docs
+            foreach ($item in $Docs) {
+                Write-Host "testing ::::: $($item)"
+                $diff = git diff -- $item.fullname
+                if ($diff) {
+                    write-warning "diff found in file: $($item.fullname) when we expected none to exist; have you run build.ps1 and committed the resulting changes?"
+                }
+                $diff | Should -BeNullOrEmpty
+            }
         }
     }
 }

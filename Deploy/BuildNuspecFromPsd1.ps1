@@ -12,19 +12,25 @@ param (
     [System.string]
     $branch
 )
-. $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
+Write-Host "======= Begin Build-Nuspec ======="
+
+If (-not $ADMUGetConfig) {
+    . $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
+}
+
+$nuspecFiles = @(
+    @{src = ".\en-Us\JumpCloud.ADMU-help.xml"; target = "./" },
+    @{src = ".\Powershell\Start-Migration.ps1"; target = "./Public" },
+    @{src = ".\Docs\*.md"; target = "./Docs" },
+    @{src = ".\JumpCloud.ADMU.psd1" },
+    @{src = ".\JumpCloud.ADMU.psm1" }
+)
 # Get PSD1
 $ManifestPath = "$($FilePath_psd1)"
 $OutputPath = "$($FolderPath_Module)"
 $Psd1 = Import-PowerShellDataFile -Path:($ManifestPath)
-# Determine Nuspec Version string:
-if ($branch -eq "master") {
-    # Nuspec version should be psd1 version
-    $Version = $Psd1.ModuleVersion
-} else {
-    # Nuspec version should contain build number for code artifact repo
-    $Version = $Psd1.ModuleVersion + ".$buildNumber"
-}
+$Version = $Psd1.ModuleVersion
+Write-Host "[status] Nuspec Version: $Version"
 
 # Set Variables for New-NuspecFile
 $Id = $(Get-Item ($ManifestPath)).BaseName
@@ -187,4 +193,5 @@ function New-NuspecFile {
     Write-Output $nuspecFullName
 }
 
-New-NuspecFile -OutputPath $OutputPath -Id $Id -Version $Version -Description $Description -Authors $Authors -Owners $Owners -ReleaseNotes $ReleaseNotes -Copyright $Copyright -Tags $Tags -LicenseUrl $LicenseUrl -ProjectUrl $ProjectUrl -IconUrl $IconUrl -Dependencies $Dependencies
+New-NuspecFile -OutputPath $OutputPath -Id $Id -Version $Version -Description $Description -Authors $Authors -Owners $Owners -ReleaseNotes $ReleaseNotes -Copyright $Copyright -Tags $Tags -LicenseUrl $LicenseUrl -ProjectUrl $ProjectUrl -IconUrl $IconUrl -Dependencies $Dependencies -Files $nuspecFiles
+Write-Host "======= End Build-Nuspec ======="

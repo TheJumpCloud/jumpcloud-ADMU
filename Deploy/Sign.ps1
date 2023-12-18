@@ -7,31 +7,14 @@ $signpath = 'C:/Program Files (x86)/Windows Kits/10/bin/10.0.17763.0/x86/signtoo
 $RootPath = Split-Path (Split-Path $PSScriptRoot -Parent)
 $GUI_JCADMU = "$RootPath/jumpcloud-ADMU/jumpcloud-ADMU/Exe/gui_jcadmu.exe"
 $UWP_JCADMU = "$RootPath/jumpcloud-ADMU/jumpcloud-ADMU/Exe/uwp_jcadmu.exe"
-$base64 = "$env:BASE64_ENCODED_CERT"
-$password = "$env:CERTPASS"
-$filenameCert = "$PSScriptRoot/cert.pfx"
-$bytes = [convert]::FromBase64String($base64)
-[IO.File]::WriteAllBytes($filenameCert, $bytes)
 
-
-
-if (test-path($filenameCert))
-{
-    Write-Output "Cert found"
-}
-else
-{
-    Write-Output "Cert not found, exiting"
-    exit 1
-}
 Write-Output "Signing binaries"
 New-Variable -Name MaxAttempts -Option Constant -Value 5
 
 # Add backup TSA Servers (RFC 3161) in case we get rate-limited
 $tsaServers = @(
-    "http://tsa.starfieldtech.com",
-    "https://timestamp.geotrust.com/tsa",
-    "http://timestamp.apple.com/ts01"
+    "http://timestamp.digicert.com",
+    "http://sha256timestamp.ws.symantec.com/sha256/timestamp"
 )
 
 $filesToSign = @(
@@ -39,60 +22,62 @@ $filesToSign = @(
     $UWP_JCADMU
 )
 
+Write-Output "Signing with Production Cert"
+$codeSigningCertHash = $env:SM_CODE_SIGNING_CERT_SHA1_HASH
 
-foreach ($file in $filesToSign)
-{
-    If (Test-Path -Path ($file))
-    {
+foreach ($file in $filesToSign) {
+    If (Test-Path -Path ($file)) {
         Write-Output "Attempting to sign $file"
-    }
-    else
-    {
+    } else {
         Write-Output "$file not found"
         exit 1
     }
 
     $tsaIndex = 0
     $attempts = 1
-    while ($True)
-    {
-        Write-Output "attempting to sign with $($tsaServers[$tsaIndex])"
-        & $signpath sign `
-            /f $filenameCert `
-            /fd SHA256 `
-            /p $password `
-            /tr http://timestamp.digicert.com `
-            $file
+    while ($True) {
+        $filename = Split-Path $file -leaf
 
-        if ( -not $? )
-        {
-            if ($attempts -le $MaxAttempts)
-            {
+        Write-Output "attempting to sign with $($tsaServers[$tsaIndex])"
+        # new
+        & $signpath sign `
+            /d "$filename" `
+            /sha1 $codeSigningCertHash `
+            /tr $($tsaServers[$tsaIndex]) `
+            /td SHA256 `
+            /fd SHA256 `
+            $file
+        # report output status
+        $signedFile = Get-Content -Path $file
+        $hash = (get-filehash -algorithm SHA256 -path $file).Hash
+        Write-Host "==== $filename Sign Status ===="
+        Write-Host "Version: $($signedFile.VersionInfo.FileVersionRaw)"
+        Write-Host "Build Date: $($signedFile.CreationTime)"
+        Write-Host "Size (bytes): $($signedFile.Length)"
+        Write-Host "SHA256 Hash: $hash"
+        Write-Host "$filename was signed successfully"
+        # continue on failure to hit tsaServer
+        if ( -not $? ) {
+            if ($attempts -le $MaxAttempts) {
                 Write-Output "attempt $attempts failed, retrying..."
                 $attempts++
                 Start-Sleep -Seconds 15
                 Continue
-            }
-            Else
-            {
-                if ($tsaIndex -lt $tsaServers.Count)
-                {
+            } Else {
+                if ($tsaIndex -lt $tsaServers.Count) {
                     Write-Output "trying a different TSA Server $($tsaServers[$tsaIndex])"
                     $tsaIndex++
                     $attempts = 1
                     Continue
-                }
-                Else
-                {
+                } Else {
                     Write-Output "Failed to sign $file, error=$error"
                     Exit 1
                 }
             }
-        }
-        Else
-        {
+        } Else {
             Break
         }
+
     }
 }
 
