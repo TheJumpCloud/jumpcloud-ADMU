@@ -1368,6 +1368,77 @@ function Set-ADMUScheduledTask {
     }
 }
 #endregion Agent Install Helper Functions
+
+# Get user file type associations
+function Get-UserFileTypeAssociation {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, HelpMessage = 'The SID of the user to capture file type associations')]
+        [System.String]
+        $UserSid,
+        [Parameter(Mandatory = $true, HelpMessage = 'The profile path of the new user to store the file type associations')]
+        [System.String]
+        $profilePath
+    )
+    begin {
+        Write-ToLog "Getting File Type Associations for userSID: $UserSid"
+    }
+    process {
+        $list = @()
+        $pathRoot = "HKEY_USERS:\$($UserSid)_admu\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
+        $exts = Get-ChildItem $pathRoot*
+        foreach ($ext in $exts) {
+            $indivExtension = $ext.PSChildName
+            $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
+            $list += [PSCustomObject]@{
+                extension  = $indivExtension
+                userChoice = $progId
+            }
+        }
+        Write-ToLog "Found $($list.count) Associations"
+
+    }
+    end {
+        Write-ToLog -Message "Writing fta_manifest.csv to $($profilePath)\AppData\Local\JumpCloudADMU\fta_manifest.csv"
+
+        $list | Export-CSV ($profilePath + '\AppData\Local\JumpCloudADMU\fta_manifest.csv') -Force
+    }
+}
+
+# Get user protocol associations
+function Get-ProtocolTypeAssociation{
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, HelpMessage = 'The SID of the user to capture file type associations')]
+        [System.String]
+        $UserSid
+    )
+    begin {
+        Write-ToLog "Getting Protocol Type Associations for userSID: $UserSid"
+    }
+    process {
+        $list = @()
+        $pathRoot = "HKEY_USERS:\$($UserSid)_admu\SOFTWARE\Classes\"
+        $exts = Get-ChildItem $pathRoot*
+        foreach ($ext in $exts) {
+            $indivExtension = $ext.PSChildName
+            $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
+            $list += [PSCustomObject]@{
+                extension  = $indivExtension
+                userChoice = $progId
+            }
+        }
+        Write-ToLog "Found $($list.count) Associations"
+
+    }
+    end {
+        Write-ToLog -Message "Writing protocol_manifest.csv to $($profilePath)\AppData\Local\JumpCloudADMU\protocol_manifest.csv"
+
+        $list | Export-CSV ($profilePath + '\AppData\Local\JumpCloudADMU\protocol_manifest.csv') -Force
+    }
+
+}
+
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
     Param (
