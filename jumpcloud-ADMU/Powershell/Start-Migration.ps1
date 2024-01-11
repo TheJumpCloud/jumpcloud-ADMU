@@ -1385,14 +1385,14 @@ function Get-UserFileTypeAssociation {
     }
     process {
         $list = @()
-        $pathRoot = "HKEY_USERS:\$($UserSid)_admu\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
+        $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
         $exts = Get-ChildItem $pathRoot*
         foreach ($ext in $exts) {
             $indivExtension = $ext.PSChildName
             $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
             $list += [PSCustomObject]@{
                 extension  = $indivExtension
-                userChoice = $progId
+                programId = $progId
             }
         }
         Write-ToLog "Found $($list.count) Associations"
@@ -1411,30 +1411,36 @@ function Get-ProtocolTypeAssociation{
     param (
         [Parameter(Mandatory = $true, HelpMessage = 'The SID of the user to capture file type associations')]
         [System.String]
-        $UserSid
+        $UserSid,
+        [Parameter(Mandatory = $true, HelpMessage = 'The profile path of the new user to store the file type associations')]
+        [System.String]
+        $profilePath
     )
     begin {
-        Write-ToLog "Getting Protocol Type Associations for userSID: $UserSid"
+        Write-ToLog "Getting Protocol Type Associations for userSID: $($UserSid)_admu"
     }
     process {
         $list = @()
-        $pathRoot = "HKEY_USERS:\$($UserSid)_admu\SOFTWARE\Classes\"
-        $exts = Get-ChildItem $pathRoot*
-        foreach ($ext in $exts) {
-            $indivExtension = $ext.PSChildName
-            $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
-            $list += [PSCustomObject]@{
-                extension  = $indivExtension
-                userChoice = $progId
+        $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
+        Get-ChildItem $pathRoot* |
+        ForEach-Object {
+            $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
+            if ($progId) {
+                $list += [PSCustomObject]@{
+                    extension  = $_.PSChildName
+                    programId = $progId
+                }
             }
+
         }
         Write-ToLog "Found $($list.count) Associations"
 
     }
     end {
-        Write-ToLog -Message "Writing protocol_manifest.csv to $($profilePath)\AppData\Local\JumpCloudADMU\protocol_manifest.csv"
+        Write-ToLog -Message "Writing protocol_manifest.csv to $($profilePath)\AppData\Local\JumpCloudADMU\pta_manifest.csv"
 
-        $list | Export-CSV ($profilePath + '\AppData\Local\JumpCloudADMU\protocol_manifest.csv') -Force
+        # Export list to JumpCloudADMU folder
+        $list | Export-CSV ($profilePath + '\AppData\Local\JumpCloudADMU\pta_manifest.csv') -Force
     }
 
 }
@@ -1854,7 +1860,12 @@ Function Start-Migration {
                 Set-ValueToKey -registryRoot Users -keyPath "$($newusersid)_admu\SOFTWARE\JCADMU" -Name "previousProfilePath" -value "$oldUserProfileImagePath" -regValueKind String
             }
             ### End reg key check for new user
-
+            $path = $oldUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
+            If (!(test-path $path)) {
+                New-Item -ItemType Directory -Force -Path $path
+            }
+            Get-ProtocolTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
+            Get-UserFileTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
             # Unload "Selected" and "NewUser"
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
@@ -1971,6 +1982,8 @@ Function Start-Migration {
                 # Set the New User Profile Image Path to Old User Profile Path (they are the same)
                 $newUserProfileImagePath = $oldUserProfileImagePath
             }
+            $path = $newUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
+
 
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUsername + '.' + $NetBiosName)
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
@@ -2037,10 +2050,10 @@ Function Start-Migration {
 
             Write-ToLog -Message:('Updating UWP Apps for new user')
             $newUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
-            $path = $newUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
-            If (!(test-path $path)) {
-                New-Item -ItemType Directory -Force -Path $path
-            }
+            # $path = $newUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
+            # If (!(test-path $path)) {
+            #     New-Item -ItemType Directory -Force -Path $path
+            # }
             $appxList = @()
 
             # Get Azure AD Status
