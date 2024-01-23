@@ -1,3 +1,15 @@
+## 2.6.0
+
+Release Date: December 18, 2023
+
+#### RELEASE NOTES
+
+```
+
+```
+
+#### Bug Fixes:
+
 ## 2.5.1
 
 Release Date: December 18, 2023
