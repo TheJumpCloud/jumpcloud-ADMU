@@ -401,23 +401,41 @@ function Set-UserRegistryLoadState {
         [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
         [System.String]$UserSid
     )
+    Begin {
+        $regQuery = REG QUERY HKU *>&1
+    }
     process {
         switch ($op) {
             "Load" {
+
+                # Current loaded profiles before loading NTUSER.DAT.BAK and USRClass.dat.bak
+                Write-ToLog -Message:('Current Loaded Profiles Before Loading: ' + $regQuery)
+
                 Start-Sleep -Seconds 1
+                $lastModified = Get-Item -path "$ProfilePath\NTUSER.DAT.BAK" -Force | Select-Object -ExpandProperty LastWriteTime
                 $results = REG LOAD HKU\$($UserSid)_admu "$ProfilePath\NTUSER.DAT.BAK" *>&1
+                # Get the last modified time of the NTUSER.DAT.BAK file
+
+                Write-ToLog -Message:("Last Modified Time of $ProfilePath\NTUSER.DAT.BAK is $lastModified")
                 if ($?) {
                     Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
                 } else {
-                    Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
+                    Throw "Could not load profile: $ProfilePath\NTUSER.DAT.BAK"
                 }
+
                 Start-Sleep -Seconds 1
+                $lastModified = Get-Item -path "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force | Select-Object -ExpandProperty LastWriteTime
                 $results = REG LOAD HKU\"$($UserSid)_Classes_admu" "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" *>&1
+                # Get the last modified time of the USRClass.dat.bak file
+
+                Write-ToLog -Message:("Last Modified Time of $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak is $lastModified")
                 if ($?) {
                     Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                 } else {
-                    Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
+                    Throw "Could not load profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
                 }
+
+
             }
             "Unload" {
                 [gc]::collect()
@@ -434,6 +452,7 @@ function Set-UserRegistryLoadState {
                     Write-ToLog -Message:('Unloaded Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                 } else {
                     Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
+                    # Force Unload
                 }
             }
         }
@@ -456,7 +475,12 @@ Function Test-UserRegistryLoadState {
         # Tests to check that the reg items are not loaded
         If ($results -match $UserSid) {
             Write-ToLog "REG Keys are loaded, attempting to unload"
-            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
+            try {
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
+            }
+            catch {
+                Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
+            }
         }
     }
     process {
@@ -464,14 +488,14 @@ Function Test-UserRegistryLoadState {
         try {
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid
         } catch {
-            Write-Error "Could Not Load"
+            Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
         }
         # Load Selected User Profile Keys
         # Unload "Selected" and "NewUser"
         try {
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
         } catch {
-            Write-Error "Could Not Unload"
+            Write-Error "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
         }
     }
     end {
@@ -479,16 +503,14 @@ Function Test-UserRegistryLoadState {
         # Tests to check that the reg items are not loaded
         If ($results -match $UserSid) {
             Write-ToLog "REG Keys are loaded, attempting to unload"
-            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
-        }
-        $results = REG QUERY HKU *>&1
-        # Tests to check that the reg items are not loaded
-        If ($results -match $UserSid) {
-            Write-ToLog "REG Keys are loaded at the end of testing, exiting..." -level Warn
-            throw "REG Keys are loaded at the end of testing, exiting..."
+            try {
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
+            }
+            catch {
+                throw "Registry Keys are still loaded after Test-UserRegistryLoadState Testing Exiting..."
+            }
         }
     }
-
 }
 
 
@@ -1889,6 +1911,30 @@ Function Start-Migration {
             try {
                 Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT" -NewName "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force -ErrorAction Stop
                 Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force -ErrorAction Stop
+
+                # Validate the file have timestamps
+                $ntuserOriginal = Get-Item "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force
+                $usrClassOriginal = Get-Item "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force
+
+                # Get the name of the file
+                $ntuserOriginalName = $ntuserOriginal.Name
+                $usrClassOriginalName = $usrClassOriginal.Name
+
+                if ($ntuserOriginalName -match "ntuser_original_$($renameDate).DAT") {
+                    Write-ToLog -Message:("Successfully renamed $ntuserOriginalName with timestamp $renameDate")
+                } else {
+                    Write-ToLog -Message:("Failed to rename $ntuserOriginalName with timestamp $renameDate")
+                    $admuTracker.renameOriginalFiles.fail = $true
+                    break
+                }
+
+                if ($usrClassOriginalName -match "UsrClass_original_$($renameDate).dat") {
+                    Write-ToLog -Message:("Successfully renamed $usrClassOriginalName with timestamp $renameDate")
+                } else {
+                    Write-ToLog -Message:("Failed to rename $usrClassOriginalName with timestamp $renameDate")
+                    $admuTracker.renameOriginalFiles.fail = $true
+                    break
+                }
             } catch {
                 Write-ToLog -Message("Could not rename original registry files for backup purposes: Exiting...")
                 Write-ToLog -Message($_.Exception.Message)
@@ -1901,6 +1947,9 @@ Function Start-Migration {
             try {
                 Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT.BAK" -NewName "$oldUserProfileImagePath\NTUSER.DAT" -Force -ErrorAction Stop
                 Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
+
+
+
             } catch {
                 Write-ToLog -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
                 Write-ToLog -Message($_.Exception.Message)
