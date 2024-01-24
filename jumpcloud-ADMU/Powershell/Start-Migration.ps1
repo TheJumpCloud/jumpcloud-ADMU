@@ -1408,7 +1408,7 @@ function Get-UserFileTypeAssociation {
     process {
         $list = @()
         $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
-        $exts = Get-ChildItem $pathRoot*
+        $exts = Get-ChildItem registry::$pathRoot*
         foreach ($ext in $exts) {
             $indivExtension = $ext.PSChildName
             $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
@@ -1444,7 +1444,7 @@ function Get-ProtocolTypeAssociation{
     process {
         $list = @()
         $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
-        Get-ChildItem $pathRoot* |
+        Get-ChildItem registry::$pathRoot* |
         ForEach-Object {
             $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
             if ($progId) {
@@ -1886,9 +1886,10 @@ Function Start-Migration {
             If (!(test-path $path)) {
                 New-Item -ItemType Directory -Force -Path $path
             }
-            Set-UserRegistryLoadState -op "Load" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
+
             # SelectedUserSid
-            Write-ToLog -Message:('Selected User SID: ' + $SelectedUserSID)
+            $regQuery = REG QUERY HKU *>&1
+            Write-ToLog -Message:('Loaded Profiles: ' + $regQuery)
             Get-ProtocolTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
             Get-UserFileTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
             # Unload "Selected" and "NewUser"
