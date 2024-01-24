@@ -47,7 +47,7 @@ If ($env:CI) {
         }
         4 = @{
             'filePath' = @(
-                "$PSScriptRoot/Tests/FTA-PTA.Tests.ps1"
+                "$PSScriptRoot/Tests/FtaPta.Tests.ps1"
             )
         }
     }
