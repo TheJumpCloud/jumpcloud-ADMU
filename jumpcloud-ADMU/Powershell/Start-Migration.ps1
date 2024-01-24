@@ -1391,6 +1391,30 @@ function Set-ADMUScheduledTask {
 }
 #endregion Agent Install Helper Functions
 
+
+##### MIT License #####
+# MIT License
+
+# Copyright © 2022, Danysys
+# Modified by JumpCloud
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 # Get user file type associations
 function Get-UserFileTypeAssociation {
     [CmdletBinding()]
@@ -1408,6 +1432,7 @@ function Get-UserFileTypeAssociation {
     process {
         $list = @()
         $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
+        Set-ItemProperty -Path "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\" -Name 'LongPathsEnabled' -Value 1
         $exts = Get-ChildItem $pathRoot*
         foreach ($ext in $exts) {
             $indivExtension = $ext.PSChildName
@@ -1428,6 +1453,9 @@ function Get-UserFileTypeAssociation {
 }
 
 # Get user protocol associations
+
+
+
 function Get-ProtocolTypeAssociation{
     [CmdletBinding()]
     param (
@@ -1444,6 +1472,8 @@ function Get-ProtocolTypeAssociation{
     process {
         $list = @()
         $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
+        # Enable long paths
+        Set-ItemProperty -Path "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\" -Name 'LongPathsEnabled' -Value 1
         Get-ChildItem $pathRoot* |
         ForEach-Object {
             $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
@@ -1466,6 +1496,7 @@ function Get-ProtocolTypeAssociation{
     }
 
 }
+##### END MIT License #####
 
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
