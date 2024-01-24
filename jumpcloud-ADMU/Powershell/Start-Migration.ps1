@@ -1886,6 +1886,9 @@ Function Start-Migration {
             If (!(test-path $path)) {
                 New-Item -ItemType Directory -Force -Path $path
             }
+            Set-UserRegistryLoadState -op "Load" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
+            # SelectedUserSid
+            Write-ToLog -Message:('Selected User SID: ' + $SelectedUserSID)
             Get-ProtocolTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
             Get-UserFileTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
             # Unload "Selected" and "NewUser"
