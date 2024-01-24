@@ -1473,9 +1473,12 @@ function Get-ProtocolTypeAssociation{
         $list = @()
         $pathRoot = "Registry::HKEY_USERS\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
         # Enable long paths
+        Write-ToLog Get-ChildItem $pathRoot*
         Get-ChildItem $pathRoot* |
         ForEach-Object {
+
             $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
+            Write-ToLog (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue)
             if ($progId) {
                 $list += [PSCustomObject]@{
                     extension  = $_.PSChildName
