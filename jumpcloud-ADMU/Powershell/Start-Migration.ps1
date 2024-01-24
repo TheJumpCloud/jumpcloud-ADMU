@@ -1408,7 +1408,7 @@ function Get-UserFileTypeAssociation {
     process {
         $list = @()
         $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
-        $exts = Get-ChildItem registry::$pathRoot*
+        $exts = Get-ChildItem $pathRoot*
         foreach ($ext in $exts) {
             $indivExtension = $ext.PSChildName
             $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
@@ -1444,7 +1444,7 @@ function Get-ProtocolTypeAssociation{
     process {
         $list = @()
         $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
-        Get-ChildItem registry::$pathRoot* |
+        Get-ChildItem $pathRoot* |
         ForEach-Object {
             $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
             if ($progId) {
@@ -1828,7 +1828,7 @@ Function Start-Migration {
                 break
             }
             # Validate file permissions on registry item
-            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
+            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }
@@ -1888,6 +1888,11 @@ Function Start-Migration {
             }
 
             # SelectedUserSid
+            # Validate file permissions on registry item
+            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
+                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+            }
             $regQuery = REG QUERY HKU *>&1
             Write-ToLog -Message:('Loaded Profiles: ' + $regQuery)
             Get-ProtocolTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
