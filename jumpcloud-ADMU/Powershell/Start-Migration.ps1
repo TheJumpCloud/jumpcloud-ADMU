@@ -1926,8 +1926,9 @@ Function Start-Migration {
             }
             $regQuery = REG QUERY HKU *>&1
             Write-ToLog -Message:('Loaded Profiles: ' + $regQuery)
-            Get-ProtocolTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
             Get-UserFileTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
+            Get-ProtocolTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
+
             # Unload "Selected" and "NewUser"
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
