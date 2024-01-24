@@ -1431,8 +1431,8 @@ function Get-UserFileTypeAssociation {
     }
     process {
         $list = @()
-        $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
-        Set-ItemProperty -Path "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\" -Name 'LongPathsEnabled' -Value 1
+
+        $pathRoot = "Registry::HKEY_USERS\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
         $exts = Get-ChildItem $pathRoot*
         foreach ($ext in $exts) {
             $indivExtension = $ext.PSChildName
@@ -1471,9 +1471,8 @@ function Get-ProtocolTypeAssociation{
     }
     process {
         $list = @()
-        $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
+        $pathRoot = "Registry::HKEY_USERS\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
         # Enable long paths
-        Set-ItemProperty -Path "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\" -Name 'LongPathsEnabled' -Value 1
         Get-ChildItem $pathRoot* |
         ForEach-Object {
             $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
