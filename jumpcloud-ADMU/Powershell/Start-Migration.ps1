@@ -1472,7 +1472,7 @@ function Get-ProtocolTypeAssociation{
     }
     process {
         $list = @()
-        $testHive = Get-ChildItem -Path "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\"
+        $testHive = Get-ChildItem -Path "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\"
         Write-ToLog "Testhive: $testHive"
         $pathRoot = "Registry::HKEY_USERS\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
         # Enable long paths
