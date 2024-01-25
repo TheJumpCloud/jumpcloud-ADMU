@@ -1431,7 +1431,7 @@ function Get-UserFileTypeAssociation {
     }
     process {
         $list = @()
-        $testHive = Get-ChildItem -Path "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\"
+        $testHive = Get-ChildItem -Path "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\"
         Write-ToLog "Testhive: $testHive"
         $pathRoot = "Registry::HKEY_USERS\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
         $exts = Get-ChildItem $pathRoot*
