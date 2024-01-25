@@ -1431,7 +1431,8 @@ function Get-UserFileTypeAssociation {
     }
     process {
         $list = @()
-
+        $testHive = Get-ChildItem -Path "HKEY_USERS:\$($UserSid)_admu\"
+        Write-ToLog "Testhive: $testHive"
         $pathRoot = "Registry::HKEY_USERS\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
         $exts = Get-ChildItem $pathRoot*
         foreach ($ext in $exts) {
@@ -1471,9 +1472,10 @@ function Get-ProtocolTypeAssociation{
     }
     process {
         $list = @()
+        $testHive = Get-ChildItem -Path "HKEY_USERS:\$($UserSid)_admu\"
+        Write-ToLog "Testhive: $testHive"
         $pathRoot = "Registry::HKEY_USERS\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
         # Enable long paths
-        Write-ToLog Get-ChildItem $pathRoot*
         Get-ChildItem $pathRoot* |
         ForEach-Object {
 
