@@ -1431,7 +1431,7 @@ function Get-UserFileTypeAssociation {
     }
     process {
         $list = @()
-        $testHive = Get-ChildItem -Path "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\"
+        $testHive = Get-ChildItem -Path "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\"
         Write-ToLog "Testhive: $testHive"
         $pathRoot = "Registry::HKEY_USERS\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
         $exts = Get-ChildItem $pathRoot*
@@ -1472,7 +1472,7 @@ function Get-ProtocolTypeAssociation{
     }
     process {
         $list = @()
-        $testHive = Get-ChildItem -Path "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\"
+        $testHive = Get-ChildItem -Path "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\"
         Write-ToLog "Testhive: $testHive"
         $pathRoot = "Registry::HKEY_USERS\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
         # Enable long paths
