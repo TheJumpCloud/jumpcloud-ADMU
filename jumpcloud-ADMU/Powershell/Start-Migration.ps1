@@ -413,10 +413,9 @@ function Set-UserRegistryLoadState {
 
                 Start-Sleep -Seconds 1
                 $lastModified = Get-Item -path "$ProfilePath\NTUSER.DAT.BAK" -Force | Select-Object -ExpandProperty LastWriteTime
+                Write-ToLog -Message:("Last Modified Time of $ProfilePath\NTUSER.DAT.BAK is $lastModified")
                 $results = REG LOAD HKU\$($UserSid)_admu "$ProfilePath\NTUSER.DAT.BAK" *>&1
                 # Get the last modified time of the NTUSER.DAT.BAK file
-
-                Write-ToLog -Message:("Last Modified Time of $ProfilePath\NTUSER.DAT.BAK is $lastModified")
                 if ($?) {
                     Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
                 } else {
@@ -425,10 +424,9 @@ function Set-UserRegistryLoadState {
 
                 Start-Sleep -Seconds 1
                 $lastModified = Get-Item -path "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force | Select-Object -ExpandProperty LastWriteTime
+                Write-ToLog -Message:("Last Modified Time of $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak is $lastModified")
                 $results = REG LOAD HKU\"$($UserSid)_Classes_admu" "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" *>&1
                 # Get the last modified time of the USRClass.dat.bak file
-
-                Write-ToLog -Message:("Last Modified Time of $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak is $lastModified")
                 if ($?) {
                     Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                 } else {
@@ -452,7 +450,6 @@ function Set-UserRegistryLoadState {
                     Write-ToLog -Message:('Unloaded Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                 } else {
                     Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
-                    # Force Unload
                 }
             }
         }
@@ -1430,30 +1427,43 @@ function Get-UserFileTypeAssociation {
         Write-ToLog "Getting File Type Associations for userSID: $UserSid"
     }
     process {
-        $list = @()
-        $pathRoot = "Registry::HKEY_USERS\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
-        $exts = Get-ChildItem $pathRoot*
-        foreach ($ext in $exts) {
-            $indivExtension = $ext.PSChildName
-            $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
-            $list += [PSCustomObject]@{
-                extension  = $indivExtension
-                programId = $progId
-            }
-        }
-        Write-ToLog "Found $($list.count) Associations"
+        $manifestList = @()
+        try {
 
+            # Test path for file type associations
+            $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
+            if (Test-Path $pathRoot) {
+                $exts = Get-ChildItem $pathRoot*
+                foreach ($ext in $exts) {
+                    $indivExtension = $ext.PSChildName
+                    $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
+                    $manifestList += [PSCustomObject]@{
+                        extension  = $indivExtension
+                        programId = $progId
+                    }
+                }
+                Write-ToLog "Found $($manifestList.count) Associations"
+            } else {
+                Write-ToLog "No File Type Association path found"
+            }
+
+
+        }
+        catch {
+            Write-ToLog "Error getting file type associations$($_.Exception.Message)"
+        }
     }
     end {
-        Write-ToLog -Message "Writing fta_manifest.csv to $($profilePath)\AppData\Local\JumpCloudADMU\fta_manifest.csv"
-
-        $list | Export-CSV ($profilePath + '\AppData\Local\JumpCloudADMU\fta_manifest.csv') -Force
+        if ($manifestList) {
+            Write-ToLog -Message "Writing fta_manifest.csv to $($profilePath)\AppData\Local\JumpCloudADMU\fta_manifest.csv"
+            $manifestList | Export-CSV ($profilePath + '\AppData\Local\JumpCloudADMU\fta_manifest.csv') -Force
+        } else {
+            Write-ToLog -Message "No File Type Associations found"
+        }
     }
 }
 
 # Get user protocol associations
-
-
 
 function Get-ProtocolTypeAssociation{
     [CmdletBinding()]
@@ -1469,32 +1479,40 @@ function Get-ProtocolTypeAssociation{
         Write-ToLog "Getting Protocol Type Associations for userSID: $($UserSid)_admu"
     }
     process {
-        $list = @()
-        $testHive = Get-ChildItem -Path "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\"
-        Write-ToLog "Testhive: $testHive"
-        $pathRoot = "Registry::HKEY_USERS\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
-        # Enable long paths
-        Get-ChildItem $pathRoot* |
-        ForEach-Object {
+        $manifestList = @()
+        try {
+            $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
+            if (Test-Path $pathRoot) {
+                Get-ChildItem $pathRoot* |
+                ForEach-Object {
 
-            $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
-            Write-ToLog (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue)
-            if ($progId) {
-                $list += [PSCustomObject]@{
-                    extension  = $_.PSChildName
-                    programId = $progId
+                    $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
+                    if ($progId) {
+                        $manifestList += [PSCustomObject]@{
+                            extension  = $_.PSChildName
+                            programId = $progId
+                        }
+                    }
                 }
+                Write-ToLog "Found $($manifestList.count) Associations"
+            } else {
+                Write-ToLog "No Protocol Association path found"
             }
-
         }
-        Write-ToLog "Found $($list.count) Associations"
-
+        catch {
+            # Write the error to the log
+            Write-ToLog "Error getting protocol associations$($_.Exception.Message)"
+        }
     }
     end {
-        Write-ToLog -Message "Writing protocol_manifest.csv to $($profilePath)\AppData\Local\JumpCloudADMU\pta_manifest.csv"
+        if ($manifestList) {
+            Write-ToLog -Message "Writing protocol_manifest.csv to $($profilePath)\AppData\Local\JumpCloudADMU\protocol_manifest.csv"
 
-        # Export list to JumpCloudADMU folder
-        $list | Export-CSV ($profilePath + '\AppData\Local\JumpCloudADMU\pta_manifest.csv') -Force
+            # Export list to JumpCloudADMU folder
+            $manifestList | Export-CSV ($profilePath + '\AppData\Local\JumpCloudADMU\pta_manifest.csv') -Force
+        } else {
+            Write-ToLog -Message "No Protocol Associations found"
+        }
     }
 
 }

@@ -1,15 +1,17 @@
 ## 2.6.0
 
-Release Date: December 18, 2023
+Release Date: January 30, 2024
 
 #### RELEASE NOTES
 
 ```
-
+* Added a feature to migrate default apps(file associations) and protocol associations
 ```
 
 #### Bug Fixes:
-
+```
+* Added a fix to stop/revert migration when a registry hive fails to load
+```
 ## 2.5.1
 
 Release Date: December 18, 2023
