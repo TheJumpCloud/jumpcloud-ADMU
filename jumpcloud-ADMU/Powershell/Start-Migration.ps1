@@ -1423,13 +1423,7 @@ function Get-UserFileTypeAssociation {
         [System.String]
         $profilePath
     )
-    begin {
-        Write-ToLog "Getting File Type Associations for userSID: $UserSid"
-    }
-    process {
         $manifestList = @()
-        try {
-
             # Test path for file type associations
             $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
             if (Test-Path $pathRoot) {
@@ -1442,25 +1436,8 @@ function Get-UserFileTypeAssociation {
                         programId = $progId
                     }
                 }
-                Write-ToLog "Found $($manifestList.count) Associations"
-            } else {
-                Write-ToLog "No File Type Association path found"
             }
-
-
-        }
-        catch {
-            Write-ToLog "Error getting file type associations$($_.Exception.Message)"
-        }
-    }
-    end {
-        if ($manifestList) {
-            Write-ToLog -Message "Writing fta_manifest.csv to $($profilePath)\AppData\Local\JumpCloudADMU\fta_manifest.csv"
-            $manifestList | Export-CSV ($profilePath + '\AppData\Local\JumpCloudADMU\fta_manifest.csv') -Force
-        } else {
-            Write-ToLog -Message "No File Type Associations found"
-        }
-    }
+            return $manifestList
 }
 
 # Get user protocol associations
@@ -1475,12 +1452,10 @@ function Get-ProtocolTypeAssociation{
         [System.String]
         $profilePath
     )
-    begin {
-        Write-ToLog "Getting Protocol Type Associations for userSID: $($UserSid)_admu"
-    }
-    process {
+
+
         $manifestList = @()
-        try {
+
             $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
             if (Test-Path $pathRoot) {
                 Get-ChildItem $pathRoot* |
@@ -1494,27 +1469,8 @@ function Get-ProtocolTypeAssociation{
                         }
                     }
                 }
-                Write-ToLog "Found $($manifestList.count) Associations"
-            } else {
-                Write-ToLog "No Protocol Association path found"
             }
-        }
-        catch {
-            # Write the error to the log
-            Write-ToLog "Error getting protocol associations$($_.Exception.Message)"
-        }
-    }
-    end {
-        if ($manifestList) {
-            Write-ToLog -Message "Writing protocol_manifest.csv to $($profilePath)\AppData\Local\JumpCloudADMU\protocol_manifest.csv"
-
-            # Export list to JumpCloudADMU folder
-            $manifestList | Export-CSV ($profilePath + '\AppData\Local\JumpCloudADMU\pta_manifest.csv') -Force
-        } else {
-            Write-ToLog -Message "No Protocol Associations found"
-        }
-    }
-
+            return $manifestList
 }
 ##### END MIT License #####
 
@@ -1944,12 +1900,29 @@ Function Start-Migration {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }
-            $regQuery = REG QUERY HKU *>&1
-            Write-ToLog -Message:('Loaded Profiles: ' + $regQuery)
-            Get-UserFileTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
-            Get-ProtocolTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
 
+
+            $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
+            Write-ToLog -Message:('Found ' + $fileTypeAssociations.count + ' File Type Associations')
+            $protocolTypeAssociations = Get-ProtocolTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
+            Write-ToLog -Message:('Found ' + $protocolTypeAssociations.count + ' Protocol Type Associations')
+            # Save the lists to CSV files
+            if ($fileTypeAssociations) {
+                Write-ToLog -Message:('Saving File Type Associations to CSV...')
+                $fileTypeAssociations | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
+            } else {
+                Write-ToLog -Message:('No File Type Associations found')
+            }
+
+            if ($protocolTypeAssociations) {
+                Write-ToLog -Message:('Saving Protocol Type Associations to CSV...')
+                $protocolTypeAssociations | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
+            } else {
+                Write-ToLog -Message:('No Protocol Type Associations found')
+            }
+            $regQuery = REG QUERY HKU *>&1
             # Unload "Selected" and "NewUser"
+            Write-ToLog -Message:('Loaded profiles before unloading: ' + $regQuery)
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
 
