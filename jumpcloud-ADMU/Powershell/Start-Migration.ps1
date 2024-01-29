@@ -2065,8 +2065,6 @@ Function Start-Migration {
                 # Set the New User Profile Image Path to Old User Profile Path (they are the same)
                 $newUserProfileImagePath = $oldUserProfileImagePath
             }
-            $path = $newUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
-
 
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUsername + '.' + $NetBiosName)
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
@@ -2133,10 +2131,11 @@ Function Start-Migration {
 
             Write-ToLog -Message:('Updating UWP Apps for new user')
             $newUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
-            # $path = $newUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
-            # If (!(test-path $path)) {
-            #     New-Item -ItemType Directory -Force -Path $path
-            # }
+
+            $path = $newUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
+            If (!(test-path $path)) {
+                New-Item -ItemType Directory -Force -Path $path
+            }
             $appxList = @()
 
             # Get Azure AD Status
