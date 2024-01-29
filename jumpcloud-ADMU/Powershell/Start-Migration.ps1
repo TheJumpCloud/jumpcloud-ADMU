@@ -1791,7 +1791,7 @@ Function Start-Migration {
                 Test-UserRegistryLoadState -ProfilePath $newUserProfileImagePath -UserSid $newUserSid
                 Test-UserRegistryLoadState -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
             } catch {
-                Write-ToLog -Message:('could not load and unload registry of migration user, exiting') -level Warn
+                Write-ToLog -Message:('Could not load and unload registry of migration user during Test-UserRegistryLoadState, exiting') -level Warn
                 $admuTracker.testRegLoadUnload.fail = $true
                 break
             }
