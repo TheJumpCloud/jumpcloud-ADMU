@@ -1787,7 +1787,16 @@ Function Start-Migration {
             # Unload "Selected" and "NewUser"
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
+            [gc]::collect()
+            Write-ToLog -Message("Begin sleep to ensure NTUSER.BAT.DAT is unloaded")
 
+            Start-Sleep 5
+            Write-ToLog -Message("write out nt user files:")
+            Get-ChildItem -Path "$newUserProfileImagePath" -Force -Filter "NTUSER.DAT"
+            Get-ChildItem -Path "$newUserProfileImagePath" -Force -Filter "NTUSER.DAT.BAK"
+            Get-ChildItem -Path "$oldUserProfileImagePath" -Force -Filter "NTUSER.DAT.BAK"
+            Get-ChildItem -Path "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/" -Force -Filter "UsrClass.dat.bak"
+            Get-ChildItem -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/" -Force -Filter "UsrClass.dat.bak"
             # Copy both registry hives over and replace the existing backup files in the destination directory.
             try {
                 Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
