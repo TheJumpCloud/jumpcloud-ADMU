@@ -1446,8 +1446,6 @@ function Get-ProtocolTypeAssociation{
         [System.String]
         $UserSid
     )
-
-
         $manifestList = @()
 
             $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
@@ -1896,9 +1894,9 @@ Function Start-Migration {
             }
 
 
-            $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
+            $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $SelectedUserSid
             Write-ToLog -Message:('Found ' + $fileTypeAssociations.count + ' File Type Associations')
-            $protocolTypeAssociations = Get-ProtocolTypeAssociation -UserSid $SelectedUserSid -ProfilePath $oldUserProfileImagePath
+            $protocolTypeAssociations = Get-ProtocolTypeAssociation -UserSid $SelectedUserSid
             Write-ToLog -Message:('Found ' + $protocolTypeAssociations.count + ' Protocol Type Associations')
             # Save the lists to CSV files
             if ($fileTypeAssociations) {
