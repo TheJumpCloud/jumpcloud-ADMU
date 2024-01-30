@@ -60,53 +60,58 @@ Describe 'Set-FTA/PTA Test Scenarios'{
             $PTAData | Should -Not -BeNullOrEmpty
         }
     }
+    Context 'Set-FTA Test'{
+        BeforeAll{
+            # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
+            . $PSScriptRoot\..\Deploy\uwp_jcadmu.ps1
+        }
+        It 'Set-FTA should be changed after migration'{
+            # Change the FTA for .txt files to wordpad
+
+            Set-FTA "C:\Program Files\Windows NT\Accessories\wordpad.exe" .txt
+            #
+            $Password = "Temp123!"
+            $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # Initialize a single user to migrate:
+            InitUser -UserName $localUser -Password $Password
+
+
+            Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
+            # Get the SID of the user
+            $sid = (New-Object System.Security.Principal.NTAccount($migrateUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+            Write-Host "SID: $sid"
+            $program =  Get-ItemProperty "HKU:\$sid\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$extension\UserChoice"
+            # Check if programId is wordpad
+            $program.ProgId | Should -Match "wordpad"
+
+        }
+    }
+
+    Context 'Set-PTA Test'{
+        BeforeAll{
+            # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
+            . $PSScriptRoot\..\Deploy\uwp_jcadmu.ps1
+        }
+        It 'Set-PTA should be changed after migration'{
+            # Change the PTA for .txt files to wordpad
+            $protocol = "http"
+            Set-PTA -Protocol $protocol -ProgId "notepad"
+            $Password = "Temp123!"
+            $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # Initialize a single user to migrate:
+            InitUser -UserName $localUser -Password $Password
+
+            Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
+            $sid = (New-Object System.Security.Principal.NTAccount($migrateUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+            Write-Host "SID: $sid"
+            $program =  Get-ItemProperty "HKU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
+            # Check if programId is notepad
+            $program.ProgId | Should -Match "notepad"
+        }
+    }
+
 }
 
-#     Context 'Set-FTA Test'{
-#         BeforeAll{
-#             # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
-#             . $PSScriptRoot\..\Deploy\uwp_jcadmu.ps1
-#         }
-#         It 'Set-FTA should be changed after migration'{
-#             # Change the FTA for .txt files to wordpad
 
-#             Set-FTA "C:\Program Files\Windows NT\Accessories\wordpad.exe" .txt
-#             $Password = "Temp123!"
-#             $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-#             $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-#             # Initialize a single user to migrate:
-#             InitUser -UserName $localUser -Password $Password
-
-#             Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
-
-#             $program =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$extension\UserChoice"
-#             # Check if programId is wordpad
-#             $program.ProgId | Should -Match "wordpad"
-
-#         }
-#     }
-
-#     Context 'Set-PTA Test'{
-#         BeforeAll{
-#             # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
-#             . $PSScriptRoot\..\Deploy\uwp_jcadmu.ps1
-#         }
-#         It 'Set-PTA should be changed after migration'{
-#             # Change the PTA for .txt files to wordpad
-#             $protocol = "http"
-#             Set-PTA -Protocol $protocol -ProgId "notepad"
-#             $Password = "Temp123!"
-#             $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-#             $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-#             # Initialize a single user to migrate:
-#             InitUser -UserName $localUser -Password $Password
-
-#             Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
-
-#             $program =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
-#             # Check if programId is notepad
-#             $program.ProgId | Should -Match "notepad"
-#         }
-#     }
-
-# }
