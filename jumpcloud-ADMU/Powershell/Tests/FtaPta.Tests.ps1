@@ -107,7 +107,7 @@ Describe 'Set-FTA/PTA Test Scenarios'{
             Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
             $sid = (New-Object System.Security.Principal.NTAccount($migrateUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
             Write-Host "SID: $sid"
-            $program =  Get-ItemProperty "HKU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
+            $program =  Get-ItemProperty "HKU:\$sid\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
             Write-Host $program
             # Check if programId is notepad
             $program.ProgId | Should -Match "notepad"
