@@ -82,6 +82,7 @@ Describe 'Set-FTA/PTA Test Scenarios'{
             $sid = (New-Object System.Security.Principal.NTAccount($migrateUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
             Write-Host "SID: $sid"
             $program =  Get-ItemProperty "HKU:\$sid\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$extension\UserChoice"
+            Write-Host $program
             # Check if programId is wordpad
             $program.ProgId | Should -Match "wordpad"
 
@@ -107,6 +108,7 @@ Describe 'Set-FTA/PTA Test Scenarios'{
             $sid = (New-Object System.Security.Principal.NTAccount($migrateUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
             Write-Host "SID: $sid"
             $program =  Get-ItemProperty "HKU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
+            Write-Host $program
             # Check if programId is notepad
             $program.ProgId | Should -Match "notepad"
         }
