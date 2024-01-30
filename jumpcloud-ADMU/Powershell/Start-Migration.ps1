@@ -1418,10 +1418,7 @@ function Get-UserFileTypeAssociation {
     param (
         [Parameter(Mandatory = $true, HelpMessage = 'The SID of the user to capture file type associations')]
         [System.String]
-        $UserSid,
-        [Parameter(Mandatory = $true, HelpMessage = 'The profile path of the new user to store the file type associations')]
-        [System.String]
-        $profilePath
+        $UserSid
     )
         $manifestList = @()
             # Test path for file type associations
@@ -1447,10 +1444,7 @@ function Get-ProtocolTypeAssociation{
     param (
         [Parameter(Mandatory = $true, HelpMessage = 'The SID of the user to capture file type associations')]
         [System.String]
-        $UserSid,
-        [Parameter(Mandatory = $true, HelpMessage = 'The profile path of the new user to store the file type associations')]
-        [System.String]
-        $profilePath
+        $UserSid
     )
 
 
