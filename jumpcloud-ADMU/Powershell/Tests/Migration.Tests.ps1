@@ -469,16 +469,25 @@ Describe 'Migration Test Scenarios' {
             $Password = "Temp123!"
             $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
+                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+            }
             # Initialize a single user to migrate:
             InitUser -UserName $localUser -Password $Password
-            Set-FTA "C:\Program Files\Windows NT\Accessories\wordpad.exe" .txt
+            $initUserSid = (New-Object System.Security.Principal.NTAccount($localUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+            $fileType = ".txt"
+            New-Item -Path "HKEY_USERS:\$initUserSid\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice" -Force
+
+            # Initialize a single user to migrate:
+            Set-FTA "C:\Program Files\Windows NT\Accessories\wordpad.exe" $fileType
 
 
             Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
             # Get the SID of the user
-            $sid = (New-Object System.Security.Principal.NTAccount($migrateUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+            $newUserSid = (New-Object System.Security.Principal.NTAccount($migrateUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
             Write-Host "SID: $sid"
-            $program =  Get-ItemProperty "HKU:\$sid\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$extension\UserChoice"
+            $program =  Get-ItemProperty "HKEY_USERS:\$newUserSid\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$extension\UserChoice"
             Write-Host $program
             # Check if programId is wordpad
             $program.ProgId | Should -Match "wordpad"
@@ -497,14 +506,23 @@ Describe 'Migration Test Scenarios' {
             $Password = "Temp123!"
             $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
+                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+            }
             # Initialize a single user to migrate:
             InitUser -UserName $localUser -Password $Password
+            $initUserSid = (New-Object System.Security.Principal.NTAccount($localUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+            # Create folders inside hive HKU:\$sid\Software\Microsoft\Windows
+            New-Item -Path "HKEY_USERS:\$initUserSid\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice" -Force
+
             Set-PTA -Protocol $protocol -ProgId "notepad"
 
             Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
-            $sid = (New-Object System.Security.Principal.NTAccount($migrateUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+            $newUserSid = (New-Object System.Security.Principal.NTAccount($migrateUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+
             Write-Host "SID: $sid"
-            $program =  Get-ItemProperty "HKU:\$sid\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
+            $program =  Get-ItemProperty "HKEY_USERS:\$newUserSid\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
             Write-Host $program
             # Check if programId is notepad
             $program.ProgId | Should -Match "notepad"
