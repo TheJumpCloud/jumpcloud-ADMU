@@ -497,7 +497,9 @@ Describe 'Migration Test Scenarios' {
             New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice" -Force
             Set-PTA -Protocol $protocol -ProgId "notepad"
 
-
+            [gc]::collect()
+            Start-Sleep -Seconds 10
+            REG UNLOAD "HKU\$($initUserSid)" *>&1
             if ($?) {
                 Write-ToLog -Message:('Unloaded Profile: ' + "NTUSER.DAT.BAK")
             } else {

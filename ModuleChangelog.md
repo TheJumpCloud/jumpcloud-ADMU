@@ -11,6 +11,7 @@ Release Date: January 30, 2024
 #### Bug Fixes:
 ```
 * Added a fix to stop/revert migration when a registry hive fails to load
+* Fixed a bug with Module Changelog version test where release type number is not properly outputted
 ```
 ## 2.5.1
 
