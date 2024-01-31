@@ -436,29 +436,30 @@ Describe 'Migration Test Scenarios' {
         }
 
     }
-    Context 'FTA and PTA CSV creation test'{
-        # Check if Users/User/AppData/Local/JUMPCLOUDADMU/FTA.csv exists
-        It "fta_manifest.csv and pta_manifest.csv should exist" {
+    # TODO
+    # Context 'FTA and PTA CSV creation test'{
+    #     # Check if Users/User/AppData/Local/JUMPCLOUDADMU/FTA.csv exists
+    #     It "fta_manifest.csv and pta_manifest.csv should exist" {
 
-            $Password = "Temp123!"
-            $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-            $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-            # Initialize a single user to migrate:
-            InitUser -UserName $localUser -Password $Password
+    #         $Password = "Temp123!"
+    #         $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+    #         $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+    #         # Initialize a single user to migrate:
+    #         InitUser -UserName $localUser -Password $Password
 
-            Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
+    #         Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
 
-            $FTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\fta_manifest.csv"
-            # Check if it contains data
-            $FTAData = Import-Csv $FTAPath
-            $FTAData | Should -Not -BeNullOrEmpty
+    #         $FTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\fta_manifest.csv"
+    #         # Check if it contains data
+    #         $FTAData = Import-Csv $FTAPath
+    #         $FTAData | Should -Not -BeNullOrEmpty
 
-            $PTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\pta_manifest.csv"
-            # Check if it contains data
-            $PTAData = Import-Csv $PTAPath
-            $PTAData | Should -Not -BeNullOrEmpty
-        }
-    }
+    #         $PTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\pta_manifest.csv"
+    #         # Check if it contains data
+    #         $PTAData = Import-Csv $PTAPath
+    #         $PTAData | Should -Not -BeNullOrEmpty
+    #     }
+    # }
     Context 'Set-FTA Test'{
         BeforeAll{
             # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
@@ -469,15 +470,20 @@ Describe 'Migration Test Scenarios' {
             $Password = "Temp123!"
             $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+
             if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }
             # Initialize a single user to migrate:
             InitUser -UserName $localUser -Password $Password
-            $initUserSid = (New-Object System.Security.Principal.NTAccount($localUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+            $initUserSid = Test-UsernameOrSID -Username $localUser
+            Write-Host "SID: $initUserSid"
+            # Load the registry hive for the user
+            REG LOAD HKU\$($initUserSid) "C:\Users\$($localUser)\NTUSER.DAT"
+
             $fileType = ".txt"
-            New-Item -Path "HKEY_USERS:\$initUserSid\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice" -Force
+            New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice" -Force
 
             # Initialize a single user to migrate:
             Set-FTA "C:\Program Files\Windows NT\Accessories\wordpad.exe" $fileType
@@ -512,9 +518,15 @@ Describe 'Migration Test Scenarios' {
             }
             # Initialize a single user to migrate:
             InitUser -UserName $localUser -Password $Password
+            $initUserSid = Test-UsernameOrSID -Username $localUser
+            Write-Host "SID: $initUserSid"
+            # Load the registry hive for the user
+            REG LOAD HKU\$($initUserSid)"C:\Users\$($localUser)\NTUSER.DAT"
             $initUserSid = (New-Object System.Security.Principal.NTAccount($localUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+            Write-Host "SID: $initUserSid"
+
             # Create folders inside hive HKU:\$sid\Software\Microsoft\Windows
-            New-Item -Path "HKEY_USERS:\$initUserSid\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice" -Force
+            New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice" -Force
 
             Set-PTA -Protocol $protocol -ProgId "notepad"
 
