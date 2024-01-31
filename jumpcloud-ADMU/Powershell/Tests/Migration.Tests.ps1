@@ -480,66 +480,79 @@ Describe 'Migration Test Scenarios' {
             $initUserSid = Test-UsernameOrSID -Username $localUser
             Write-Host "SID: $initUserSid"
             # Load the registry hive for the user
-            REG LOAD HKU\$($initUserSid) "C:\Users\$($localUser)\NTUSER.DAT"
+            REG LOAD "HKU\$($initUserSid)" "C:\Users\$($localUser)\NTUSER.DAT" *>&1
+            # Get the last modified time of the NTUSER.DAT.BAK file
+            if ($?) {
+                Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
+            } else {
+                Write-Host $.Exception.Message
+                Throw "Could not load profile: $ProfilePath\NTUSER.DAT.BAK"
+            }
+
 
             $fileType = ".txt"
             New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice" -Force
-
-            # Initialize a single user to migrate:
             Set-FTA "C:\Program Files\Windows NT\Accessories\wordpad.exe" $fileType
+
+            New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice" -Force
+            Set-PTA -Protocol $protocol -ProgId "notepad"
+
+            REG UNLOAD HKU\$($initUserSid)
 
 
             Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
             # Get the SID of the user
             $newUserSid = (New-Object System.Security.Principal.NTAccount($migrateUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
             Write-Host "SID: $sid"
-            $program =  Get-ItemProperty "HKEY_USERS:\$newUserSid\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$extension\UserChoice"
+            $fta =  Get-ItemProperty "HKEY_USERS:\$newUserSid\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$extension\UserChoice"
+            $pta =  Get-ItemProperty "HKEY_USERS:\$newUserSid\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
             Write-Host $program
             # Check if programId is wordpad
-            $program.ProgId | Should -Match "wordpad"
+            $fta.ProgId | Should -Match "wordpad"
+            pta.ProgId | Should -Match "notepad"
 
         }
     }
-    Context 'Set-PTA Test'{
-        BeforeAll{
-            # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
-            . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
-        }
-        It 'Set-PTA should be changed after migration'{
-            # Change the PTA for .txt files to wordpad
-            $protocol = "http"
+    # Context 'Set-PTA Test'{
+    #     BeforeAll{
+    #         # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
+    #         . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
+    #     }
+    #     It 'Set-PTA should be changed after migration'{
+    #         # Change the PTA for .txt files to wordpad
+    #         $protocol = "http"
 
-            $Password = "Temp123!"
-            $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-            $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
-                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
-            }
-            # Initialize a single user to migrate:
-            InitUser -UserName $localUser -Password $Password
-            $initUserSid = Test-UsernameOrSID -Username $localUser
-            Write-Host "SID: $initUserSid"
-            # Load the registry hive for the user
-            REG LOAD HKU\$($initUserSid)"C:\Users\$($localUser)\NTUSER.DAT"
-            $initUserSid = (New-Object System.Security.Principal.NTAccount($localUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
-            Write-Host "SID: $initUserSid"
+    #         $Password = "Temp123!"
+    #         $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+    #         $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+    #         if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
+    #             Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
+    #             New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+    #         }
+    #         # Initialize a single user to migrate:
+    #         InitUser -UserName $localUser -Password $Password
+    #         $initUserSid = Test-UsernameOrSID -Username $localUser
+    #         Write-Host "SID: $initUserSid"
+    #         # Load the registry hive for the user
+    #         REG LOAD HKU\$($initUserSid) "C:\Users\$($localUser)\NTUSER.DAT"
+    #         $initUserSid = (New-Object System.Security.Principal.NTAccount($localUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+    #         Write-Host "SID: $initUserSid"
 
-            # Create folders inside hive HKU:\$sid\Software\Microsoft\Windows
-            New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice" -Force
+    #         # Create folders inside hive HKU:\$sid\Software\Microsoft\Windows
+    #         New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice" -Force
 
-            Set-PTA -Protocol $protocol -ProgId "notepad"
+    #         Set-PTA -Protocol $protocol -ProgId "notepad"
 
-            Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
-            $newUserSid = (New-Object System.Security.Principal.NTAccount($migrateUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+    #         Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
+    #         $newUserSid = (New-Object System.Security.Principal.NTAccount($migrateUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
 
-            Write-Host "SID: $sid"
-            $program =  Get-ItemProperty "HKEY_USERS:\$newUserSid\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
-            Write-Host $program
-            # Check if programId is notepad
-            $program.ProgId | Should -Match "notepad"
-        }
-    }
+    #         Write-Host "SID: $sid"
+    #         $program =  Get-ItemProperty "HKEY_USERS:\$newUserSid\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
+    #         Write-Host $program
+    #         # Check if programId is notepad
+    #         $program.ProgId | Should -Match "notepad"
+    #     }
+    # }
     AfterEach {
         Write-Host "`nEnd Test: $testName"
         Write-Host "---------------------------`n"
