@@ -491,14 +491,22 @@ Describe 'Migration Test Scenarios' {
 
             $protocol = "http"
             $fileType = ".txt"
-            New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice" -Force
+            $result = New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice" -Force
+            # Garbage collection to ensure the registry is updated
+            $result.Handle.Close()
+            [gc]::collect()
+            [gc]::WaitForPendingFinalizers()
+
             Set-FTA "C:\Program Files\Windows NT\Accessories\wordpad.exe" $fileType
 
-            New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice" -Force
+            $result = New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice" -Force
+            [gc]::Collect()
+            [gc]::WaitForPendingFinalizers()
+
             Set-PTA -Protocol $protocol -ProgId "notepad"
 
             [gc]::collect()
-            Start-Sleep -Seconds 10
+            [gc]::WaitForPendingFinalizers()
             REG UNLOAD "HKU\$($initUserSid)" *>&1
             if ($?) {
                 Write-ToLog -Message:('Unloaded Profile: ' + "NTUSER.DAT.BAK")
