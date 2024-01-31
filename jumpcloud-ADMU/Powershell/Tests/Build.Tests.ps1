@@ -75,7 +75,9 @@ Describe "Module Validation Tests" {
         It 'Module Changlog Version should be correct' {
             $ModuleChangelogVersionRegex = "([0-9]+)\.([0-9]+)\.([0-9]+)"
             $ModuleChangelogVersionMatch = ($ModuleChangelogContent | Select-Object -First 1) | Select-String -Pattern:($ModuleChangelogVersionRegex)
+            Write-Host "Module Changelog Content: $ModuleChangelogVersionMatch"
             $ModuleChangelogVersion = $ModuleChangelogVersionMatch.Matches.Value
+            Write-Host "Module Changelog Version: $ModuleChangelogVersion"
             # Compare
             Write-Host ([version]$lastestModule.version.$($env:ModuleVersionType) + 1)
             ([version]$ModuleChangelogVersion).$($env:ModuleVersionType) | Should -Be ([version]$lastestModule.version.$($env:ModuleVersionType) + 1)

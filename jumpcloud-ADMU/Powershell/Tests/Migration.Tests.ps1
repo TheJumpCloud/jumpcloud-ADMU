@@ -497,7 +497,13 @@ Describe 'Migration Test Scenarios' {
             New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice" -Force
             Set-PTA -Protocol $protocol -ProgId "notepad"
 
-            REG UNLOAD HKU\$($initUserSid)
+            REG UNLOAD "HKU\$($initUserSid)" *>&1
+            if ($?) {
+                Write-ToLog -Message:('Unloaded Profile: ' + "NTUSER.DAT.BAK")
+            } else {
+                Write-Host $.Exception.Message
+                Throw "Could not unload profile: NTUSER.DAT.BAK"
+            }
 
 
             Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
