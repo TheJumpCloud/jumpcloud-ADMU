@@ -448,12 +448,12 @@ Describe 'Migration Test Scenarios' {
 
             Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
 
-            $FTAPath = "C:\Users\$($migrateUser)\AppData\Local\JumpCloudADMU\fta_manifest.csv"
+            $FTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\fta_manifest.csv"
             # Check if it contains data
             $FTAData = Import-Csv $FTAPath
             $FTAData | Should -Not -BeNullOrEmpty
 
-            $PTAPath = "C:\Users\$($migrateUser)\AppData\Local\JumpCloudADMU\pta_manifest.csv"
+            $PTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\pta_manifest.csv"
             # Check if it contains data
             $PTAData = Import-Csv $PTAPath
             $PTAData | Should -Not -BeNullOrEmpty
@@ -462,7 +462,7 @@ Describe 'Migration Test Scenarios' {
     Context 'Set-FTA Test'{
         BeforeAll{
             # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
-            . $PSScriptRoot\..\Deploy\uwp_jcadmu.ps1
+            . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
         }
         It 'Set-FTA should be changed after migration'{
             # Change the FTA for .txt files to wordpad
@@ -497,7 +497,7 @@ Describe 'Migration Test Scenarios' {
     Context 'Set-PTA Test'{
         BeforeAll{
             # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
-            . $PSScriptRoot\..\Deploy\uwp_jcadmu.ps1
+            . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
         }
         It 'Set-PTA should be changed after migration'{
             # Change the PTA for .txt files to wordpad
