@@ -387,6 +387,139 @@ function Get-SID ([string]$User) {
     $strSID.Value
 }
 
+# Get processes to display if we could not load/ unload registry hive:
+function Get-ProcessByOwner {
+    [CmdletBinding()]
+    param (
+        # the username to of which to search active processes
+        [Parameter(Mandatory = $true, ParameterSetName = "ByUsername")]
+        [System.String]
+        $username,
+        # the account security identifier of which to search processes
+        [Parameter(Mandatory = $true, ParameterSetName = "BySID")]
+        [System.String]
+        $SID
+    )
+
+    begin {
+        switch ($PSBoundParameters.Keys) {
+            'username' {
+                # validate username
+                $accountSid = Convert-UserName -user $username
+                $domainUsername = Convert-Sid -Sid $accountSid
+            }
+            'SID' {
+                # validate SID
+                $domainUsername = Convert-Sid -Sid $SID
+            }
+        }
+    }
+    process {
+        $processList = New-Object System.Collections.ArrayList
+        $processes = Get-Process
+        foreach ($process in $processes) {
+            $owner = (Get-WmiObject -Class Win32_Process -Filter:("ProcessId = $($Process.Id)")).GetOwner()
+            $processList.Add(
+                [PSCustomObject]@{
+                    ProcessName = $process.Name
+                    ProcessId   = $process.Id
+                    Owner       = "$($owner.Domain)\$($owner.User)"
+                }
+            ) | Out-Null
+        }
+        # Filter Process List by User:
+        $processList = $processList | Where-Object { $_.Owner -eq $domainUsername }
+    }
+
+    end {
+        return $processList, $domainUsername
+    }
+}
+
+function Show-ProcessListResult {
+    [CmdletBinding()]
+    param (
+        # processList from Get-ProcessByOwner
+        [Parameter(Mandatory = $true)]
+        [System.Object]
+        $ProcessList,
+        # domainUsername from Get-ProcessByOwner
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $domainUsername
+    )
+
+    begin {
+        if (-not $ProcessList) {
+            Write-ToLog -Message:("No system processes were found for $domainUsername")
+            return
+        }
+    }
+
+    process {
+        Write-ToLog "The following processes were found running under $domainUsername's account"
+        foreach ($process in $ProcessList) {
+            Write-ToLog -Message:("ProcessName: $($Process.ProcessName) | ProcessId: $($Process.ProcessId)")
+        }
+    }
+}
+function Close-ProcessByOwner {
+    [CmdletBinding()]
+    param (
+        # Parameter help description
+        [Parameter(Mandatory = $true)]
+        [System.Object]
+        $ProcesssList,
+        # force close processes
+        [Parameter()]
+        [switch]
+        $force
+    )
+
+    begin {
+        $resultList = New-Object System.Collections.ArrayList
+    }
+
+    process {
+        switch ($force) {
+            $true {
+                foreach ($item in $ProcesssList) {
+                    Write-ToLog "Attempting to close processID: $($item.ProcessId)"
+                    $tkStatus = taskkill /t /f /PID $item.ProcessId 2>&1
+                    $tkSuccess = if ($tkStatus -match "ERROR") {
+                        $false
+                    } else {
+                        $true
+                    }
+                    $resultList.Add(
+                        [PSCustomObject]@{
+                            ProcessName = $item.ProcessName
+                            ProcessID   = $item.ProcessId
+                            Closed      = $tkSuccess
+                        }
+                    ) | Out-Null
+                }
+            }
+            $false {
+                foreach ($item in $ProcesssList) {
+                    $resultList.Add(
+                        [PSCustomObject]@{
+                            ProcessName = $item.ProcessName
+                            ProcessID   = $item.ProcessId
+                            Closed      = "NA"
+                        }
+                    ) | Out-Null
+                }
+            }
+        }
+    }
+
+    end {
+        return $resultList
+    }
+}
+
+
 function Set-UserRegistryLoadState {
     [CmdletBinding()]
     param (
@@ -401,39 +534,68 @@ function Set-UserRegistryLoadState {
         [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
         [System.String]$UserSid
     )
+    begin {
+        $regQuery = REG QUERY HKU *>&1
+    }
     process {
+        $username = Convert-Sid $UserSid
         switch ($op) {
             "Load" {
+                # Current loaded profiles before loading NTUSER.DAT.BAK and USRClass.dat.bak
+                Write-ToLog -Message:('Current Loaded Profiles Before Loading: ' + $regQuery)
                 Start-Sleep -Seconds 1
+                $lastModified = Get-Item -path "$ProfilePath\NTUSER.DAT.BAK" -Force | Select-Object -ExpandProperty LastWriteTime
+                Write-ToLog -Message:("Last Modified Time of $ProfilePath\NTUSER.DAT.BAK is $lastModified")
                 $results = REG LOAD HKU\$($UserSid)_admu "$ProfilePath\NTUSER.DAT.BAK" *>&1
+                # Get the last modified time of the NTUSER.DAT.BAK file
                 if ($?) {
                     Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
                 } else {
                     Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
+                    $processList, $domainUsername = Get-ProcessByOwner -username $username
+                    Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                    Throw "Could not load profile: $ProfilePath\NTUSER.DAT.BAK"
                 }
                 Start-Sleep -Seconds 1
+                $lastModified = Get-Item -path "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force | Select-Object -ExpandProperty LastWriteTime
+                Write-ToLog -Message:("Last Modified Time of $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak is $lastModified")
                 $results = REG LOAD HKU\"$($UserSid)_Classes_admu" "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" *>&1
+                # Get the last modified time of the UsrClass.dat.bak file
                 if ($?) {
                     Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                 } else {
                     Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
+                    $processList, $domainUsername = Get-ProcessByOwner -username $username
+                    Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                    Throw "Could not load profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
                 }
             }
             "Unload" {
                 [gc]::collect()
+                Write-ToLog -Message:('Current Loaded Profiles Before Unloading: ' + $regQuery)
                 Start-Sleep -Seconds 1
+                $lastModified = Get-Item -path "$ProfilePath\NTUSER.DAT.BAK" -Force | Select-Object -ExpandProperty LastWriteTime
+                Write-ToLog -Message:("Last Modified Time of $ProfilePath\NTUSER.DAT.BAK is $lastModified")
                 $results = REG UNLOAD HKU\$($UserSid)_admu *>&1
                 if ($?) {
                     Write-ToLog -Message:('Unloaded Profile: ' + "$ProfilePath\NTUSER.DAT.bak")
                 } else {
                     Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\NTUSER.DAT.bak")
+                    $processList, $domainUsername = Get-ProcessByOwner -username $username
+                    Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                    Throw "Could not unload profile: $ProfilePath\NTUSER.DAT.BAK"
                 }
                 Start-Sleep -Seconds 1
+                $lastModified = Get-Item -path "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force | Select-Object -ExpandProperty LastWriteTime
+                Write-ToLog -Message:("Last Modified Time of $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak is $lastModified")
                 $results = REG UNLOAD HKU\$($UserSid)_Classes_admu *>&1
                 if ($?) {
                     Write-ToLog -Message:('Unloaded Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                 } else {
                     Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
+                    $processList, $domainUsername = Get-ProcessByOwner -username $username
+                    Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                    Throw "Could not unload profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
                 }
             }
         }
@@ -456,7 +618,11 @@ Function Test-UserRegistryLoadState {
         # Tests to check that the reg items are not loaded
         If ($results -match $UserSid) {
             Write-ToLog "REG Keys are loaded, attempting to unload"
-            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
+            try {
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
+            } catch {
+                Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
+            }
         }
     }
     process {
@@ -464,14 +630,14 @@ Function Test-UserRegistryLoadState {
         try {
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid
         } catch {
-            Write-Error "Could Not Load"
+            Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
         }
         # Load Selected User Profile Keys
         # Unload "Selected" and "NewUser"
         try {
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
         } catch {
-            Write-Error "Could Not Unload"
+            Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
         }
     }
     end {
@@ -479,13 +645,11 @@ Function Test-UserRegistryLoadState {
         # Tests to check that the reg items are not loaded
         If ($results -match $UserSid) {
             Write-ToLog "REG Keys are loaded, attempting to unload"
-            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
-        }
-        $results = REG QUERY HKU *>&1
-        # Tests to check that the reg items are not loaded
-        If ($results -match $UserSid) {
-            Write-ToLog "REG Keys are loaded at the end of testing, exiting..." -level Warn
-            throw "REG Keys are loaded at the end of testing, exiting..."
+            try {
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
+            } catch {
+                throw "Registry Keys are still loaded after Test-UserRegistryLoadState Testing Exiting..."
+            }
         }
     }
 
@@ -497,16 +661,37 @@ Function Backup-RegistryHive {
     param (
         [Parameter(Mandatory = $true)]
         [System.String]
-        $profileImagePath
+        $profileImagePath,
+        # Parameter help description
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $SID
     )
-
-    try {
-        Copy-Item -Path "$profileImagePath\NTUSER.DAT" -Destination "$profileImagePath\NTUSER.DAT.BAK" -ErrorAction Stop
-        Copy-Item -Path "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -ErrorAction Stop
-    } catch {
-        Write-ToLog -Message("Could Not Backup Registry Hives in $($profileImagePath): Exiting...")
-        Write-ToLog -Message($_.Exception.Message)
-        throw "Could Not Backup Registry Hives in $($profileImagePath): Exiting..."
+    begin {
+        # get sid from PIP:
+        $domainUsername = Convert-Sid -Sid $SID
+    }
+    process {
+        try {
+            Copy-Item -Path "$profileImagePath\NTUSER.DAT" -Destination "$profileImagePath\NTUSER.DAT.BAK" -ErrorAction Stop
+            Copy-Item -Path "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -ErrorAction Stop
+        } catch {
+            $processList, $domainUsername = Get-ProcessByOwner -username $domainUsername
+            Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+            try {
+                Write-ToLog -Message("Attempting to recover:")
+                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force
+                Write-Host $CloseResults
+                Start-Sleep 1
+                # retry:
+                Copy-Item -Path "$profileImagePath\NTUSER.DAT" -Destination "$profileImagePath\NTUSER.DAT.BAK" -ErrorAction Stop
+                Copy-Item -Path "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -ErrorAction Stop
+            } catch {
+                Write-ToLog -Message("Could Not Backup Registry Hives in $($profileImagePath): Exiting...")
+                Write-ToLog -Message($_.Exception.Message)
+                throw "Could Not Backup Registry Hives in $($profileImagePath): Exiting..."
+            }
+        }
     }
 }
 
@@ -1566,16 +1751,20 @@ Function Start-Migration {
         # While loop for breaking out of log gracefully:
         $MigrateUser = $true
         while ($MigrateUser) {
-
-
-
+            # TODO: remove!
+            $username = "YourUsername"
+            $password = "YourPassword"
+            $credentials = New-Object System.Management.Automation.PSCredential -ArgumentList @($username, (ConvertTo-SecureString -String $password -AsPlainText -Force))
+            # kick off process for user, to test recovery
+            Start-Process -FilePath "powershell.exe" -Credential $credentials -NoNewWindow -WorkingDirectory 'C:\Windows\System32'
+            #### end remove!
             ### Begin Backup Registry for Selected User ###
             Write-ToLog -Message:('Creating Backup of User Registry Hive')
             # Get Profile Image Path from Registry
             $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
             # Backup Registry NTUSER.DAT and UsrClass.dat files
             try {
-                Backup-RegistryHive -profileImagePath $oldUserProfileImagePath
+                Backup-RegistryHive -profileImagePath $oldUserProfileImagePath -SID $SelectedUserSID
             } catch {
                 Write-ToLog -Message("Could Not Backup Registry Hives: Exiting...")
                 Write-ToLog -Message($_.Exception.Message)
@@ -1624,7 +1813,7 @@ Function Start-Migration {
 
             ### Begin backup user registry for new user
             try {
-                Backup-RegistryHive -profileImagePath $newUserProfileImagePath
+                Backup-RegistryHive -profileImagePath $newUserProfileImagePath -SID $NewUserSID
             } catch {
                 Write-ToLog -Message("Could Not Backup Registry Hives in $($newUserProfileImagePath): Exiting...") -level Warn
                 Write-ToLog -Message($_.Exception.Message)
@@ -1641,7 +1830,7 @@ Function Start-Migration {
                 Test-UserRegistryLoadState -ProfilePath $newUserProfileImagePath -UserSid $newUserSid
                 Test-UserRegistryLoadState -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
             } catch {
-                Write-ToLog -Message:('could not load and unload registry of migration user, exiting') -level Warn
+                Write-ToLog -Message:('Could not load and unload registry of migration user during Test-UserRegistryLoadState, exiting') -level Warn
                 $admuTracker.testRegLoadUnload.fail = $true
                 break
             }
@@ -1729,7 +1918,7 @@ Function Start-Migration {
                 break
             }
             # Validate file permissions on registry item
-            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
+            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }
@@ -1816,6 +2005,29 @@ Function Start-Migration {
             try {
                 Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT" -NewName "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force -ErrorAction Stop
                 Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force -ErrorAction Stop
+                # Validate the file have timestamps
+                $ntuserOriginal = Get-Item "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force
+                $usrClassOriginal = Get-Item "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force
+
+                # Get the name of the file
+                $ntuserOriginalName = $ntuserOriginal.Name
+                $usrClassOriginalName = $usrClassOriginal.Name
+
+                if ($ntuserOriginalName -match "ntuser_original_$($renameDate).DAT") {
+                    Write-ToLog -Message:("Successfully renamed $ntuserOriginalName with timestamp $renameDate")
+                } else {
+                    Write-ToLog -Message:("Failed to rename $ntuserOriginalName with timestamp $renameDate")
+                    $admuTracker.renameOriginalFiles.fail = $true
+                    break
+                }
+
+                if ($usrClassOriginalName -match "UsrClass_original_$($renameDate).dat") {
+                    Write-ToLog -Message:("Successfully renamed $usrClassOriginalName with timestamp $renameDate")
+                } else {
+                    Write-ToLog -Message:("Failed to rename $usrClassOriginalName with timestamp $renameDate")
+                    $admuTracker.renameOriginalFiles.fail = $true
+                    break
+                }
             } catch {
                 Write-ToLog -Message("Could not rename original registry files for backup purposes: Exiting...")
                 Write-ToLog -Message($_.Exception.Message)
