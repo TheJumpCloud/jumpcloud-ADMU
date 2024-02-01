@@ -1896,22 +1896,13 @@ Function Start-Migration {
 
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $SelectedUserSid
             Write-ToLog -Message:('Found ' + $fileTypeAssociations.count + ' File Type Associations')
+            $fileTypeAssociations | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
+
             $protocolTypeAssociations = Get-ProtocolTypeAssociation -UserSid $SelectedUserSid
             Write-ToLog -Message:('Found ' + $protocolTypeAssociations.count + ' Protocol Type Associations')
-            # Save the lists to CSV files
-            if ($fileTypeAssociations) {
-                Write-ToLog -Message:('Saving File Type Associations to CSV...')
-                $fileTypeAssociations | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
-            } else {
-                Write-ToLog -Message:('No File Type Associations found')
-            }
+            $protocolTypeAssociations | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
 
-            if ($protocolTypeAssociations) {
-                Write-ToLog -Message:('Saving Protocol Type Associations to CSV...')
-                $protocolTypeAssociations | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
-            } else {
-                Write-ToLog -Message:('No Protocol Type Associations found')
-            }
+
             $regQuery = REG QUERY HKU *>&1
             # Unload "Selected" and "NewUser"
             Write-ToLog -Message:('Loaded profiles before unloading: ' + $regQuery)

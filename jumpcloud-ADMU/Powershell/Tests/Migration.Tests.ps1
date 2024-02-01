@@ -437,110 +437,30 @@ Describe 'Migration Test Scenarios' {
 
     # }
     # TODO
-    # Context 'FTA and PTA CSV creation test'{
-    #     # Check if Users/User/AppData/Local/JUMPCLOUDADMU/FTA.csv exists
-    #     It "fta_manifest.csv and pta_manifest.csv should exist" {
+    Context 'FTA and PTA CSV creation test'{
+        # Check if Users/User/AppData/Local/JUMPCLOUDADMU/FTA.csv exists
+        It "fta_manifest.csv and pta_manifest.csv should exist" {
 
-    #         $Password = "Temp123!"
-    #         $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-    #         $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-    #         # Initialize a single user to migrate:
-    #         InitUser -UserName $localUser -Password $Password
-
-    #         Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
-
-    #         $FTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\fta_manifest.csv"
-    #         # Check if it contains data
-    #         $FTAData = Import-Csv $FTAPath
-    #         $FTAData | Should -Not -BeNullOrEmpty
-
-    #         $PTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\pta_manifest.csv"
-    #         # Check if it contains data
-    #         $PTAData = Import-Csv $PTAPath
-    #         $PTAData | Should -Not -BeNullOrEmpty
-    #     }
-    # }
-    Context 'Set-FTA Test'{
-        BeforeAll{
-            # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
-            . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
-        }
-        It 'Set-FTA should be changed after migration'{
-            # Change the FTA for .txt files to wordpad
             $Password = "Temp123!"
             $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $migrateUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-
-            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
-                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
-            }
             # Initialize a single user to migrate:
             InitUser -UserName $localUser -Password $Password
-            $initUserSid = Test-UsernameOrSID -Username $localUser
-            Write-Host "SID: $initUserSid"
-            # Load the registry hive for the user
-            REG LOAD "HKU\$($initUserSid)" "C:\Users\$($localUser)\NTUSER.DAT" *>&1
-            # Get the last modified time of the NTUSER.DAT.BAK file
-            if ($?) {
-                Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
-            } else {
-                Write-Host $.Exception.Message
-                Throw "Could not load profile: $ProfilePath\NTUSER.DAT.BAK"
-            }
-
-            $protocol = "http"
-            $fileType = ".txt"
-            $result = New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice" -Force
-            # Garbage collection to ensure the registry is updated
-            $result.Handle.Close()
-            [gc]::collect()
-            [gc]::WaitForPendingFinalizers()
-
-            Set-FTA "C:\Program Files\Windows NT\Accessories\wordpad.exe" $fileType
-
-            $result = New-Item -Path "HKEY_USERS:\$($initUserSid)\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice" -Force
-            [gc]::Collect()
-            [gc]::WaitForPendingFinalizers()
-
-            Set-PTA -Protocol $protocol -ProgId "notepad"
-            # Remove PS Drive
-            Remove-PSDrive -Name "HKEY_USERS"
-
-            [gc]::collect()
-            [gc]::WaitForPendingFinalizers()
-
-            # unload the hive
-
-            # REG UNLOAD "HKU\$($initUserSid)" *>&1
-            $tempHive = "HKU\$($initUserSid)"
-            # unload the hive
-            $startParams = @{
-                FilePath     = 'reg.exe'
-                ArgumentList = "unload `"$tempHive`""
-                WindowStyle  = 'Hidden'
-                Wait         = $true
-                PassThru     = $true
-            }
-            $process = Start-Process @startParams
-            if ($process.ExitCode) {
-            throw "Failed to unload the temp hive '$tempHive' for '$ntUserFile': exit code $($process.ExitCode)"
-            }
-
 
             Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
-            # Get the SID of the user
-            $newUserSid = (New-Object System.Security.Principal.NTAccount($migrateUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
-            Write-Host "SID: $sid"
-            $fta =  Get-ItemProperty "HKEY_USERS:\$newUserSid\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$extension\UserChoice"
-            $pta =  Get-ItemProperty "HKEY_USERS:\$newUserSid\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
-            Write-Host $program
-            # Check if programId is wordpad
-            $fta.ProgId | Should -Match "wordpad"
-            pta.ProgId | Should -Match "notepad"
 
+            $FTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\fta_manifest.csv"
+            # Check if it contains data
+            $FTAData = Import-Csv $FTAPath
+            $FTAData | Should -Not -BeNullOrEmpty
+
+            $PTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\pta_manifest.csv"
+            # Check if it contains data
+            $PTAData = Import-Csv $PTAPath
+            $PTAData | Should -Not -BeNullOrEmpty
         }
     }
+
     # Context 'Set-PTA Test'{
     #     BeforeAll{
     #         # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA

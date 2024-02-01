@@ -32,6 +32,44 @@ Describe 'Functions' {
             Test-RegistryValueMatch -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -Value 'Public' -stringmatch 'Private' | Should -Be $false
         }
     }
+    Context 'Set-PTA/FTA Test'{
+        BeforeAll{
+            # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
+            . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
+        }
+        It 'Set-FTA should be changed after migration'{
+            # Change the FTA for .txt files to wordpad
+            $Password = "Temp123!"
+            $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+
+            # Initialize a single user to migrate:
+            InitUser -UserName $localUser -Password $Password
+
+            $protocol = "http"
+            $fileType = ".txt"
+
+            Set-FTA "C:\Program Files\Windows NT\Accessories\wordpad.exe" $fileType
+
+            Set-PTA -Protocol $protocol -ProgId "notepad"
+            # Remove PS Drive
+            Remove-PSDrive -Name "HKEY_USERS"
+
+            [gc]::collect()
+            [gc]::WaitForPendingFinalizers()
+
+            # unload the hive
+
+            REG UNLOAD "HKU\$($initUserSid)"
+
+            $fta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$extension\UserChoice"
+            $pta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
+            Write-Host $program
+            # Check if programId is wordpad
+            $fta.ProgId | Should -Match "wordpad"
+            pta.ProgId | Should -Match "notepad"
+
+        }
+    }
     Context 'Test-JumpCloudUsername Function' {
         It 'Valid Username Returns True' {
             # Get the first user
