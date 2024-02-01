@@ -453,6 +453,8 @@ function Show-ProcessListResult {
         if (-not $ProcessList) {
             Write-ToLog -Message:("No system processes were found for $domainUsername")
             return
+        } else {
+            Write-ToLog -Message:("$($ProcessList.count) processes were found for $domainUsername")
         }
     }
 
@@ -554,7 +556,10 @@ function Set-UserRegistryLoadState {
                     Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
                     $processList, $domainUsername = Get-ProcessByOwner -username $username
                     Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
-                    Throw "Could not load profile: $ProfilePath\NTUSER.DAT.BAK"
+                    $CloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                    if ($CloseResults.closed -match "NA") {
+                        Throw "Could not load profile: $ProfilePath\NTUSER.DAT.BAK"
+                    }
                 }
                 Start-Sleep -Seconds 1
                 $lastModified = Get-Item -path "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force | Select-Object -ExpandProperty LastWriteTime
@@ -567,7 +572,10 @@ function Set-UserRegistryLoadState {
                     Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                     $processList, $domainUsername = Get-ProcessByOwner -username $username
                     Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
-                    Throw "Could not load profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
+                    $CloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                    if ($CloseResults.closed -match "NA") {
+                        Throw "Could not load profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
+                    }
                 }
             }
             "Unload" {
@@ -583,7 +591,11 @@ function Set-UserRegistryLoadState {
                     Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\NTUSER.DAT.bak")
                     $processList, $domainUsername = Get-ProcessByOwner -username $username
                     Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
-                    Throw "Could not unload profile: $ProfilePath\NTUSER.DAT.BAK"
+                    $CloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                    if ($CloseResults.closed -match "NA") {
+
+                        Throw "Could not unload profile: $ProfilePath\NTUSER.DAT.BAK"
+                    }
                 }
                 Start-Sleep -Seconds 1
                 $lastModified = Get-Item -path "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force | Select-Object -ExpandProperty LastWriteTime
@@ -595,7 +607,10 @@ function Set-UserRegistryLoadState {
                     Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                     $processList, $domainUsername = Get-ProcessByOwner -username $username
                     Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
-                    Throw "Could not unload profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
+                    $CloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                    if ($CloseResults.closed -match "NA") {
+                        Throw "Could not unload profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
+                    }
                 }
             }
         }
@@ -1751,13 +1766,6 @@ Function Start-Migration {
         # While loop for breaking out of log gracefully:
         $MigrateUser = $true
         while ($MigrateUser) {
-            # TODO: remove!
-            $username = "YourUsername"
-            $password = "YourPassword"
-            $credentials = New-Object System.Management.Automation.PSCredential -ArgumentList @($username, (ConvertTo-SecureString -String $password -AsPlainText -Force))
-            # kick off process for user, to test recovery
-            Start-Process -FilePath "powershell.exe" -Credential $credentials -NoNewWindow -WorkingDirectory 'C:\Windows\System32'
-            #### end remove!
             ### Begin Backup Registry for Selected User ###
             Write-ToLog -Message:('Creating Backup of User Registry Hive')
             # Get Profile Image Path from Registry
@@ -1908,14 +1916,30 @@ Function Start-Migration {
                     }
                 }
             }
-
+            # TODO: processList
             reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
             if ($?) {
                 Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
             } else {
                 Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-                $admuTracker.copyRegistry.fail = $true
-                break
+                # attempt to recover:
+                # list processes for new user
+                $processList, $domainUsername = Get-ProcessByOwner -SID $NewUserSID
+                Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                # list processes for selectedUser
+                $processList, $domainUsername = Get-ProcessByOwner -SID $SelectedUserSID
+                Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                # attempt copy again:
+                reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
+                if ($?) {
+                    Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+                } else {
+                    Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+                    $admuTracker.copyRegistry.fail = $true
+                    break
+                }
             }
             # Validate file permissions on registry item
             if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
@@ -1975,6 +1999,16 @@ Function Start-Migration {
 
             # Unload "Selected" and "NewUser"
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID
+
+            # TODO: remove!
+            Write-ToLog "#### Begin start process ####"
+            $username = "YourUsername"
+            $password = "YourPassword"
+            $credentials = New-Object System.Management.Automation.PSCredential -ArgumentList @($username, (ConvertTo-SecureString -String $password -AsPlainText -Force))
+            # kick off process for user, to test recovery
+            Start-Process -FilePath "powershell.exe" -Credential $credentials -NoNewWindow -WorkingDirectory 'C:\Windows\System32'
+            Write-ToLog "#### end start process ####"
+            #### end remove!
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
             [gc]::collect()
             Write-ToLog -Message("Begin sleep to ensure NTUSER.BAT.DAT is unloaded")
@@ -1988,13 +2022,30 @@ Function Start-Migration {
             Get-ChildItem -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/" -Force -Filter "UsrClass.dat.bak"
             # Copy both registry hives over and replace the existing backup files in the destination directory.
             try {
+                # TODO: processList
                 Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
                 Copy-Item -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Destination "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Force -ErrorAction Stop
             } catch {
                 Write-ToLog -Message("Could not copy backup registry hives to the destination location in $($oldUserProfileImagePath): Exiting...")
                 Write-ToLog -Message($_.Exception.Message)
-                $admuTracker.copyRegistryFiles.fail = $true
-                break
+                # attempt to recover:
+                # list processes for new user
+                $processList, $domainUsername = Get-ProcessByOwner -SID $NewUserSID
+                Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                # list processes for selectedUser
+                $processList, $domainUsername = Get-ProcessByOwner -SID $SelectedUserSID
+                Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                try {
+                    Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
+                    Copy-Item -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Destination "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Force -ErrorAction Stop
+                } catch {
+
+                    $admuTracker.copyRegistryFiles.fail = $true
+                    break
+                }
+
             }
             $admuTracker.copyRegistryFiles.pass = $true
 
@@ -2004,15 +2055,10 @@ Function Start-Migration {
             Write-ToLog -Message:("Copy orig. ntuser.dat to ntuser_original_$($renameDate).dat (backup reg step)")
             try {
                 Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT" -NewName "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force -ErrorAction Stop
-                Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force -ErrorAction Stop
                 # Validate the file have timestamps
                 $ntuserOriginal = Get-Item "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force
-                $usrClassOriginal = Get-Item "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force
-
                 # Get the name of the file
                 $ntuserOriginalName = $ntuserOriginal.Name
-                $usrClassOriginalName = $usrClassOriginal.Name
-
                 if ($ntuserOriginalName -match "ntuser_original_$($renameDate).DAT") {
                     Write-ToLog -Message:("Successfully renamed $ntuserOriginalName with timestamp $renameDate")
                 } else {
@@ -2021,6 +2067,46 @@ Function Start-Migration {
                     break
                 }
 
+
+            } catch {
+                # attempt to recover:
+                # list processes for new user
+                $processList, $domainUsername = Get-ProcessByOwner -SID $NewUserSID
+                Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                # list processes for selectedUser
+                $processList, $domainUsername = Get-ProcessByOwner -SID $SelectedUserSID
+                Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                try {
+                    Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT" -NewName "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force -ErrorAction Stop
+                    # Validate the file have timestamps
+                    $ntuserOriginal = Get-Item "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force
+                    # Get the name of the file
+                    $ntuserOriginalName = $ntuserOriginal.Name
+                    if ($ntuserOriginalName -match "ntuser_original_$($renameDate).DAT") {
+                        Write-ToLog -Message:("Successfully renamed $ntuserOriginalName with timestamp $renameDate")
+                    } else {
+                        Write-ToLog -Message:("Failed to rename $ntuserOriginalName with timestamp $renameDate")
+                        $admuTracker.renameOriginalFiles.fail = $true
+                        break
+                    }
+
+                } catch {
+
+                    Write-ToLog -Message("Could not rename original NTUser registry files for backup purposes: Exiting...")
+                    Write-ToLog -Message($_.Exception.Message)
+                    $admuTracker.renameOriginalFiles.fail = $true
+                    break
+                }
+            }
+            Write-ToLog -Message:("Copy orig. usrClass.dat to UsrClass_original_$($renameDate).dat (backup reg step)")
+            try {
+                Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force -ErrorAction Stop
+                # Validate the file have timestamps
+                $usrClassOriginal = Get-Item "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force
+                # Get the name of the file
+                $usrClassOriginalName = $usrClassOriginal.Name
                 if ($usrClassOriginalName -match "UsrClass_original_$($renameDate).dat") {
                     Write-ToLog -Message:("Successfully renamed $usrClassOriginalName with timestamp $renameDate")
                 } else {
@@ -2029,22 +2115,66 @@ Function Start-Migration {
                     break
                 }
             } catch {
-                Write-ToLog -Message("Could not rename original registry files for backup purposes: Exiting...")
-                Write-ToLog -Message($_.Exception.Message)
-                $admuTracker.renameOriginalFiles.fail = $true
-                break
+                # attempt to recover:
+                # list processes for new user
+                $processList, $domainUsername = Get-ProcessByOwner -SID $NewUserSID
+                Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                # list processes for selectedUser
+                $processList, $domainUsername = Get-ProcessByOwner -SID $SelectedUserSID
+                Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                try {
+                    Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force -ErrorAction Stop
+                    # Validate the file have timestamps
+                    $usrClassOriginal = Get-Item "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force
+                    # Get the name of the file
+                    $usrClassOriginalName = $usrClassOriginal.Name
+                    if ($usrClassOriginalName -match "UsrClass_original_$($renameDate).dat") {
+                        Write-ToLog -Message:("Successfully renamed $usrClassOriginalName with timestamp $renameDate")
+                    } else {
+                        Write-ToLog -Message:("Failed to rename $usrClassOriginalName with timestamp $renameDate")
+                        $admuTracker.renameOriginalFiles.fail = $true
+                        break
+                    }
+                } catch {
+                    Write-ToLog -Message("Could not rename original usrClass registry files for backup purposes: Exiting...")
+                    Write-ToLog -Message($_.Exception.Message)
+                    $admuTracker.renameOriginalFiles.fail = $true
+                    break
+                }
             }
             $admuTracker.renameOriginalFiles.pass = $true
             # finally set .dat.back registry files to the .dat in the profileimagepath
             Write-ToLog -Message:('rename ntuser.dat.bak to ntuser.dat (replace step)')
             try {
+                # TODO: processList
+
                 Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT.BAK" -NewName "$oldUserProfileImagePath\NTUSER.DAT" -Force -ErrorAction Stop
                 Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
             } catch {
                 Write-ToLog -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
                 Write-ToLog -Message($_.Exception.Message)
-                $admuTracker.renameBackupFiles.fail = $true
-                break
+
+                # attempt to recover:
+                # list processes for new user
+                $processList, $domainUsername = Get-ProcessByOwner -SID $NewUserSID
+                Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                # list processes for selectedUser
+                $processList, $domainUsername = Get-ProcessByOwner -SID $SelectedUserSID
+                Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+
+                try {
+                    Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT.BAK" -NewName "$oldUserProfileImagePath\NTUSER.DAT" -Force -ErrorAction Stop
+
+                    Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
+
+                } catch {
+                    $admuTracker.renameBackupFiles.fail = $true
+                    break
+                }
             }
             $admuTracker.renameBackupFiles.pass = $true
             if ($UpdateHomePath) {
