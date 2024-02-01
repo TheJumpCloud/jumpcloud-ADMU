@@ -44,22 +44,21 @@ Describe 'Functions' {
 
             # Initialize a single user to migrate:
             InitUser -UserName $localUser -Password $Password
-            New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice"
-            New-Item -Path "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
+
+            New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice" -force
+            # Test path
+            New-Item -Path "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice" -Force
             $protocol = "http"
             $fileType = ".txt"
             Set-FTA "wordpad" $fileType
             Set-PTA -Protocol $protocol -ProgId "notepad"
 
-            [gc]::collect()
-            [gc]::WaitForPendingFinalizers()
-
-            $fta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$extension\UserChoice"
+            $fta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($extension)\UserChoice"
             $pta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
             Write-Host $program
             # Check if programId is wordpad
             $fta.ProgId | Should -Match "wordpad"
-            pta.ProgId | Should -Match "notepad"
+            $pta.ProgId | Should -Match "notepad"
 
         }
     }
