@@ -44,16 +44,16 @@ Describe 'Functions' {
 
             # Initialize a single user to migrate:
             InitUser -UserName $localUser -Password $Password
-
+            $protocol = "http"
+            $fileType = ".txt"
             New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice" -force
             # Test path
             New-Item -Path "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice" -Force
-            $protocol = "http"
-            $fileType = ".txt"
+
             Set-FTA "wordpad" $fileType
             Set-PTA -Protocol $protocol -ProgId "notepad"
 
-            $fta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($extension)\UserChoice"
+            $fta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice"
             $pta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
             # Write out the contents of the FTA and PTA
             Write-Host "FTA: $($fta)"
