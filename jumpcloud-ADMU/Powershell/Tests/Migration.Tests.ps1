@@ -449,12 +449,12 @@ Describe 'Migration Test Scenarios' {
 
             Start-Migration -AutobindJCUser $false -JumpCloudUserName $migrateUser -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" -SetDefaultWindowsUser $true
 
-            $FTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\fta_manifest.csv"
+            $FTAPath = "C:\Users\$($migrateUser)\AppData\Local\JumpCloudADMU\fta_manifest.csv"
             # Check if it contains data
             $FTAData = Import-Csv $FTAPath
             $FTAData | Should -Not -BeNullOrEmpty
 
-            $PTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\pta_manifest.csv"
+            $PTAPath = "C:\Users\$($migrateUser)\AppData\Local\JumpCloudADMU\pta_manifest.csv"
             # Check if it contains data
             $PTAData = Import-Csv $PTAPath
             $PTAData | Should -Not -BeNullOrEmpty

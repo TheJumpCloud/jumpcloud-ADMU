@@ -49,17 +49,10 @@ Describe 'Functions' {
             $fileType = ".txt"
 
             Set-FTA "C:\Program Files\Windows NT\Accessories\wordpad.exe" $fileType
-
             Set-PTA -Protocol $protocol -ProgId "notepad"
-            # Remove PS Drive
-            Remove-PSDrive -Name "HKEY_USERS"
 
             [gc]::collect()
             [gc]::WaitForPendingFinalizers()
-
-            # unload the hive
-
-            REG UNLOAD "HKU\$($initUserSid)"
 
             $fta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$extension\UserChoice"
             $pta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
