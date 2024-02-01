@@ -504,17 +504,27 @@ Describe 'Migration Test Scenarios' {
             [gc]::WaitForPendingFinalizers()
 
             Set-PTA -Protocol $protocol -ProgId "notepad"
+            # Remove PS Drive
+            Remove-PSDrive -Name "HKEY_USERS"
 
             [gc]::collect()
             [gc]::WaitForPendingFinalizers()
-            REG UNLOAD "HKU\$($initUserSid)" *>&1
-            if ($?) {
-                Write-ToLog -Message:('Unloaded Profile: ' + "NTUSER.DAT.BAK")
-            } else {
-                [gc]::collect()
-                Start-Sleep -Seconds 10
-                REG UNLOAD "HKU\$($initUserSid)" *>&1
-                Write-ToLog "Could not unload profile: NTUSER.DAT.BAK"
+
+            # unload the hive
+
+            # REG UNLOAD "HKU\$($initUserSid)" *>&1
+            $tempHive = "HKU\$($initUserSid)"
+            # unload the hive
+            $startParams = @{
+                FilePath     = 'reg.exe'
+                ArgumentList = "unload `"$tempHive`""
+                WindowStyle  = 'Hidden'
+                Wait         = $true
+                PassThru     = $true
+            }
+            $process = Start-Process @startParams
+            if ($process.ExitCode) {
+            throw "Failed to unload the temp hive '$tempHive' for '$ntUserFile': exit code $($process.ExitCode)"
             }
 
 
