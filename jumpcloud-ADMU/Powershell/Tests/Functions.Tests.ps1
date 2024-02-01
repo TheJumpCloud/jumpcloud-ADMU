@@ -44,11 +44,11 @@ Describe 'Functions' {
 
             # Initialize a single user to migrate:
             InitUser -UserName $localUser -Password $Password
-
+            New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice"
+            New-Item -Path "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
             $protocol = "http"
             $fileType = ".txt"
-
-            Set-FTA "C:\Program Files\Windows NT\Accessories\wordpad.exe" $fileType
+            Set-FTA "wordpad" $fileType
             Set-PTA -Protocol $protocol -ProgId "notepad"
 
             [gc]::collect()
