@@ -46,9 +46,9 @@ Describe 'Functions' {
             InitUser -UserName $localUser -Password $Password
             $protocol = "http"
             $fileType = ".txt"
-            New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice"
-            # Test path
-            New-Item -Path "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
+            # New-Item -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice"
+            # # Test path
+            # New-Item -Path "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
 
             Set-FTA "wordpad" $fileType
             Set-PTA -Protocol $protocol -ProgId "notepad"
