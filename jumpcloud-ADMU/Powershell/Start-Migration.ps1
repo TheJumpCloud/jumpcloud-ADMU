@@ -421,24 +421,24 @@ function Get-ProcessByOwner {
             if ($process.id) {
                 # TODO: processItem would throw a null value exception
                 $processItem = (Get-WmiObject -Class Win32_Process -Filter:("ProcessId = $($Process.Id)"))
-                if (![string]::IsNullOrEmpty($processItem)){
+                if (![string]::IsNullOrEmpty($processItem)) {
                     # Create null value check for processItem
-                        $owner = $processItem.GetOwner()
-                        $processList.Add(
-                            [PSCustomObject]@{
-                                ProcessName = if ($process.Name) {
-                                    $process.Name
-                                } else {
-                                    "NA"
-                                }
-                                ProcessId   = if ($process.Id) {
-                                    $process.Id
-                                } else {
-                                    "NA"
-                                }
-                                Owner       = "$($owner.Domain)\$($owner.User)"
+                    $owner = $processItem.GetOwner()
+                    $processList.Add(
+                        [PSCustomObject]@{
+                            ProcessName = if ($process.Name) {
+                                $process.Name
+                            } else {
+                                "NA"
                             }
-                        ) | Out-Null
+                            ProcessId   = if ($process.Id) {
+                                $process.Id
+                            } else {
+                                "NA"
+                            }
+                            Owner       = "$($owner.Domain)\$($owner.User)"
+                        }
+                    ) | Out-Null
                 }
             }
         }
@@ -491,7 +491,7 @@ function Close-ProcessByOwner {
         $ProcesssList,
         # force close processes
         [Parameter()]
-        [switch]
+        [bool]
         $force
     )
 
@@ -557,6 +557,7 @@ function Set-UserRegistryLoadState {
         [System.String]$UserSid
     )
     begin {
+        Write-ToLog -Message:("## Begin Registry $op State ##")
         $regQuery = REG QUERY HKU *>&1
     }
     process {
@@ -564,7 +565,20 @@ function Set-UserRegistryLoadState {
         switch ($op) {
             "Load" {
                 # Current loaded profiles before loading NTUSER.DAT.BAK and USRClass.dat.bak
-                Write-ToLog -Message:('Current Loaded Profiles Before Loading: ' + $regQuery)
+                Write-ToLog -Message:('Current Loaded Profiles Before Loading:')
+                for ($i = 0; $i -lt $regQuery.Count; $i++) {
+                    <# Action that will repeat until the condition is met #>
+                    if ($i -eq 0) {
+                        Write-ToLog -Message:("--------------------")
+                    }
+                    if (-Not [System.String]::IsNullOrEmpty($regQuery[$i])) {
+                        Write-ToLog -Message:($regQuery[$i])
+                    }
+                    if ($i -eq ($regQuery.count - 1)) {
+                        Write-ToLog -Message:("--------------------")
+                    }
+                }
+
                 Start-Sleep -Seconds 1
                 $lastModified = Get-Item -path "$ProfilePath\NTUSER.DAT.BAK" -Force | Select-Object -ExpandProperty LastWriteTime
                 Write-ToLog -Message:("Last Modified Time of $ProfilePath\NTUSER.DAT.BAK is $lastModified")
@@ -577,7 +591,7 @@ function Set-UserRegistryLoadState {
                     Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
                     $processList = Get-ProcessByOwner -username $username
                     Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                    $CloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                    $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                     if ($CloseResults.closed -match "SUCCESS") {
                         Write-ToLog -Message:("Closed Processes for $username")
                         Write-ToLog -Message:("Attempting to RELoad profile: $ProfilePath\NTUSER.DAT.BAK")
@@ -585,7 +599,7 @@ function Set-UserRegistryLoadState {
                         if ($?) {
                             Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
                         } else {
-                           throw "Could not load profile: $ProfilePath\NTUSER.DAT.BAK"
+                            throw "Could not load profile: $ProfilePath\NTUSER.DAT.BAK"
                         }
                     } elseif ($CloseResults.closed -match "NA") {
                         Write-ToLog -Message:("Could not close processes when loading $ProfilePath\NTUSER.DAT.BAK for $username. Exiting...")
@@ -605,7 +619,7 @@ function Set-UserRegistryLoadState {
                     Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                     $processList = Get-ProcessByOwner -username $username
                     Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                    $CloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                    $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                     if ($CloseResults.closed -match "SUCCESS") {
                         Write-ToLog -Message:("Closed Processes for $username")
                         Write-ToLog -Message:("Attempting to RELoad profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
@@ -624,7 +638,19 @@ function Set-UserRegistryLoadState {
             }
             "Unload" {
                 [gc]::collect()
-                Write-ToLog -Message:('Current Loaded Profiles Before Unloading: ' + $regQuery)
+                Write-ToLog -Message:('Current Loaded Profiles Before Loading:')
+                for ($i = 0; $i -lt $regQuery.Count; $i++) {
+                    <# Action that will repeat until the condition is met #>
+                    if ($i -eq 0) {
+                        Write-ToLog -Message:("--------------------")
+                    }
+                    if (-Not [System.String]::IsNullOrEmpty($regQuery[$i])) {
+                        Write-ToLog -Message:($regQuery[$i])
+                    }
+                    if ($i -eq ($regQuery.count - 1)) {
+                        Write-ToLog -Message:("--------------------")
+                    }
+                }
                 Start-Sleep -Seconds 1
                 $lastModified = Get-Item -path "$ProfilePath\NTUSER.DAT.BAK" -Force | Select-Object -ExpandProperty LastWriteTime
                 Write-ToLog -Message:("Last Modified Time of $ProfilePath\NTUSER.DAT.BAK is $lastModified")
@@ -637,7 +663,7 @@ function Set-UserRegistryLoadState {
                     Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\NTUSER.DAT.bak")
                     $processList = Get-ProcessByOwner -username $username
                     Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                    $CloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                    $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                     Write-ToLog -Message:("CloseResults: $($CloseResults.closed)")
                     if (($CloseResults.closed)) {
                         Write-ToLog -Message:("Closed Processes for $username")
@@ -664,7 +690,7 @@ function Set-UserRegistryLoadState {
                     Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                     $processList = Get-ProcessByOwner -username $username
                     Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                    $CloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                    $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                     $results = REG UNLOAD HKU\$($UserSid)_Classes_admu *>&1
                     if ($CloseResults.closed -match "SUCCESS") {
                         Write-ToLog -Message:("Closed Processes for $username")
@@ -681,6 +707,10 @@ function Set-UserRegistryLoadState {
                 }
             }
         }
+    }
+    end {
+        Write-ToLog -Message:("## End Registry $op State ##")
+
     }
 }
 
@@ -761,8 +791,8 @@ Function Backup-RegistryHive {
             $processList = Get-ProcessByOwner -username $domainUsername
             Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
             try {
-                Write-ToLog -Message("Attempting to recover:")
-                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force
+                Write-ToLog -Message("Initial backup was not successful, trying again...")
+                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 Write-Host $CloseResults
                 Start-Sleep 1
                 # retry:
@@ -1648,6 +1678,7 @@ Function Start-Migration {
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AutobindJCUser = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$BindAsAdmin = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$SetDefaultWindowsUser = $true,
+        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ForceCloseProcesses = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudAPIKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(24, 24)][string]$JumpCloudOrgID,
@@ -1661,7 +1692,18 @@ Function Start-Migration {
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
 
-
+        # validate process close options
+        switch ($ForceCloseProcesses) {
+            $true {
+                $Script:ADMU_closeProcess = $true
+            }
+            $false {
+                $Script:ADMU_closeProcess = $false
+            }
+            Default {
+                $Script:ADMU_closeProcess = $false
+            }
+        }
         # validate API KEY/ OrgID if Autobind is selected
         if ($AutobindJCUser) {
             if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
@@ -1711,7 +1753,7 @@ Function Start-Migration {
         # Conditional ParameterSet logic
         If ($PSCmdlet.ParameterSetName -eq "form") {
             $SelectedUserName = $inputObject.SelectedUserName
-
+            $Script:ADMU_closeProcess = $inputObject.ForceCloseProcesses
             $JumpCloudUserName = $inputObject.JumpCloudUserName
             $TempPassword = $inputObject.TempPassword
             if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
@@ -1958,26 +2000,35 @@ Function Start-Migration {
 
 
             # TODO: processList
-            $processList = Get-ProcessByOwner -username $JumpCloudUserName
-            if ($processList) {
-                Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                Close-ProcessByOwner -ProcesssList $ProcessList -force
-                Start-Sleep 1
-            }
-            # list processes for selectedUser
-            $processList = Get-ProcessByOwner -username $SelectedUserName
-            if ($processList) {
-                Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                Close-ProcessByOwner -ProcesssList $ProcessList -force
-                Start-Sleep 1
-            }
             reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
             if ($?) {
                 Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/NTUSER.DAT.BAK" + ' To: ' + "$oldUserProfileImagePath/NTUSER.DAT.BAK")
             } else {
-                Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath/NTUSER.DAT.BAK" + ' To: ' + "$oldUserProfileImagePath/NTUSER.DAT.BAK")
-                $admuTracker.copyRegistry.fail = $true
-                break
+
+                $processList = Get-ProcessByOwner -username $JumpCloudUserName
+                if ($processList) {
+                    Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
+                    Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    Start-Sleep 1
+                }
+                # list processes for selectedUser
+                $processList = Get-ProcessByOwner -username $SelectedUserName
+                if ($processList) {
+                    Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
+                    Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    Start-Sleep 1
+                }
+                reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
+                switch ($?) {
+                    $true {
+                        Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/NTUSER.DAT.BAK" + ' To: ' + "$oldUserProfileImagePath/NTUSER.DAT.BAK")
+                    }
+                    $false {
+                        Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath/NTUSER.DAT.BAK" + ' To: ' + "$oldUserProfileImagePath/NTUSER.DAT.BAK")
+                        $admuTracker.copyRegistry.fail = $true
+                        break
+                    }
+                }
             }
 
             # for Windows 10 devices, force refresh of start/ search app:
@@ -2000,20 +2051,6 @@ Function Start-Migration {
                 }
             }
             # TODO: processList
-            # TODO VALIDATE: processList
-            $processList = Get-ProcessByOwner -username $JumpCloudUserName
-            if ($processList) {
-                Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                Close-ProcessByOwner -ProcesssList $ProcessList -force
-                Start-Sleep 1
-            }
-            # list processes for selectedUser
-            $processList = Get-ProcessByOwner -username $SelectedUserName
-            if ($processList) {
-                Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                Close-ProcessByOwner -ProcesssList $ProcessList -force
-                Start-Sleep 1
-            }
 
             reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
             if ($?) {
@@ -2024,19 +2061,21 @@ Function Start-Migration {
                 # list processes for new user
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 # attempt copy again:
                 reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
-                if ($?) {
-                    Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-                } else {
-                    Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
-                    $admuTracker.copyRegistry.fail = $true
-                    break
+                switch ($?) {
+                    $true {
+                        Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+                    } $false {
+                        Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+                        $admuTracker.copyRegistry.fail = $true
+                        break
+                    }
                 }
             }
             # Validate file permissions on registry item
@@ -2110,41 +2149,25 @@ Function Start-Migration {
             Get-ChildItem -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/" -Force -Filter "UsrClass.dat.bak"
             # Copy both registry hives over and replace the existing backup files in the destination directory.
             # TODO: processList
-            # TODO VALIDATE: processList
-            $processList = Get-ProcessByOwner -username $JumpCloudUserName
-            if ($processList) {
-                Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                Close-ProcessByOwner -ProcesssList $ProcessList -force
-                Start-Sleep 1
-            }
-            # list processes for selectedUser
-            $processList = Get-ProcessByOwner -username $SelectedUserName
-            if ($processList) {
-                Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                Close-ProcessByOwner -ProcesssList $ProcessList -force
-                Start-Sleep 1
-            }
-
             try {
                 Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
                 Copy-Item -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Destination "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Force -ErrorAction Stop
             } catch {
-                Write-ToLog -Message("Could not copy backup registry hives to the destination location in $($oldUserProfileImagePath): Exiting...")
                 Write-ToLog -Message($_.Exception.Message)
                 # attempt to recover:
                 # list processes for new user
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 try {
                     Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
                     Copy-Item -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Destination "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Force -ErrorAction Stop
                 } catch {
-
+                    Write-ToLog -Message("Could not copy backup registry hives to the destination location in $($oldUserProfileImagePath): Exiting...")
                     $admuTracker.copyRegistryFiles.fail = $true
                     break
                 }
@@ -2155,22 +2178,6 @@ Function Start-Migration {
             # Rename original ntuser & usrclass .dat files to ntuser_original.dat & usrclass_original.dat for backup and reversal if needed
             $renameDate = Get-Date -UFormat "%Y-%m-%d-%H%M%S"
             Write-ToLog -Message:("Copy orig. ntuser.dat to ntuser_original_$($renameDate).dat (backup reg step)")
-            # TODO VALIDATE: processList worked and closed
-
-            $processList = Get-ProcessByOwner -username $JumpCloudUserName
-            if ($processList) {
-                Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
-            }
-
-            # list processes for selectedUser
-            $processList = Get-ProcessByOwner -username $SelectedUserName
-            if ($processList) {
-                Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
-            }
-
-
             try {
                 Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT" -NewName "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force -ErrorAction Stop
                 # Validate the file have timestamps
@@ -2189,24 +2196,17 @@ Function Start-Migration {
             } catch {
                 # attempt to recover:
                 # list processes for new user
-                Write-ToLog "Testing processes for $JumpCloudUsername"
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
-                Write-ToLog "Testing processe results for $JumpCloudUserName"
-                Write-ToLog "Testing processes results for $processList"
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                    $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
-                } else {
-                    Write-ToLog "nothing to see here folks"
+                    $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                    $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                    $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
-                # TODO: We think we need this after we close process by owner, maybe move up into close process by owner
-                Start-Sleep 5
                 try {
                     Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT" -NewName "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force -ErrorAction Stop
                     # Validate the file have timestamps
@@ -2231,21 +2231,6 @@ Function Start-Migration {
             }
             Write-ToLog -Message:("Copy orig. usrClass.dat to UsrClass_original_$($renameDate).dat (backup reg step)")
             # TODO: processList
-
-            # TODO VALIDATE: processList worked correctly with the close process by owner
-            $processList = Get-ProcessByOwner -username $JumpCloudUserName
-            if ($processList) {
-                Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
-                Start-Sleep 1
-            }
-            # list processes for selectedUser
-            $processList = Get-ProcessByOwner -username $SelectedUserName
-            if ($processList) {
-                Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
-                Start-Sleep 1
-            }
             try {
                 Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force -ErrorAction Stop
                 # Validate the file have timestamps
@@ -2265,13 +2250,13 @@ Function Start-Migration {
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                    $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                    $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                    $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
+                    $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
                 try {
                     Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force -ErrorAction Stop
@@ -2298,20 +2283,6 @@ Function Start-Migration {
             Write-ToLog -Message:('rename ntuser.dat.bak to ntuser.dat (replace step)')
             # TODO: processList
             # TODO VALIDATE: processList worked correctly with the close process by owner
-            $processList = Get-ProcessByOwner -username $JumpCloudUserName
-            if ($processList) {
-                Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
-                Start-Sleep 1
-            }
-            # list processes for selectedUser
-            $processList = Get-ProcessByOwner -username $SelectedUserName
-            if ($processList) {
-                $processList = Get-ProcessByOwner -username $SelectedUserName
-                Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
-                Start-Sleep 1
-            }
 
             try {
                 Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT.BAK" -NewName "$oldUserProfileImagePath\NTUSER.DAT" -Force -ErrorAction Stop
@@ -2323,19 +2294,7 @@ Function Start-Migration {
                 # attempt to recover:
 
                 # TODO VALIDATE: processList
-                $processList = Get-ProcessByOwner -username $JumpCloudUserName
-                if ($processList) {
-                    Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                    $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
-                    Start-Sleep 1
-                }
-                # list processes for selectedUser
-                $processList = Get-ProcessByOwner -username $SelectedUserName
-                if ($processList) {
-                    Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                    $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $ProcessList -force
-                    Start-Sleep 5
-                }
+
 
                 try {
                     Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT.BAK" -NewName "$oldUserProfileImagePath\NTUSER.DAT" -Force -ErrorAction Stop
@@ -2343,8 +2302,29 @@ Function Start-Migration {
                     Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
 
                 } catch {
-                    $admuTracker.renameBackupFiles.fail = $true
-                    break
+                    Write-ToLog -Message($_.Exception.Message)
+                    $processList = Get-ProcessByOwner -username $JumpCloudUserName
+                    if ($processList) {
+                        Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
+                        $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    }
+                    # list processes for selectedUser
+                    $processList = Get-ProcessByOwner -username $SelectedUserName
+                    if ($processList) {
+                        Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
+                        $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    }
+                    try {
+                        # try again:
+                        Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT.BAK" -NewName "$oldUserProfileImagePath\NTUSER.DAT" -Force -ErrorAction Stop
+
+                        Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
+                    } catch {
+                        Write-ToLog -Message($_.Exception.Message)
+
+                        $admuTracker.renameBackupFiles.fail = $true
+                        break
+                    }
                 }
             }
             $admuTracker.renameBackupFiles.pass = $true
