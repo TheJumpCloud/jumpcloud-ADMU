@@ -52,12 +52,7 @@ Describe 'Migration Test Scenarios' {
         Write-Host "---------------------------"
         Write-Host "Begin Test: $testName`n"
     }
-    . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
     Context 'Set FTA/PTA' {
-        BeforeAll{
-            # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
-            . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
-        }
         It 'Set FTA/PTA' {
             $Password = "Temp123!"
             $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -72,7 +67,7 @@ Describe 'Migration Test Scenarios' {
                 $fileType = ".txt"
                 Set-FTA "wordpad" $fileType
                 Set-PTA -ProgId "notepad" -Protocol $protocol
-            } -credential $credentials
+            } -credential $credentials -InitializationScript {. $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1}
             # wait until the job is done
             $ftaList = Receive-Job $job -Wait
             # do migration
