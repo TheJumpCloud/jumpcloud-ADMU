@@ -68,7 +68,7 @@ Describe 'Migration Test Scenarios' {
                 $fileType = ".txt"
                 Set-FTA "wordpad" $fileType
                 Set-PTA -ProgId "notepad" -Protocol $protocol
-            } -credential $credentials -InitializationScript {Import-Module -name "$PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1"}
+            } -credential $credentials -InitializationScript {Import-Module -name $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1}
             # wait until the job is done
             $ftaList = Receive-Job $job -Wait
             # do migration
