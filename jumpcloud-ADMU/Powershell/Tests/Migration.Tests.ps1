@@ -55,9 +55,9 @@ Describe 'Migration Test Scenarios' {
     Context 'Set FTA/PTA' {
         It 'Set FTA/PTA' {
             $Password = "Temp123!"
-            $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-            InitUser -UserName $user1 -Password $Password
+            InitUser -UserName $localUser -Password $Password
 
             # create credential object
             $credentials = New-Object System.Management.Automation.PSCredential -ArgumentList @($localUser, (ConvertTo-SecureString -String $password -AsPlainText -Force))
@@ -72,7 +72,7 @@ Describe 'Migration Test Scenarios' {
             # wait until the job is done
             $ftaList = Receive-Job $job -Wait
             # do migration
-            {Start-Migration -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$user1" -TempPassword "$($Password)"} | Should -Not -Throw
+            {Start-Migration -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)"} | Should -Not -Throw
             # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
             $FTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv"
             $PTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\protocolTypeAssociations.csv"
