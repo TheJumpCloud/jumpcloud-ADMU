@@ -62,7 +62,8 @@ Describe 'Migration Test Scenarios' {
             Write-Host "Current User Profile: $($env:USERPROFILE)"
             # create credential object
             $credentials = New-Object System.Management.Automation.PSCredential -ArgumentList @($localUser, (ConvertTo-SecureString -String $password -AsPlainText -Force))
-            $path = "$PSScriptRoot\..\..\Deploy\uwp_jcadmu.ps1"
+            #
+            $path = "$PSScriptRoot"
             $testPath = "$PSScriptRoot"
             # run the job to set the STA
             $job = Start-Job -scriptblock:({
@@ -78,7 +79,11 @@ Describe 'Migration Test Scenarios' {
                         )
 
                 Write-Host "TestPath is $testPath"
-                . $uwpPath
+                Set-Location -Path (Get-Item -Path $uwpPath).Parent.Parent.FullName
+                $path = Get-Location
+                Write-Host "Path is $path"
+                . $path/Deploy/uwp_jcadmu.ps1
+
                 if ($?) {
                     Write-Host "Imported uwp_jcadmu"
                     $protocol = "http"
