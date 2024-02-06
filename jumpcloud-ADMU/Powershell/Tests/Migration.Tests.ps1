@@ -79,8 +79,10 @@ Describe 'Migration Test Scenarios' {
                         )
 
                 Write-Host "TestPath is $testPath"
-                Set-Location -Path (Get-Item -Path $uwpPath).Parent.Parent.FullName
+
+                Set-Location -Path (Get-Item -Path $uwpPath).Parent.Parent.Parent.FullName
                 $path = Get-Location
+
                 Write-Host "Path is $path"
                 . $path/Deploy/uwp_jcadmu.ps1
 
