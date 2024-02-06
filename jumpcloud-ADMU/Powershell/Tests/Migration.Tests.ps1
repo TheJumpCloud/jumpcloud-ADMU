@@ -58,7 +58,8 @@ Describe 'Migration Test Scenarios' {
             $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             InitUser -UserName $localUser -Password $Password
-
+            # Geth the current user profile
+            Write-Host "Current User Profile: $($env:USERPROFILE)"
             # create credential object
             $credentials = New-Object System.Management.Automation.PSCredential -ArgumentList @($localUser, (ConvertTo-SecureString -String $password -AsPlainText -Force))
             # run the job to set the STA
@@ -67,7 +68,7 @@ Describe 'Migration Test Scenarios' {
                 $fileType = ".txt"
                 Set-FTA "wordpad" $fileType
                 Set-PTA -ProgId "notepad" -Protocol $protocol
-            } -credential $credentials -InitializationScript {. $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1}
+            } -credential $credentials -InitializationScript {Import-Module -name "$PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1"}
             # wait until the job is done
             $ftaList = Receive-Job $job -Wait
             # do migration
