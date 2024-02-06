@@ -78,12 +78,16 @@ Describe 'Migration Test Scenarios' {
                         )
 
                 Write-Host "TestPath is $testPath"
-                Import-Module $uwpPath
-                $protocol = "http"
-                $fileType = ".txt"
-                Set-FTA "wordpad" $fileType
-                Set-PTA -ProgId "notepad" -Protocol $protocol
-
+                . $uwpPath
+                if ($?) {
+                    Write-Host "Imported uwp_jcadmu"
+                    $protocol = "http"
+                    $fileType = ".txt"
+                    Set-FTA "wordpad" $fileType
+                    Set-PTA -ProgId "notepad" -Protocol $protocol
+                } else {
+                    Write-Host "File does not exist"
+                }
 
             }) -ArgumentList:($path, $testPath)  -credential:($credentials)
             # wait until the job is done
