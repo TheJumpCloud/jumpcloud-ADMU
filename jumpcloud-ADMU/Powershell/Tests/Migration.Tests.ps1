@@ -62,7 +62,7 @@ Describe 'Migration Test Scenarios' {
             Write-Host "Current User Profile: $($env:USERPROFILE)"
             # create credential object
             $credentials = New-Object System.Management.Automation.PSCredential -ArgumentList @($localUser, (ConvertTo-SecureString -String $password -AsPlainText -Force))
-            $path = "$PSScriptRoot\..\Deploy\uwp_jcadmu.ps1"
+            $path = "$PSScriptRoot\..\..\Deploy\uwp_jcadmu.ps1"
             $testPath = "$PSScriptRoot"
             # run the job to set the STA
             $job = Start-Job -scriptblock:({
@@ -76,7 +76,7 @@ Describe 'Migration Test Scenarios' {
                             [string]
                             $testPath
                         )
-                Get-ChildItem $testPath -Directory
+
                 Write-Host "TestPath is $testPath"
                 . $uwpPath
                 if ($?) {
