@@ -107,12 +107,17 @@ Describe 'Migration Test Scenarios' {
             # Check if data exists
             $ftaCsv = Import-Csv $FTAPath
             $ptaCsv = Import-Csv $PTAPath
-            Write-Host "FTA: $($ftaCsv | Format-Table)"
-            Write-Host "PTA: $($ptaCsv | Format-Table)"
+
             # Check if csv exists
             Test-Path $FTAPath | Should -Be $true
-
             Test-Path $PTAPath | Should -Be $true
+
+            # Check if csv contains http and .txt
+            $ftaValue = $ftaCsv | Where-Object { $_.Extension -eq ".txt" }
+            $ptaValue = $ptaCsv | Where-Object { $_.Protocol -eq "http" }
+
+            $ftaValue | Should -Be "wordpad"
+            $ptaValue | Should -Be "notepad"
         }
     }
 
