@@ -52,7 +52,12 @@ Describe 'Migration Test Scenarios' {
         Write-Host "---------------------------"
         Write-Host "Begin Test: $testName`n"
     }
+    . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
     Context 'Set FTA/PTA' {
+        BeforeAll{
+            # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
+            . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
+        }
         It 'Set FTA/PTA' {
             $Password = "Temp123!"
             $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -63,7 +68,6 @@ Describe 'Migration Test Scenarios' {
             $credentials = New-Object System.Management.Automation.PSCredential -ArgumentList @($localUser, (ConvertTo-SecureString -String $password -AsPlainText -Force))
             # run the job to set the STA
             $job = Start-Job -scriptblock {
-                . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
                 $protocol = "http"
                 $fileType = ".txt"
                 Set-FTA "wordpad" $fileType
