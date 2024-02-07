@@ -1,11 +1,3 @@
-## 2.6.1
-
-Release Date: February 7, 2024
-
-#### Bug Fixes:
-```
-* Fixed an issue with test dependencies
-```
 ## 2.6.0
 
 Release Date: February 7, 2024
