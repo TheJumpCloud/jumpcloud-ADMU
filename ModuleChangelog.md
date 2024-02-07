@@ -1,6 +1,6 @@
 ## 2.6.0
 
-Release Date: February 8, 2024
+Release Date: February 7, 2024
 
 #### RELEASE NOTES
 
