@@ -5,7 +5,7 @@ Release Date: January 30, 2024
 #### RELEASE NOTES
 
 ```
-* Added a feature to migrate default apps(file associations) and protocol associations
+* Added a feature to migrate default applications (file associations) and protocol associations
 ```
 
 #### Bug Fixes:
