@@ -401,23 +401,39 @@ function Set-UserRegistryLoadState {
         [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
         [System.String]$UserSid
     )
+    Begin {
+        $regQuery = REG QUERY HKU *>&1
+    }
     process {
         switch ($op) {
             "Load" {
+
+                # Current loaded profiles before loading NTUSER.DAT.BAK and USRClass.dat.bak
+                Write-ToLog -Message:('Current Loaded Profiles Before Loading: ' + $regQuery)
+
                 Start-Sleep -Seconds 1
+                $lastModified = Get-Item -path "$ProfilePath\NTUSER.DAT.BAK" -Force | Select-Object -ExpandProperty LastWriteTime
+                Write-ToLog -Message:("Last Modified Time of $ProfilePath\NTUSER.DAT.BAK is $lastModified")
                 $results = REG LOAD HKU\$($UserSid)_admu "$ProfilePath\NTUSER.DAT.BAK" *>&1
+                # Get the last modified time of the NTUSER.DAT.BAK file
                 if ($?) {
                     Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
                 } else {
-                    Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
+                    Throw "Could not load profile: $ProfilePath\NTUSER.DAT.BAK"
                 }
+
                 Start-Sleep -Seconds 1
+                $lastModified = Get-Item -path "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force | Select-Object -ExpandProperty LastWriteTime
+                Write-ToLog -Message:("Last Modified Time of $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak is $lastModified")
                 $results = REG LOAD HKU\"$($UserSid)_Classes_admu" "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" *>&1
+                # Get the last modified time of the USRClass.dat.bak file
                 if ($?) {
                     Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                 } else {
-                    Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
+                    Throw "Could not load profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
                 }
+
+
             }
             "Unload" {
                 [gc]::collect()
@@ -456,7 +472,12 @@ Function Test-UserRegistryLoadState {
         # Tests to check that the reg items are not loaded
         If ($results -match $UserSid) {
             Write-ToLog "REG Keys are loaded, attempting to unload"
-            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
+            try {
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
+            }
+            catch {
+                Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
+            }
         }
     }
     process {
@@ -464,14 +485,14 @@ Function Test-UserRegistryLoadState {
         try {
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid
         } catch {
-            Write-Error "Could Not Load"
+            Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
         }
         # Load Selected User Profile Keys
         # Unload "Selected" and "NewUser"
         try {
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
         } catch {
-            Write-Error "Could Not Unload"
+            Write-Error "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
         }
     }
     end {
@@ -479,16 +500,14 @@ Function Test-UserRegistryLoadState {
         # Tests to check that the reg items are not loaded
         If ($results -match $UserSid) {
             Write-ToLog "REG Keys are loaded, attempting to unload"
-            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
-        }
-        $results = REG QUERY HKU *>&1
-        # Tests to check that the reg items are not loaded
-        If ($results -match $UserSid) {
-            Write-ToLog "REG Keys are loaded at the end of testing, exiting..." -level Warn
-            throw "REG Keys are loaded at the end of testing, exiting..."
+            try {
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
+            }
+            catch {
+                throw "Registry Keys are still loaded after Test-UserRegistryLoadState Testing Exiting..."
+            }
         }
     }
-
 }
 
 
@@ -1368,6 +1387,85 @@ function Set-ADMUScheduledTask {
     }
 }
 #endregion Agent Install Helper Functions
+
+
+##### MIT License #####
+# MIT License
+
+# Copyright © 2022, Danysys
+# Modified by JumpCloud
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+# Get user file type associations
+function Get-UserFileTypeAssociation {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, HelpMessage = 'The SID of the user to capture file type associations')]
+        [System.String]
+        $UserSid
+    )
+        $manifestList = @()
+            # Test path for file type associations
+            $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
+            if (Test-Path $pathRoot) {
+                $exts = Get-ChildItem $pathRoot*
+                foreach ($ext in $exts) {
+                    $indivExtension = $ext.PSChildName
+                    $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
+                    $manifestList += [PSCustomObject]@{
+                        extension  = $indivExtension
+                        programId = $progId
+                    }
+                }
+            }
+            return $manifestList
+}
+
+# Get user protocol associations
+
+function Get-ProtocolTypeAssociation{
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true, HelpMessage = 'The SID of the user to capture file type associations')]
+        [System.String]
+        $UserSid
+    )
+        $manifestList = @()
+
+            $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
+            if (Test-Path $pathRoot) {
+                Get-ChildItem $pathRoot* |
+                ForEach-Object {
+
+                    $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
+                    if ($progId) {
+                        $manifestList += [PSCustomObject]@{
+                            extension  = $_.PSChildName
+                            programId = $progId
+                        }
+                    }
+                }
+            }
+            return $manifestList
+}
+##### END MIT License #####
+
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
     Param (
@@ -1389,7 +1487,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.5.1'
+        $admuVersion = '2.6.0'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
@@ -1641,7 +1739,7 @@ Function Start-Migration {
                 Test-UserRegistryLoadState -ProfilePath $newUserProfileImagePath -UserSid $newUserSid
                 Test-UserRegistryLoadState -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
             } catch {
-                Write-ToLog -Message:('could not load and unload registry of migration user, exiting') -level Warn
+                Write-ToLog -Message:('Could not load and unload registry of migration user during Test-UserRegistryLoadState, exiting') -level Warn
                 $admuTracker.testRegLoadUnload.fail = $true
                 break
             }
@@ -1729,7 +1827,7 @@ Function Start-Migration {
                 break
             }
             # Validate file permissions on registry item
-            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
+            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }
@@ -1783,8 +1881,31 @@ Function Start-Migration {
                 Set-ValueToKey -registryRoot Users -keyPath "$($newusersid)_admu\SOFTWARE\JCADMU" -Name "previousProfilePath" -value "$oldUserProfileImagePath" -regValueKind String
             }
             ### End reg key check for new user
+            $path = $oldUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
+            If (!(test-path $path)) {
+                New-Item -ItemType Directory -Force -Path $path
+            }
 
+            # SelectedUserSid
+            # Validate file permissions on registry item
+            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
+                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+            }
+
+
+            $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $SelectedUserSid
+            Write-ToLog -Message:('Found ' + $fileTypeAssociations.count + ' File Type Associations')
+            $fileTypeAssociations | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
+
+            $protocolTypeAssociations = Get-ProtocolTypeAssociation -UserSid $SelectedUserSid
+            Write-ToLog -Message:('Found ' + $protocolTypeAssociations.count + ' Protocol Type Associations')
+            $protocolTypeAssociations | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
+
+
+            $regQuery = REG QUERY HKU *>&1
             # Unload "Selected" and "NewUser"
+            Write-ToLog -Message:('Loaded profiles before unloading: ' + $regQuery)
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
 
@@ -1807,6 +1928,30 @@ Function Start-Migration {
             try {
                 Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT" -NewName "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force -ErrorAction Stop
                 Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force -ErrorAction Stop
+
+                # Validate the file have timestamps
+                $ntuserOriginal = Get-Item "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force
+                $usrClassOriginal = Get-Item "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force
+
+                # Get the name of the file
+                $ntuserOriginalName = $ntuserOriginal.Name
+                $usrClassOriginalName = $usrClassOriginal.Name
+
+                if ($ntuserOriginalName -match "ntuser_original_$($renameDate).DAT") {
+                    Write-ToLog -Message:("Successfully renamed $ntuserOriginalName with timestamp $renameDate")
+                } else {
+                    Write-ToLog -Message:("Failed to rename $ntuserOriginalName with timestamp $renameDate")
+                    $admuTracker.renameOriginalFiles.fail = $true
+                    break
+                }
+
+                if ($usrClassOriginalName -match "UsrClass_original_$($renameDate).dat") {
+                    Write-ToLog -Message:("Successfully renamed $usrClassOriginalName with timestamp $renameDate")
+                } else {
+                    Write-ToLog -Message:("Failed to rename $usrClassOriginalName with timestamp $renameDate")
+                    $admuTracker.renameOriginalFiles.fail = $true
+                    break
+                }
             } catch {
                 Write-ToLog -Message("Could not rename original registry files for backup purposes: Exiting...")
                 Write-ToLog -Message($_.Exception.Message)
@@ -1819,6 +1964,9 @@ Function Start-Migration {
             try {
                 Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT.BAK" -NewName "$oldUserProfileImagePath\NTUSER.DAT" -Force -ErrorAction Stop
                 Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
+
+
+
             } catch {
                 Write-ToLog -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
                 Write-ToLog -Message($_.Exception.Message)
@@ -1966,6 +2114,7 @@ Function Start-Migration {
 
             Write-ToLog -Message:('Updating UWP Apps for new user')
             $newUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
+
             $path = $newUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
             If (!(test-path $path)) {
                 New-Item -ItemType Directory -Force -Path $path

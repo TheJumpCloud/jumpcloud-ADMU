@@ -75,9 +75,12 @@ Describe "Module Validation Tests" {
         It 'Module Changlog Version should be correct' {
             $ModuleChangelogVersionRegex = "([0-9]+)\.([0-9]+)\.([0-9]+)"
             $ModuleChangelogVersionMatch = ($ModuleChangelogContent | Select-Object -First 1) | Select-String -Pattern:($ModuleChangelogVersionRegex)
+            Write-Host "Module Changelog Content: $ModuleChangelogVersionMatch"
             $ModuleChangelogVersion = $ModuleChangelogVersionMatch.Matches.Value
+            Write-Host "Module Changelog Version: $ModuleChangelogVersion"
             # Compare
-            ([version]$ModuleChangelogVersion).$($env:ModuleVersionType) | Should -Be ($lastestModule.version.$($env:ModuleVersionType) + 1)
+            $latestVersion = [version]$lastestModule.version
+            ([version]$ModuleChangelogVersion).$($env:ModuleVersionType) | Should -Be ($latestVersion.$($env:ModuleVersionType) + 1)
 
         }
         It 'Module Changelog should not contain placeholder values' {
