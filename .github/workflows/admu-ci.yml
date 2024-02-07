@@ -106,7 +106,7 @@ jobs:
                     } else {
                       Install-Module -Name $RequiredModule -Repository:($($PSDependencies[$RequiredModule].Repository)) -RequiredVersion:($($PSDependencies[$RequiredModule].RequiredVersion)) -AllowPrerelease -Force
                     }
-                    }
+
                   }
               }
           }
