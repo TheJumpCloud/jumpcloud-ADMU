@@ -12,7 +12,12 @@ param (
 . $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 
 # Run Build-Module
-. $PSScriptRoot\Build-Module.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
+if ($ModuleVersionType -eq 'manual') {
+    . $PSScriptRoot\Build-Module.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName) -ManualModuleVersion:($true)
+} else {
+    . $PSScriptRoot\Build-Module.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
+}
+
 # Run Build-Exe
 . $PSScriptRoot\Build-Exe.ps1
 # Run Build-HelpFiles
