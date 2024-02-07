@@ -2,7 +2,6 @@
 
 Release Date: February 7, 2024
 
-
 #### Bug Fixes:
 ```
 * Fixed an issue with test dependencies
