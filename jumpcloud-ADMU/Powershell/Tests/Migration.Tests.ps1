@@ -88,7 +88,7 @@ Describe 'Migration Test Scenarios' {
                     Write-Host "File does not exist"
                 }
 
-            }) -ArgumentList:($rootPath, $testPath)  -credential:($credentials)
+            }) -ArgumentList:($rootPath)  -credential:($credentials)
             # wait until the job is done
             $ftaList = Receive-Job $job -Wait
             # do migration
