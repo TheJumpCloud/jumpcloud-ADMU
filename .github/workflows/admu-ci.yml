@@ -101,7 +101,12 @@ jobs:
                   if ($($PSDependencies[$RequiredModule].RequiredVersion) -eq "latest"){
                     Install-Module -Name $RequiredModule -Repository:($($PSDependencies[$RequiredModule].Repository))-Force
                   } else {
-                    Install-Module -Name $RequiredModule -Repository:($($PSDependencies[$RequiredModule].Repository)) -RequiredVersion:($($PSDependencies[$RequiredModule].RequiredVersion)) -AllowPrerelease -Force
+                    if($RequiredModule -eq 'PowerShellGet'){
+                      Install-Module -Name $RequiredModule -Repository:($($PSDependencies[$RequiredModule].Repository)) -RequiredVersion:($($PSDependencies[$RequiredModule].RequiredVersion)) -AllowPrerelease -Force -allowClobber
+                    } else {
+                      Install-Module -Name $RequiredModule -Repository:($($PSDependencies[$RequiredModule].Repository)) -RequiredVersion:($($PSDependencies[$RequiredModule].RequiredVersion)) -AllowPrerelease -Force
+                    }
+                    }
                   }
               }
           }
