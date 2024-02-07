@@ -45,11 +45,6 @@ If ($env:CI) {
                 "$PSScriptRoot/Tests/ScheduledTaskTest.Tests.ps1"
             )
         }
-        # 4 = @{
-        #     'filePath' = @(
-        #         "$PSScriptRoot/Tests/FtaPta.Tests.ps1"
-        #     )
-        # }
     }
     write-host "running CI job group: $env:job_group"
     $configRunPath = $jobMatrixSet[[int]$($env:job_group)].filePath

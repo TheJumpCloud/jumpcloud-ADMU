@@ -38,12 +38,6 @@ Describe 'Functions' {
             . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
         }
         It 'Set-FTA should be changed after migration'{
-            # Change the FTA for .txt files to wordpad
-            $Password = "Temp123!"
-            $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-
-            # Initialize a single user to migrate:
-            InitUser -UserName $localUser -Password $Password
             $protocol = "http"
             $fileType = ".txt"
 
