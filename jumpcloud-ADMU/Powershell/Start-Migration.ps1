@@ -1412,7 +1412,7 @@ function Set-ADMUScheduledTask {
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-# Get user file type associations
+# Get user file type associations/FTA
 function Get-UserFileTypeAssociation {
     [CmdletBinding()]
     param (
@@ -1437,8 +1437,7 @@ function Get-UserFileTypeAssociation {
             return $manifestList
 }
 
-# Get user protocol associations
-
+# Get user protocol associations/PTA
 function Get-ProtocolTypeAssociation{
     [CmdletBinding()]
     param (
