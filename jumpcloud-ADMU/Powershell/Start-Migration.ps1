@@ -1120,11 +1120,9 @@ function Test-UsernameOrSID {
         }
     }
 }
-
 #endregion Functions
 
 #region Agent Install Helper Functions
-
 Function Restart-ComputerWithDelay {
     Param(
         [int]$TimeOut = 10
