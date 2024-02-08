@@ -1,3 +1,11 @@
+## 2.6.1
+
+Release Date: February 7, 2024
+
+#### Bug Fixes:
+```
+* Fix issue with manual release type not included in build
+```
 ## 2.6.0
 
 Release Date: February 7, 2024
