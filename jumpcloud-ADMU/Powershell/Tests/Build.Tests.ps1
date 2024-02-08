@@ -93,9 +93,12 @@ Describe "Module Validation Tests" {
             Write-Host "Module Changelog Content: $ModuleChangelogVersionMatch"
             $ModuleChangelogVersion = $ModuleChangelogVersionMatch.Matches.Value
             Write-Host "Module Changelog Version: $ModuleChangelogVersion"
-            # Compare
             $latestVersion = [version]$lastestModule.version
-            ([version]$ModuleChangelogVersion).$($env:ModuleVersionType) | Should -Be ($latestVersion.$($env:ModuleVersionType) + 1)
+            if ($env:ModuleVersionType -eq "manual") {
+                $ModuleChangelogVersion | Should -BeGreaterThan $latestVersion
+            } else {
+                ([version]$ModuleChangelogVersion).$($env:ModuleVersionType) | Should -Be ($latestVersion.$($env:ModuleVersionType) + 1)
+            }
 
         }
         It 'Module Changelog should not contain placeholder values' {
