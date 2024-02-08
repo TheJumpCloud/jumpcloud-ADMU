@@ -38,8 +38,15 @@ Describe "Module Validation Tests" {
             $masterform = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1 -useBasicParsing).tostring()
             $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
             $masterformversion = [version]$masterversion.Matches.value
-            $branchformversion | Should -BeGreaterThan $masterformversion
-            $branchformversion.$($env:ModuleVersionType) | Should -Be ($masterformversion.$($env:ModuleVersionType) + 1)
+            if($env:ModuleVersionType -eq "manual"){
+                # Manual Versioning
+                # Given version should be greater than master
+                $branchformversion | Should -BeGreaterThan $masterformversion
+            } else {
+                $branchformversion | Should -BeGreaterThan $masterformversion
+                $branchformversion.$($env:ModuleVersionType) | Should -Be ($masterformversion.$($env:ModuleVersionType) + 1)
+            }
+
         }
 
         It 'Start-Migration version' {
@@ -50,8 +57,12 @@ Describe "Module Validation Tests" {
             $masterStartMigration = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Start-Migration.ps1 -useBasicParsing).tostring()
             $masterVersion = Select-String -inputobject:($masterStartMigration) -Pattern:($VersionRegex)
             $masterStartMigrationVersion = [version]$masterVersion.Matches.value
-            $branchStartMigrationVersion | Should -BeGreaterThan $masterStartMigrationVersion
-            $branchStartMigrationVersion.$($env:ModuleVersionType) | Should -Be ($masterStartMigrationVersion.$($env:ModuleVersionType) + 1)
+            if ($env:ModuleVersionType -eq "manual") {
+                $branchStartMigrationVersion | Should -BeGreaterThan $masterStartMigrationVersion
+            } else {
+                $branchStartMigrationVersion | Should -BeGreaterThan $masterStartMigrationVersion
+                $branchStartMigrationVersion.$($env:ModuleVersionType) | Should -Be ($masterStartMigrationVersion.$($env:ModuleVersionType) + 1)
+            }
         }
 
         It 'gui_jcadmu.exe version' -skip {
@@ -60,8 +71,12 @@ Describe "Module Validation Tests" {
             $masterVersion = Select-String -inputobject:($masterform) -Pattern:($VersionRegex)
             $masterformversion = [version]$masterversion.Matches.value
             $exeversion = [version](Get-Item ("$PSScriptRoot\..\..\exe\gui_jcadmu.exe")).VersionInfo.FileVersion
-            $exeversion | Should -BeGreaterThan $masterformversion
-            $exeversion.$($env:ModuleVersionType) | Should -Be ($masterformversion.$($env:ModuleVersionType) + 1)
+            if ($env:ModuleVersionType -eq "manual") {
+                $exeversion | Should -BeGreaterThan $masterformversion
+            } else {
+                $exeversion | Should -BeGreaterThan $masterformversion
+                $exeversion.$($env:ModuleVersionType) | Should -Be ($masterformversion.$($env:ModuleVersionType) + 1)
+            }
         }
     }
 

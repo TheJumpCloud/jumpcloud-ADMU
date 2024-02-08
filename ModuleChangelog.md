@@ -1,14 +1,6 @@
 ## 2.6.1
 
-Release Date: February 7, 2024
-
-#### Bug Fixes:
-```
-* Fix issue with manual release type not included in build
-```
-## 2.6.0
-
-Release Date: February 7, 2024
+Release Date: February 12, 2024
 
 #### RELEASE NOTES
 
@@ -20,6 +12,7 @@ Release Date: February 7, 2024
 ```
 * Addressed a issue where a registry hive fails to load, the tool will now halt migration instead of continuing
 * Fixed a bug with Module Changelog version test where release type number is not properly outputted
+* Fix issue with manual release type not included in tests
 ```
 ## 2.5.1
 
