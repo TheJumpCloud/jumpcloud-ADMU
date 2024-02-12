@@ -1,4 +1,4 @@
-## 2.6.1
+## 2.6.2
 
 Release Date: February 12, 2024
 
