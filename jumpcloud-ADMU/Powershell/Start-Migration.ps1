@@ -1120,11 +1120,9 @@ function Test-UsernameOrSID {
         }
     }
 }
-
 #endregion Functions
 
 #region Agent Install Helper Functions
-
 Function Restart-ComputerWithDelay {
     Param(
         [int]$TimeOut = 10
@@ -1412,7 +1410,7 @@ function Set-ADMUScheduledTask {
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-# Get user file type associations
+# Get user file type associations/FTA
 function Get-UserFileTypeAssociation {
     [CmdletBinding()]
     param (
@@ -1437,8 +1435,7 @@ function Get-UserFileTypeAssociation {
             return $manifestList
 }
 
-# Get user protocol associations
-
+# Get user protocol associations/PTA
 function Get-ProtocolTypeAssociation{
     [CmdletBinding()]
     param (
@@ -1487,7 +1484,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.6.0'
+        $admuVersion = '2.6.1'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
