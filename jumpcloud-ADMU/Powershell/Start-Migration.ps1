@@ -1717,48 +1717,48 @@ function Get-UserFileTypeAssociation {
         [System.String]
         $UserSid
     )
-        $manifestList = @()
-            # Test path for file type associations
-            $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
-            if (Test-Path $pathRoot) {
-                $exts = Get-ChildItem $pathRoot*
-                foreach ($ext in $exts) {
-                    $indivExtension = $ext.PSChildName
-                    $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
-                    $manifestList += [PSCustomObject]@{
-                        extension  = $indivExtension
-                        programId = $progId
-                    }
-                }
+    $manifestList = @()
+    # Test path for file type associations
+    $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
+    if (Test-Path $pathRoot) {
+        $exts = Get-ChildItem $pathRoot*
+        foreach ($ext in $exts) {
+            $indivExtension = $ext.PSChildName
+            $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
+            $manifestList += [PSCustomObject]@{
+                extension = $indivExtension
+                programId = $progId
             }
-            return $manifestList
+        }
+    }
+    return $manifestList
 }
 
 # Get user protocol associations/PTA
-function Get-ProtocolTypeAssociation{
+function Get-ProtocolTypeAssociation {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, HelpMessage = 'The SID of the user to capture file type associations')]
         [System.String]
         $UserSid
     )
-        $manifestList = @()
+    $manifestList = @()
 
-            $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
-            if (Test-Path $pathRoot) {
-                Get-ChildItem $pathRoot* |
-                ForEach-Object {
+    $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
+    if (Test-Path $pathRoot) {
+        Get-ChildItem $pathRoot* |
+        ForEach-Object {
 
-                    $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
-                    if ($progId) {
-                        $manifestList += [PSCustomObject]@{
-                            extension  = $_.PSChildName
-                            programId = $progId
-                        }
-                    }
+            $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
+            if ($progId) {
+                $manifestList += [PSCustomObject]@{
+                    extension = $_.PSChildName
+                    programId = $progId
                 }
             }
-            return $manifestList
+        }
+    }
+    return $manifestList
 }
 ##### END MIT License #####
 
@@ -1784,7 +1784,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.6.2'
+        $admuVersion = '2.7.0'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
