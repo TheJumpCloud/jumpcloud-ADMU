@@ -481,6 +481,7 @@ function Show-ProcessListResult {
             Write-ToLog -Message:("ProcessName: $($Process.ProcessName) | ProcessId: $($Process.ProcessId)")
         }
     }
+    # TODO: Get Processes not owned by user: i.e. search open handles in memory that have been accessed by file
 }
 function Close-ProcessByOwner {
     [CmdletBinding()]
@@ -533,21 +534,160 @@ function Close-ProcessByOwner {
         }
 
         # TODO: wait 1 -5 sec to ensure NTUser is closed
-        Start-Sleep 5
+        Start-Sleep 1
     }
-
     end {
         return $resultList
     }
 }
-
-
 function Set-UserRegistryLoadState {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
         [ValidateSet("Unload", "Load")]
         [System.String]$op,
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("classes", "root")]
+        [System.String]$hive,
+        [Parameter(Mandatory = $true)]
+        [ValidateScript( { Test-Path $_ })]
+        [System.String]$ProfilePath,
+        # User Security Identifier
+        [Parameter(Mandatory = $true)]
+        [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
+        [System.String]$UserSid,
+        [Parameter()]
+        [System.Int32]$counter = 0
+    )
+    begin {
+        Write-ToLog -Message:("## Begin Registry $op $UserSid ##")
+        switch ($hive) {
+            "classes" {
+                $key = "HKU\$($UserSid)_Classes_admu"
+                $hiveFile = "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
+            }
+            "root" {
+                $key = "HKU\$($UserSid)_admu"
+                $hiveFile = "$ProfilePath\NTUSER.DAT.BAK"
+            }
+        }
+        If ($counter -ge 0) {
+            $counter += 1
+        }
+        if ($counter -gt 3) {
+            # if we've tried to close the hive three times, throw error
+            throw "Registry $op $key failed"
+        }
+    }
+    process {
+        $username = Convert-Sid $UserSid
+        switch ($op) {
+            "Load" {
+                switch ($hive) {
+                    "root" {
+                        [gc]::collect()
+                        $results = Set-RegistryExe -op Load -hive root -UserSid $UserSid -ProfilePath $ProfilePath
+                        if ($results) {
+                            Write-ToLog "Load Successful $results"
+                        } else {
+                            $processList = Get-ProcessByOwner -username $username
+                            if ($processList) {
+                                Show-ProcessListResult -ProcessList $processList -domainUsername $username
+                                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                            }
+                            Set-UserRegistryLoadstate -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
+                        }
+                    }
+                    "classes" {
+                        [gc]::collect()
+                        $results = Set-RegistryExe -op Load -hive classes -UserSid $UserSid -ProfilePath $ProfilePath
+                        if ($results) {
+                            Write-ToLog "Load Successful $results"
+                        } else {
+                            $processList = Get-ProcessByOwner -username $username
+                            if ($processList) {
+                                Show-ProcessListResult -ProcessList $processList -domainUsername $username
+                                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                            }
+                            Set-UserRegistryLoadstate -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
+                        }
+                    }
+                }
+            }
+            "Unload" {
+                switch ($hive) {
+                    "root" {
+                        [gc]::collect()
+
+                        $results = Set-RegistryExe -op Unload -hive root -UserSid $UserSid -ProfilePath $ProfilePath
+                        if ($results) {
+                            Write-ToLog "Unload Successful $results"
+
+                        } else {
+                            $processList = Get-ProcessByOwner -username $username
+                            if ($processList) {
+                                Show-ProcessListResult -ProcessList $processList -domainUsername $username
+                                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                            }
+                            Set-UserRegistryLoadstate -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
+                        }
+                    }
+                    "classes" {
+                        [gc]::collect()
+
+                        $results = Set-RegistryExe -op Unload -hive classes -UserSid $UserSid -ProfilePath $ProfilePath
+                        if ($results) {
+                            Write-ToLog "Unload Successful $results"
+
+                        } else {
+                            $processList = Get-ProcessByOwner -username $username
+                            if ($processList) {
+                                Show-ProcessListResult -ProcessList $processList -domainUsername $username
+                                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                            }
+                            Set-UserRegistryLoadstate -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
+                        }
+                    }
+                }
+            }
+        }
+    }
+    end {
+        Write-ToLog -Message:("## End Registry $op $UserSid ##")
+
+    }
+}
+
+function Get-RegistryExeStatus {
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param (
+        [Parameter()]
+        [System.Object]
+        $resultsObject
+    )
+    # if resultsObject has an exception, the command failed:
+    if ($resultsObject.Exception) {
+        # write the warning
+        Write-Warning "$($resultsObject.TargetObject)"
+        Write-Warning "$($resultsObject.InvocationInfo.PositionMessage)"
+        # return false
+        $status = $false
+    } else {
+        # return true
+        $status = $true
+    }
+    # return true or false
+    return $status
+}
+function Set-RegistryExe {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("Unload", "Load")]
+        [System.String]$op,
+        [ValidateSet("classes", "root")]
+        [System.String]$hive,
         [Parameter(Mandatory = $true)]
         [ValidateScript( { Test-Path $_ })]
         [System.String]$ProfilePath,
@@ -557,161 +697,35 @@ function Set-UserRegistryLoadState {
         [System.String]$UserSid
     )
     begin {
-        Write-ToLog -Message:("## Begin Registry $op State ##")
-        $regQuery = REG QUERY HKU *>&1
-    }
-    process {
-        $username = Convert-Sid $UserSid
-        switch ($op) {
-            "Load" {
-                # Current loaded profiles before loading NTUSER.DAT.BAK and USRClass.dat.bak
-                Write-ToLog -Message:('Current Loaded Profiles Before Loading:')
-                for ($i = 0; $i -lt $regQuery.Count; $i++) {
-                    <# Action that will repeat until the condition is met #>
-                    if ($i -eq 0) {
-                        Write-ToLog -Message:("--------------------")
-                    }
-                    if (-Not [System.String]::IsNullOrEmpty($regQuery[$i])) {
-                        Write-ToLog -Message:($regQuery[$i])
-                    }
-                    if ($i -eq ($regQuery.count - 1)) {
-                        Write-ToLog -Message:("--------------------")
-                    }
-                }
-
-                Start-Sleep -Seconds 1
-                $lastModified = Get-Item -path "$ProfilePath\NTUSER.DAT.BAK" -Force | Select-Object -ExpandProperty LastWriteTime
-                Write-ToLog -Message:("Last Modified Time of $ProfilePath\NTUSER.DAT.BAK is $lastModified")
-                $results = REG LOAD HKU\$($UserSid)_admu "$ProfilePath\NTUSER.DAT.BAK" *>&1
-                if ($?) {
-                    Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
-                } else {
-                    # TODO: attempt to reload
-                    ## TODO: Validate
-                    Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
-                    $processList = Get-ProcessByOwner -username $username
-                    Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                    $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
-                    if ($CloseResults.closed -match "SUCCESS") {
-                        Write-ToLog -Message:("Closed Processes for $username")
-                        Write-ToLog -Message:("Attempting to RELoad profile: $ProfilePath\NTUSER.DAT.BAK")
-                        $results = REG LOAD HKU\$($UserSid)_admu "$ProfilePath\NTUSER.DAT.BAK" *>&1
-                        if ($?) {
-                            Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
-                        } else {
-                            throw "Could not load profile: $ProfilePath\NTUSER.DAT.BAK"
-                        }
-                    } elseif ($CloseResults.closed -match "NA") {
-                        Write-ToLog -Message:("Could not close processes when loading $ProfilePath\NTUSER.DAT.BAK for $username. Exiting...")
-                        Throw "Could not load profile: $ProfilePath\NTUSER.DAT.BAK"
-                    }
-                }
-                Start-Sleep -Seconds 1
-                $lastModified = Get-Item -path "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force | Select-Object -ExpandProperty LastWriteTime
-                Write-ToLog -Message:("Last Modified Time of $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak is $lastModified")
-                $results = REG LOAD HKU\"$($UserSid)_Classes_admu" "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" *>&1
-                # Get the last modified time of the UsrClass.dat.bak file
-                if ($?) {
-                    Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
-                } else {
-                    # TODO: attempt to reload
-                    ## TODO Validate:
-                    Write-ToLog -Message:('Could not load profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
-                    $processList = Get-ProcessByOwner -username $username
-                    Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                    $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
-                    if ($CloseResults.closed -match "SUCCESS") {
-                        Write-ToLog -Message:("Closed Processes for $username")
-                        Write-ToLog -Message:("Attempting to RELoad profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
-                        $results = REG LOAD HKU\$($UserSid)_Classes_admu *>&1
-                        if ($?) {
-                            Write-ToLog -Message:('Loaded Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
-                        } else {
-                            Throw "Could not load profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
-                        }
-                    }
-                    if ($CloseResults.closed -match "NA") {
-                        Write-ToLog -Message:("Could not close processes when Loading $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak for $username. Exiting...")
-                        Throw "Could not load profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
-                    }
-                }
+        switch ($hive) {
+            "classes" {
+                $key = "HKU\$($UserSid)_Classes_admu"
+                $hiveFile = "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
             }
-            "Unload" {
-                [gc]::collect()
-                Write-ToLog -Message:('Current Loaded Profiles Before Loading:')
-                for ($i = 0; $i -lt $regQuery.Count; $i++) {
-                    <# Action that will repeat until the condition is met #>
-                    if ($i -eq 0) {
-                        Write-ToLog -Message:("--------------------")
-                    }
-                    if (-Not [System.String]::IsNullOrEmpty($regQuery[$i])) {
-                        Write-ToLog -Message:($regQuery[$i])
-                    }
-                    if ($i -eq ($regQuery.count - 1)) {
-                        Write-ToLog -Message:("--------------------")
-                    }
-                }
-                Start-Sleep -Seconds 1
-                $lastModified = Get-Item -path "$ProfilePath\NTUSER.DAT.BAK" -Force | Select-Object -ExpandProperty LastWriteTime
-                Write-ToLog -Message:("Last Modified Time of $ProfilePath\NTUSER.DAT.BAK is $lastModified")
-                $results = REG UNLOAD HKU\$($UserSid)_admu *>&1
-                if ($?) {
-                    Write-ToLog -Message:('Unloaded Profile: ' + "$ProfilePath\NTUSER.DAT.bak")
-                } else {
-                    # TODO: attempt to unload
-                    ## TODO: Validate
-                    Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\NTUSER.DAT.bak")
-                    $processList = Get-ProcessByOwner -username $username
-                    Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                    $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
-                    Write-ToLog -Message:("CloseResults: $($CloseResults.closed)")
-                    if (($CloseResults.closed)) {
-                        Write-ToLog -Message:("Closed Processes for $username")
-                        Write-ToLog -Message:("Attempting to REUnload profile: $ProfilePath\NTUSER.DAT.BAK")
-                        $results = REG UNLOAD HKU\$($UserSid)_admu *>&1
-                        if ($?) {
-                            Write-ToLog -Message:('Unloaded Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
-                        } else {
-                            Throw "Could not unload profile: $ProfilePath\NTUSER.DAT.BAK"
-                        }
-                    } elseif ($CloseResults.closed -match "NA") {
-                        Throw "Could not unload profile: $ProfilePath\NTUSER.DAT.BAK"
-                    }
-                }
-                Start-Sleep -Seconds 1
-                $lastModified = Get-Item -path "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force | Select-Object -ExpandProperty LastWriteTime
-                Write-ToLog -Message:("Last Modified Time of $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak is $lastModified")
-                $results = REG UNLOAD HKU\$($UserSid)_Classes_admu *>&1
-                if ($?) {
-                    Write-ToLog -Message:('Unloaded Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
-                } else {
-                    # TODO: attempt to unload
-                    ## TODO: Validate
-                    Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
-                    $processList = Get-ProcessByOwner -username $username
-                    Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                    $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
-                    $results = REG UNLOAD HKU\$($UserSid)_Classes_admu *>&1
-                    if ($CloseResults.closed -match "SUCCESS") {
-                        Write-ToLog -Message:("Closed Processes for $username")
-                        Write-ToLog -Message:("Attempting to REUnload profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
-                        $results = REG UNLOAD HKU\$($UserSid)_Classes_admu *>&1
-                        if ($?) {
-                            Write-ToLog -Message:('Unloaded Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
-                        } else {
-                            Throw "Could not unload profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
-                        }
-                    } elseif ($CloseResults.closed -match "NA") {
-                        Throw "Could not unload profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
-                    }
-                }
+            "root" {
+                $key = "HKU\$($UserSid)_admu"
+                $hiveFile = "$ProfilePath\NTUSER.DAT.BAK"
             }
         }
     }
-    end {
-        Write-ToLog -Message:("## End Registry $op State ##")
-
+    process {
+        switch ($op) {
+            "Load" {
+                Write-ToLog "REG LOAD $KEY $hiveFile"
+                $results = REG LOAD $key $hiveFile *>&1
+            }
+            "Unload" {
+                Write-ToLog "REG UNLOAD $KEY"
+                $results = REG UNLOAD $key *>&1
+            }
+        }
+        $status = Get-RegistryExeStatus $results
     }
+    end {
+        # Status here will be either true or false depending on whether or not the tool was able to perform the registry action requested
+        return $status
+    }
+
 }
 
 Function Test-UserRegistryLoadState {
@@ -731,7 +745,8 @@ Function Test-UserRegistryLoadState {
         If ($results -match $UserSid) {
             Write-ToLog "REG Keys are loaded, attempting to unload"
             try {
-                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
             } catch {
                 Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
             }
@@ -740,14 +755,16 @@ Function Test-UserRegistryLoadState {
     process {
         # Load New User Profile Registry Keys
         try {
-            Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid
+            Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
+            Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
         } catch {
             Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
         }
         # Load Selected User Profile Keys
         # Unload "Selected" and "NewUser"
         try {
-            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
+            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
+            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
         } catch {
             Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
         }
@@ -758,7 +775,8 @@ Function Test-UserRegistryLoadState {
         If ($results -match $UserSid) {
             Write-ToLog "REG Keys are loaded, attempting to unload"
             try {
-                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
             } catch {
                 throw "Registry Keys are still loaded after Test-UserRegistryLoadState Testing Exiting..."
             }
@@ -789,11 +807,13 @@ Function Backup-RegistryHive {
             Copy-Item -Path "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -ErrorAction Stop
         } catch {
             $processList = Get-ProcessByOwner -username $domainUsername
-            Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+            if ($processList) {
+                Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
+                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+            }
             try {
                 Write-ToLog -Message("Initial backup was not successful, trying again...")
-                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
-                Write-Host $CloseResults
+                Write-ToLog $CloseResults
                 Start-Sleep 1
                 # retry:
                 Copy-Item -Path "$profileImagePath\NTUSER.DAT" -Destination "$profileImagePath\NTUSER.DAT.BAK" -ErrorAction Stop
@@ -1810,24 +1830,26 @@ Function Start-Migration {
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
         # Track migration steps
         $admuTracker = [Ordered]@{
-            backupOldUserReg    = @{'pass' = $false; 'fail' = $false }
-            newUserCreate       = @{'pass' = $false; 'fail' = $false }
-            newUserInit         = @{'pass' = $false; 'fail' = $false }
-            backupNewUserReg    = @{'pass' = $false; 'fail' = $false }
-            testRegLoadUnload   = @{'pass' = $false; 'fail' = $false }
-            copyRegistry        = @{'pass' = $false; 'fail' = $false }
-            copyRegistryFiles   = @{'pass' = $false; 'fail' = $false }
-            renameOriginalFiles = @{'pass' = $false; 'fail' = $false }
-            renameBackupFiles   = @{'pass' = $false; 'fail' = $false }
-            renameHomeDirectory = @{'pass' = $false; 'fail' = $false }
-            ntfsAccess          = @{'pass' = $false; 'fail' = $false }
-            ntfsPermissions     = @{'pass' = $false; 'fail' = $false }
-            activeSetupHKLM     = @{'pass' = $false; 'fail' = $false }
-            activeSetupHKU      = @{'pass' = $false; 'fail' = $false }
-            uwpAppXPacakges     = @{'pass' = $false; 'fail' = $false }
-            uwpDownloadExe      = @{'pass' = $false; 'fail' = $false }
-            leaveDomain         = @{'pass' = $false; 'fail' = $false }
-            autoBind            = @{'pass' = $false; 'fail' = $false }
+            backupOldUserReg              = @{'pass' = $false; 'fail' = $false }
+            newUserCreate                 = @{'pass' = $false; 'fail' = $false }
+            newUserInit                   = @{'pass' = $false; 'fail' = $false }
+            backupNewUserReg              = @{'pass' = $false; 'fail' = $false }
+            testRegLoadUnload             = @{'pass' = $false; 'fail' = $false }
+            loadBeforeCopyRegistry        = @{'pass' = $false; 'fail' = $false }
+            copyRegistry                  = @{'pass' = $false; 'fail' = $false }
+            unloadBeforeCopyRegistryFiles = @{'pass' = $false; 'fail' = $false }
+            copyRegistryFiles             = @{'pass' = $false; 'fail' = $false }
+            renameOriginalFiles           = @{'pass' = $false; 'fail' = $false }
+            renameBackupFiles             = @{'pass' = $false; 'fail' = $false }
+            renameHomeDirectory           = @{'pass' = $false; 'fail' = $false }
+            ntfsAccess                    = @{'pass' = $false; 'fail' = $false }
+            ntfsPermissions               = @{'pass' = $false; 'fail' = $false }
+            activeSetupHKLM               = @{'pass' = $false; 'fail' = $false }
+            activeSetupHKU                = @{'pass' = $false; 'fail' = $false }
+            uwpAppXPacakges               = @{'pass' = $false; 'fail' = $false }
+            uwpDownloadExe                = @{'pass' = $false; 'fail' = $false }
+            leaveDomain                   = @{'pass' = $false; 'fail' = $false }
+            autoBind                      = @{'pass' = $false; 'fail' = $false }
         }
 
         Write-ToLog -Message("The Selected Migration user is: $JumpCloudUsername")
@@ -1992,11 +2014,20 @@ Function Start-Migration {
             Write-ToLog -Message:("Applying ACL...")
             $acl | Set-Acl $newUserProfileImagePath
 
-            # Load New User Profile Registry Keys
-            Set-UserRegistryLoadState -op "Load" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID
-            # Load Selected User Profile Keys
-            Set-UserRegistryLoadState -op "Load" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
-            # Copy from "SelectedUser" to "NewUser"
+            try {
+                # Load New User Profile Registry Keys
+                Set-UserRegistryLoadState -op "Load" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID -hive root
+                Set-UserRegistryLoadState -op "Load" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID -hive classes
+                # Load Selected User Profile Keys
+                Set-UserRegistryLoadState -op "Load" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID -hive root
+                Set-UserRegistryLoadState -op "Load" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID -hive classes
+                # Copy from "SelectedUser" to "NewUser"
+            } catch {
+                Write-ToLog -Message("Could not unload registry hives before copy steps: Exiting...")
+                $admuTracker.loadBeforeCopyRegistry.fail = $true
+                break
+            }
+            $admuTracker.loadBeforeCopyRegistry.pass = $true
 
 
             # TODO: processList
@@ -2060,12 +2091,16 @@ Function Start-Migration {
                 # attempt to recover:
                 # list processes for new user
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
-                Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                if ($processList) {
+                    Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
+                    $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
-                Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                if ($processList) {
+                    Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
+                    $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                }
                 # attempt copy again:
                 reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
                 switch ($?) {
@@ -2135,20 +2170,18 @@ Function Start-Migration {
             ### End reg key check for new user
 
             # Unload "Selected" and "NewUser"
-            Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID
-            Set-UserRegistryLoadState -op "Unload" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
-            [gc]::collect()
-            Write-ToLog -Message("Begin sleep to ensure NTUSER.BAT.DAT is unloaded")
+            try {
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID -hive root
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID -hive classes
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID -hive root
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID -hive classes
+            } catch {
+                Write-ToLog -Message("Could not unload registry hives before copy steps: Exiting...")
+                $admuTracker.unloadBeforeCopyRegistryFiles.fail = $true
+                break
+            }
+            $admuTracker.unloadBeforeCopyRegistryFiles.pass = $true
 
-            Start-Sleep 5
-            Write-ToLog -Message("write out nt user files:")
-            Get-ChildItem -Path "$newUserProfileImagePath" -Force -Filter "NTUSER.DAT"
-            Get-ChildItem -Path "$newUserProfileImagePath" -Force -Filter "NTUSER.DAT.BAK"
-            Get-ChildItem -Path "$oldUserProfileImagePath" -Force -Filter "NTUSER.DAT.BAK"
-            Get-ChildItem -Path "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/" -Force -Filter "UsrClass.dat.bak"
-            Get-ChildItem -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/" -Force -Filter "UsrClass.dat.bak"
-            # Copy both registry hives over and replace the existing backup files in the destination directory.
-            # TODO: processList
             try {
                 Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
                 Copy-Item -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Destination "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Force -ErrorAction Stop
@@ -2157,12 +2190,16 @@ Function Start-Migration {
                 # attempt to recover:
                 # list processes for new user
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
-                Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                if ($processList) {
+                    Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
+                    $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
-                Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                if ($processList) {
+                    Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
+                    $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                }
                 try {
                     Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
                     Copy-Item -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Destination "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Force -ErrorAction Stop

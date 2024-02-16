@@ -212,7 +212,7 @@ Fix for previous version 1.6.7 where after migrating a domain user with the same
 
 #### BUG FIXES:
 
-Domain users with the same name as the system hostname now initalize correctly and the GUI will allow for migration of these user accounts
+Domain users with the same name as the system hostname now initialize correctly and the GUI will allow for migration of these user accounts
 
 ## 1.6.7
 
