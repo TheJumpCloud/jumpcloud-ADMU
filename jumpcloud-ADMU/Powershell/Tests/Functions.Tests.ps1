@@ -32,6 +32,29 @@ Describe 'Functions' {
             Test-RegistryValueMatch -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -Value 'Public' -stringmatch 'Private' | Should -Be $false
         }
     }
+    Context 'Set-PTA/FTA Test'{
+        BeforeAll{
+            # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
+            . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
+        }
+        It 'Set-FTA should be changed after migration'{
+            $protocol = "http"
+            $fileType = ".txt"
+
+            Set-FTA "wordpad" $fileType
+            Set-PTA -ProgId "notepad" -Protocol $protocol
+
+            $fta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice"
+            $pta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
+            # Write out the contents of the FTA and PTA
+            Write-Host "FTA: $($fta)"
+            Write-Host "PTA: $($pta)"
+            # Check if programId is wordpad
+            $fta.ProgId | Should -Contain "wordpad"
+            $pta.ProgId | Should -Contain "notepad"
+
+        }
+    }
     Context 'Test-JumpCloudUsername Function' {
         It 'Valid Username Returns True' {
             # Get the first user

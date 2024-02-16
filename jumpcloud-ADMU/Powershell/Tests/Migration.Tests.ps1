@@ -52,6 +52,69 @@ Describe 'Migration Test Scenarios' {
         Write-Host "---------------------------"
         Write-Host "Begin Test: $testName`n"
     }
+    Context 'Test FTA/PTA CSV Creation' {
+        It 'Creates FTA/PTA CSV files and changes file/protocol associations' {
+            $Password = "Temp123!"
+            $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            InitUser -UserName $localUser -Password $Password
+
+            # Create credential object
+            $credentials = New-Object System.Management.Automation.PSCredential -ArgumentList @($localUser, (ConvertTo-SecureString -String $password -AsPlainText -Force))
+            #
+            $rootPath = "$PSScriptRoot"
+            # run the job to set the STA
+            $job = Start-Job -scriptblock:({
+                # parameters
+                [CmdletBinding()]
+                        param (
+                            [Parameter()]
+                            [string]
+                            $uwpPath
+                        )
+                Set-Location -Path (Get-Item -Path $uwpPath).Parent.Parent.Parent.FullName
+                $path = Get-Location
+
+                Write-Host "Path is $path"
+                . $path/Deploy/uwp_jcadmu.ps1
+
+                if ($?) {
+                    Write-Host "Imported uwp_jcadmu"
+                    $protocol = "http"
+                    $fileType = ".txt"
+                    Set-FTA "wordpad" $fileType
+                    Set-PTA -ProgId "notepad" -Protocol $protocol
+                } else {
+                    Write-Host "File does not exist"
+                }
+
+            }) -ArgumentList:($rootPath)  -credential:($credentials)
+            # wait until the job is done
+            $ftaList = Receive-Job $job -Wait
+            # do migration
+            {Start-Migration -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)"} | Should -Not -Throw
+            # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
+            $FTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv"
+            $PTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\protocolTypeAssociations.csv"
+            # Check if data exists
+            $ftaCsv = Import-Csv $FTAPath
+            $ptaCsv = Import-Csv $PTAPath
+
+            # Check if csv exists
+            Test-Path $FTAPath | Should -Be $true
+            Test-Path $PTAPath | Should -Be $true
+
+            # Check if csv contains http and .txt
+            $ftaValue = $ftaCsv | Where-Object { $_.Extension -eq ".txt" }
+            $ptaValue = $ptaCsv | Where-Object { $_.Extension -eq "http" }
+
+            $ftaValue.programId | Should -Be "wordpad"
+            $ptaValue.programId | Should -Be "notepad"
+        }
+    }
+
+
+# check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
     Context 'Start-Migration on local accounts (Test Functionallity)' {
         It "username extists for testing" {
             foreach ($user in $userTestingHash.Values) {

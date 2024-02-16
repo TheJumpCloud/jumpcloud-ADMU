@@ -1,3 +1,19 @@
+## 2.6.2
+
+Release Date: February 12, 2024
+
+#### RELEASE NOTES
+
+```
+* Added a feature to migrate default applications (file associations) and protocol associations
+```
+
+#### Bug Fixes:
+```
+* Addressed a issue where a registry hive fails to load, the tool will now halt migration instead of continuing
+* Fixed a bug with Module Changelog version test where release type number is not properly outputted
+* Fix issue with manual release type not included in tests
+```
 ## 2.5.1
 
 Release Date: December 18, 2023
