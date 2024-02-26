@@ -593,7 +593,7 @@ function Set-UserRegistryLoadState {
                             $processList = Get-ProcessByOwner -username $username
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                                # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                             }
                             Set-UserRegistryLoadstate -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
                         }
@@ -607,7 +607,7 @@ function Set-UserRegistryLoadState {
                             $processList = Get-ProcessByOwner -username $username
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                                # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                             }
                             Set-UserRegistryLoadstate -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
                         }
@@ -629,7 +629,7 @@ function Set-UserRegistryLoadState {
                             $processList = Get-ProcessByOwner -username $username
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                                # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                             }
                             Set-UserRegistryLoadstate -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
                         }
@@ -645,7 +645,7 @@ function Set-UserRegistryLoadState {
                             $processList = Get-ProcessByOwner -username $username
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                                # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                             }
                             Set-UserRegistryLoadstate -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
                         }
@@ -810,7 +810,7 @@ Function Backup-RegistryHive {
             $processList = Get-ProcessByOwner -username $domainUsername
             if ($processList) {
                 Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
-                $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
             }
             try {
                 Write-ToLog -Message("Initial backup was not successful, trying again...")
@@ -1775,7 +1775,6 @@ Function Start-Migration {
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AutobindJCUser = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$BindAsAdmin = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$SetDefaultWindowsUser = $true,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ForceCloseProcesses = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudAPIKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(24, 24)][string]$JumpCloudOrgID,
@@ -1789,18 +1788,6 @@ Function Start-Migration {
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
 
-        # validate process close options
-        switch ($ForceCloseProcesses) {
-            $true {
-                $Script:ADMU_closeProcess = $true
-            }
-            $false {
-                $Script:ADMU_closeProcess = $false
-            }
-            Default {
-                $Script:ADMU_closeProcess = $false
-            }
-        }
         # validate API KEY/ OrgID if Autobind is selected
         if ($AutobindJCUser) {
             if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
@@ -1850,7 +1837,6 @@ Function Start-Migration {
         # Conditional ParameterSet logic
         If ($PSCmdlet.ParameterSetName -eq "form") {
             $SelectedUserName = $inputObject.SelectedUserName
-            $Script:ADMU_closeProcess = $inputObject.ForceCloseProcesses
             $JumpCloudUserName = $inputObject.JumpCloudUserName
             $TempPassword = $inputObject.TempPassword
             if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
@@ -2114,14 +2100,14 @@ Function Start-Migration {
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                    Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                     Start-Sleep 1
                 }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                    Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                     Start-Sleep 1
                 }
                 reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
@@ -2167,13 +2153,13 @@ Function Start-Migration {
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                    $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                    $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
                 # attempt copy again:
                 reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
@@ -2288,13 +2274,13 @@ Function Start-Migration {
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                    $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                    $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
                 try {
                     Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
@@ -2332,13 +2318,13 @@ Function Start-Migration {
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                    $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                    $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
                 try {
                     Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT" -NewName "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force -ErrorAction Stop
@@ -2393,13 +2379,13 @@ Function Start-Migration {
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                    $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                    $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
                 try {
                     Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force -ErrorAction Stop
@@ -2448,13 +2434,13 @@ Function Start-Migration {
                     $processList = Get-ProcessByOwner -username $JumpCloudUserName
                     if ($processList) {
                         Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                        $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                        # $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                     }
                     # list processes for selectedUser
                     $processList = Get-ProcessByOwner -username $SelectedUserName
                     if ($processList) {
                         Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                        $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                        # $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                     }
                     try {
                         # try again:
