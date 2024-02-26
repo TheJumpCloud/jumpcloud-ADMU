@@ -266,9 +266,9 @@ function New-LocalUserProfile {
         $sb = new-object System.Text.StringBuilder(260);
         $pathLen = $sb.Capacity;
 
-        Write-ToLog "Creating user profile for $UserName";
+        Write-ToLog "Creating user profile for $UserName" -Level Verbose
         if ($UserName -eq $env:computername) {
-            Write-ToLog "$UserName Matches ComputerName";
+            Write-ToLog "$UserName Matches ComputerName" -Level Verbose
             $objUser = New-Object System.Security.Principal.NTAccount("$env:computername\$UserName")
         } else {
             $objUser = New-Object System.Security.Principal.NTAccount($UserName)
@@ -580,13 +580,16 @@ Function Get-WindowsDrive {
   .LINK
      https://gallery.technet.microsoft.com/scriptcenter/Write-ToLog-PowerShell-999c32d0
   #>
+# Set a global parameter for debug logging
+$global:AdminDebug = $false
 Function Write-ToLog {
     [CmdletBinding()]
     Param
     (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
         , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
-        , [Parameter(Mandatory = $false)][ValidateSet("Error", "Warn", "Info")][string]$Level = "Info"
+        , [Parameter(Mandatory = $false)][ValidateSet("Error", "Warn", "Info", "Verbose")][string]$Level = "Info"
+        # Log all messages if $VerbosePreference is set to
     )
     Begin {
         # Set VerbosePreference to Continue so that verbose messages are displayed.
@@ -603,20 +606,44 @@ Function Write-ToLog {
         # Format Date for our Log File
         $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
         # Write message to error, warning, or verbose pipeline and specify $LevelText
-        Switch ($Level) {
-            'Error' {
-                Write-Error $Message
-                $LevelText = 'ERROR:'
+        if ($global:AdminDebug) {
+            Switch ($Level) {
+                'Error' {
+                    Write-Error $Message
+                    $LevelText = 'ERROR:'
+                }
+                'Warn' {
+                    Write-Warning $Message
+                    $LevelText = 'WARNING:'
+                }
+                'Info' {
+                    Write-Verbose $Message
+                    $LevelText = 'INFO:'
+                }
+                'Verbose' {
+                    Write-Verbose $Message
+                    $LevelText = 'INFO:'
+                }
             }
-            'Warn' {
-                Write-Warning $Message
-                $LevelText = 'WARNING:'
-            }
-            'Info' {
-                Write-Verbose $Message
-                $LevelText = 'INFO:'
+        } else {
+            Switch ($Level) {
+                'Error' {
+                    Write-Error $Message
+                    $LevelText = 'ERROR:'
+                }
+                'Warn' {
+                    $LevelText = 'WARNING:'
+                }
+                'Info' {
+                    $LevelText = 'INFO:'
+                }
+                'Verbose' {
+                    Write-Verbose $Message
+                    $LevelText = 'INFO:'
+                }
             }
         }
+
         # Write log entry to $Path
         "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
     }
@@ -945,15 +972,15 @@ Function Install-JumpCloudAgent(
 ) {
     $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
     If (!$AgentService) {
-        Write-ToLog -Message:('Downloading JCAgent Installer')
+        Write-ToLog -Message:('Downloading JCAgent Installer') -Level Verbose
         #Download Installer
         if ((Test-Path $AGENT_INSTALLER_PATH)) {
-            Write-ToLog -Message:('JumpCloud Agent Already Downloaded')
+            Write-ToLog -Message:('JumpCloud Agent Already Downloaded') -Level Verbose
         } else {
             (New-Object System.Net.WebClient).DownloadFile("${AGENT_INSTALLER_URL}", ($AGENT_INSTALLER_PATH))
-            Write-ToLog -Message:('JumpCloud Agent Download Complete')
+            Write-ToLog -Message:('JumpCloud Agent Download Complete') -Level Verbose
         }
-        Write-ToLog -Message:('Running JCAgent Installer')
+        Write-ToLog -Message:('Running JCAgent Installer') -Level Verbose
         Write-ToLog -Message:("LogPath: $env:TEMP\jcUpdate.log")
         # run .MSI installer
         msiexec /i $AGENT_INSTALLER_PATH /quiet /L "$env:TEMP\jcUpdate.log" JCINSTALLERARGUMENTS=`"-k $($JumpCloudConnectKey) /VERYSILENT /NORESTART /NOCLOSEAPPLICATIONS`"
@@ -1476,6 +1503,7 @@ Function Start-Migration {
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AutobindJCUser = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$BindAsAdmin = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$SetDefaultWindowsUser = $true,
+        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AdminDebug = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudAPIKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(24, 24)][string]$JumpCloudOrgID,
@@ -1485,10 +1513,16 @@ Function Start-Migration {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
         $admuVersion = '2.6.2'
-        Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
+        Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion) -Level Verbose
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
-
+#         $ShowWindowAsync = Add-Type -MemberDefinition @"
+#     [DllImport("user32.dll")]
+#     public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+# "@ -Name "Win32ShowWindowAsync" -Namespace "Win32Functions" -PassThru
+#             $ShowWindowAsync::ShowWindowAsync((Get-Process -id $pid).MainWindowHandle, 9) | Out-Null
+#             Write-ToLog "Pid: $pid"
+        $global:AdminDebug = $AdminDebug
 
         # validate API KEY/ OrgID if Autobind is selected
         if ($AutobindJCUser) {
@@ -1575,9 +1609,14 @@ Function Start-Migration {
             $LeaveDomain = $InputObject.LeaveDomain
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
+            # $debug = $inputObject.debug
             $displayGuiPrompt = $true
         }
-        Write-ToLog -Message:("Bindas admin = $($BindAsAdmin)")
+        # if ($debug) {
+        #     Write-ToLog "hWnd $hWnd"
+        #     $ShowWindowAsync::ShowWindowAsync($debug, 1) | Out-Null
+        # }
+        Write-ToLog -Message:("Bind as admin = $($BindAsAdmin)")
         # Define misc static variables
         $netBiosName = Get-NetBiosName
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
@@ -1616,14 +1655,14 @@ Function Start-Migration {
             autoBind            = @{'pass' = $false; 'fail' = $false }
         }
 
-        Write-ToLog -Message("The Selected Migration user is: $JumpCloudUsername")
+        Write-ToLog -Message("The Selected Migration user is: $JumpCloudUsername") -Level Verbose
         $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
 
         Write-ToLog -Message:('Creating JCADMU Temporary Path in ' + $jcAdmuTempPath)
         if (!(Test-path $jcAdmuTempPath)) {
             new-item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
         }
-        Write-ToLog -Message:($localComputerName + ' is currently Domain joined to ' + $WmiComputerSystem.Domain + ' NetBiosName is ' + $netBiosName)
+        Write-ToLog -Message:($localComputerName + ' is currently Domain joined to ' + $WmiComputerSystem.Domain + ' NetBiosName is ' + $netBiosName) -Level Verbose
 
         # Get all schedule tasks that have State of "Ready" and not disabled and "Running"
         $ScheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -ne "Disabled" -and $_.state -ne "Running" }
@@ -1638,24 +1677,32 @@ Function Start-Migration {
     }
     Process {
         # Start Of Console Output
-        Write-ToLog -Message:('Windows Profile "' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUsername + '"')
+        Write-ToLog -Message:('Windows Profile "' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUsername + '"') -Level Verbose
         #region SilentAgentInstall
+        $progressCount = 18
+        $progressCounter = 1
+
         $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
+        # 1/18 in progress
+        Write-Progress -Activity "Migrating User to JumpCloud" -Status "Installing JumpCloud Agent" -PercentComplete ($progressCounter++ / $progressCount * 100)
         if ($InstallJCAgent -eq $true -and (!$AgentService)) {
             #check if jc is not installed and clear folder
             if (Test-Path "$windowsDrive\Program Files\Jumpcloud\") {
                 Remove-ItemIfExist -Path "$windowsDrive\Program Files\Jumpcloud\" -Recurse
             }
             # Agent Installer
+            # Do write-Progess and create an artificial progress percent till $agentInstallStatus is true
             $agentInstallStatus = Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
+
+
             if ($agentInstallStatus) {
-                Write-ToLog -Message:("JumpCloud Agent Install Done")
+                Write-ToLog -Message:("JumpCloud Agent Install Done") -Level Verbose
             } else {
                 Write-ToLog -Message:("JumpCloud Agent Install Failed") -Level Error
                 exit
             }
         } elseif ($InstallJCAgent -eq $true -and ($AgentService)) {
-            Write-ToLog -Message:('JumpCloud agent is already installed on the system.')
+            Write-ToLog -Message:('JumpCloud agent is already installed on the system.') -Level Verbose
         }
 
         # While loop for breaking out of log gracefully:
@@ -1663,16 +1710,17 @@ Function Start-Migration {
         while ($MigrateUser) {
 
 
-
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Backing up Registry Hive" -PercentComplete ($progressCounter++ / $progressCount * 100)
             ### Begin Backup Registry for Selected User ###
             Write-ToLog -Message:('Creating Backup of User Registry Hive')
             # Get Profile Image Path from Registry
             $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
             # Backup Registry NTUSER.DAT and UsrClass.dat files
             try {
+                Write-Progress -Activity "Migrating User to JumpCloud" -Status "Backing up Registry Hive" -PercentComplete ($progressCounter++ / $progressCount * 100)
                 Backup-RegistryHive -profileImagePath $oldUserProfileImagePath
             } catch {
-                Write-ToLog -Message("Could Not Backup Registry Hives: Exiting...")
+                Write-ToLog -Message("Could Not Backup Registry Hives: Exiting...") -Level Error
                 Write-ToLog -Message($_.Exception.Message)
                 $admuTracker.backupOldUserReg.fail = $true
                 break
@@ -1685,16 +1733,17 @@ Function Start-Migration {
             # Create New User
             $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
 
-            New-localUser -Name $JumpCloudUsername -password $newUserPassword -Description "Created By JumpCloud ADMU" -ErrorVariable userExitCode
+            New-localUser -Name $JumpCloudUsername -password $newUserPassword -Description "Created By JumpCloud ADMU" -ErrorVariable userExitCode | Out-Null
 
             if ($userExitCode) {
-                Write-ToLog -Message:("$userExitCode")
-                Write-ToLog -Message:("The user: $JumpCloudUsername could not be created, exiting")
+                Write-ToLog -Message:("$userExitCode") -Level Error
+                Write-ToLog -Message:("The user: $JumpCloudUsername could not be created, exiting") -Level Error
                 $admuTracker.newUserCreate.fail = $true
                 break
             }
             $admuTracker.newUserCreate.pass = $true
             # Initialize the Profile & Set SID
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Initializing new user profile" -PercentComplete ($progressCounter++ / $progressCount * 100)
             $NewUserSID = New-LocalUserProfile -username:($JumpCloudUsername) -ErrorVariable profileInit
             if ($profileInit) {
                 Write-ToLog -Message:("$profileInit")
@@ -1719,6 +1768,7 @@ Function Start-Migration {
 
             ### Begin backup user registry for new user
             try {
+                Write-Progress -Activity "Migrating User to JumpCloud" -Status "Backing up registry hive" -PercentComplete ($progressCounter++ / $progressCount * 100)
                 Backup-RegistryHive -profileImagePath $newUserProfileImagePath
             } catch {
                 Write-ToLog -Message("Could Not Backup Registry Hives in $($newUserProfileImagePath): Exiting...") -level Warn
@@ -1731,6 +1781,8 @@ Function Start-Migration {
 
             ### Begin Test Registry Steps
             # Test Registry Access before edits
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Verifying registry hives" -PercentComplete ($progressCounter++ / $progressCount * 100)
+
             Write-ToLog -Message:('Verifying Registry Hives can be loaded and unloaded')
             try {
                 Test-UserRegistryLoadState -ProfilePath $newUserProfileImagePath -UserSid $newUserSid
@@ -1742,8 +1794,9 @@ Function Start-Migration {
             }
             $admuTracker.testRegLoadUnload.pass = $true
             ### End Test Registry
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Copying local user registry" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
-            Write-ToLog -Message:('Begin new local user registry copy')
+            Write-ToLog -Message:('Begin new local user registry copy') -Level Verbose
             # Give us admin rights to modify
             Write-ToLog -Message:("Take Ownership of $($newUserProfileImagePath)")
             $path = takeown /F "$($newUserProfileImagePath)" /r /d Y 2>&1
@@ -1758,6 +1811,7 @@ Function Start-Migration {
                     }
                 }
             }
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Getting ACLs" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
             Write-ToLog -Message:("Get ACLs for $($newUserProfileImagePath)")
             $acl = Get-Acl ($newUserProfileImagePath)
@@ -1785,6 +1839,8 @@ Function Start-Migration {
             # Load Selected User Profile Keys
             Set-UserRegistryLoadState -op "Load" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
             # Copy from "SelectedUser" to "NewUser"
+            #TODO: Out NULL?
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Copying selected user to new user" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
             reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
             if ($?) {
@@ -1814,7 +1870,9 @@ Function Start-Migration {
                     }
                 }
             }
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Copying SelectedUser_Classes_admu to NewUser_Classes_admu" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
+            #TODO: Out NULL?
             reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
             if ($?) {
                 Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
@@ -1826,7 +1884,7 @@ Function Start-Migration {
             # Validate file permissions on registry item
             if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
             }
             $validateRegistryPermission, $validateRegistryPermissionResult = Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_admu" -username $jumpcloudUsername -type 'registry'
             $validateRegistryPermissionClasses, $validateRegistryPermissionClassesResult = Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_Classes_admu" -username $jumpcloudUsername -type 'registry'
@@ -1845,6 +1903,8 @@ Function Start-Migration {
             $admuTracker.copyRegistry.pass = $true
 
             # Copy the profile containing the correct access and data to the destination profile
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Copying merged profiles to destination profile path" -PercentComplete ($progressCounter++ / $progressCount * 100)
+
             Write-ToLog -Message:('Copying merged profiles to destination profile path')
 
             # Set Registry Check Key for New User
@@ -1880,16 +1940,17 @@ Function Start-Migration {
             ### End reg key check for new user
             $path = $oldUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
             If (!(test-path $path)) {
-                New-Item -ItemType Directory -Force -Path $path
+                New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
 
             # SelectedUserSid
             # Validate file permissions on registry item
             if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
             }
 
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Copying default protocols and apps" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $SelectedUserSid
             Write-ToLog -Message:('Found ' + $fileTypeAssociations.count + ' File Type Associations')
@@ -1951,7 +2012,7 @@ Function Start-Migration {
                 }
             } catch {
                 Write-ToLog -Message("Could not rename original registry files for backup purposes: Exiting...")
-                Write-ToLog -Message($_.Exception.Message)
+                Write-ToLog -Message($_.Exception.Message) -Level Error
                 $admuTracker.renameOriginalFiles.fail = $true
                 break
             }
@@ -1961,19 +2022,18 @@ Function Start-Migration {
             try {
                 Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT.BAK" -NewName "$oldUserProfileImagePath\NTUSER.DAT" -Force -ErrorAction Stop
                 Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
-
-
-
             } catch {
                 Write-ToLog -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
-                Write-ToLog -Message($_.Exception.Message)
+                Write-ToLog -Message($_.Exception.Message) -Level Error
                 $admuTracker.renameBackupFiles.fail = $true
                 break
             }
             $admuTracker.renameBackupFiles.pass = $true
             if ($UpdateHomePath) {
+                Write-Progress -Activity "Migrating User to JumpCloud" -Status "Updating homepath" -PercentComplete ($progressCounter++ / $progressCount * 100)
+
                 Write-ToLog -Message:("Parameter to Update Home Path was set.")
-                Write-ToLog -Message:("Attempting to rename $oldUserProfileImagePath to: $($windowsDrive)\Users\$JumpCloudUsername.")
+                Write-ToLog -Message:("Attempting to rename $oldUserProfileImagePath to: $($windowsDrive)\Users\$JumpCloudUsername.") -Level Verbose
                 # Test Condition for same names
                 # Check if the new user is named username.HOSTNAME or username.000, .001 etc.
                 $userCompare = $oldUserProfileImagePath.Replace("$($windowsDrive)\Users\", "")
@@ -2027,6 +2087,8 @@ Function Start-Migration {
                 $admuTracker.renameHomeDirectory.pass = $true
                 # TODO: reverse track this if we fail later
             } else {
+                Write-Progress -Activity "Migrating User to JumpCloud" -Status "Homepath check" -PercentComplete ($progressCounter++ / $progressCount * 100)
+
                 Write-ToLog -Message:("Parameter to Update Home Path was not set.")
                 Write-ToLog -Message:("The $JumpCloudUserName account will point to $oldUserProfileImagePath profile path")
                 $datPath = $oldUserProfileImagePath
@@ -2062,6 +2124,8 @@ Function Start-Migration {
             # Validate if .DAT has correct permissions
             $validateNTUserDatPermissions, $validateNTUserDatPermissionsResults = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'
             $validateUsrClassDatPermissions, $validateUsrClassDatPermissionsResults = Test-DATFilePermission -path "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat" -username $JumpCloudUserName -type 'ntfs'
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Validating .DAT permissions" -PercentComplete ($progressCounter++ / $progressCount * 100)
+
             if ($validateNTUserDatPermissions ) {
                 Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath) `n$($validateNTUserDatPermissionsResults | Out-String)")
             } else {
@@ -2075,7 +2139,9 @@ Function Start-Migration {
             ## End Regedit Block ##
 
             ### Active Setup Registry Entry ###
-            Write-ToLog -Message:('Creating HKLM Registry Entries')
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Creating HKLM registry entries" -PercentComplete ($progressCounter++ / $progressCount * 100)
+
+            Write-ToLog -Message:('Creating HKLM Registry Entries') -Level Verbose
             # Root Key Path
             $ADMUKEY = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
             # Remove Root from key to pass into functions
@@ -2108,8 +2174,9 @@ Function Start-Migration {
             }
             # $admuTracker.activeSetupHKLM = $true
             ### End Active Setup Registry Entry Region ###
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Updating UWP Apps" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
-            Write-ToLog -Message:('Updating UWP Apps for new user')
+            Write-ToLog -Message:('Updating UWP Apps for new user') -Level Verbose
             $newUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
 
             $path = $newUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
@@ -2126,10 +2193,10 @@ Function Start-Migration {
                     $AzureADStatus = ($line.trimstart('AzureADJoined : '))
                 }
             }
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Checking AzureAD status" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
-            Write-ToLog "AzureAD Status: $AzureADStatus"
+            Write-ToLog "AzureAD Status: $AzureADStatus" -Level Verbose
             if ($AzureADStatus -eq 'YES' -or $netBiosName -match 'AzureAD') {
-
                 # Find Appx User Apps by Username
                 try {
                     $appxList = Get-AppXpackage -user (Convert-Sid $SelectedUserSID) | Select-Object InstallLocation
@@ -2162,15 +2229,17 @@ Function Start-Migration {
             Invoke-WebRequest -Uri 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -OutFile 'C:\windows\uwp_jcadmu.exe' -UseBasicParsing
             Start-Sleep -Seconds 5
             try {
-                Get-Item -Path "$windowsDrive\Windows\uwp_jcadmu.exe" -ErrorAction Stop
+                Get-Item -Path "$windowsDrive\Windows\uwp_jcadmu.exe" -ErrorAction Stop | Out-Null
             } catch {
-                Write-ToLog -Message("Could not find uwp_jcadmu.exe in $windowsDrive\Windows\ UWP Apps will not migrate")
-                Write-ToLog -Message($_.Exception.Message)
+                Write-ToLog -Message("Could not find uwp_jcadmu.exe in $windowsDrive\Windows\ UWP Apps will not migrate") -Level Error
+                Write-ToLog -Message($_.Exception.Message) -Level Error
                 # TODO: Test and return non terminating error here if failure
                 # TODO: Get the checksum
                 # $admuTracker.uwpDownloadExe = $true
             }
-            Write-ToLog -Message:('Profile Conversion Completed')
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Profile Conversion Completed" -Completed
+
+            Write-ToLog -Message:('Profile Conversion Completed') -Level Verbose
 
 
             #region Add To Local Users Group
@@ -2182,7 +2251,7 @@ Function Start-Migration {
             if ($AutobindJCUser -eq $true) {
                 $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $JumpCloudUserId -BindAsAdmin $BindAsAdmin
                 if ($bindResult) {
-                    Write-ToLog -Message:('jumpcloud autobind step succeeded for user ' + $JumpCloudUserName)
+                    Write-ToLog -Message:('jumpcloud autobind step succeeded for user ' + $JumpCloudUserName) -Level Verbose
                     $admuTracker.autoBind.pass = $true
                 } else {
                     Write-ToLog -Message:('jumpcloud autobind step failed, apikey or jumpcloud username is incorrect.') -Level:('Warn')
@@ -2197,7 +2266,7 @@ Function Start-Migration {
                 if ($AzureADStatus -match 'YES') {
                     # Check if user is not NTAUTHORITY\SYSTEM
                     if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false) {
-                        Write-ToLog -Message:('User not NTAuthority\SYSTEM. Invoking as System to leave AzureAD')
+                        Write-ToLog -Message:('User not NTAuthority\SYSTEM. Invoking as System to leave AzureAD') -Level Verbose
                         try {
                             Invoke-AsSystem { dsregcmd.exe /leave }
                         } catch {
@@ -2218,7 +2287,7 @@ Function Start-Migration {
                         }
                         # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
                         if ($AzureADStatus -match 'NO') {
-                            Write-toLog -message "Left Azure AD domain successfully`nDevice Domain State`nAzureADJoined : $AzureADStatus`nEnterpriseJoined : $AzureEnterpriseStatus`nDomainJoined : $AzureDomainStatus"
+                            Write-toLog -message "Left Azure AD domain successfully`nDevice Domain State`nAzureADJoined : $AzureADStatus`nEnterpriseJoined : $AzureEnterpriseStatus`nDomainJoined : $AzureDomainStatus" -Level Verbose
 
                         } else {
                             Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
@@ -2288,10 +2357,10 @@ Function Start-Migration {
                     switch ($trackedStep) {
                         # Case for reverting 'newUserInit' steps
                         'newUserInit' {
-                            Write-ToLog -Message:("Attempting to revert $($trackedStep) steps")
+                            Write-ToLog -Message:("Attempting to revert $($trackedStep) steps") -Level Verbose
                             try {
                                 Remove-LocalUserProfile -username $JumpCloudUserName
-                                Write-ToLog -Message:("User: $JumpCloudUserName was successfully removed from the local system")
+                                Write-ToLog -Message:("User: $JumpCloudUserName was successfully removed from the local system") -Level Verbose
                             } catch {
                                 Write-ToLog -Message:("Could not remove the $JumpCloudUserName profile and user account") -Level Error
                             }
@@ -2312,8 +2381,8 @@ Function Start-Migration {
             }
         }
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) {
-            Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
-            Write-ToLog -Message:('Tool options chosen were : ' + "`nInstall JC Agent = " + $InstallJCAgent + "`nLeave Domain = " + $LeaveDomain + "`nForce Reboot = " + $ForceReboot + "`nUpdate Home Path = " + $UpdateHomePath + "`nAutobind JC User = " + $AutobindJCUser)
+            Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile) -Level Verbose
+            Write-ToLog -Message:('Tool options chosen were : ' + "`nInstall JC Agent = " + $InstallJCAgent + "`nLeave Domain = " + $LeaveDomain + "`nForce Reboot = " + $ForceReboot + "`nUpdate Home Path = " + $UpdateHomePath + "`nAutobind JC User = " + $AutobindJCUser) -Level Verbose
             if ($displayGuiPrompt) {
                 Show-Result -domainUser $SelectedUserName -localUser "$($localComputerName)\$($JumpCloudUserName)" -success $true -profilePath $newUserProfileImagePath -logPath $jcAdmuLogFile
             }
