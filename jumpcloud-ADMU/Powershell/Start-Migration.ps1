@@ -2190,7 +2190,7 @@ Function Start-Migration {
                     $AzureADStatus = ($line.trimstart('AzureADJoined : '))
                 }
             }
-            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Checking AzureAD status" -PercentComplete ($progressCounter++ / $progressCount * 100)
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Checking AD status" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
             Write-ToLog "AzureAD Status: $AzureADStatus" -Level Verbose
             if ($AzureADStatus -eq 'YES' -or $netBiosName -match 'AzureAD') {
