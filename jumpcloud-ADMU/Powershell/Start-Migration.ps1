@@ -1679,7 +1679,7 @@ Function Start-Migration {
         # Start Of Console Output
         Write-ToLog -Message:('Windows Profile "' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUsername + '"') -Level Verbose
         #region SilentAgentInstall
-        $progressCount = 18
+        $progressCount = 16
         $progressCounter = 1
 
         $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
@@ -1710,14 +1710,13 @@ Function Start-Migration {
         while ($MigrateUser) {
 
 
-            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Backing up Registry Hive" -PercentComplete ($progressCounter++ / $progressCount * 100)
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Creating backup of user files" -PercentComplete ($progressCounter++ / $progressCount * 100)
             ### Begin Backup Registry for Selected User ###
             Write-ToLog -Message:('Creating Backup of User Registry Hive')
             # Get Profile Image Path from Registry
             $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
             # Backup Registry NTUSER.DAT and UsrClass.dat files
             try {
-                Write-Progress -Activity "Migrating User to JumpCloud" -Status "Backing up Registry Hive" -PercentComplete ($progressCounter++ / $progressCount * 100)
                 Backup-RegistryHive -profileImagePath $oldUserProfileImagePath
             } catch {
                 Write-ToLog -Message("Could Not Backup Registry Hives: Exiting...") -Level Error
@@ -1783,7 +1782,7 @@ Function Start-Migration {
             # Test Registry Access before edits
             Write-Progress -Activity "Migrating User to JumpCloud" -Status "Verifying registry hives" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
-            Write-ToLog -Message:('Verifying Registry Hives can be loaded and unloaded')
+            Write-ToLog -Message:('Verifying registry files can be loaded and unloaded')
             try {
                 Test-UserRegistryLoadState -ProfilePath $newUserProfileImagePath -UserSid $newUserSid
                 Test-UserRegistryLoadState -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
@@ -1870,7 +1869,7 @@ Function Start-Migration {
                     }
                 }
             }
-            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Copying SelectedUser_Classes_admu to NewUser_Classes_admu" -PercentComplete ($progressCounter++ / $progressCount * 100)
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Copying user registry files" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
             #TODO: Out NULL?
             reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
@@ -2030,7 +2029,6 @@ Function Start-Migration {
             }
             $admuTracker.renameBackupFiles.pass = $true
             if ($UpdateHomePath) {
-                Write-Progress -Activity "Migrating User to JumpCloud" -Status "Updating homepath" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
                 Write-ToLog -Message:("Parameter to Update Home Path was set.")
                 Write-ToLog -Message:("Attempting to rename $oldUserProfileImagePath to: $($windowsDrive)\Users\$JumpCloudUsername.") -Level Verbose
@@ -2087,7 +2085,6 @@ Function Start-Migration {
                 $admuTracker.renameHomeDirectory.pass = $true
                 # TODO: reverse track this if we fail later
             } else {
-                Write-Progress -Activity "Migrating User to JumpCloud" -Status "Homepath check" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
                 Write-ToLog -Message:("Parameter to Update Home Path was not set.")
                 Write-ToLog -Message:("The $JumpCloudUserName account will point to $oldUserProfileImagePath profile path")
@@ -2124,7 +2121,7 @@ Function Start-Migration {
             # Validate if .DAT has correct permissions
             $validateNTUserDatPermissions, $validateNTUserDatPermissionsResults = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'
             $validateUsrClassDatPermissions, $validateUsrClassDatPermissionsResults = Test-DATFilePermission -path "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat" -username $JumpCloudUserName -type 'ntfs'
-            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Validating .DAT permissions" -PercentComplete ($progressCounter++ / $progressCount * 100)
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Validating user permissions" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
             if ($validateNTUserDatPermissions ) {
                 Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath) `n$($validateNTUserDatPermissionsResults | Out-String)")
@@ -2139,7 +2136,7 @@ Function Start-Migration {
             ## End Regedit Block ##
 
             ### Active Setup Registry Entry ###
-            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Creating HKLM registry entries" -PercentComplete ($progressCounter++ / $progressCount * 100)
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Creating registry entries" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
             Write-ToLog -Message:('Creating HKLM Registry Entries') -Level Verbose
             # Root Key Path
@@ -2238,7 +2235,6 @@ Function Start-Migration {
                 # $admuTracker.uwpDownloadExe = $true
             }
             Write-Progress -Activity "Migrating User to JumpCloud" -Status "Profile Conversion Completed" -Completed
-
             Write-ToLog -Message:('Profile Conversion Completed') -Level Verbose
 
 
