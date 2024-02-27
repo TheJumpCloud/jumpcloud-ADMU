@@ -581,7 +581,7 @@ Function Get-WindowsDrive {
      https://gallery.technet.microsoft.com/scriptcenter/Write-ToLog-PowerShell-999c32d0
   #>
 # Set a global parameter for debug logging
-$global:AdminDebug = $false
+$Script:AdminDebug = $false
 Function Write-ToLog {
     [CmdletBinding()]
     Param
