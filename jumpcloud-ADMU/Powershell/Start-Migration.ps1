@@ -2171,7 +2171,7 @@ Function Start-Migration {
             }
             # $admuTracker.activeSetupHKLM = $true
             ### End Active Setup Registry Entry Region ###
-            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Updating UWP Apps" -PercentComplete ($progressCounter++ / $progressCount * 100)
+            Write-Progress -Activity "Migrating User to JumpCloud" -Status "Downloading UWP application" -PercentComplete ($progressCounter++ / $progressCount * 100)
 
             Write-ToLog -Message:('Updating UWP Apps for new user') -Level Verbose
             $newUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
