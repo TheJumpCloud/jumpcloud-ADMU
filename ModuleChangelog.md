@@ -1,3 +1,13 @@
+## 2.7.0
+
+Release Date: February 16, 2024
+
+#### RELEASE NOTES
+
+```
+* When loading/ unloading a user's registry hive and an error is encounered, the tool will attempt to close any processes owned by that user.
+```
+
 ## 2.6.2
 
 Release Date: February 12, 2024
@@ -9,11 +19,13 @@ Release Date: February 12, 2024
 ```
 
 #### Bug Fixes:
+
 ```
 * Addressed a issue where a registry hive fails to load, the tool will now halt migration instead of continuing
 * Fixed a bug with Module Changelog version test where release type number is not properly outputted
 * Fix issue with manual release type not included in tests
 ```
+
 ## 2.5.1
 
 Release Date: December 18, 2023
@@ -228,7 +240,7 @@ Fix for previous version 1.6.7 where after migrating a domain user with the same
 
 #### BUG FIXES:
 
-Domain users with the same name as the system hostname now initalize correctly and the GUI will allow for migration of these user accounts
+Domain users with the same name as the system hostname now initialize correctly and the GUI will allow for migration of these user accounts
 
 ## 1.6.7
 
