@@ -1,3 +1,18 @@
+## 2.6.3
+
+Release Date: Mar 5, 2024
+
+#### RELEASE NOTES
+
+```
+* Bug fixes for leave domain and nuget
+```
+
+#### Bug Fixes:
+```
+* Addressed a issue with hybrid leave domains only unjoins AzureAD
+* Fixed issue with nuget release
+```
 ## 2.6.2
 
 Release Date: February 12, 2024

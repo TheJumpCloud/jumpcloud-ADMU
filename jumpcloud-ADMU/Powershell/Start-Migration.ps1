@@ -1484,7 +1484,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.6.2'
+        $admuVersion = '2.6.3'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
@@ -2125,8 +2125,11 @@ Function Start-Migration {
                 if ($line -match "AzureADJoined : ") {
                     $AzureADStatus = ($line.trimstart('AzureADJoined : '))
                 }
+                if ($line -match "DomainJoined : ") {
+                    $AzureDomainStatus = ($line.trimstart('DomainJoined : '))
+                }
             }
-
+            Write-ToLog -Message "DomainJoined Status: $AzureDomainStatus"
             Write-ToLog "AzureAD Status: $AzureADStatus"
             if ($AzureADStatus -eq 'YES' -or $netBiosName -match 'AzureAD') {
 
@@ -2194,12 +2197,10 @@ Function Start-Migration {
             #region Leave Domain or AzureAD
 
             if ($LeaveDomain -eq $true) {
-                if ($AzureADStatus -match 'YES') {
+                if ($AzureADStatus -match 'YES' -or $AzureDomainStatus -match 'YES') {
                     # Check if user is not NTAUTHORITY\SYSTEM
-                    if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false) {
-                        Write-ToLog -Message:('User not NTAuthority\SYSTEM. Invoking as System to leave AzureAD')
                         try {
-                            Invoke-AsSystem { dsregcmd.exe /leave }
+                            Remove-Computer -force #Leave domain, AZUREAD or Hyb
                         } catch {
                             Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
                         }
@@ -2219,32 +2220,12 @@ Function Start-Migration {
                         # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
                         if ($AzureADStatus -match 'NO') {
                             Write-toLog -message "Left Azure AD domain successfully`nDevice Domain State`nAzureADJoined : $AzureADStatus`nEnterpriseJoined : $AzureEnterpriseStatus`nDomainJoined : $AzureDomainStatus"
-
+                            $admuTracker.leaveDomain.pass = $true
                         } else {
                             Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
                         }
-
-                    } else {
-                        try {
-                            Write-ToLog -Message:('Leaving AzureAD Domain with dsregcmd.exe ')
-                            dsregcmd.exe /leave
-                        } catch {
-                            Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
-                            # $admuTracker.leaveDomain.fail = $true
-                        }
-                    }
-                } else {
-                    Try {
-                        Write-ToLog -Message:('Leaving Domain')
-                        $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
-                    } Catch {
-                        Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
-                        # $admuTracker.leaveDomain.fail = $true
-                    }
-                }
-                $admuTracker.leaveDomain.pass = $true
             }
-
+        }
             # re-enable scheduled tasks if they were disabled
             if ($ScheduledTasks) {
                 Set-ADMUScheduledTask -op "enable" -scheduledTasks $ScheduledTasks
