@@ -2201,9 +2201,9 @@ Function Start-Migration {
                     # Check if user is not NTAUTHORITY\SYSTEM
                         try {
                             if ($AzureDomainStatus -match 'NO') {
-                                dsregcmd.exe /leave
+                                dsregcmd.exe /leave # Leave Azure AD
                             } else {
-                                Remove-Computer -force #Leave domain, Hybrid
+                                Remove-Computer -force #Leave local AD or Hybrid
                             }
                         } catch {
                             Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
