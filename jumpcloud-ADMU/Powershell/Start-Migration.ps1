@@ -2198,7 +2198,6 @@ Function Start-Migration {
 
             if ($LeaveDomain -eq $true) {
                 if ($AzureADStatus -match 'YES' -or $AzureDomainStatus -match 'YES') {
-                    # Check if user is not NTAUTHORITY\SYSTEM
                         try {
                             if ($AzureDomainStatus -match 'NO') {
                                 dsregcmd.exe /leave # Leave Azure AD
