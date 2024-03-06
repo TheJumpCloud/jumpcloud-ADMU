@@ -1,4 +1,4 @@
-## 2.6.3
+## 2.6.4
 
 Release Date: Mar 6, 2024
 
@@ -9,10 +9,12 @@ Release Date: Mar 6, 2024
 ```
 
 #### Bug Fixes:
+
 ```
 * When selecting "leave domain" in the GUI or specifying the `leaveDomain` parameter using the PowerShell module, hybrid joined devices will now leave the domain successfully
 * Set the PowerShell module to release
 ```
+
 ## 2.6.2
 
 Release Date: February 12, 2024
@@ -24,11 +26,13 @@ Release Date: February 12, 2024
 ```
 
 #### Bug Fixes:
+
 ```
 * Addressed a issue where a registry hive fails to load, the tool will now halt migration instead of continuing
 * Fixed a bug with Module Changelog version test where release type number is not properly outputted
 * Fix issue with manual release type not included in tests
 ```
+
 ## 2.5.1
 
 Release Date: December 18, 2023
