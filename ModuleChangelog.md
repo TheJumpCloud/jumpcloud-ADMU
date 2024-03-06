@@ -1,6 +1,6 @@
 ## 2.6.3
 
-Release Date: Mar 5, 2024
+Release Date: Mar 6, 2024
 
 #### RELEASE NOTES
 
@@ -10,7 +10,7 @@ Release Date: Mar 5, 2024
 
 #### Bug Fixes:
 ```
-* When selecting "leave domain" in the GUI or specifying the `leaveDomain` parameter using the PowerShell module, hybrid joined devices will now leave the domain successfully 
+* When selecting "leave domain" in the GUI or specifying the `leaveDomain` parameter using the PowerShell module, hybrid joined devices will now leave the domain successfully
 * Set the PowerShell module to release
 ```
 ## 2.6.2
