@@ -5,7 +5,7 @@ Release Date: Mar 5, 2024
 #### RELEASE NOTES
 
 ```
-* Bug fixes for leave domain and nuget
+* Addresses an issue with the `leaveDomain` parameter where devices that were hybrid joined would not leave the domain.
 ```
 
 #### Bug Fixes:
