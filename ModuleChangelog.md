@@ -11,7 +11,7 @@ Release Date: Mar 5, 2024
 #### Bug Fixes:
 ```
 * When selecting "leave domain" in the GUI or specifying the `leaveDomain` parameter using the PowerShell module, hybrid joined devices will now leave the domain successfully 
-* Fixed issue with nuget release
+* Set the PowerShell module to release
 ```
 ## 2.6.2
 
