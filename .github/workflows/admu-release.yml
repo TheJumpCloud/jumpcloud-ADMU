@@ -121,6 +121,7 @@ jobs:
           $psm1Path = "${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.psm1"
           $psm1Content = Get-Content -path $psm1Path
           $psm1Content = $psm1Content -replace "\\Powershell\\", "\Public\"
+          Set-Content -Value $psm1Content -Path $psm1Path -Force
           # Pack
           nuget pack "${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.nuspec"
       - name: Validate NuPkg File
