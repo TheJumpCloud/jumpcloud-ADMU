@@ -10,7 +10,7 @@ Release Date: Mar 5, 2024
 
 #### Bug Fixes:
 ```
-* Addressed a issue with hybrid leave domains only unjoins AzureAD
+* When selecting "leave domain" in the GUI or specifying the `leaveDomain` parameter using the PowerShell module, hybrid joined devices will now leave the domain successfully 
 * Fixed issue with nuget release
 ```
 ## 2.6.2
