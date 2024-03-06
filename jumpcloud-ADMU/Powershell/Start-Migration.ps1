@@ -1149,107 +1149,6 @@ Function Restart-ComputerWithDelay {
         Restart-Computer -ComputerName $env:COMPUTERNAME -Force
     }
 }
-# Invoke system class “InvokeAsSystemSvc.exe” to execute the ADMU.ps1 script
-Function Invoke-AsSystem {
-    #
-    # Invoke-AsSystem is a quick hack to run a PS ScriptBlock as the System account
-    # It is possible to pass and retrieve object through the pipeline, though objects
-    # are passed as serialized objects using export/clixml.
-    #
-
-    param(
-        [scriptblock] $Process = { Get-ChildItem },
-        [scriptblock] $Begin = {} ,
-        [scriptblock] $End = {} ,
-        [int] $Depth = 4
-    )
-    begin {
-        Function Test-Elevated {
-            $wid = [System.Security.Principal.WindowsIdentity ]::GetCurrent()
-            $prp = new-object System.Security.Principal.WindowsPrincipal($wid )
-            $adm = [System.Security.Principal.WindowsBuiltInRole ]::Administrator
-            $prp.IsInRole( $adm)
-        }
-        $code = @"
-using System;
-using System.ServiceProcess;
-namespace CosmosKey.Powershell.InvokeAsSystemSvc
-{
-    class TempPowershellService : ServiceBase
-    {
-        static void Main()
-        {
-            ServiceBase.Run(new ServiceBase[] { new TempPowershellService() });
-        }
-        protected override void OnStart(string[] args)
-        {
-            string[] clArgs = Environment.GetCommandLineArgs();
-            try
-            {
-                string argString = String.Format(
-                    "-command .{{import-clixml '{0}' | .'{1}' | export-clixml -Path '{2}' -Depth {3}}}",
-                    clArgs[1],
-                    clArgs[2],
-                    clArgs[3],
-                    clArgs[5]);
-                System.Diagnostics.Process.Start("powershell", argString).WaitForExit();
-                System.IO.File.AppendAllText(clArgs[4], "success");
-            }
-            catch (Exception e)
-            {
-                System.IO.File.AppendAllText(clArgs[4], "fail\r\n" + e.Message);
-            }
-        }
-        protected override void OnStop()
-        {
-        }
-    }
-}
-"@
-        if ( -not (Test-Elevated)) {
-            throw "Process is not running as an eleveated process. Please run as elevated."
-        }
-        [void][ System.Reflection.Assembly]::LoadWithPartialName( "System.ServiceProcess")
-        $serviceNamePrefix = "MyTempPowershellSvc"
-        $timeStamp = get-date -Format yyyyMMdd-HHmmss
-        $serviceName = "{0}-{1}" -f $serviceNamePrefix , $timeStamp
-        $tempPSexe = "{0}.exe" -f $serviceName , $timeStamp
-        $tempPSout = "{0}.out" -f $serviceName , $timeStamp
-        $tempPSin = "{0}.in" -f $serviceName , $timeStamp
-        $tempPSscr = "{0}.ps1" -f $serviceName , $timeStamp
-        $tempPScomplete = "{0}.end" -f $serviceName , $timeStamp
-        $servicePath = Join-Path $env:temp $tempPSexe
-        $outPath = Join-Path $env:temp $tempPSout
-        $inPath = Join-Path $env:temp $tempPSin
-        $scrPath = Join-Path $env:temp $tempPSscr
-        $completePath = Join-Path $env:temp $tempPScomplete
-        $serviceImagePath = "`"{0}`" `"{1}`" `"{2}`" `"{3}`" `"{4}`" {5}" -f $servicePath, $inPath , $scrPath, $outPath, $completePath , $depth
-        Add-Type $code -ReferencedAssemblies "System.ServiceProcess" -OutputAssembly $servicePath -OutputType WindowsApplication | Out-Null
-        $objectsFromPipeline = new-object Collections.ArrayList
-        $script = "BEGIN {{{0}}}`nPROCESS {{{1}}}`nEND {{{2}}}" -f $Begin.ToString() , $Process. ToString(), $End.ToString()
-        $script.ToString() | Out-File -FilePath $scrPath -Force
-    }
-
-    process {
-        [void] $objectsFromPipeline.Add( $_)
-    }
-
-    end {
-        $objectsFromPipeline | Export-Clixml -Path $inPath -Depth $Depth
-        New-Service -Name $serviceName -BinaryPathName $serviceImagePath -DisplayName $serviceName -Description $serviceName -StartupType Manual | out-null
-        $service = Get-Service $serviceName
-        $service.Start() | out-null
-        while ( -not (test-path $completePath)) {
-            start-sleep -Milliseconds 100
-        }
-        $service.Stop() | Out-Null
-        do {
-            $service = Get-Service $serviceName
-        } while ($service.Status -ne "Stopped")
-        ( Get-WmiObject win32_service -Filter "name='$serviceName'" ).delete() | out-null
-        Import-Clixml -Path $outPath
-    }
-}
 # Function to validate if NTUser.dat has SYSTEM, Administrators, and the specified user as full control
 function Test-DATFilePermission {
     param (
@@ -1484,7 +1383,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.6.2'
+        $admuVersion = '2.6.3'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
@@ -2125,8 +2024,11 @@ Function Start-Migration {
                 if ($line -match "AzureADJoined : ") {
                     $AzureADStatus = ($line.trimstart('AzureADJoined : '))
                 }
+                if ($line -match "DomainJoined : ") {
+                    $AzureDomainStatus = ($line.trimstart('DomainJoined : '))
+                }
             }
-
+            Write-ToLog -Message "DomainJoined Status: $AzureDomainStatus"
             Write-ToLog "AzureAD Status: $AzureADStatus"
             if ($AzureADStatus -eq 'YES' -or $netBiosName -match 'AzureAD') {
 
@@ -2194,12 +2096,13 @@ Function Start-Migration {
             #region Leave Domain or AzureAD
 
             if ($LeaveDomain -eq $true) {
-                if ($AzureADStatus -match 'YES') {
-                    # Check if user is not NTAUTHORITY\SYSTEM
-                    if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false) {
-                        Write-ToLog -Message:('User not NTAuthority\SYSTEM. Invoking as System to leave AzureAD')
+                if ($AzureADStatus -match 'YES' -or $AzureDomainStatus -match 'YES') {
                         try {
-                            Invoke-AsSystem { dsregcmd.exe /leave }
+                            if ($AzureDomainStatus -match 'NO') {
+                                dsregcmd.exe /leave # Leave Azure AD
+                            } else {
+                                Remove-Computer -force #Leave local AD or Hybrid
+                            }
                         } catch {
                             Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
                         }
@@ -2219,32 +2122,12 @@ Function Start-Migration {
                         # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
                         if ($AzureADStatus -match 'NO') {
                             Write-toLog -message "Left Azure AD domain successfully`nDevice Domain State`nAzureADJoined : $AzureADStatus`nEnterpriseJoined : $AzureEnterpriseStatus`nDomainJoined : $AzureDomainStatus"
-
+                            $admuTracker.leaveDomain.pass = $true
                         } else {
                             Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
                         }
-
-                    } else {
-                        try {
-                            Write-ToLog -Message:('Leaving AzureAD Domain with dsregcmd.exe ')
-                            dsregcmd.exe /leave
-                        } catch {
-                            Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
-                            # $admuTracker.leaveDomain.fail = $true
-                        }
-                    }
-                } else {
-                    Try {
-                        Write-ToLog -Message:('Leaving Domain')
-                        $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
-                    } Catch {
-                        Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
-                        # $admuTracker.leaveDomain.fail = $true
-                    }
-                }
-                $admuTracker.leaveDomain.pass = $true
             }
-
+        }
             # re-enable scheduled tasks if they were disabled
             if ($ScheduledTasks) {
                 Set-ADMUScheduledTask -op "enable" -scheduledTasks $ScheduledTasks
