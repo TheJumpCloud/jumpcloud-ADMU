@@ -1388,7 +1388,7 @@ function Error-Map {
             Write-Error "Rename Error: Original registry files cannot be renamed. Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
         }
 
-        "rename_ntuser_backup_error" {
+        "rename_backup_registry_file_error" {
             Write-Error "Rename Error: NTUser.dat could not be renamed to NTUser.dat.bak. Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
         }
         "backup_error" {
@@ -1881,7 +1881,7 @@ Function Start-Migration {
                     Write-ToLog -Message:("Successfully renamed $usrClassOriginalName with timestamp $renameDate")
                 } else {
                     Write-ToLog -Message:("Failed to rename $usrClassOriginalName with timestamp $renameDate")
-                    Error-Map -Error:("rename_usrclass_original_error")
+                    Error-Map -Error:("rename_original_registry_file_error")
                     $admuTracker.renameOriginalFiles.fail = $true
                     break
                 }
@@ -1904,7 +1904,7 @@ Function Start-Migration {
             } catch {
                 Write-ToLog -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
                 Write-ToLog -Message($_.Exception.Message)
-                Error-Map -Error:("rename_ntuser_backup_error")
+                Error-Map -Error:("rename_backup_registry_file_error")
                 $admuTracker.renameBackupFiles.fail = $true
                 break
             }
