@@ -419,7 +419,7 @@ function Set-UserRegistryLoadState {
                 if ($?) {
                     Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\NTUSER.DAT.BAK")
                 } else {
-                    Map_Error -Error:("load_error")
+                    Error-Map -Error:("load_error")
                     Throw "Could not load profile: $ProfilePath\NTUSER.DAT.BAK"
                 }
 
@@ -431,7 +431,7 @@ function Set-UserRegistryLoadState {
                 if ($?) {
                     Write-ToLog -Message:('Load Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                 } else {
-                    Map_Error -Error:("load_error")
+                    Error-Map -Error:("load_error")
                     Throw "Could not load profile: $ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
                 }
 
@@ -444,7 +444,7 @@ function Set-UserRegistryLoadState {
                 if ($?) {
                     Write-ToLog -Message:('Unloaded Profile: ' + "$ProfilePath\NTUSER.DAT.bak")
                 } else {
-                    Map_Error -Error:("unload_error")
+                    Error-Map -Error:("unload_error")
                     Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\NTUSER.DAT.bak")
                 }
                 Start-Sleep -Seconds 1
@@ -452,7 +452,7 @@ function Set-UserRegistryLoadState {
                 if ($?) {
                     Write-ToLog -Message:('Unloaded Profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                 } else {
-                    Map_Error -Error:("unload_error")
+                    Error-Map -Error:("unload_error")
                     Write-ToLog -Message:('Could not unload profile: ' + "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak")
                 }
             }
@@ -489,7 +489,7 @@ Function Test-UserRegistryLoadState {
         try {
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid
         } catch {
-            Map_Error -Error:("load_error")
+            Error-Map -Error:("load_error")
             Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
         }
         # Load Selected User Profile Keys
@@ -497,7 +497,7 @@ Function Test-UserRegistryLoadState {
         try {
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
         } catch {
-            Map_Error -Error:("unload_error")
+            Error-Map -Error:("unload_error")
             Write-Error "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
         }
     }
@@ -510,7 +510,7 @@ Function Test-UserRegistryLoadState {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
             }
             catch {
-                Map_Error -Error:("unload_error")
+                Error-Map -Error:("unload_error")
                 throw "Registry Keys are still loaded after Test-UserRegistryLoadState Testing Exiting..."
             }
         }
@@ -532,7 +532,7 @@ Function Backup-RegistryHive {
     } catch {
         Write-ToLog -Message("Could Not Backup Registry Hives in $($profileImagePath): Exiting...")
         Write-ToLog -Message($_.Exception.Message)
-        Map_Error -Error:("backup_error")
+        Error-Map -Error:("backup_error")
         throw "Could Not Backup Registry Hives in $($profileImagePath): Exiting..."
     }
 }
@@ -1370,7 +1370,7 @@ function Get-ProtocolTypeAssociation{
 }
 ##### END MIT License #####
 
-function Map-Error {
+function Error-Map {
     param (
         [string]$ErrorName
     )
@@ -1874,7 +1874,7 @@ Function Start-Migration {
                     Write-ToLog -Message:("Successfully renamed $ntuserOriginalName with timestamp $renameDate")
                 } else {
                     Write-ToLog -Message:("Failed to rename $ntuserOriginalName with timestamp $renameDate")
-                    Map_Error -Error:("rename_ntuser_original_error")
+                    Error-Map -Error:("rename_ntuser_original_error")
                     $admuTracker.renameOriginalFiles.fail = $true
                     break
                 }
@@ -1883,7 +1883,7 @@ Function Start-Migration {
                     Write-ToLog -Message:("Successfully renamed $usrClassOriginalName with timestamp $renameDate")
                 } else {
                     Write-ToLog -Message:("Failed to rename $usrClassOriginalName with timestamp $renameDate")
-                    Map_Error -Error:("rename_usrclass_original_error")
+                    Error-Map -Error:("rename_usrclass_original_error")
                     $admuTracker.renameOriginalFiles.fail = $true
                     break
                 }
@@ -1905,7 +1905,7 @@ Function Start-Migration {
             } catch {
                 Write-ToLog -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
                 Write-ToLog -Message($_.Exception.Message)
-                Map_Error -Error:("rename_ntuser_backup_error")
+                Error-Map -Error:("rename_ntuser_backup_error")
                 $admuTracker.renameBackupFiles.fail = $true
                 break
             }
