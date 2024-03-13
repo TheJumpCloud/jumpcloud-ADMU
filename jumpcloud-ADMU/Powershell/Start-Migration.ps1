@@ -1384,12 +1384,10 @@ function Error-Map {
         "copy_error" {
             Write-Error "Copy Error: Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
         }
-        "rename_ntuser_original_error" {
-            Write-Error "Rename Error: NTUser_original.dat a could not be renamed or copied. Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+        "rename_original_registry_file_error" {
+            Write-Error "Rename Error: Original registry files cannot be renamed. Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
         }
-        "rename_usrclass_original_error" {
-            Write-Error "Rename Error: Usrclass_original.dat could not be renamed or copied. Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
-        }
+
         "rename_ntuser_backup_error" {
             Write-Error "Rename Error: NTUser.dat could not be renamed to NTUser.dat.bak. Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
         }
@@ -1889,6 +1887,7 @@ Function Start-Migration {
                 }
             } catch {
                 Write-ToLog -Message("Could not rename original registry files for backup purposes: Exiting...")
+                Error-Map -Error:("rename_original_registry_file_error")
                 Write-ToLog -Message($_.Exception.Message)
                 $admuTracker.renameOriginalFiles.fail = $true
                 break
