@@ -673,6 +673,7 @@ function Get-RegistryExeStatus {
         # write the warning
         Write-Warning "$($resultsObject.TargetObject)"
         Write-Warning "$($resultsObject.InvocationInfo.PositionMessage)"
+        Error-Map -Error:("load_unload_error")
         # return false
         $status = $false
     } else {
@@ -750,7 +751,7 @@ Function Test-UserRegistryLoadState {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
             } catch {
-                Error-Map -Error:("unload_error")
+                Error-Map -Error:("load_unload_error")
                 Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
             }
         }
@@ -761,7 +762,7 @@ Function Test-UserRegistryLoadState {
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
         } catch {
-            Error-Map -Error:("load_error")
+            Error-Map -Error:("load_unload_error")
             Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
         }
         # Load Selected User Profile Keys
@@ -770,7 +771,7 @@ Function Test-UserRegistryLoadState {
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
         } catch {
-            Error-Map -Error:("unload_error")
+            Error-Map -Error:("load_unload_error")
             Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
         }
     }
@@ -783,7 +784,7 @@ Function Test-UserRegistryLoadState {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
             } catch {
-                Error-Map -Error:("unload_error")
+                Error-Map -Error:("load_unload_error")
                 throw "Registry Keys are still loaded after Test-UserRegistryLoadState Testing Exiting..."
             }
         }
@@ -1798,11 +1799,8 @@ function Error-Map {
         [string]$ErrorName
     )
     switch ($ErrorName) {
-        "load_error" {
-            Write-Error "Load Error: Hive cannot be loaded. Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
-        }
-        "unload_error" {
-            Write-Error "Unload Error: Hive cannot be unloaded. Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+        "load_unload_error" {
+            Write-Error "Load/Unload Error: Hive cannot be loaded or unloaded. Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
         }
         "copy_error" {
             Write-Error "Copy Error: Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
@@ -1816,6 +1814,9 @@ function Error-Map {
         }
         "backup_error" {
             Write-Error "Registry Backup Error: Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+        }
+        Default {
+            Write-Error "Error occured, please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
         }
     }
 }
