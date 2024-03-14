@@ -674,6 +674,7 @@ function Get-RegistryExeStatus {
         Write-Warning "$($resultsObject.TargetObject)"
         Write-Warning "$($resultsObject.InvocationInfo.PositionMessage)"
         Error-Map -Error:("load_unload_error")
+
         # return false
         $status = $false
     } else {
@@ -752,6 +753,7 @@ Function Test-UserRegistryLoadState {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
             } catch {
                 Error-Map -Error:("load_unload_error")
+
                 Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
             }
         }
@@ -772,6 +774,7 @@ Function Test-UserRegistryLoadState {
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
         } catch {
             Error-Map -Error:("load_unload_error")
+
             Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
         }
     }
@@ -2543,7 +2546,6 @@ Function Start-Migration {
                     } catch {
                         Error-Map -Error:("rename_backup_registry_file_error")
                         Write-ToLog -Message($_.Exception.Message)
-
                         $admuTracker.renameBackupFiles.fail = $true
                         break
                     }

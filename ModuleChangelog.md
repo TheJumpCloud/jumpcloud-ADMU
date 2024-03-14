@@ -1,18 +1,16 @@
-## 2.6.4
+## 2.7.0
 
-Release Date: Mar 6, 2024
+Release Date: February 16, 2024
+
 
 #### RELEASE NOTES
 
-```
-* Addresses an issue with the `leaveDomain` parameter where devices that were hybrid joined would not leave the domain.
-```
 
 #### Bug Fixes:
 
 ```
-* When selecting "leave domain" in the GUI or specifying the `leaveDomain` parameter using the PowerShell module, hybrid joined devices will now leave the domain successfully
-* Set the PowerShell module to release
+* When loading/ unloading a user's registry hive and an error is encounered, the tool will attempt to close any processes owned by that user.
+
 ```
 
 ## 2.6.2
@@ -247,7 +245,7 @@ Fix for previous version 1.6.7 where after migrating a domain user with the same
 
 #### BUG FIXES:
 
-Domain users with the same name as the system hostname now initalize correctly and the GUI will allow for migration of these user accounts
+Domain users with the same name as the system hostname now initialize correctly and the GUI will allow for migration of these user accounts
 
 ## 1.6.7
 
