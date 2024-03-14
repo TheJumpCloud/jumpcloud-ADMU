@@ -2776,7 +2776,7 @@ Function Start-Migration {
                                 Write-toLog -message "Left Azure AD domain successfully`nDevice Domain State`nAzureADJoined : $AzureADStatus`nEnterpriseJoined : $AzureEnterpriseStatus`nDomainJoined : $AzureDomainStatus" -Level Verbose
 
                             } else {
-                                Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
+                                Write-ToLog -Message:('Unable to leave domain') -Level:('Warn')
                             }
 
                         } else {
