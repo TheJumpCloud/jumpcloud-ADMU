@@ -2784,7 +2784,7 @@ Function Start-Migration {
                                 Write-ToLog -Message:('Leaving AzureAD Domain with dsregcmd.exe ')
                                 dsregcmd.exe /leave
                             } catch {
-                                Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
+                                Write-ToLog -Message:('Unable to leave domain') -Level:('Warn')
                                 # $admuTracker.leaveDomain.fail = $true
                             }
                         }
