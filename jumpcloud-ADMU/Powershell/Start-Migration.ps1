@@ -1803,7 +1803,7 @@ function Error-Map {
             Write-Error "Load/Unload Error: User registry cannot be loaded or unloaded. Verify that the admin running ADMU has permission to the user's NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
         }
         "copy_error" {
-            Write-Error "Copy Error: Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+            Write-Error "Copy Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
         }
         "rename_original_registry_file_error" {
             Write-Error "Rename Error: Original registry files cannot be renamed. Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
