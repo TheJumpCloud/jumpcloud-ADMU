@@ -2793,7 +2793,7 @@ Function Start-Migration {
                             Write-ToLog -Message:('Leaving Domain')
                             $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
                         } Catch {
-                            Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
+                            Write-ToLog -Message:('Unable to leave domain') -Level:('Warn')
                             # $admuTracker.leaveDomain.fail = $true
                         }
                     }
