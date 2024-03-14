@@ -1800,7 +1800,7 @@ function Error-Map {
     )
     switch ($ErrorName) {
         "load_unload_error" {
-            Write-Error "Load/Unload Error: Hive cannot be loaded or unloaded. Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+            Write-Error "Load/Unload Error: User registry cannot be loaded or unloaded. Verify that the admin running ADMU has permission to the user's NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
         }
         "copy_error" {
             Write-Error "Copy Error: Verify that the admin have proper permissions to NTUser.dat/UsrClass.dat and no process is running for the user to be migrated. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
