@@ -2756,7 +2756,7 @@ Function Start-Migration {
                             try {
                                 Invoke-AsSystem { dsregcmd.exe /leave }
                             } catch {
-                                Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
+                                Write-ToLog -Message:('Unable to leave domain') -Level:('Warn')
                             }
                             # Get Azure AD Status
                             $ADStatus = dsregcmd.exe /status
