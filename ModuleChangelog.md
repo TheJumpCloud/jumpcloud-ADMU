@@ -2,7 +2,11 @@
 
 Release Date: February 16, 2024
 
+
 #### RELEASE NOTES
+
+
+#### Bug Fixes:
 
 ```
 * When loading/ unloading a user's registry hive and an error is encounered, the tool will attempt to close any processes owned by that user.

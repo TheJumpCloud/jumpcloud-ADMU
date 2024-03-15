@@ -673,6 +673,8 @@ function Get-RegistryExeStatus {
         # write the warning
         Write-Warning "$($resultsObject.TargetObject)"
         Write-Warning "$($resultsObject.InvocationInfo.PositionMessage)"
+        Error-Map -Error:("load_unload_error")
+
         # return false
         $status = $false
     } else {
@@ -750,6 +752,8 @@ Function Test-UserRegistryLoadState {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
             } catch {
+                Error-Map -Error:("load_unload_error")
+
                 Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
             }
         }
@@ -760,6 +764,7 @@ Function Test-UserRegistryLoadState {
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
         } catch {
+            Error-Map -Error:("load_unload_error")
             Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
         }
         # Load Selected User Profile Keys
@@ -768,6 +773,8 @@ Function Test-UserRegistryLoadState {
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
         } catch {
+            Error-Map -Error:("load_unload_error")
+
             Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
         }
     }
@@ -780,6 +787,7 @@ Function Test-UserRegistryLoadState {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
             } catch {
+                Error-Map -Error:("load_unload_error")
                 throw "Registry Keys are still loaded after Test-UserRegistryLoadState Testing Exiting..."
             }
         }
@@ -821,6 +829,7 @@ Function Backup-RegistryHive {
                 Copy-Item -Path "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -ErrorAction Stop
             } catch {
                 Write-ToLog -Message("Could Not Backup Registry Hives in $($profileImagePath): Exiting...")
+                Error-Map -Error:("backup_error")
                 Write-ToLog -Message($_.Exception.Message)
                 throw "Could Not Backup Registry Hives in $($profileImagePath): Exiting..."
             }
@@ -1788,7 +1797,32 @@ function Get-ProtocolTypeAssociation {
     return $manifestList
 }
 ##### END MIT License #####
+function Error-Map {
+    param (
+        [string]$ErrorName
+    )
+    switch ($ErrorName) {
+        "load_unload_error" {
+            Write-Error "Load/Unload Error: User registry cannot be loaded or unloaded. Verify that the admin running ADMU has permission to the user's NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+        }
+        "copy_error" {
+            Write-Error "Copy Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+        }
+        "rename_original_registry_file_error" {
+            Write-Error "Rename Error: Registry files cannot be renamed. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+        }
 
+        "rename_backup_registry_file_error" {
+            Write-Error "Rename Error: NTUser.dat could not be renamed to NTUser.dat.bak. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+        }
+        "backup_error" {
+            Write-Error "Registry Backup Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+        }
+        Default {
+            Write-Error "Error occured, please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+        }
+    }
+}
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
     Param (
@@ -2366,6 +2400,7 @@ Function Start-Migration {
                     Write-ToLog -Message:("Successfully renamed $ntuserOriginalName with timestamp $renameDate")
                 } else {
                     Write-ToLog -Message:("Failed to rename $ntuserOriginalName with timestamp $renameDate")
+                    Error-Map -Error:("rename_original_registry_file_error")
                     $admuTracker.renameOriginalFiles.fail = $true
                     break
                 }
@@ -2395,6 +2430,7 @@ Function Start-Migration {
                         Write-ToLog -Message:("Successfully renamed $ntuserOriginalName with timestamp $renameDate")
                     } else {
                         Write-ToLog -Message:("Failed to rename $ntuserOriginalName with timestamp $renameDate")
+                        Error-Map -Error:("rename_original_registry_file_error")
                         $admuTracker.renameOriginalFiles.fail = $true
                         break
                     }
@@ -2402,6 +2438,7 @@ Function Start-Migration {
                 } catch {
 
                     Write-ToLog -Message("Could not rename original NTUser registry files for backup purposes: Exiting...")
+                    Error-Map -Error:("rename_original_registry_file_error")
                     Write-ToLog -Message($_.Exception.Message)
                     $admuTracker.renameOriginalFiles.fail = $true
                     break
@@ -2475,6 +2512,7 @@ Function Start-Migration {
                 Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
             } catch {
                 Write-ToLog -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
+                Error-Map -Error:("rename_backup_registry_file_error")
                 Write-ToLog -Message($_.Exception.Message)
 
                 # attempt to recover:
@@ -2506,8 +2544,8 @@ Function Start-Migration {
 
                         Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
                     } catch {
+                        Error-Map -Error:("rename_backup_registry_file_error")
                         Write-ToLog -Message($_.Exception.Message)
-
                         $admuTracker.renameBackupFiles.fail = $true
                         break
                     }
