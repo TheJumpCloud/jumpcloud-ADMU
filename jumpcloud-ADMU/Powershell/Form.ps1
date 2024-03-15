@@ -179,7 +179,7 @@ function show-mtpSelection {
                 <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="10,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="123,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <CheckBox Name="cb_bindAsAdmin" Content="Bind As Admin" HorizontalAlignment="Left" Margin="253,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
-                <CheckBox Name="cb_leavedomain" ToolTipService.ShowOnDisabled="True" Content="Leave Domain" HorizontalAlignment="Left" Margin="10,123,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                <CheckBox Name="cb_leavedomain" ToolTipService.ShowOnDisabled="True" Content="Leave Domain" HorizontalAlignment="Left" Margin="10,123,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="false"/>
                 <CheckBox Name="cb_autobindjcuser" Content="Autobind JC User" HorizontalAlignment="Left" Margin="123,123,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <Image Name="img_ckey_info" HorizontalAlignment="Left" Height="14" Margin="157,13,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="The Connect Key provides you with a means of associating this system with your JumpCloud organization. The Key is used to deploy the agent to this system." />
                 <Image Name="img_ckey_valid" HorizontalAlignment="Left" Height="14" Margin="454,13,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Connect Key must be 40chars &amp; not contain spaces" />
@@ -294,6 +294,9 @@ if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
         }
         if ($line -match "TenantName : ") {
             $TenantName = ($line.trimstart('WorkplaceTenantName : '))
+        }
+        if ($line -match "DomainJoined : ") {
+            $AzureDomainStatus = ($line.trimstart('DomainJoined : '))
         }
     }
 } else {
@@ -534,6 +537,12 @@ $cb_autobindjcuser.Add_Unchecked( {
 
 
 # Leave Domain checkbox
+if (($AzureADStatus -eq 'Yes') -or ($AzureDomainStatus -eq 'Yes')) {
+    $script:cb_leavedomain.IsEnabled = $true
+} else {
+    Write-ToLog "Device is not AzureAD Joined or Domain Joined. Leave Domain Checkbox Disabled."
+    $script:cb_leavedomain.IsEnabled = $false
+}
 $script:LeaveDomain = $false
 $cb_leavedomain.Add_Checked( { $script:LeaveDomain = $true })
 $cb_leavedomain.Add_Unchecked( { $script:LeaveDomain = $false })
