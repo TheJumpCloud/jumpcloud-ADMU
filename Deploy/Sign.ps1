@@ -43,7 +43,7 @@ foreach ($file in $filesToSign) {
         # new
         & $signpath sign `
             /d "$filename" `
-            /sha1 $rootSubjectName `
+            /r $rootSubjectName `
             /tr $($tsaServers[$tsaIndex]) `
             /td SHA256 `
             /fd SHA256 `
