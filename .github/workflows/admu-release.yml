@@ -156,7 +156,6 @@ jobs:
           curl -X GET https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -H "x-api-key:%SM_API_KEY%" -o smtools-windows-x64.msi
           msiexec /i smtools-windows-x64.msi /quiet /qn
           smksp_registrar.exe list > nul 2>&1
-          smctl.exe healthcheck > nul 2>&1
           smctl.exe keypair ls > nul 2>&1
           C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user > nul 2>&1
           smksp_cert_sync.exe > nul 2>&1
