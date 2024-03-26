@@ -23,7 +23,8 @@ $filesToSign = @(
 )
 
 Write-Output "Signing with Production Cert"
-$codeSigningCertHash = $env:SM_CODE_SIGNING_CERT_SHA1_HASH
+# only sign release builds
+$rootSubjectName = "DigiCert Trusted Root G4"
 
 foreach ($file in $filesToSign) {
     If (Test-Path -Path ($file)) {
@@ -42,7 +43,7 @@ foreach ($file in $filesToSign) {
         # new
         & $signpath sign `
             /d "$filename" `
-            /sha1 $codeSigningCertHash `
+            /r $rootSubjectName `
             /tr $($tsaServers[$tsaIndex]) `
             /td SHA256 `
             /fd SHA256 `
