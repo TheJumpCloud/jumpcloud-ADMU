@@ -363,7 +363,7 @@ Describe 'Migration Test Scenarios' {
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             InitUser -UserName $user1 -Password $Password
-            write-host "`nRunning: Start-Migration -JumpCloudUserName $($user2) -SelectedUserName $($user1) -TempPassword $($Password)`n"
+            write-host "`nRunning: Start-Migration -JumpCloudUserName testUser -SelectedUserName testUser -TempPassword $($Password)`n"
             { Start-Migration -JumpCloudAPIKey $env:PESTER_APIKEY -JumpCloudUserName "testUser" -SelectedUserName "$ENV:COMPUTERNAME\testUser" -TempPassword "$($Password)" } | Should -Throw
         }
     }
