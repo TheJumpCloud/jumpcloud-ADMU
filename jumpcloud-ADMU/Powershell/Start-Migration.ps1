@@ -1898,10 +1898,9 @@ Function Start-Migration {
             break
         }
 
-        # Get the value of selectedusername after / if it exists "domain\username" get the username
-        $selectedUsernameVal = $SelectedUserName.Split('\')[-1]
-        if($JumpCloudUserName -eq $selectedUsernameVal) {
-            Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and SelectedUserName cannot be the same. Exiting..."
+        $hostname = hostname # Get computer hostname
+        if($JumpCloudUserName -eq $hostname) {
+            Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and Hostname cannot be the same. Exiting..."
             break
         }
         # Conditional ParameterSet logic
