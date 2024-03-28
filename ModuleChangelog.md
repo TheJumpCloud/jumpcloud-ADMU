@@ -11,6 +11,7 @@ Release Date: February 16, 2024
 ```
 * When loading/ unloading a user's registry hive and an error is encounered, the tool will attempt to close any processes owned by that user.
 * Added error mapping function to provide useful information for troubleshooting to admin when an error pops up.
+* Added a validation to check if jumpcloud username and local username are the same
 ```
 
 ## 2.6.2

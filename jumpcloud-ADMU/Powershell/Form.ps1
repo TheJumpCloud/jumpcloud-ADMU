@@ -388,7 +388,7 @@ $lbNetBios.Content = $NetBiosName
 #AzureADInformation
 $lbAzureAD_Joined.Content = $AzureADStatus
 $lbTenantName.Content = $TenantName
-
+$hostname = hostname
 Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKey, [object]$tbTempPassword, [object]$lvProfileList, [object]$tbJumpCloudAPIKey) {
     If (![System.String]::IsNullOrEmpty($lvProfileList.SelectedItem.UserName)) {
         If (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) -and (($($tbJumpCloudUserName.Text).length) -le 20) `
@@ -553,9 +553,10 @@ $script:ForceReboot = $false
 $cb_forcereboot.Add_Checked( { $script:ForceReboot = $true })
 $cb_forcereboot.Add_Unchecked( { $script:ForceReboot = $false })
 
+$hostname = hostname
 $tbJumpCloudUserName.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If ((Test-IsNotEmpty $tbJumpCloudUserName.Text) -or (!(Test-HasNoSpace $tbJumpCloudUserName.Text)) -or (Test-Localusername $tbJumpCloudUserName.Text) -or (($tbJumpCloudUserName.Text).Length -gt 20)) {
+        If ((Test-IsNotEmpty $tbJumpCloudUserName.Text) -or (!(Test-HasNoSpace $tbJumpCloudUserName.Text)) -or (Test-Localusername $tbJumpCloudUserName.Text) -or (($tbJumpCloudUserName.Text).Length -gt 20) -or $tbJumpCloudUserName.Text -eq $hostname) {
             $tbJumpCloudUserName.Background = "#FFC6CBCF"
             $tbJumpCloudUserName.BorderBrush = "#FFF90000"
             $img_localaccount_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
@@ -567,6 +568,11 @@ $tbJumpCloudUserName.add_TextChanged( {
             $img_localaccount_valid.Source = DecodeBase64Image -ImageBase64 $ActiveBase64
             $img_localaccount_valid.ToolTip = $null
         }
+        if($tbJumpCloudUserName.Text -eq $hostname){
+            Write-ToLog "JumpCloud Username can not be the same as the hostname"
+            $script:bMigrateProfile.IsEnabled = $false
+            $img_localaccount_valid.ToolTip = "JumpCloud Username can not be the same as the hostname. Please change the username."
+            }
     })
 
 $tbJumpCloudConnectKey.Add_PasswordChanged( {
@@ -675,8 +681,6 @@ $bMigrateProfile.Add_Click( {
                 Write-ToLog "$($tbJumpCloudUserName.Text) not found in the JumpCloud console"
                 return
             }
-
-
             if ( -not [string]::isnullorempty($JCSystemUsername) ) {
                 # Regex to get the username from the domain\username string and compare it to JCSystemUsername
                 #Get all the local users

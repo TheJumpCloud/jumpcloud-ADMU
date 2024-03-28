@@ -1898,6 +1898,11 @@ Function Start-Migration {
             break
         }
 
+        $hostname = hostname # Get computer hostname
+        if($JumpCloudUserName -eq $hostname) {
+            Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and Hostname cannot be the same. Exiting..."
+            break
+        }
         # Conditional ParameterSet logic
         If ($PSCmdlet.ParameterSetName -eq "form") {
             $SelectedUserName = $inputObject.SelectedUserName
