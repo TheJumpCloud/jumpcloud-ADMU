@@ -1,3 +1,13 @@
+## 2.6.5
+
+Release Date: Mar 28, 2024
+
+#### RELEASE NOTES
+
+```
+* Update Signing Certificate
+```
+
 ## 2.6.4
 
 Release Date: Mar 6, 2024
