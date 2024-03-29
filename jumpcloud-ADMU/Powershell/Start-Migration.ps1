@@ -2141,7 +2141,7 @@ Function Start-Migration {
                         }
 
                         if ($LocalDomainStatus -match 'NO') {
-                            Write-toLog -message "Left local AD domain successfully. Device Domain State, Local Domain Joined : $LocalDomainStatus"
+                            Write-toLog -message "Local Domain State, Local Domain Joined : $LocalDomainStatus"
                             $admuTracker.leaveDomain.pass = $true
                         } else {
                             Write-ToLog -Message:('Unable to leave local domain using remove-computer...Running UnJoinDomainOrWorkGroup') -Level:('Warn')
