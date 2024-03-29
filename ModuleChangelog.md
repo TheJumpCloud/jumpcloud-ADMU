@@ -1,3 +1,12 @@
+## 2.6.7
+
+Release Date: Mar 29, 2024
+
+#### RELEASE NOTES
+
+```
+* Fixes an issue with hybrid unjoin would not leave local domain
+```
 ## 2.6.6
 
 Release Date: Mar 28, 2024
