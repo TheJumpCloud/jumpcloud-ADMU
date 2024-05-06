@@ -420,10 +420,12 @@ function Get-ProcessByOwner {
         foreach ($process in $processes) {
             if ($process.id) {
                 # TODO: processItem would throw a null value exception
-                $processItem = (Get-WmiObject -Class Win32_Process -Filter:("ProcessId = $($Process.Id)"))
+                # $processItem = (Get-WmiObject -Class Win32_Process -Filter:("ProcessId = $($Process.Id)"))
+                $processItem = ( Get-CimInstance Win32_Process | Where-Object { $_.ProcessID -eq $($Process.Id) })
                 if (![string]::IsNullOrEmpty($processItem)) {
                     # Create null value check for processItem
-                    $owner = $processItem.GetOwner()
+                    # $owner = $processItem.GetOwner()
+                    $owner = $processItem | Invoke-CimMethod -MethodName GetOwner
                     $processList.Add(
                         [PSCustomObject]@{
                             ProcessName = if ($process.Name) {
@@ -889,7 +891,7 @@ Function Get-WindowsDrive {
      https://gallery.technet.microsoft.com/scriptcenter/Write-ToLog-PowerShell-999c32d0
   #>
 # Set a global parameter for debug logging
-$Script:AdminDebug = $false
+$global:AdminDebug = $true
 Function Write-ToLog {
     [CmdletBinding()]
     Param
@@ -1836,7 +1838,7 @@ Function Start-Migration {
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AutobindJCUser = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$BindAsAdmin = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$SetDefaultWindowsUser = $true,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AdminDebug = $false,
+        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AdminDebug = $true,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudAPIKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(24, 24)][string]$JumpCloudOrgID,
@@ -1849,7 +1851,7 @@ Function Start-Migration {
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion) -Level Verbose
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
-        $script:AdminDebug = $AdminDebug
+        $global:AdminDebug = $AdminDebug
 
 
         # validate API KEY/ OrgID if Autobind is selected
@@ -1899,7 +1901,7 @@ Function Start-Migration {
         }
 
         $hostname = hostname # Get computer hostname
-        if($JumpCloudUserName -eq $hostname) {
+        if ($JumpCloudUserName -eq $hostname) {
             Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and Hostname cannot be the same. Exiting..."
             break
         }
@@ -2065,6 +2067,10 @@ Function Start-Migration {
             # Create New User
             $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
 
+            # if psversion is core, load the local account powershell module (default in 5.1)
+            if ($PSVersionTable.PSEdition -eq "Core") {
+                Import-module microsoft.powershell.localaccounts -UseWindowsPowerShell -Force
+            }
             New-localUser -Name $JumpCloudUsername -password $newUserPassword -Description "Created By JumpCloud ADMU" -ErrorVariable userExitCode | Out-Null
 
             if ($userExitCode) {
@@ -2790,7 +2796,7 @@ Function Start-Migration {
 
             #region Leave Domain or AzureAD
 
-            if (($AzureADStatus -eq 'YES') -or ($AzureDomainStatus -eq 'YES')){
+            if (($AzureADStatus -eq 'YES') -or ($AzureDomainStatus -eq 'YES')) {
                 if ($LeaveDomain -eq $true) {
                     if ($AzureADStatus -match 'YES') {
                         # Check if user is not NTAUTHORITY\SYSTEM
