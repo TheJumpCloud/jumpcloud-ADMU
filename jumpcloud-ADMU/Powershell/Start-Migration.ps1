@@ -257,8 +257,8 @@ function New-LocalUserProfile {
 
         if (-not ([System.Management.Automation.PSTypeName]$methodname).Type) {
             Register-NativeMethod "userenv.dll" "int CreateProfile([MarshalAs(UnmanagedType.LPWStr)] string pszUserSid,`
-           [MarshalAs(UnmanagedType.LPWStr)] string pszUserName,`
-           [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszProfilePath, uint cchProfilePath)";
+            [MarshalAs(UnmanagedType.LPWStr)] string pszUserName,`
+            [Out][MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszProfilePath, uint cchProfilePath)";
 
             Add-NativeMethod -typeName $methodname;
         }
@@ -455,6 +455,28 @@ function Get-ProcessByOwner {
     }
 }
 
+function Show-FileLockProcessListResult {
+    [CmdLetBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Object]
+        $ProcessList,
+        [Parameter(Mandatory = $true)]
+        [String]
+        $FilePath
+    )
+    begin {
+        if ($null -eq $processList) {
+            return
+        }
+    }
+    process {
+        foreach ($item in $ProcessList) {
+            <# $item is the current item #>
+            Write-ToLog "$($item.ProcessName) process with ID: $($item.Id) is currently using the file $FilePath"
+        }
+    }
+}
 function Show-ProcessListResult {
     [CmdletBinding()]
     param (
@@ -542,6 +564,268 @@ function Close-ProcessByOwner {
         return $resultList
     }
 }
+
+#region Get-FileLockProcess
+
+# Copyright 2018 Paul DiMaggio pldmgg
+
+# Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
+
+# http://www.apache.org/licenses/LICENSE-2.0
+# Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+
+# function modified and inspired by https://github.com/pldmgg/misc-powershell/blob/master/MyFunctions/PowerShellCore_Compatible/Get-FileLockProcess.ps1 which was inspired by https://stackoverflow.com/a/20623311
+function Get-FileLockProcess {
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory = $True)]
+        [string]$FilePath
+    )
+    ##### BEGIN Variable/Parameter Transforms and PreRun Prep #####
+
+    if (! $(Test-Path $FilePath)) {
+        Write-Error "The path $FilePath was not found! Halting!"
+        $global:FunctionResult = "1"
+        return
+    }
+
+    ##### END Variable/Parameter Transforms and PreRun Prep #####
+
+
+    ##### BEGIN Main Body #####
+
+    if ($PSVersionTable.Platform -eq "Win32NT" -or
+        $($PSVersionTable.PSVersion.Major -le 5 -and $PSVersionTable.PSVersion.Major -ge 3 -and $PSVersionTable.PSEdition -eq "Desktop")
+    ) {
+        $CurrentlyLoadedAssemblies = [System.AppDomain]::CurrentDomain.GetAssemblies()
+
+        $AssembliesFullInfo = $CurrentlyLoadedAssemblies | Where-Object {
+            $_.GetName().Name -eq "Microsoft.CSharp" -or
+            $_.GetName().Name -eq "mscorlib" -or
+            $_.GetName().Name -eq "System" -or
+            $_.GetName().Name -eq "System.Collections" -or
+            $_.GetName().Name -eq "System.ComponentModel.Primitives" -or
+            $_.GetName().Name -eq "System.Core" -or
+            $_.GetName().Name -eq "System.Diagnostics.Process" -or
+            $_.GetName().Name -eq "System.IO" -or
+            $_.GetName().Name -eq "System.Linq" -or
+            $_.GetName().Name -eq "System.Runtime" -or
+            $_.GetName().Name -eq "System.Runtime.Extensions" -or
+            $_.GetName().Name -eq "System.Runtime.InteropServices"
+        }
+        $AssembliesFullInfo = $AssembliesFullInfo | Where-Object { $_.IsDynamic -eq $False }
+
+        $ReferencedAssemblies = $AssembliesFullInfo.FullName | Sort-Object | Get-Unique
+
+        $usingStatementsAsString = $null
+
+        # For powershell versions 3 to 5, we can use default System.Diagnostics but in 6+, we need to use a static reference.
+        if ($($PSVersionTable.PSVersion.Major -le 5 -and $PSVersionTable.PSVersion.Major -ge 3)) {
+            $usingStatementsAsString = "
+            using Microsoft.CSharp;
+            using System.Collections.Generic;
+            using System.Collections;
+            using System.IO;
+            using System.Linq;
+            using System.Runtime.InteropServices;
+            using System.Runtime;
+            using System;
+            using System.Diagnostics;"
+        } else {
+            $usingStatementsAsString = "
+            using Microsoft.CSharp;
+            using System.Collections.Generic;
+            using System.Collections;
+            using System.IO;
+            using System.Linq;
+            using System.Runtime.InteropServices;
+            using System.Runtime;
+            using System;
+            using static System.Diagnostics.Process;
+            "
+        }
+
+        $TypeDefinition = @"
+        $usingStatementsAsString
+
+        namespace MyCore.Utils
+        {
+            static public class FileLockUtil
+            {
+                [StructLayout(LayoutKind.Sequential)]
+                struct RM_UNIQUE_PROCESS
+                {
+                    public int dwProcessId;
+                    public System.Runtime.InteropServices.ComTypes.FILETIME ProcessStartTime;
+                }
+
+                const int RmRebootReasonNone = 0;
+                const int CCH_RM_MAX_APP_NAME = 255;
+                const int CCH_RM_MAX_SVC_NAME = 63;
+
+                enum RM_APP_TYPE
+                {
+                    RmUnknownApp = 0,
+                    RmMainWindow = 1,
+                    RmOtherWindow = 2,
+                    RmService = 3,
+                    RmExplorer = 4,
+                    RmConsole = 5,
+                    RmCritical = 1000
+                }
+
+                [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+                struct RM_PROCESS_INFO
+                {
+                    public RM_UNIQUE_PROCESS Process;
+
+                    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = CCH_RM_MAX_APP_NAME + 1)]
+                    public string strAppName;
+
+                    [MarshalAs(UnmanagedType.ByValTStr, SizeConst = CCH_RM_MAX_SVC_NAME + 1)]
+                    public string strServiceShortName;
+
+                    public RM_APP_TYPE ApplicationType;
+                    public uint AppStatus;
+                    public uint TSSessionId;
+                    [MarshalAs(UnmanagedType.Bool)]
+                    public bool bRestartable;
+                }
+
+                [DllImport("rstrtmgr.dll", CharSet = CharSet.Unicode)]
+                static extern int RmRegisterResources(uint pSessionHandle,
+                                                    UInt32 nFiles,
+                                                    string[] rgsFilenames,
+                                                    UInt32 nApplications,
+                                                    [In] RM_UNIQUE_PROCESS[] rgApplications,
+                                                    UInt32 nServices,
+                                                    string[] rgsServiceNames);
+
+                [DllImport("rstrtmgr.dll", CharSet = CharSet.Auto)]
+                static extern int RmStartSession(out uint pSessionHandle, int dwSessionFlags, string strSessionKey);
+
+                [DllImport("rstrtmgr.dll")]
+                static extern int RmEndSession(uint pSessionHandle);
+
+                [DllImport("rstrtmgr.dll")]
+                static extern int RmGetList(uint dwSessionHandle,
+                                            out uint pnProcInfoNeeded,
+                                            ref uint pnProcInfo,
+                                            [In, Out] RM_PROCESS_INFO[] rgAffectedApps,
+                                            ref uint lpdwRebootReasons);
+
+                /// <summary>
+                /// Find out what process(es) have a lock on the specified file.
+                /// </summary>
+                /// <param name="path">Path of the file.</param>
+                /// <returns>Processes locking the file</returns>
+                /// <remarks>See also:
+                /// http://msdn.microsoft.com/en-us/library/windows/desktop/aa373661(v=vs.85).aspx
+                /// http://wyupdate.googlecode.com/svn-history/r401/trunk/frmFilesInUse.cs (no copyright in code at time of viewing)
+                ///
+                /// </remarks>
+                static public List<System.Diagnostics.Process> WhoIsLocking(string path)
+                {
+                    uint handle;
+                    string key = Guid.NewGuid().ToString();
+                    List<System.Diagnostics.Process> processes = new List<System.Diagnostics.Process>();
+
+                    int res = RmStartSession(out handle, 0, key);
+                    if (res != 0) throw new Exception("Could not begin restart session.  Unable to determine file locker.");
+
+                    try
+                    {
+                        const int ERROR_MORE_DATA = 234;
+                        uint pnProcInfoNeeded = 0,
+                            pnProcInfo = 0,
+                            lpdwRebootReasons = RmRebootReasonNone;
+
+                        string[] resources = new string[] { path }; // Just checking on one resource.
+
+                        res = RmRegisterResources(handle, (uint)resources.Length, resources, 0, null, 0, null);
+
+                        if (res != 0) throw new Exception("Could not register resource.");
+
+                        //Note: there's a race condition here -- the first call to RmGetList() returns
+                        //      the total number of process. However, when we call RmGetList() again to get
+                        //      the actual processes this number may have increased.
+                        res = RmGetList(handle, out pnProcInfoNeeded, ref pnProcInfo, null, ref lpdwRebootReasons);
+
+                        if (res == ERROR_MORE_DATA)
+                        {
+                            // Create an array to store the process results
+                            RM_PROCESS_INFO[] processInfo = new RM_PROCESS_INFO[pnProcInfoNeeded];
+                            pnProcInfo = pnProcInfoNeeded;
+
+                            // Get the list
+                            res = RmGetList(handle, out pnProcInfoNeeded, ref pnProcInfo, processInfo, ref lpdwRebootReasons);
+                            if (res == 0)
+                            {
+                                processes = new List<System.Diagnostics.Process>((int)pnProcInfo);
+
+                                // Enumerate all of the results and add them to the
+                                // list to be returned
+                                for (int i = 0; i < pnProcInfo; i++)
+                                {
+                                    try
+                                    {
+                                        processes.Add(System.Diagnostics.Process.GetProcessById(processInfo[i].Process.dwProcessId));
+                                    }
+                                    // catch the error -- in case the process is no longer running
+                                    catch (ArgumentException) { }
+                                }
+                            }
+                            else throw new Exception("Could not list processes locking resource.");
+                        }
+                        else if (res != 0) throw new Exception("Could not list processes locking resource. Failed to get size of result.");
+                    }
+                    finally
+                    {
+                        RmEndSession(handle);
+                    }
+
+                    return processes;
+                }
+            }
+        }
+"@
+
+        $CheckMyCoreUtilsFileLockUtilLoaded = $CurrentlyLoadedAssemblies | Where-Object { $_.ExportedTypes -like "MyCore.Utils.FileLockUtil*" }
+        if ($CheckMyCoreUtilsFileLockUtilLoaded -eq $null) {
+            Add-Type -AssemblyName "Microsoft.CSharp"
+            Add-Type -ReferencedAssemblies $ReferencedAssemblies -TypeDefinition $TypeDefinition
+        } else {
+            Write-Verbose "The Namespace MyCore.Utils Class FileLockUtil is already loaded and available!"
+        }
+
+        $Result = [MyCore.Utils.FileLockUtil]::WhoIsLocking($FilePath)
+    } else {
+        # ($PSVersionTable.Platform -ne $null -and $PSVersionTable.Platform -ne "Win32NT")
+        $lsofOutput = lsof $FilePath
+
+        function Parse-lsofStrings ($lsofOutput, $Index) {
+            $($lsofOutput[$Index] -split " " | foreach {
+                    if (![String]::IsNullOrWhiteSpace($_)) {
+                        $_
+                    }
+                }).Trim()
+        }
+
+        $lsofOutputHeaders = Parse-lsofStrings -lsofOutput $lsofOutput -Index 0
+        $lsofOutputValues = Parse-lsofStrings -lsofOutput $lsofOutput -Index 1
+
+        $Result = [pscustomobject]@{}
+        for ($i = 0; $i -lt $lsofOutputHeaders.Count; $i++) {
+            $Result | Add-Member -MemberType NoteProperty -Name $lsofOutputHeaders[$i] -Value $lsofOutputValues[$i]
+        }
+    }
+
+    $Result
+
+    ##### END Main Body #####
+
+}
+#endRegion Get-FileLockProcess
 function Set-UserRegistryLoadState {
     [CmdletBinding()]
     param (
@@ -593,6 +877,8 @@ function Set-UserRegistryLoadState {
                             Write-ToLog "Load Successful $results"
                         } else {
                             $processList = Get-ProcessByOwner -username $username
+                            $ProcessList2 = Get-FileLockProcess -FilePath $ProfilePath
+                            Show-FileLockProcessListResult -ProcessList $processList2 -FilePath $ProfilePath
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
                                 # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
@@ -607,6 +893,8 @@ function Set-UserRegistryLoadState {
                             Write-ToLog "Load Successful $results"
                         } else {
                             $processList = Get-ProcessByOwner -username $username
+                            $ProcessList2 = Get-FileLockProcess -FilePath $ProfilePath
+                            Show-FileLockProcessListResult -ProcessList $processList2 -FilePath $ProfilePath
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
                                 # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
@@ -629,6 +917,9 @@ function Set-UserRegistryLoadState {
 
                         } else {
                             $processList = Get-ProcessByOwner -username $username
+                            $ProcessList2 = Get-FileLockProcess -FilePath $ProfilePath
+                            Show-FileLockProcessListResult -ProcessList $processList2 -FilePath $ProfilePath
+
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
                                 # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
@@ -645,6 +936,8 @@ function Set-UserRegistryLoadState {
 
                         } else {
                             $processList = Get-ProcessByOwner -username $username
+                            $ProcessList2 = Get-FileLockProcess -FilePath $ProfilePath
+                            Show-FileLockProcessListResult -ProcessList $processList2 -FilePath $ProfilePath
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
                                 # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
@@ -2262,6 +2555,15 @@ Function Start-Migration {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
                     # $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
+                # show file lock process
+                $NewUserLockFileDetails = Get-FileLockProcess -FilePath "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat"
+                if ($NewUserLockFileDetails) {
+                    Show-FileLockProcessListResult -ProcessList $NewUserLockFileDetails -FilePath "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat"
+                }
+                $OldUserLockFileDetails = Get-FileLockProcess -FilePath "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat"
+                if ($OldUserLockFileDetails) {
+                    Show-FileLockProcessListResult -ProcessList $OldUserLockFileDetails -FilePath "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat"
+                }
                 # attempt copy again:
                 reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
                 switch ($?) {
@@ -2367,7 +2669,6 @@ Function Start-Migration {
                 break
             }
             $admuTracker.unloadBeforeCopyRegistryFiles.pass = $true
-
             try {
                 Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
                 Copy-Item -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Destination "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Force -ErrorAction Stop
@@ -2385,6 +2686,15 @@ Function Start-Migration {
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
                     # $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                }
+                # show file lock process
+                $NewUserLockFileDetails = Get-FileLockProcess -FilePath "$newUserProfileImagePath/NTUSER.DAT.BAK"
+                if ($NewUserLockFileDetails) {
+                    Show-FileLockProcessListResult -ProcessList $NewUserLockFileDetails -FilePath "$newUserProfileImagePath/NTUSER.DAT.BAK"
+                }
+                $OldUserLockFileDetails = Get-FileLockProcess -FilePath "$oldUserProfileImagePath/NTUSER.DAT.BAK"
+                if ($OldUserLockFileDetails) {
+                    Show-FileLockProcessListResult -ProcessList $OldUserLockFileDetails -FilePath "$oldUserProfileImagePath/NTUSER.DAT.BAK"
                 }
                 try {
                     Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
@@ -2430,6 +2740,11 @@ Function Start-Migration {
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
                     # $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                }
+                # show file lock process
+                $NewUserLockFileDetails = Get-FileLockProcess -FilePath "$oldUserProfileImagePath\NTUSER.DAT"
+                if ($NewUserLockFileDetails) {
+                    Show-FileLockProcessListResult -ProcessList $NewUserLockFileDetails -FilePath "$oldUserProfileImagePath\NTUSER.DAT"
                 }
                 try {
                     Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT" -NewName "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force -ErrorAction Stop
@@ -2494,6 +2809,11 @@ Function Start-Migration {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
                     # $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
                 }
+                # show file lock process
+                $NewUserLockFileDetails = Get-FileLockProcess -FilePath "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat"
+                if ($NewUserLockFileDetails) {
+                    Show-FileLockProcessListResult -ProcessList $NewUserLockFileDetails -FilePath "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat"
+                }
                 try {
                     Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force -ErrorAction Stop
                     # Validate the file have timestamps
@@ -2517,7 +2837,6 @@ Function Start-Migration {
             $admuTracker.renameOriginalFiles.pass = $true
             # finally set .dat.back registry files to the .dat in the profileimagepath
             Write-ToLog -Message:('rename ntuser.dat.bak to ntuser.dat (replace step)')
-
             try {
                 Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT.BAK" -NewName "$oldUserProfileImagePath\NTUSER.DAT" -Force -ErrorAction Stop
                 Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
@@ -2529,7 +2848,15 @@ Function Start-Migration {
                 # attempt to recover:
 
                 # TODO VALIDATE: processList
-
+                # show file lock process
+                $NewUserLockFileDetails = Get-FileLockProcess -FilePath "$oldUserProfileImagePath\NTUSER.DAT.BAK"
+                if ($NewUserLockFileDetails) {
+                    Show-FileLockProcessListResult -ProcessList $NewUserLockFileDetails -FilePath "$oldUserProfileImagePath\NTUSER.DAT.BAK"
+                }
+                $OldUserLockFileDetails = Get-FileLockProcess -FilePath "$oldUserProfileImagePath\NTUSER.DAT"
+                if ($OldUserLockFileDetails) {
+                    Show-FileLockProcessListResult -ProcessList $OldUserLockFileDetails -FilePath "$oldUserProfileImagePath\NTUSER.DAT"
+                }
 
                 try {
                     Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT.BAK" -NewName "$oldUserProfileImagePath\NTUSER.DAT" -Force -ErrorAction Stop
