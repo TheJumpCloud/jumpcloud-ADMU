@@ -474,8 +474,7 @@ Function Test-UserRegistryLoadState {
             Write-ToLog "REG Keys are loaded, attempting to unload"
             try {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
-            }
-            catch {
+            } catch {
                 Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
             }
         }
@@ -502,8 +501,7 @@ Function Test-UserRegistryLoadState {
             Write-ToLog "REG Keys are loaded, attempting to unload"
             try {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid
-            }
-            catch {
+            } catch {
                 throw "Registry Keys are still loaded after Test-UserRegistryLoadState Testing Exiting..."
             }
         }
@@ -1317,48 +1315,48 @@ function Get-UserFileTypeAssociation {
         [System.String]
         $UserSid
     )
-        $manifestList = @()
-            # Test path for file type associations
-            $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
-            if (Test-Path $pathRoot) {
-                $exts = Get-ChildItem $pathRoot*
-                foreach ($ext in $exts) {
-                    $indivExtension = $ext.PSChildName
-                    $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
-                    $manifestList += [PSCustomObject]@{
-                        extension  = $indivExtension
-                        programId = $progId
-                    }
-                }
+    $manifestList = @()
+    # Test path for file type associations
+    $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
+    if (Test-Path $pathRoot) {
+        $exts = Get-ChildItem $pathRoot*
+        foreach ($ext in $exts) {
+            $indivExtension = $ext.PSChildName
+            $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
+            $manifestList += [PSCustomObject]@{
+                extension = $indivExtension
+                programId = $progId
             }
-            return $manifestList
+        }
+    }
+    return $manifestList
 }
 
 # Get user protocol associations/PTA
-function Get-ProtocolTypeAssociation{
+function Get-ProtocolTypeAssociation {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, HelpMessage = 'The SID of the user to capture file type associations')]
         [System.String]
         $UserSid
     )
-        $manifestList = @()
+    $manifestList = @()
 
-            $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
-            if (Test-Path $pathRoot) {
-                Get-ChildItem $pathRoot* |
-                ForEach-Object {
+    $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
+    if (Test-Path $pathRoot) {
+        Get-ChildItem $pathRoot* |
+        ForEach-Object {
 
-                    $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
-                    if ($progId) {
-                        $manifestList += [PSCustomObject]@{
-                            extension  = $_.PSChildName
-                            programId = $progId
-                        }
-                    }
+            $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
+            if ($progId) {
+                $manifestList += [PSCustomObject]@{
+                    extension = $_.PSChildName
+                    programId = $progId
                 }
             }
-            return $manifestList
+        }
+    }
+    return $manifestList
 }
 ##### END MIT License #####
 
@@ -1383,7 +1381,7 @@ Function Start-Migration {
     Begin {
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.6.7'
+        $admuVersion = '2.6.8'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion)
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
@@ -2097,72 +2095,72 @@ Function Start-Migration {
             $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
             if ($LeaveDomain -eq $true) {
                 if ($AzureADStatus -match 'YES' -or $LocalDomainStatus -match 'YES') {
-                        try {
-                            if ($LocalDomainStatus -match 'NO') {
-                                dsregcmd.exe /leave # Leave Azure AD
-                            } else {
-                                Remove-Computer -force #Leave local AD or Hybrid
-                            }
-                        } catch {
-                            Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
+                    try {
+                        if ($LocalDomainStatus -match 'NO') {
+                            dsregcmd.exe /leave # Leave Azure AD
+                        } else {
+                            Remove-Computer -force #Leave local AD or Hybrid
                         }
-                        # Get Azure AD Status
+                    } catch {
+                        Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
+                    }
+                    # Get Azure AD Status
+                    $ADStatus = dsregcmd.exe /status
+                    foreach ($line in $ADStatus) {
+                        if ($line -match "AzureADJoined : ") {
+                            $AzureADStatus = ($line.trimstart('AzureADJoined : '))
+                        }
+                        if ($line -match "DomainJoined : ") {
+                            $LocalDomainStatus = ($line.trimstart('DomainJoined : '))
+                        }
+                    }
+                    # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
+                    if ($AzureADStatus -match 'NO') {
+                        Write-toLog -message "Left Azure AD domain successfully. Device Domain State, AzureADJoined : $AzureADStatus"
+                        $admuTracker.leaveDomain.pass = $true
+                    } else {
+                        Write-ToLog -Message:('Unable to leave Azure Domain. Re-running dsregcmd.exe /leave') -Level:('Warn')
+                        dsregcmd.exe /leave # Leave Azure AD
+
                         $ADStatus = dsregcmd.exe /status
                         foreach ($line in $ADStatus) {
                             if ($line -match "AzureADJoined : ") {
                                 $AzureADStatus = ($line.trimstart('AzureADJoined : '))
                             }
+                        }
+                        if ($AzureADStatus -match 'NO') {
+                            Write-ToLog -Message:('Left Azure AD domain successfully') -Level:('Info')
+                            $admuTracker.leaveDomain.pass = $true
+                        } else {
+                            Write-ToLog -Message:('Unable to leave Azure AD domain') -Level:('Warn')
+                            $admuTracker.leaveDomain.fail = $true
+                        }
+
+                    }
+
+                    if ($LocalDomainStatus -match 'NO') {
+                        Write-toLog -message "Local Domain State, Local Domain Joined : $LocalDomainStatus"
+                        $admuTracker.leaveDomain.pass = $true
+                    } else {
+                        Write-ToLog -Message:('Unable to leave local domain using remove-computer...Running UnJoinDomainOrWorkGroup') -Level:('Warn')
+                        $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+
+                        $ADStatus = dsregcmd.exe /status
+                        foreach ($line in $ADStatus) {
                             if ($line -match "DomainJoined : ") {
                                 $LocalDomainStatus = ($line.trimstart('DomainJoined : '))
                             }
                         }
-                        # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
-                        if ($AzureADStatus -match 'NO') {
-                            Write-toLog -message "Left Azure AD domain successfully. Device Domain State, AzureADJoined : $AzureADStatus"
-                            $admuTracker.leaveDomain.pass = $true
-                        } else {
-                            Write-ToLog -Message:('Unable to leave Azure Domain. Re-running dsregcmd.exe /leave') -Level:('Warn')
-                            dsregcmd.exe /leave # Leave Azure AD
-
-                            $ADStatus = dsregcmd.exe /status
-                            foreach ($line in $ADStatus) {
-                                if ($line -match "AzureADJoined : ") {
-                                    $AzureADStatus = ($line.trimstart('AzureADJoined : '))
-                                }
-                            }
-                            if ($AzureADStatus -match 'NO') {
-                                Write-ToLog -Message:('Left Azure AD domain successfully') -Level:('Info')
-                                $admuTracker.leaveDomain.pass = $true
-                            } else {
-                                Write-ToLog -Message:('Unable to leave Azure AD domain') -Level:('Warn')
-                                $admuTracker.leaveDomain.fail = $true
-                            }
-
-                        }
-
                         if ($LocalDomainStatus -match 'NO') {
-                            Write-toLog -message "Local Domain State, Local Domain Joined : $LocalDomainStatus"
+                            Write-ToLog -Message:('Left local domain successfully') -Level:('Info')
                             $admuTracker.leaveDomain.pass = $true
                         } else {
-                            Write-ToLog -Message:('Unable to leave local domain using remove-computer...Running UnJoinDomainOrWorkGroup') -Level:('Warn')
-                            $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
-
-                            $ADStatus = dsregcmd.exe /status
-                            foreach ($line in $ADStatus) {
-                                if ($line -match "DomainJoined : ") {
-                                    $LocalDomainStatus = ($line.trimstart('DomainJoined : '))
-                                }
-                            }
-                            if ($LocalDomainStatus -match 'NO') {
-                                Write-ToLog -Message:('Left local domain successfully') -Level:('Info')
-                                $admuTracker.leaveDomain.pass = $true
-                            } else {
-                                Write-ToLog -Message:('Unable to leave local domain') -Level:('Warn')
-                                $admuTracker.leaveDomain.fail = $true
-                            }
+                            Write-ToLog -Message:('Unable to leave local domain') -Level:('Warn')
+                            $admuTracker.leaveDomain.fail = $true
                         }
+                    }
+                }
             }
-        }
             # re-enable scheduled tasks if they were disabled
             if ($ScheduledTasks) {
                 Set-ADMUScheduledTask -op "enable" -scheduledTasks $ScheduledTasks

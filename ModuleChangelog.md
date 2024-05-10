@@ -1,3 +1,14 @@
+## 2.6.8
+
+Release Date: May 10, 2024
+
+#### RELEASE NOTES
+
+```
+* Addresses an issue with the migration where a user's `NTUSER.DAT` file has a `system` attribute. Removing this attribute during migration checks will now allow the migration to continue.
+* Release build and sign steps moved to common JumpCloud action.
+```
+
 ## 2.6.7
 
 Release Date: Mar 29, 2024
@@ -7,6 +18,7 @@ Release Date: Mar 29, 2024
 ```
 * Fixes an issue with hybrid unjoin would not leave local domain
 ```
+
 ## 2.6.6
 
 Release Date: Mar 28, 2024
