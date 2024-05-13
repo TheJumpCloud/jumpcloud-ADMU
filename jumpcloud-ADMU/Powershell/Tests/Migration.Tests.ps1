@@ -65,34 +65,34 @@ Describe 'Migration Test Scenarios' {
             $rootPath = "$PSScriptRoot"
             # run the job to set the STA
             $job = Start-Job -scriptblock:({
-                # parameters
-                [CmdletBinding()]
-                        param (
-                            [Parameter()]
-                            [string]
-                            $uwpPath
-                        )
-                Set-Location -Path (Get-Item -Path $uwpPath).Parent.Parent.Parent.FullName
-                $path = Get-Location
+                    # parameters
+                    [CmdletBinding()]
+                    param (
+                        [Parameter()]
+                        [string]
+                        $uwpPath
+                    )
+                    Set-Location -Path (Get-Item -Path $uwpPath).Parent.Parent.Parent.FullName
+                    $path = Get-Location
 
-                Write-Host "Path is $path"
-                . $path/Deploy/uwp_jcadmu.ps1
+                    Write-Host "Path is $path"
+                    . $path/Deploy/uwp_jcadmu.ps1
 
-                if ($?) {
-                    Write-Host "Imported uwp_jcadmu"
-                    $protocol = "http"
-                    $fileType = ".txt"
-                    Set-FTA "wordpad" $fileType
-                    Set-PTA -ProgId "notepad" -Protocol $protocol
-                } else {
-                    Write-Host "File does not exist"
-                }
+                    if ($?) {
+                        Write-Host "Imported uwp_jcadmu"
+                        $protocol = "http"
+                        $fileType = ".txt"
+                        Set-FTA "wordpad" $fileType
+                        Set-PTA -ProgId "notepad" -Protocol $protocol
+                    } else {
+                        Write-Host "File does not exist"
+                    }
 
-            }) -ArgumentList:($rootPath)  -credential:($credentials)
+                }) -ArgumentList:($rootPath)  -credential:($credentials)
             # wait until the job is done
             $ftaList = Receive-Job $job -Wait
             # do migration
-            {Start-Migration -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)"} | Should -Not -Throw
+            { Start-Migration -AutobindJCUser $false -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$localUser" -TempPassword "$($Password)" } | Should -Not -Throw
             # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
             $FTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv"
             $PTAPath = "C:\Users\$($localUser)\AppData\Local\JumpCloudADMU\protocolTypeAssociations.csv"
@@ -114,7 +114,7 @@ Describe 'Migration Test Scenarios' {
     }
 
 
-# check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
+    # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
     Context 'Start-Migration on local accounts (Test Functionallity)' {
         It "username extists for testing" {
             foreach ($user in $userTestingHash.Values) {
@@ -200,6 +200,18 @@ Describe 'Migration Test Scenarios' {
             "C:\Users\$user1" | Should -Exist
             # The user we are migrating to existed before the test, it should also exist after
             "C:\Users\$user2" | Should -Exist
+        }
+        It "Start-Migration should migrate a user who's NTUSER.DAT file has a 'system' attribute" {
+            $Password = "Temp123!"
+            $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            InitUser -UserName $user1 -Password $Password
+            # set user1 NTUSER.DAT file to be system
+            Attrib +a +h +s "C:\Users\$user1\NTUSER.DAT"
+            Test-FileAttribute -ProfilePath $contentFilePath -Attribute "System" | Should -Be $true
+            # migrate the user, the script should not throw
+            { Start-Migration -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$user1" -TempPassword "$($Password)" } | Should -Not -Throw
+
         }
     }
     Context 'Start-Migration kicked off through JumpCloud agent' {

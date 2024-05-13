@@ -1,3 +1,13 @@
+## 2.6.8
+
+Release Date: May 13, 2024
+
+#### RELEASE NOTES
+
+```
+* Addresses a specific case that would prevent migration when a user's `NTUSER.DAT` registry hive was set with a `system` attribute
+```
+
 ## 2.6.7
 
 Release Date: Mar 29, 2024
@@ -7,6 +17,7 @@ Release Date: Mar 29, 2024
 ```
 * Fixes an issue with hybrid unjoin would not leave local domain
 ```
+
 ## 2.6.6
 
 Release Date: Mar 28, 2024
