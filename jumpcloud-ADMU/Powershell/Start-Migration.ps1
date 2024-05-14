@@ -523,7 +523,7 @@ function Set-FileAttribute {
                 $profilePropertiesBefore.Attributes = $profilePropertiesBefore.Attributes -bxor [System.IO.FileAttributes]::$Attribute
             }
         }
-        $attributeTest = Test-UserRegistrySystemAttribute -ProfilePath $ProfilePath -Attribute $Attribute
+        $attributeTest = Test-FileAttribute -ProfilePath $ProfilePath -Attribute $Attribute
     }
 
     end {

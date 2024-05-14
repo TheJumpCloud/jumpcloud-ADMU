@@ -208,7 +208,7 @@ Describe 'Migration Test Scenarios' {
             InitUser -UserName $user1 -Password $Password
             # set user1 NTUSER.DAT file to be system
             Attrib +a +h +s "C:\Users\$user1\NTUSER.DAT"
-            Test-FileAttribute -ProfilePath $contentFilePath -Attribute "System" | Should -Be $true
+            Test-FileAttribute -ProfilePath "C:\Users\$user1\NTUSER.DAT" -Attribute "System" | Should -Be $true
             # migrate the user, the script should not throw
             { Start-Migration -JumpCloudUserName $user2 -SelectedUserName "$ENV:COMPUTERNAME\$user1" -TempPassword "$($Password)" } | Should -Not -Throw
 
@@ -310,7 +310,7 @@ Describe 'Migration Test Scenarios' {
             }
         }
     }
-    Context 'Start-Migration Sucessfully Binds JumpCloud User to System' {
+    Context 'Start-Migration Successfully Binds JumpCloud User to System' {
         It 'user bound to system after migration' {
             $headers = @{}
             $headers.Add("x-org-id", $env:PESTER_ORGID)
