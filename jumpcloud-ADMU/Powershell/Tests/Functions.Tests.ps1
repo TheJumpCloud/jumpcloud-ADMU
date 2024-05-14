@@ -573,9 +573,12 @@ Describe 'Functions' {
         }
         It 'Validates that a file attribute can be added to a file with the Set-FileAttribute function' {
             Set-FileAttribute -ProfilePath $contentFilePath -Attribute "System" -Operation "Add" | Should -Be $true
+            Test-FileAttribute -ProfilePath $contentFilePath -Attribute "System" | Should -Be $true
         }
         It 'Validates that a file attribute can be removed from a file with the Set-FileAttribute function' {
-            Set-FileAttribute -ProfilePath $contentFilePath -Attribute "System" -Operation "Remove" | Should -Be $true
+            # when we remove the returned bool should be false because Test-FileAttribute returns "false" if the attribute does not exist
+            Set-FileAttribute -ProfilePath $contentFilePath -Attribute "System" -Operation "Remove" | Should -be $false
+            Test-FileAttribute -ProfilePath $contentFilePath -Attribute "System" | Should -Be $false
         }
 
     }

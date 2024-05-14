@@ -525,7 +525,6 @@ function Set-FileAttribute {
         }
         $attributeTest = Test-FileAttribute -ProfilePath $ProfilePath -Attribute $Attribute
     }
-
     end {
         if ($attributeTest) {
             return $true
