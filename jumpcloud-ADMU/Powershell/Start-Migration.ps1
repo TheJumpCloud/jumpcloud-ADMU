@@ -476,7 +476,6 @@ function Test-FileAttribute {
 
     process {
         $attributes = $($profileProperties.Attributes)
-        Write-ToLog "$profilePath attributes: $($attributes)"
     }
 
     end {
@@ -509,11 +508,11 @@ function Set-FileAttribute {
 
     begin {
         $profilePropertiesBefore = Get-ItemProperty -Path $ProfilePath
+        $attributesBefore = $($profilePropertiesBefore.Attributes)
     }
 
     process {
-        $attributesBefore = $($profilePropertiesBefore.Attributes)
-        Write-ToLog "$profilePath attributes: $($attributesBefore)"
+        Write-ToLog "$profilePath attributes before: $($attributesBefore)"
         # remove item with bitwise operators, keeping what was set but removing the $attribute
         switch ($Operation) {
             "Remove" {
@@ -526,6 +525,10 @@ function Set-FileAttribute {
         $attributeTest = Test-FileAttribute -ProfilePath $ProfilePath -Attribute $Attribute
     }
     end {
+        $profilePropertiesAfter = Get-ItemProperty -Path $ProfilePath
+        $attributesAfter = $($profilePropertiesBefore.Attributes)
+        Write-ToLog "$profilePath attributes after: $($attributesAfter)"
+
         if ($attributeTest) {
             return $true
         } else {
@@ -1648,9 +1651,9 @@ Function Start-Migration {
             if (Test-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System") {
                 Set-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System" -Operation "Remove"
             } Else {
-                $profileProperties = Get-ItemProperty -Path $oldUserProfileImagePath
+                $profileProperties = Get-ItemProperty -Path "$oldUserProfileImagePath\NTUSER.DAT"
                 $attributes = $($profileProperties.Attributes)
-                Write-ToLog "$oldUserProfileImagePath attributes: $($attributes)"
+                Write-ToLog "$oldUserProfileImagePath\NTUSER.DAT attributes: $($attributes)"
             }
             #### End check for Registry system attribute
 
