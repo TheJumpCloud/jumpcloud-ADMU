@@ -1645,8 +1645,8 @@ Function Start-Migration {
             # Get Profile Image Path from Registry
             $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
             #### Begin check for Registry system attribute
-            if (Test-FileAttribute -ProfilePath $oldUserProfileImagePath -Attribute "System") {
-                Set-FileAttribute -ProfilePath $oldUserProfileImagePath -Attribute "System" -Operation "Remove"
+            if (Test-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System") {
+                Set-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System" -Operation "Remove"
             } Else {
                 $profileProperties = Get-ItemProperty -Path $oldUserProfileImagePath
                 $attributes = $($profileProperties.Attributes)
