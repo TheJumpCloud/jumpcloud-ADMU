@@ -1,6 +1,10 @@
 #region Functions
 # Imports
+
+
+# Load functions
 . "$PSScriptRoot\ProgressForm.ps1"
+
 
 function Show-Result {
     [CmdletBinding()]
@@ -954,19 +958,18 @@ Function Write-ToLog {
                 }
             }
         }
-        . "$PSScriptRoot\ProgressForm.ps1"
-        # List of all the log messages
 
         # Add the message to the log messages and space down
         $logMessage = "$FormattedDate $LevelText $Message" + "`r`n"
         if ($Script:ProgressBar) {
-            if ($Level -eq 'Error') {
-                Update-LogTextBlock -LogText $logMessage -ProgressBar $Script:ProgressBar
-                Update-ProgressForm -ProgressBar $Script:ProgressBar -logLevel "Error" -Status:($message)
-                #Write-ToProgressLog -Status $logMessage -logLevel "Error" -ProgressBar $Script:ProgressBar -form $true
-            } else {
-                Update-LogTextBlock -LogText $logMessage -ProgressBar $Script:ProgressBar
-            }
+            Update-LogTextBlock -LogText $logMessage -ProgressBar $Script:ProgressBar
+            # if ($Level -eq 'Error') {
+            #     Update-LogTextBlock -LogText $logMessage -ProgressBar $Script:ProgressBar
+            #     Update-ProgressForm -ProgressBar $Script:ProgressBar -logLevel "Error" -Status:($message)
+            #     #Write-ToProgressLog -Status $logMessage -logLevel "Error" -ProgressBar $Script:ProgressBar -form $true
+            # } else {
+
+            # }
         }
         # Write log entry to $Path
         "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
@@ -1814,39 +1817,42 @@ function Get-ProtocolTypeAssociation {
     return $manifestList
 }
 ##### END MIT License #####
+$Script:ErrorMessage = $null
 function Error-Map {
     param (
         [string]$ErrorName
     )
     switch ($ErrorName) {
         "load_unload_error" {
-            Write-Error "Load/Unload Error: User registry cannot be loaded or unloaded. Verify that the admin running ADMU has permission to the user's NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
             Write-ToLog -Message "Load/Unload Error: User registry cannot be loaded or unloaded. Verify that the admin running ADMU has permission to the user's NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors" -Level Error
+
+            $Script:ErrorMessage = "Load/Unload Error: User registry cannot be loaded or unloaded. Please go to log file for more information."
         }
         "copy_error" {
-            Write-Error "Copy Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
-
             Write-ToLog -Message:("Copy Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
+
+            $Script:ErrorMessage = "Copy Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Please go to log file for more information."
         }
         "rename_original_registry_file_error" {
-            Write-Error "Rename Error: Registry files cannot be renamed. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
-
             Write-ToLog -message:("Rename Error: Registry files cannot be renamed. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
+
+            $Script:ErrorMessage = "Rename Error: Registry files cannot be renamed. Please go to log file for more information."
         }
 
         "rename_backup_registry_file_error" {
-            Write-Error "Rename Error: NTUser.dat could not be renamed to NTUser.dat.bak. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
-
             Write-ToLog -Message:("Rename Error: NTUser.dat could not be renamed to NTUser.dat.bak. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
+
+            $Script:ErrorMessage = "Rename Error: NTUser.dat could not be renamed to NTUser.dat.bak. Please go to log file for more information."
         }
         "backup_error" {
-            Write-Error "Registry Backup Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
-
             Write-ToLog -Message:("Registry Backup Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors")   -Level Error
+
+            $Script:ErrorMessage = "Registry Backup Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Please go to log file for more information."
         }
         Default {
-            Write-Error "Error occured, please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
             Write-ToLog -Message:("Error occured, please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
+
+            $Script:ErrorMessage = "Error occured, please refer to log file for more information."
         }
     }
 }
@@ -1860,12 +1866,12 @@ function Write-ToProgress {
         [Parameter(Mandatory = $true)]
         $PercentComplete,
         [Parameter(Mandatory = $true)]
-        $Status
+        $Status,
+        [Parameter(Mandatory = $false)]
+        $logLevel
     )
     if ($form) {
-        Update-ProgressForm -ProgressBar $ProgressBar `
-                    -PercentComplete $PercentComplete `
-                    -Status $Status
+        Update-ProgressForm -ProgressBar $ProgressBar -PercentComplete $PercentComplete -Status $Status -logLevel $logLevel
     } else {
         Write-Progress -Activity "Migration Progress" -PercentComplete $PercentComplete -Status $Status
     }
@@ -2998,21 +3004,21 @@ Function Start-Migration {
         }
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) {
             Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile) -Level Verbose
+            Write-ToProgress -ProgressBar $Progressbar -PercentComplete 100 -Status "Migration Completed Succesfully" -form $isForm
             Write-ToLog -Message:('Tool options chosen were : ' + "`nInstall JC Agent = " + $InstallJCAgent + "`nLeave Domain = " + $LeaveDomain + "`nForce Reboot = " + $ForceReboot + "`nUpdate Home Path = " + $UpdateHomePath + "`nAutobind JC User = " + $AutobindJCUser) -Level Verbose
             if ($displayGuiPrompt) {
                 # Close progress bar
-                $progressForm.Close()
                 Show-Result -domainUser $SelectedUserName -localUser "$($localComputerName)\$($JumpCloudUserName)" -success $true -profilePath $newUserProfileImagePath -logPath $jcAdmuLogFile
             }
         } else {
+
             Write-ToLog -Message:("ADMU encoutered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warn
             Write-ToLog -Message:("The following migration steps were reverted to their original state: $FixedErrors") -Level Warn
+            Write-ToProgress -ProgressBar $Progressbar -PercentComplete 100 -Status $Script:ErrorMessage -form $isForm -logLevel "Error"
             if ($displayGuiPrompt) {
                 Show-Result -domainUser $SelectedUserName -localUser "$($localComputerName)\$($JumpCloudUserName)" -success $false -profilePath $newUserProfileImagePath -admuTrackerInput $admuTracker -FixedErrors $FixedErrors -logPath $jcAdmuLogFile
             }
             throw "JumpCloud ADMU was unable to migrate $selectedUserName"
         }
-
-
     }
 }
