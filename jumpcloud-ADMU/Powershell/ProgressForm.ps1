@@ -132,10 +132,7 @@ function New-ProgressForm{
             $timer.Interval = [TimeSpan]"0:0:0.01"
             $timer.Add_Tick( $updateForm )
             $timer.Start()
-            if ($timer.IsEnabled ) {
-
-            }
-            else {
+            if (!$timer.IsEnabled ) {
                 $clock.Close()
                 Write-Error "Timer didn't start"
             }
