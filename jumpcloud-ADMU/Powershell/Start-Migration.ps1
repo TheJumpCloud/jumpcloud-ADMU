@@ -1,4 +1,6 @@
 #region Functions
+# Imports
+. "$PSScriptRoot\ProgressForm.ps1"
 
 function Show-Result {
     [CmdletBinding()]
@@ -890,6 +892,7 @@ Function Get-WindowsDrive {
   #>
 # Set a global parameter for debug logging
 $Script:AdminDebug = $false
+$Script:ProgressBar = $null
 Function Write-ToLog {
     [CmdletBinding()]
     Param
@@ -914,7 +917,7 @@ Function Write-ToLog {
         # Format Date for our Log File
         $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
         # Write message to error, warning, or verbose pipeline and specify $LevelText
-        if ($global:AdminDebug) {
+        if ($Script:AdminDebug) {
             Switch ($Level) {
                 'Error' {
                     Write-Error $Message
@@ -951,7 +954,20 @@ Function Write-ToLog {
                 }
             }
         }
+        . "$PSScriptRoot\ProgressForm.ps1"
+        # List of all the log messages
 
+        # Add the message to the log messages and space down
+        $logMessage = "$FormattedDate $LevelText $Message" + "`r`n"
+        if ($Script:ProgressBar) {
+            if ($Level -eq 'Error') {
+                Update-LogTextBlock -LogText $logMessage -ProgressBar $Script:ProgressBar
+                Update-ProgressForm -ProgressBar $Script:ProgressBar -logLevel "Error" -Status:($message)
+            } else {
+                Update-LogTextBlock -LogText $logMessage -ProgressBar $Script:ProgressBar
+            }
+
+        }
         # Write log entry to $Path
         "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
     }
@@ -1805,23 +1821,53 @@ function Error-Map {
     switch ($ErrorName) {
         "load_unload_error" {
             Write-Error "Load/Unload Error: User registry cannot be loaded or unloaded. Verify that the admin running ADMU has permission to the user's NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+            Write-ToLog -Message "Load/Unload Error: User registry cannot be loaded or unloaded. Verify that the admin running ADMU has permission to the user's NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors" -Level Error
         }
         "copy_error" {
             Write-Error "Copy Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+
+            Write-ToLog -Message:("Copy Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
         }
         "rename_original_registry_file_error" {
             Write-Error "Rename Error: Registry files cannot be renamed. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+
+            Write-ToLog -message:("Rename Error: Registry files cannot be renamed. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
         }
 
         "rename_backup_registry_file_error" {
             Write-Error "Rename Error: NTUser.dat could not be renamed to NTUser.dat.bak. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+
+            Write-ToLog -Message:("Rename Error: NTUser.dat could not be renamed to NTUser.dat.bak. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
         }
         "backup_error" {
             Write-Error "Registry Backup Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+
+            Write-ToLog -Message:("Registry Backup Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors")   -Level Error
         }
         Default {
             Write-Error "Error occured, please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors"
+            Write-ToLog -Message:("Error occured, please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
         }
+    }
+}
+# Function to write progress to the progress bar or console
+function Write-ToProgress {
+    param (
+        [Parameter(Mandatory = $false)]
+        $form,
+        [Parameter(Mandatory = $false)]
+        $ProgressBar,
+        [Parameter(Mandatory = $true)]
+        $PercentComplete,
+        [Parameter(Mandatory = $true)]
+        $Status
+    )
+    if ($form) {
+        Update-ProgressForm -ProgressBar $ProgressBar `
+                    -PercentComplete $PercentComplete `
+                    -Status $Status
+    } else {
+        Write-Progress -Activity "Migration Progress" -PercentComplete $PercentComplete -Status $Status
     }
 }
 Function Start-Migration {
@@ -1844,15 +1890,74 @@ Function Start-Migration {
         [Parameter(ParameterSetName = "form")][Object]$inputObject)
 
     Begin {
+        $progressCount = 16
+        $progressCounter = 1
+        $script:AdminDebug = $AdminDebug
+        $isForm = $PSCmdlet.ParameterSetName -eq "form"
+
+
+        If ($isForm) {
+            $Progressbar = New-ProgressForm
+            # Make $progressbar global
+            $script:Progressbar = $Progressbar
+
+            Update-ProgressForm -ProgressBar $Progressbar `
+                        -PercentComplete 5 `
+                        -Status "Starting Migration. Please wait..."
+            $SelectedUserName = $inputObject.SelectedUserName
+            $JumpCloudUserName = $inputObject.JumpCloudUserName
+            $TempPassword = $inputObject.TempPassword
+            if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
+                $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
+            }
+            if (($inputObject.JumpCloudAPIKey).Length -eq 40) {
+                $JumpCloudAPIKey = $inputObject.JumpCloudAPIKey
+                $ValidatedJumpCloudOrgID = $inputObject.JumpCloudOrgID
+            }
+            $InstallJCAgent = $inputObject.InstallJCAgent
+            $AutobindJCUser = $inputObject.AutobindJCUser
+
+            if ($AutoBindJCUser -eq $true) {
+                # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
+                $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $ValidatedJumpCloudOrgID -Username $JumpCloudUserName
+                # Write to log all variables above
+                Write-ToLog -Message:("Test-JumpCloudUsername Results:`nUserFound: $($ret)`nJumpCloudUserName: $($JumpCloudUserName)`nJumpCloudUserId: $($JumpCloudUserId)`nJumpCloudsystemUserName: $($JumpCloudsystemUserName)")
+
+                if ($JumpCloudsystemUserName) {
+                    $JumpCloudUsername = $JumpCloudsystemUserName
+                }
+                if ($ret -eq $false) {
+                    Write-toLog ("The specified JumpCloudUsername does not exist")
+                    break
+                }
+            }
+
+            if ($JumpCloudsystemUserName) {
+                $JumpCloudUserName = $JumpCloudsystemUserName
+            }
+
+            $BindAsAdmin = $inputObject.BindAsAdmin
+            $LeaveDomain = $InputObject.LeaveDomain
+            $ForceReboot = $InputObject.ForceReboot
+            $UpdateHomePath = $inputObject.UpdateHomePath
+            $script:AdminDebug = $inputObject.AdminDebug
+            Write-ToLog "Admin Debug: $script:AdminDebug"
+            $displayGuiPrompt = $true
+            Add-Type -AssemblyName System.Windows.Forms
+            # Use these
+            #     WindowStyle="SingleBorderWindow"
+            # ResizeMode="NoResize"
+            # Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1000" Height="520">
+
+        }
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
         $admuVersion = '2.7.0'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion) -Level Verbose
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
-        $script:AdminDebug = $AdminDebug
-        # Include ProgressForm.ps1
-        . "$PSScriptRoot\ProgressForm.ps1"
+
+
 
         # validate API KEY/ OrgID if Autobind is selected
         if ($AutobindJCUser) {
@@ -1905,55 +2010,7 @@ Function Start-Migration {
             Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and Hostname cannot be the same. Exiting..."
             break
         }
-        # Conditional ParameterSet logic
-        If ($PSCmdlet.ParameterSetName -eq "form") {
 
-            $SelectedUserName = $inputObject.SelectedUserName
-            $JumpCloudUserName = $inputObject.JumpCloudUserName
-            $TempPassword = $inputObject.TempPassword
-            if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
-                $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
-            }
-            if (($inputObject.JumpCloudAPIKey).Length -eq 40) {
-                $JumpCloudAPIKey = $inputObject.JumpCloudAPIKey
-                $ValidatedJumpCloudOrgID = $inputObject.JumpCloudOrgID
-            }
-            $InstallJCAgent = $inputObject.InstallJCAgent
-            $AutobindJCUser = $inputObject.AutobindJCUser
-
-            if ($AutoBindJCUser -eq $true) {
-                # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
-                $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $ValidatedJumpCloudOrgID -Username $JumpCloudUserName
-                # Write to log all variables above
-                Write-ToLog -Message:("Test-JumpCloudUsername Results:`nUserFound: $($ret)`nJumpCloudUserName: $($JumpCloudUserName)`nJumpCloudUserId: $($JumpCloudUserId)`nJumpCloudsystemUserName: $($JumpCloudsystemUserName)")
-
-                if ($JumpCloudsystemUserName) {
-                    $JumpCloudUsername = $JumpCloudsystemUserName
-                }
-                if ($ret -eq $false) {
-                    Write-toLog ("The specified JumpCloudUsername does not exist")
-                    break
-                }
-            }
-
-            if ($JumpCloudsystemUserName) {
-                $JumpCloudUserName = $JumpCloudsystemUserName
-            }
-
-            $BindAsAdmin = $inputObject.BindAsAdmin
-            $LeaveDomain = $InputObject.LeaveDomain
-            $ForceReboot = $InputObject.ForceReboot
-            $UpdateHomePath = $inputObject.UpdateHomePath
-            $script:AdminDebug = $inputObject.AdminDebug
-            Write-ToLog "Admin Debug: $script:AdminDebug"
-            $displayGuiPrompt = $true
-            Add-Type -AssemblyName System.Windows.Forms
-            # Use these
-            #     WindowStyle="SingleBorderWindow"
-            # ResizeMode="NoResize"
-            # Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1000" Height="520">
-
-        }
 
         Write-ToLog -Message:("Bind as admin = $($BindAsAdmin)")
         # Define misc static variables
@@ -2022,14 +2079,13 @@ Function Start-Migration {
         $SelectedLocalUsername = "$($localComputerName)\$($JumpCloudUserName)"
         Write-ToLog -Message:('Windows Profile "' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUsername + '"') -Level Verbose
         #region SilentAgentInstall
-        $progressCount = 16
-        $progressCounter = 1
+
 
         $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
         $progressPercent = ($progressCounter++ / $progressCount * 100)
 
         Write-Progress -Activity "Migrating User to JumpCloud" -Status "Installing JumpCloud Agent" -PercentComplete $progressPercent
-        $Progressbar = New-ProgressForm
+
         Update-ProgressForm -ProgressBar $Progressbar `
                         -PercentComplete $progressPercent `
                         -Status "Installing JumpCloud Agent"
