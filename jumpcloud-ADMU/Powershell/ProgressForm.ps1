@@ -147,19 +147,16 @@ function New-ProgressForm{
           $syncHash.Error = $Error
     })
 
+    # Invoke PS Command
     $psCommand.Runspace = $newRunspace
     $data = $psCommand.BeginInvoke()
 
 
-    Register-ObjectEvent -InputObject $SyncHash.Runspace `
-        -EventName 'AvailabilityChanged' `
-        -Action {
-
+    Register-ObjectEvent -InputObject $SyncHash.Runspace -EventName 'AvailabilityChanged' -Action {
         if ($Sender.RunspaceAvailability -eq "Available") {
             $Sender.Closeasync()
             $Sender.Dispose()
         }
-
     } | Out-Null
 
     return $syncHash
