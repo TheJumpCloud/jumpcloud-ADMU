@@ -189,7 +189,6 @@ function show-mtpSelection {
                 <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="10,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="123,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <CheckBox Name="cb_bindAsAdmin" Content="Bind As Admin" HorizontalAlignment="Left" Margin="253,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
-                <CheckBox Name="cb_verbose" Content="Verbose" HorizontalAlignment="Left" Margin="253,123,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <CheckBox Name="cb_leavedomain" ToolTipService.ShowOnDisabled="True" Content="Leave Domain" HorizontalAlignment="Left" Margin="10,123,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="false"/>
                 <CheckBox Name="cb_autobindjcuser" Content="Autobind JC User" HorizontalAlignment="Left" Margin="123,123,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                 <Image Name="img_ckey_info" HorizontalAlignment="Left" Height="14" Margin="157,13,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="The Connect Key provides you with a means of associating this system with your JumpCloud organization. The Key is used to deploy the agent to this system." />
@@ -558,10 +557,6 @@ $script:LeaveDomain = $false
 $cb_leavedomain.Add_Checked( { $script:LeaveDomain = $true })
 $cb_leavedomain.Add_Unchecked( { $script:LeaveDomain = $false })
 
-$script:verbose = $false
-$cb_verbose.Add_Checked( { $script:verbose = $true })
-$cb_verbose.Add_Unchecked( { $script:verbose = $false })
-
 # Force Reboot checkbox
 $script:ForceReboot = $false
 $cb_forcereboot.Add_Checked( { $script:ForceReboot = $true })
@@ -734,7 +729,6 @@ $bMigrateProfile.Add_Click( {
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('AutobindJCUser') -Value:($AutobindJCUser)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('BindAsAdmin') -Value:($BindAsAdmin)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('LeaveDomain') -Value:($LeaveDomain)
-        Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('AdminDebug') -Value:($verbose)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ForceReboot') -Value:($ForceReboot)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('SelectedUserName') -Value:($SelectedUserName)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudUserName') -Value:($tbJumpCloudUserName.Text)
@@ -744,11 +738,6 @@ $bMigrateProfile.Add_Click( {
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudOrgID') -Value:($Env:selectedOrgID)
         # Close form
         $Form.Close()
-
-        if ($verbose) {
-            Write-ToLog "Verbose is enabled"
-            $ShowWindowAsync::ShowWindowAsync($FormWindowPIDHandle , 1) | Out-Null
-        }
     })
 
 $tbJumpCloudUserName.add_GotFocus( {

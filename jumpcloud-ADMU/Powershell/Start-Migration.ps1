@@ -1,10 +1,5 @@
 #region Functions
-# Imports
-
-
-# Load functions
 . "$PSScriptRoot\ProgressForm.ps1"
-
 
 function Show-Result {
     [CmdletBinding()]
@@ -1849,6 +1844,16 @@ function Error-Map {
 
             $Script:ErrorMessage = "Registry Backup Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Please go to log file for more information."
         }
+        "user_unit_error" {
+            Write-ToLog -Message:("User Initialize Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running or the user is already created. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
+
+            $Script:ErrorMessage = "User Initialize Error. Please go to log file for more information."
+        }
+        "user_create_error" {
+            Write-ToLog -Message:("User Create Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running or the user is already created. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
+
+            $Script:ErrorMessage = "User Create Error. Please go to log file for more information."
+        }
         Default {
             Write-ToLog -Message:("Error occured, please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
 
@@ -1900,7 +1905,7 @@ Function Start-Migration {
         $progressCounter = 1
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
-
+        Write-ToLog -Message:("Form is set to $isForm") -Level Verbose
 
         If ($isForm) {
             $Progressbar = New-ProgressForm
@@ -1946,8 +1951,8 @@ Function Start-Migration {
             $LeaveDomain = $InputObject.LeaveDomain
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
-            $script:AdminDebug = $inputObject.AdminDebug
-            Write-ToLog "Admin Debug: $script:AdminDebug"
+            # $script:AdminDebug = $inputObject.AdminDebug
+            # Write-ToLog "Admin Debug: $script:AdminDebug"
             $displayGuiPrompt = $true
             Add-Type -AssemblyName System.Windows.Forms
             # Use these
@@ -1962,7 +1967,7 @@ Function Start-Migration {
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion) -Level Verbose
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
-
+        Write-ToLog -Message:("Form is set to $isForm")
 
 
         # validate API KEY/ OrgID if Autobind is selected
@@ -2145,6 +2150,7 @@ Function Start-Migration {
             if ($userExitCode) {
                 Write-ToLog -Message:("$userExitCode") -Level Error
                 Write-ToLog -Message:("The user: $JumpCloudUsername could not be created, exiting") -Level Error
+                Error-Map -ErrorName "user_create_error"
                 $admuTracker.newUserCreate.fail = $true
                 break
             }
@@ -2157,6 +2163,7 @@ Function Start-Migration {
             if ($profileInit) {
                 Write-ToLog -Message:("$profileInit")
                 Write-ToLog -Message:("The user: $JumpCloudUsername could not be initalized, exiting")
+                Error-Map -ErrorName "user_init_error"
                 $admuTracker.newUserInit.fail = $true
                 break
             } else {
@@ -3006,16 +3013,15 @@ Function Start-Migration {
             Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile) -Level Verbose
             Write-ToProgress -ProgressBar $Progressbar -PercentComplete 100 -Status "Migration Completed Succesfully" -form $isForm
             Write-ToLog -Message:('Tool options chosen were : ' + "`nInstall JC Agent = " + $InstallJCAgent + "`nLeave Domain = " + $LeaveDomain + "`nForce Reboot = " + $ForceReboot + "`nUpdate Home Path = " + $UpdateHomePath + "`nAutobind JC User = " + $AutobindJCUser) -Level Verbose
-            if ($displayGuiPrompt) {
-                # Close progress bar
+            if (!$isForm) {
                 Show-Result -domainUser $SelectedUserName -localUser "$($localComputerName)\$($JumpCloudUserName)" -success $true -profilePath $newUserProfileImagePath -logPath $jcAdmuLogFile
             }
         } else {
-
             Write-ToLog -Message:("ADMU encoutered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warn
             Write-ToLog -Message:("The following migration steps were reverted to their original state: $FixedErrors") -Level Warn
+            Write-ToLog -Message:('Script finished with errors; Log file location: ' + $jcAdmuLogFile) -Level Error
             Write-ToProgress -ProgressBar $Progressbar -PercentComplete 100 -Status $Script:ErrorMessage -form $isForm -logLevel "Error"
-            if ($displayGuiPrompt) {
+            if (!$isForm) {
                 Show-Result -domainUser $SelectedUserName -localUser "$($localComputerName)\$($JumpCloudUserName)" -success $false -profilePath $newUserProfileImagePath -admuTrackerInput $admuTracker -FixedErrors $FixedErrors -logPath $jcAdmuLogFile
             }
             throw "JumpCloud ADMU was unable to migrate $selectedUserName"
