@@ -131,12 +131,12 @@ jobs:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
         run: |
           . "${{ github.workspace }}/Deploy/build.ps1" -ModuleVersionType $env:RELEASE_TYPE -ModuleName "JumpCloud.ADMU"
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-region: ${{ secrets.AWS_REGION }}
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_NUMBER }}:oidc-provider/token.actions.githubusercontent.com
-          role-session-name: GHA_ADMU_TEST
+      # - name: Configure AWS Credentials
+      #   uses: aws-actions/configure-aws-credentials@v4
+      #   with:
+      #     aws-region: ${{ secrets.AWS_REGION }}
+      #     role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_NUMBER }}:oidc-provider/token.actions.githubusercontent.com
+      #     role-session-name: GHA_ADMU_TEST
       - name: Sign and Upload
         uses: ./.github/workflows/sign-common-actions/sign-and-upload
         with:
