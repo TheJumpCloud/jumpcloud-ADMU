@@ -1,12 +1,13 @@
 ## 2.6.8
 
-Release Date: May 10, 2024
+Release Date: May 14, 2024
+
 
 #### RELEASE NOTES
 
 ```
-* Addresses an issue with the migration where a user's `NTUSER.DAT` file has a `system` attribute. Removing this attribute during migration checks will now allow the migration to continue.
-* Release build and sign steps moved to common JumpCloud action.
+* Addresses a specific case that would prevent migration when a user's `NTUSER.DAT` registry hive was set with a `system` attribute
+
 ```
 
 ## 2.6.7

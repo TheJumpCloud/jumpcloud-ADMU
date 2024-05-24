@@ -32,20 +32,20 @@ Describe 'Functions' {
             Test-RegistryValueMatch -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -Value 'Public' -stringmatch 'Private' | Should -Be $false
         }
     }
-    Context 'Set-PTA/FTA Test'{
-        BeforeAll{
+    Context 'Set-PTA/FTA Test' {
+        BeforeAll {
             # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
             . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
         }
-        It 'Set-FTA should be changed after migration'{
+        It 'Set-FTA should be changed after migration' {
             $protocol = "http"
             $fileType = ".txt"
 
             Set-FTA "wordpad" $fileType
             Set-PTA -ProgId "notepad" -Protocol $protocol
 
-            $fta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice"
-            $pta =  Get-ItemProperty "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
+            $fta = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice"
+            $pta = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
             # Write out the contents of the FTA and PTA
             Write-Host "FTA: $($fta)"
             Write-Host "PTA: $($pta)"
@@ -469,7 +469,7 @@ Describe 'Functions' {
 
     Context 'Install-JumpCloudAgent Function' {
         BeforeAll {
-            Mock Get-WindowsDrive {Return "C:"}
+            Mock Get-WindowsDrive { Return "C:" }
             $windowsDrive = Get-WindowsDrive
             $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
             $AGENT_INSTALLER_PATH
@@ -554,6 +554,33 @@ Describe 'Functions' {
                 $afterEnable | Where-Object { $_.TaskName -eq $task.TaskName -and $_.State -eq "Ready" } | Should -Not -BeNullOrEmpty
             }
         }
+    }
+    Context 'Validates the functionailty of the Set-FileAttribute and associated functions' {
+        BeforeAll {
+            # create some file to test with:
+            $content = "placeholder text"
+            # save the file
+            $content | Out-File "C:\Windows\Temp\content.txt"
+            $contentFilePath = "C:\Windows\Temp\content.txt"
+        }
+        It 'Validates the function Test-FileAttribute should reuturn true/ falst given some attribute type' {
+            # using attrib, set the file associations to hidden and archive
+            Attrib +h +a $contentFilePath
+            # validate that the test function will return true for both attributes and false for another
+            Test-FileAttribute -ProfilePath $contentFilePath -Attribute "Hidden" | Should -Be $true
+            Test-FileAttribute -ProfilePath $contentFilePath -Attribute "Archive" | Should -Be $true
+            Test-FileAttribute -ProfilePath $contentFilePath -Attribute "System" | Should -Be $false
+        }
+        It 'Validates that a file attribute can be added to a file with the Set-FileAttribute function' {
+            Set-FileAttribute -ProfilePath $contentFilePath -Attribute "System" -Operation "Add" | Should -Be $true
+            Test-FileAttribute -ProfilePath $contentFilePath -Attribute "System" | Should -Be $true
+        }
+        It 'Validates that a file attribute can be removed from a file with the Set-FileAttribute function' {
+            # when we remove the returned bool should be false because Test-FileAttribute returns "false" if the attribute does not exist
+            Set-FileAttribute -ProfilePath $contentFilePath -Attribute "System" -Operation "Remove" | Should -be $false
+            Test-FileAttribute -ProfilePath $contentFilePath -Attribute "System" | Should -Be $false
+        }
+
     }
     Context 'Validates that the  Registry Hive Permissions are correct, given a username' {
         It 'Should return true when a users ntfs permissions are correct' {
