@@ -13,9 +13,9 @@ concurrency:
   cancel-in-progress: true
 # define jobs
 
-permissions:
-  contents: read
-  id-token: write
+# permissions:
+#   contents: read
+#   id-token: write
 
 jobs:
   Filter-Branch:
