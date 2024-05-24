@@ -14,6 +14,7 @@ concurrency:
 # define jobs
 
 permissions:
+  contents: read
   id-token: write
 
 jobs:
