@@ -135,7 +135,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-region: ${{ secrets.AWS_REGION }}
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_NUMBER }}:oidc-provider/token.actions.githubusercontent.com
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_NUMBER }}:role/oidc-admu-test-role
           role-session-name: GHA_ADMU_TEST
       - name: Sign and Upload
         uses: ./.github/workflows/sign-common-actions/sign-and-upload
