@@ -13,9 +13,9 @@ concurrency:
   cancel-in-progress: true
 # define jobs
 
-# permissions:
-#   contents: read
-#   id-token: write
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   Filter-Branch:
@@ -131,22 +131,22 @@ jobs:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
         run: |
           . "${{ github.workspace }}/Deploy/build.ps1" -ModuleVersionType $env:RELEASE_TYPE -ModuleName "JumpCloud.ADMU"
-      # - name: Configure AWS Credentials
-      #   uses: aws-actions/configure-aws-credentials@v4
-      #   with:
-      #     aws-region: ${{ secrets.AWS_REGION }}
-      #     role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_NUMBER }}:oidc-provider/token.actions.githubusercontent.com
-      #     role-session-name: GHA_ADMU_TEST
-      # - name: Sign and Upload
-      #   uses: ./.github/workflows/sign-common-actions/sign-and-upload
-      #   with:
-      #     files: |-
-      #       ${{ github.workspace }}/jumpcloud-ADMU/Exe/gui_jcadmu.exe
-      #       ${{ github.workspace }}/jumpcloud-ADMU/Exe/uwp_jcadmu.exe
-      #     SM_API_KEY: ${{ secrets.SM_API_KEY }}
-      #     SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
-      #     SM_CLIENT_CERT_FILE_B64: ${{ secrets.SM_V2_CLIENT_CERT_FILE_B64 }}
-      #     SM_HOST: ${{ secrets.SM_HOST }}
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_NUMBER }}:oidc-provider/token.actions.githubusercontent.com
+          role-session-name: GHA_ADMU_TEST
+      - name: Sign and Upload
+        uses: ./.github/workflows/sign-common-actions/sign-and-upload
+        with:
+          files: |-
+            ${{ github.workspace }}/jumpcloud-ADMU/Exe/gui_jcadmu.exe
+            ${{ github.workspace }}/jumpcloud-ADMU/Exe/uwp_jcadmu.exe
+          SM_API_KEY: ${{ secrets.SM_API_KEY }}
+          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
+          SM_CLIENT_CERT_FILE_B64: ${{ secrets.SM_V2_CLIENT_CERT_FILE_B64 }}
+          SM_HOST: ${{ secrets.SM_HOST }}
       - name: Upload Nuspec
         uses: actions/upload-artifact@v3
         with:
