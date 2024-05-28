@@ -41,6 +41,7 @@ function New-ProgressForm{
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Name="Window" Title="JumpCloud ADMU Migration..."
+    Title="JumpCloud ADMU 2.7.0"
     WindowStyle="SingleBorderWindow"
     ResizeMode="NoResize"
     SizeToContent="WidthAndHeight"
@@ -109,7 +110,7 @@ function New-ProgressForm{
         $syncHash.NewLocalUsername.Text = $syncHash.NewLocalUsernameInput
 
         $updateForm = {
-            $SyncHash.Window.Title = "JumpCloud ADMU 2.7.0"
+
             # Migration Details
 
             if ($SyncHash.closeWindow -eq $True) {
@@ -155,14 +156,11 @@ function New-ProgressForm{
        })
         # Start JCADMU Button
         $syncHash.StartJCADMUButton.Add_Click({
-            Set-ExecutionPolicy Bypass -Scope Process -Force
-            $Synchash.StatusInput = $Synchash.scriptPath
-            # If scriptpath = C:\Windows\System32 then go to scriptpath
-            if ($Synchash.scriptPath -eq "C:\Windows\System32") {
-                $Synchash.scriptPath = $Synchash.scriptPath2
-            }
-            $scriptToRun = Join-Path -Path $synchash.scriptpath -ChildPath 'Start-JCADMU.ps1'
-            & $scriptToRun
+            # Get the path of the exe then rerun
+            $exeFilePath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+            Start-Process -FilePath $exeFilePath
+            # Close the current window
+            $syncHash.CloseWindow = $true
         })
 
         $synchash.ExitButton.Add_Click({
