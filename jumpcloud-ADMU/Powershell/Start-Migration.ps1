@@ -1,5 +1,4 @@
 #region Functions
-. "$PSScriptRoot\ProgressForm.ps1"
 
 function Show-Result {
     [CmdletBinding()]
