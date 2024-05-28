@@ -14,6 +14,7 @@ function DecodeBase64Image {
 }
 function New-ProgressForm{
     $scriptPath = PWD
+    $scriptPath2 = (Split-Path -Path:($MyInvocation.MyCommand.Path))
     # Synchash the values
     [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null
     [System.Reflection.Assembly]::LoadWithPartialName('presentationframework') | Out-Null
@@ -27,6 +28,13 @@ function New-ProgressForm{
     $syncHash.base64JCLogo = DecodeBase64Image -ImageBase64 $newJCLogoBase64
     $synchash.closeWindow = $false
     $synchash.scriptPath = $scriptPath
+    $syncHash.scriptpath2 = $scriptPath2
+
+    # Migration Details
+    $syncHash.UsernameInput = ''
+    $syncHash.ProfileSizeInput = ''
+    $syncHash.LocalPathInput = ''
+    $syncHash.NewLocalUsernameInput = ''
 
     $syncHash.XAML = @"
     <Window
@@ -35,13 +43,29 @@ function New-ProgressForm{
     Name="Window" Title="JumpCloud ADMU Migration..."
     WindowStyle="SingleBorderWindow"
     ResizeMode="NoResize"
-    Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="626" Height="539">
-    <Grid Margin="0,0,0,3">
-        <TextBlock Name="Status" FontWeight="Medium" FontSize="14" TextAlignment="Center" HorizontalAlignment="Center" TextWrapping="Wrap"  VerticalAlignment="Center" Width="422" Height="70"/>
-        <ProgressBar Name="ProgressBar" HorizontalAlignment="Center" Height="37" Margin="0,147,0,0" VerticalAlignment="Top" Width="422" Foreground="#FF104357"/>
-        <Button Name="ViewLog" Content="View Log" HorizontalAlignment="Left" Margin="52,440,0,0" VerticalAlignment="Top" Height="27" Width="69" Visibility="Hidden" />
-        <Button Name="StartJCADMU" Content="RunJCAdmu" HorizontalAlignment="Left" Margin="505,441,0,0" VerticalAlignment="Top" Height="26" Width="69" Visibility="Hidden" />
-        <Expander HorizontalAlignment="Center" Height="127" Header="Log" Margin="0,297,0,0" VerticalAlignment="Top" Width="522">
+    SizeToContent="WidthAndHeight"
+    Background="White" Width="700" Height="470">
+    <Grid>
+        <Image Name="JCLogoImg" Margin="18,9,490,409" Source="/JC oceanblue tm.png" Height="36" VerticalAlignment="Top"/>
+        <StackPanel Margin="10,44,354,294" VerticalAlignment="Top" HorizontalAlignment="Left">
+            <TextBlock TextWrapping="Wrap" Text="Migration Details:" Width="250" FontWeight="Bold" Margin="5,5,5,5" HorizontalAlignment="Left"/>
+            <TextBlock Name="Username" TextWrapping="Wrap" Text="Username: " Width="250" FontSize="11" Margin="5,1,1,1" HorizontalAlignment="Left"/>
+            <TextBlock Name="ProfileSize" TextWrapping="Wrap" Text="Profile Size: " Width="250" FontSize="11" Margin="5,1,1,1" HorizontalAlignment="Left"/>
+            <TextBlock Name="LocalPath" TextWrapping="Wrap" Text="Local Path: " Width="250" FontSize="11" Margin="5,1,1,1" HorizontalAlignment="Left"/>
+            <TextBlock Name="NewLocalUsername" TextWrapping="Wrap" Text="New Local Username: " Width="250" FontSize="11" Margin="5,1,1,1" HorizontalAlignment="Left"/>
+        </StackPanel >
+
+        <StackPanel Margin="10,150,10,183" VerticalAlignment="Top" HorizontalAlignment="Left" >
+            <StackPanel Height="86" Width="679" HorizontalAlignment="Left">
+                <TextBlock TextWrapping="Wrap" Text="Migration Progress:" Width="262" FontWeight="Bold" Margin="5,5,5,5" HorizontalAlignment="Left"/>
+                <TextBlock Name="Status" TextWrapping="Wrap" Text="Progress" Width="360" FontSize="11" Height="24" Margin="5,5,5,5" HorizontalAlignment="Left"/>
+                <ProgressBar Name="ProgressBar" Height="12" Width="592" Value="50" Foreground="#90b7fc" VerticalAlignment="Top" HorizontalAlignment="Center"/>
+            </StackPanel>
+
+
+        </StackPanel>
+
+        <Expander Height="140" Header="View Log" Margin="0,241,0,0" VerticalAlignment="Top" Background="AliceBlue" HorizontalAlignment="Center" Width="574">
             <Expander.Content>
                 <ScrollViewer Name="ScrollLog" Margin="0,10,0,9" Foreground="Gray" HorizontalScrollBarVisibility = "Auto">
                     <TextBlock Name="LogTextBlock" TextWrapping="Wrap" FontWeight="Medium" FontSize="12" >
@@ -49,7 +73,9 @@ function New-ProgressForm{
                 </ScrollViewer>
             </Expander.Content>
         </Expander>
-        <Image Name="JCLogoImg" Margin="102,41,102,362" Stretch="Fill"/>
+        <Button Name="ViewLogButton" Content="View Log" HorizontalAlignment="Left" Margin="417,402,0,0" VerticalAlignment="Top" Height="26" Width="70"  />
+        <Button Name="StartJCADMUButton" Content="Re-run JCADMU" HorizontalAlignment="Left" Margin="492,402,0,0" Height="26" Width="70" FontSize="9" VerticalAlignment="Top"  />
+        <Button Name="ExitButton" Content="Exit" Height="26" Width="70" Margin="567,402,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"  />
     </Grid>
 </Window>
 "@
@@ -76,8 +102,16 @@ function New-ProgressForm{
         # Scroll to end of Log
         $syncHash.ScrollLog.ScrollToEnd()
 
+
+        $syncHash.Username.Text = $syncHash.UsernameInput
+        $syncHash.ProfileSize.Text = $syncHash.ProfileSizeInput
+        $syncHash.LocalPath.Text = $syncHash.LocalPathInput
+        $syncHash.NewLocalUsername.Text = $syncHash.NewLocalUsernameInput
+
         $updateForm = {
             $SyncHash.Window.Title = "JumpCloud ADMU 2.7.0"
+            # Migration Details
+
             if ($SyncHash.closeWindow -eq $True) {
                 $syncHash.Window.Close()
                 [System.Windows.Forms.Application]::Exit()
@@ -87,16 +121,17 @@ function New-ProgressForm{
             if ($SyncHash.Closing) {
                 $SyncHash.Window.Close()
                 [System.Windows.Forms.Application]::Exit()
-                # Break out of the loop
                 Break
-                # Run Start-JCADMU
             }
             if ($SyncHash.logLevel -eq "Error") {
-                $syncHash.Status.Foreground = "Red"
+                #$syncHash.Status.Foreground = "Red"
+                # Hide Progress Bar
+                $SyncHash.ProgressBar.Visibility = "Hidden"
             }
             if ($synchash.PercentComplete -eq 100) {
-                $SyncHash.ViewLog.Visibility = "Visible"
-                $SyncHash.StartJCADMU.Visibility = "Visible"
+                $SyncHash.ViewLogButton.IsEnabled = $true
+                $SyncHash.StartJCADMUButton.IsEnabled = $true
+                $SyncHash.ExitButton.IsEnabled = $true
             }
 
             # Update Log TextBlock
@@ -112,18 +147,26 @@ function New-ProgressForm{
             }
         }
         # View Log Button
-        $SyncHash.ViewLog.Add_Click({
+        $SyncHash.ViewLogButton.Add_Click({
             # Open log \Windows\Temp\jcAdmu.log
             $scriptPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
             # Open the log
            Invoke-Item -Path:($scriptPath)
        })
         # Start JCADMU Button
-        $syncHash.StartJCADMU.Add_Click({
+        $syncHash.StartJCADMUButton.Add_Click({
             Set-ExecutionPolicy Bypass -Scope Process -Force
-
+            $Synchash.StatusInput = $Synchash.scriptPath
+            # If scriptpath = C:\Windows\System32 then go to scriptpath
+            if ($Synchash.scriptPath -eq "C:\Windows\System32") {
+                $Synchash.scriptPath = $Synchash.scriptPath2
+            }
             $scriptToRun = Join-Path -Path $synchash.scriptpath -ChildPath 'Start-JCADMU.ps1'
             & $scriptToRun
+        })
+
+        $synchash.ExitButton.Add_Click({
+            $syncHash.CloseWindow = $true
         })
 
         # Time to update the form
@@ -155,9 +198,7 @@ function New-ProgressForm{
             $Sender.Dispose()
         }
     } | Out-Null
-
     return $syncHash
-
 }
 
 # Function to update the progress bar
@@ -167,8 +208,18 @@ function Update-ProgressForm {
         $ProgressBar,
         [int]$PercentComplete,
         [string]$Status,
-        [string]$logLevel
+        [string]$logLevel,
+        [string]$username,
+        [string]$profileSize,
+        [string]$localPath,
+        [string]$newLocalUsername
     )
+
+    $ProgressBar.UsernameInput = "Username: $username"
+    $ProgressBar.ProfileSizeInput = "ProfileSize: $($profileSize)GB"
+    $ProgressBar.LocalPathInput = "LocalPath: $localPath"
+    $ProgressBar.NewLocalUsernameInput = "NewLocalUsername: $newLocalUsername"
+
 
     if ($logLevel -eq "Error") {
         $ProgressBar.PercentComplete = 100

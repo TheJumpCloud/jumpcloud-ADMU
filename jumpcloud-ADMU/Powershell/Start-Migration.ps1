@@ -1873,13 +1873,43 @@ function Write-ToProgress {
         [Parameter(Mandatory = $true)]
         $Status,
         [Parameter(Mandatory = $false)]
-        $logLevel
+        $logLevel,
+        [Parameter(Mandatory = $false)]
+        $username,
+        [Parameter(Mandatory = $false)]
+        $newLocalUsername,
+        [Parameter(Mandatory = $false)]
+        $profileSize,
+        [Parameter(Mandatory = $false)]
+        $LocalPath
+
     )
     if ($form) {
-        Update-ProgressForm -ProgressBar $ProgressBar -PercentComplete $PercentComplete -Status $Status -logLevel $logLevel
+
+        if ($username -and $newLocalUsername -and $profileSize -and $LocalPath) {
+            # Pass in the migration details
+            Update-ProgressForm -ProgressBar $ProgressBar -PercentComplete $PercentComplete -Status $Status -logLevel $logLevel -username $username -newLocalUsername $newLocalUsername -profileSize $profileSize -LocalPath $LocalPath
+        } else {
+            Update-ProgressForm -ProgressBar $ProgressBar -PercentComplete $PercentComplete -Status $Status -logLevel $logLevel
+        }
     } else {
         Write-Progress -Activity "Migration Progress" -PercentComplete $PercentComplete -Status $Status
     }
+}
+
+# Get Profile Size function
+function Get-ProfileSize {
+    param (
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $profilePath
+    )
+    $profilePath = "C:\Users\KenTest"
+    $files = Get-ChildItem -Path $profilePath -Recurse -Force | Where-Object { -not $_.PSIsContainer } | Measure-Object -Property Length -Sum
+    $profileSizeSum = $files.Sum
+    $totalSizeGB = [math]::round($profileSizeSum / 1GB, 1)
+
+    return $totalSizeGB
 }
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
@@ -1901,6 +1931,23 @@ Function Start-Migration {
         [Parameter(ParameterSetName = "form")][Object]$inputObject)
 
     Begin {
+        # Define misc static variables
+        $netBiosName = Get-NetBiosName
+        $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+        $localComputerName = $WmiComputerSystem.Name
+        $systemVersion = Get-ComputerInfo | Select-Object OSName, OSVersion, OsHardwareAbstractionLayer
+        $windowsDrive = Get-WindowsDrive
+        $jcAdmuTempPath = "$windowsDrive\Windows\Temp\JCADMU\"
+        $jcAdmuLogFile = "$windowsDrive\Windows\Temp\jcAdmu.log"
+        $netBiosName = Get-NetBiosName
+
+        # JumpCloud Agent Installation Variables
+        $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
+        $AGENT_BINARY_NAME = "jumpcloud-agent.exe"
+        $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
+        $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
+        $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
+
         $progressCount = 16
         $progressCounter = 1
         $script:AdminDebug = $AdminDebug
@@ -1908,16 +1955,28 @@ Function Start-Migration {
         Write-ToLog -Message:("Form is set to $isForm") -Level Verbose
 
         If ($isForm) {
-            $Progressbar = New-ProgressForm
-            # Make $progressbar global
-            $script:Progressbar = $Progressbar
 
-            # Write to progress bar
-            Write-ToProgress -form $isForm -ProgressBar $Progressbar -PercentComplete 5 -Status "Starting Migration. Please wait..."
+
 
             $SelectedUserName = $inputObject.SelectedUserName
+            $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
+            $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
+            $profileSize = Get-ProfileSize -profilePath $oldUserProfileImagePath
+
             $JumpCloudUserName = $inputObject.JumpCloudUserName
             $TempPassword = $inputObject.TempPassword
+
+            # Make $progressbar global
+            # Write to progress bar
+            $Progressbar = New-ProgressForm
+            $script:Progressbar = $Progressbar
+
+
+            Write-ToProgress -form $isForm -ProgressBar $Progressbar -PercentComplete 5 -Status "Starting Migration. Please wait..." -username $SelectedUserName -newLocalUsername $JumpCloudUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath # TODO: Old or New Profile Path?
+
+            # Log all variables
+            Write-ToLog -Message:("SelectedUserName: $SelectedUserName`nSelectedUserSID: $SelectedUserSID`nOldUserProfileImagePath: $oldUserProfileImagePath`nJumpCloudUserName: $JumpCloudUserName`nTempPassword: $TempPassword`nLeaveDomain: $LeaveDomain`nForceReboot: $ForceReboot`nUpdateHomePath: $UpdateHomePath`nInstallJCAgent: $InstallJCAgent`nAutobindJCUser: $AutobindJCUser`nBindAsAdmin: $BindAsAdmin`nSetDefaultWindowsUser: $SetDefaultWindowsUser`nAdminDebug: $AdminDebug`nJumpCloudConnectKey: $JumpCloudConnectKey`nJumpCloudAPIKey: $JumpCloudAPIKey`nJumpCloudOrgID: $JumpCloudOrgID`nProgressbar: $Progressbar`nProfileSize: $profileSize`nLocalPath: $oldUserProfileImagePath") -Verbose
+
             if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
                 $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
             }
@@ -1961,6 +2020,10 @@ Function Start-Migration {
             # Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1000" Height="520">
 
         }
+
+        $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
+        $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
+
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
         $admuVersion = '2.7.0'
@@ -2024,22 +2087,7 @@ Function Start-Migration {
 
 
         Write-ToLog -Message:("Bind as admin = $($BindAsAdmin)")
-        # Define misc static variables
-        $netBiosName = Get-NetBiosName
-        $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-        $localComputerName = $WmiComputerSystem.Name
-        $systemVersion = Get-ComputerInfo | Select-Object OSName, OSVersion, OsHardwareAbstractionLayer
-        $windowsDrive = Get-WindowsDrive
-        $jcAdmuTempPath = "$windowsDrive\Windows\Temp\JCADMU\"
-        $jcAdmuLogFile = "$windowsDrive\Windows\Temp\jcAdmu.log"
-        $netBiosName = Get-NetBiosName
 
-        # JumpCloud Agent Installation Variables
-        $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
-        $AGENT_BINARY_NAME = "jumpcloud-agent.exe"
-        $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
-        $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
-        $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
         # Track migration steps
         $admuTracker = [Ordered]@{
             backupOldUserReg              = @{'pass' = $false; 'fail' = $false }
@@ -2065,7 +2113,7 @@ Function Start-Migration {
         }
 
         Write-ToLog -Message("The Selected Migration user is: $JumpCloudUsername") -Level Verbose
-        $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
+
 
         Write-ToLog -Message:('Creating JCADMU Temporary Path in ' + $jcAdmuTempPath)
         if (!(Test-path $jcAdmuTempPath)) {
@@ -2127,7 +2175,7 @@ Function Start-Migration {
             ### Begin Backup Registry for Selected User ###
             Write-ToLog -Message:('Creating Backup of User Registry Hive')
             # Get Profile Image Path from Registry
-            $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
+
             # Backup Registry NTUSER.DAT and UsrClass.dat files
             try {
                 Backup-RegistryHive -profileImagePath $oldUserProfileImagePath -SID $SelectedUserSID
