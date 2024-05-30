@@ -12,9 +12,8 @@ function DecodeBase64Image {
     $ObjBitmapImage.Freeze() #Makes the current object unmodifiable and sets its IsFrozen property to true.
     $ObjBitmapImage
 }
+
 function New-ProgressForm{
-    $scriptPath = PWD
-    $scriptPath2 = (Split-Path -Path:($MyInvocation.MyCommand.Path))
     # Synchash the values
     [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null
     [System.Reflection.Assembly]::LoadWithPartialName('presentationframework') | Out-Null
@@ -27,8 +26,6 @@ function New-ProgressForm{
     $synchash.logLevel = ''
     $syncHash.base64JCLogo = DecodeBase64Image -ImageBase64 $newJCLogoBase64
     $synchash.closeWindow = $false
-    $synchash.scriptPath = $scriptPath
-    $syncHash.scriptpath2 = $scriptPath2
 
     # Migration Details
     $syncHash.UsernameInput = ''
@@ -40,43 +37,59 @@ function New-ProgressForm{
     <Window
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Name="Window" Title="JumpCloud ADMU Migration..."
-    Title="JumpCloud ADMU 2.7.0"
+    Name="Window" Title="JumpCloud ADMU 2.7.0"
     WindowStyle="SingleBorderWindow"
     ResizeMode="NoResize"
-    SizeToContent="WidthAndHeight"
-    Background="White" Width="700" Height="470">
+    Background="White" Width="700" Height="530">
     <Grid>
-        <Image Name="JCLogoImg" Margin="18,9,490,409" Source="/JC oceanblue tm.png" Height="36" VerticalAlignment="Top"/>
-        <StackPanel Margin="10,44,354,294" VerticalAlignment="Top" HorizontalAlignment="Left">
-            <TextBlock TextWrapping="Wrap" Text="Migration Details:" Width="250" FontWeight="Bold" Margin="5,5,5,5" HorizontalAlignment="Left"/>
-            <TextBlock Name="Username" TextWrapping="Wrap" Text="Username: " Width="250" FontSize="11" Margin="5,1,1,1" HorizontalAlignment="Left"/>
-            <TextBlock Name="ProfileSize" TextWrapping="Wrap" Text="Profile Size: " Width="250" FontSize="11" Margin="5,1,1,1" HorizontalAlignment="Left"/>
-            <TextBlock Name="LocalPath" TextWrapping="Wrap" Text="Local Path: " Width="250" FontSize="11" Margin="5,1,1,1" HorizontalAlignment="Left"/>
-            <TextBlock Name="NewLocalUsername" TextWrapping="Wrap" Text="New Local Username: " Width="250" FontSize="11" Margin="5,1,1,1" HorizontalAlignment="Left"/>
-        </StackPanel >
+        <Image Name="JCLogoImg" Margin="75,15,454,0" Source="/JC oceanblue tm.png" Height="28" VerticalAlignment="Top"/>
+        <GroupBox Header="Migration Details" FontWeight="Bold" Width="303" Height="148" MaxHeight="160" Margin="10,50,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <Grid HorizontalAlignment="Left" Height="61" Margin="10,0,0,0" VerticalAlignment="Center" Width="276" MinWidth="245" MinHeight="100">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="110"/>
+                    <ColumnDefinition Width="165"/>
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="25"/>
+                    <RowDefinition Height="25"/>
+                    <RowDefinition Height="25"/>
+                    <RowDefinition Height="25"/>
 
-        <StackPanel Margin="10,150,10,183" VerticalAlignment="Top" HorizontalAlignment="Left" >
-            <StackPanel Height="86" Width="679" HorizontalAlignment="Left">
-                <TextBlock TextWrapping="Wrap" Text="Migration Progress:" Width="262" FontWeight="Bold" Margin="5,5,5,5" HorizontalAlignment="Left"/>
-                <TextBlock Name="Status" TextWrapping="Wrap" Text="Progress" Width="360" FontSize="11" Height="24" Margin="5,5,5,5" HorizontalAlignment="Left"/>
-                <ProgressBar Name="ProgressBar" Height="12" Width="592" Value="50" Foreground="#90b7fc" VerticalAlignment="Top" HorizontalAlignment="Center"/>
+                </Grid.RowDefinitions>
+                <Label Content="Username: " HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Column="0" Height="25" Width="69" />
+                <Label Content="ProfileSize: " HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Column="0" Grid.Row="1" Height="25" Width="71" />
+                <Label Content="LocalPath:" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Column="0" Grid.Row="2" Height="25" Width="63" />
+                <Label Content="NewLocalUsername:" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="3" Height="25" Width="114" />
+                <Label Name="Username" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="0"/>
+                <Label Name="ProfileSize" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="1"/>
+                <Label Name="LocalPath" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="2"/>
+                <Label Name="NewLocalUsername" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="3"/>
+            </Grid>
+        </GroupBox>
+
+        <GroupBox Header="Migration Status" FontWeight="Bold" Width="670" Height="83" MaxHeight="160" Margin="10,206,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <StackPanel Height="45" Width="660" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,0,0,0">
+                <TextBlock Name="Status" TextWrapping="Wrap" Text="Status: " Width="auto"  FontSize="12" Height="auto" Margin="5,5,5,5" HorizontalAlignment="Left" FontWeight="Normal"/>
+                <ProgressBar Name="ProgressBar" Height="12" Width="549" Foreground="#90b7fc" HorizontalAlignment="Center" VerticalAlignment="Top"/>
             </StackPanel>
+        </GroupBox>
 
-
+        <StackPanel>
+            <Expander Height="140" Header="View Log" Margin="10,307,0,60" Background="AliceBlue" HorizontalAlignment="Center" Width="536" VerticalAlignment="Bottom">
+                <Expander.Content>
+                    <ScrollViewer Name="ScrollLog" Margin="0,10,0,9" Foreground="Gray" HorizontalScrollBarVisibility = "Auto">
+                        <TextBlock Name="LogTextBlock" TextWrapping="Wrap" FontWeight="Medium" FontSize="12" >
+                        </TextBlock>
+                    </ScrollViewer>
+                </Expander.Content>
+            </Expander>
         </StackPanel>
 
-        <Expander Height="140" Header="View Log" Margin="0,241,0,0" VerticalAlignment="Top" Background="AliceBlue" HorizontalAlignment="Center" Width="574">
-            <Expander.Content>
-                <ScrollViewer Name="ScrollLog" Margin="0,10,0,9" Foreground="Gray" HorizontalScrollBarVisibility = "Auto">
-                    <TextBlock Name="LogTextBlock" TextWrapping="Wrap" FontWeight="Medium" FontSize="12" >
-                    </TextBlock>
-                </ScrollViewer>
-            </Expander.Content>
-        </Expander>
-        <Button Name="ViewLogButton" Content="View Log" HorizontalAlignment="Left" Margin="417,402,0,0" VerticalAlignment="Top" Height="26" Width="70"  />
-        <Button Name="StartJCADMUButton" Content="Re-run JCADMU" HorizontalAlignment="Left" Margin="492,402,0,0" Height="26" Width="70" FontSize="9" VerticalAlignment="Top"  />
-        <Button Name="ExitButton" Content="Exit" Height="26" Width="70" Margin="567,402,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"  />
+        <Grid HorizontalAlignment="Center" Margin="0,455,0,0" Width="700" VerticalAlignment="Top" Height="54" >
+            <Button Name="ViewLogButton" Content="View Log" HorizontalAlignment="Left"  VerticalAlignment="Bottom" Height="26" Width="70"  IsEnabled="False" FontWeight="Normal" Margin="403,0,0,18"/>
+            <Button Name="StartJCADMUButton" Content="Re-run JCADMU" HorizontalAlignment="Left"  Height="26" Width="70" FontSize="9" VerticalAlignment="Bottom" IsEnabled="False" FontWeight="Normal" Margin="478,0,0,18"/>
+            <Button Name="ExitButton" Content="Exit" Height="26" Width="70" HorizontalAlignment="Left" VerticalAlignment="Bottom" IsEnabled="False"  FontWeight="Normal" Margin="553,0,0,18"/>
+        </Grid>
     </Grid>
 </Window>
 "@
@@ -104,13 +117,11 @@ function New-ProgressForm{
         $syncHash.ScrollLog.ScrollToEnd()
 
 
-        $syncHash.Username.Text = $syncHash.UsernameInput
-        $syncHash.ProfileSize.Text = $syncHash.ProfileSizeInput
-        $syncHash.LocalPath.Text = $syncHash.LocalPathInput
-        $syncHash.NewLocalUsername.Text = $syncHash.NewLocalUsernameInput
-
         $updateForm = {
-
+            $syncHash.Username.Content = $syncHash.UsernameInput
+            $syncHash.ProfileSize.Content = $syncHash.ProfileSizeInput
+            $syncHash.LocalPath.Content = $syncHash.LocalPathInput
+            $syncHash.NewLocalUsername.Content = $syncHash.NewLocalUsernameInput
             # Migration Details
 
             if ($SyncHash.closeWindow -eq $True) {
@@ -212,11 +223,19 @@ function Update-ProgressForm {
         [string]$localPath,
         [string]$newLocalUsername
     )
+        # Make as $script: to make it global
+        # $ProgressBar.UsernameInput = $username
+        # $ProgressBar.ProfileSizeInput = $profileSize
+        # $ProgressBar.LocalPathInput = $localPath
+        # $ProgressBar.NewLocalUsernameInput = $newLocalUsername
 
-    $ProgressBar.UsernameInput = "Username: $username"
-    $ProgressBar.ProfileSizeInput = "ProfileSize: $($profileSize)GB"
-    $ProgressBar.LocalPathInput = "LocalPath: $localPath"
-    $ProgressBar.NewLocalUsernameInput = "NewLocalUsername: $newLocalUsername"
+    if ($username -and $profileSize -and $localPath -and $newLocalUsername) {
+        #Write-toLog -message "Migration details updated: Username: $username, ProfileSize: $profileSize, LocalPath: $localPath, NewLocalUsername: $newLocalUsername"
+        $ProgressBar.UsernameInput = $username
+        $ProgressBar.ProfileSizeInput = $profileSize
+        $ProgressBar.LocalPathInput = $localPath
+        $ProgressBar.NewLocalUsernameInput = $newLocalUsername
+    }
 
 
     if ($logLevel -eq "Error") {
@@ -240,3 +259,6 @@ function Update-LogTextBlock {
     # Update the progress bar
     $ProgressBar.LogText += $LogText
 }
+
+# $newProgress = New-ProgressForm
+# Update-ProgressForm -ProgressBar $newProgress -PercentComplete 50 -Status "Migration in progress" -logLevel "Info" -username "testuser" -profileSize "1GB" -localPath "C:\Users\testuser" -newLocalUsername "newtestuser"

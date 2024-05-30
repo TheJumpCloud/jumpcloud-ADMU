@@ -1,5 +1,5 @@
 #region Functions
-
+#. $psScriptRoot\ProgressForm.ps1
 function Show-Result {
     [CmdletBinding()]
     param (
@@ -1866,11 +1866,9 @@ function Write-ToProgress {
         [Parameter(Mandatory = $false)]
         $form,
         [Parameter(Mandatory = $false)]
-        $ProgressBar,
+        $progressBar,
         [Parameter(Mandatory = $true)]
-        $PercentComplete,
-        [Parameter(Mandatory = $true)]
-        $Status,
+        $status,
         [Parameter(Mandatory = $false)]
         $logLevel,
         [Parameter(Mandatory = $false)]
@@ -1883,16 +1881,54 @@ function Write-ToProgress {
         $LocalPath
 
     )
+    # Create a hashtable of all status messages
+    $statusMessages = [ordered]@{
+        "Init" = "Initializing Migration"
+        "Install"   = "Installing JumpCloud Agent"
+        "BackupUserFiles"       = "Backing up user profile"
+        "UserProfileUnit"     = "Initializing new user profile"
+        "BackupRegHive"      = "Backing up registry hive"
+        "VerifyRegHive"     = "Verifying registry hive"
+        "CopyLocalReg"   = "Copying local user registry"
+        "GetACL"   = "Getting ACLs"
+        "CopyUser"   = "Copying selected user to new user"
+        "CopyUserRegFiles" = "Copying user registry files"
+        "CopyMergedProfile" = "Copying merged profiles to destination profile path"
+        "CopyDefaultProtocols" = "Copying default protocol associations"
+        "ValidateUserPermissions" = "Validating user permissions"
+        "CreateRegEntries" = "Creating registry entries"
+        "DownloadUWPApps" = "Downloading UWP Apps"
+        "CheckADStatus" = "Checking AD Status"
+        "ConversionComplete" = "Profile conversion complete"
+        "MigrationComplete" = "Migration completed successfully"
+    }
+    # If status is error message, write to log
+    if ($logLevel -eq "Error") {
+        $statusMessage = $Status
+        $PercentComplete = 100
+    } else {
+        # Get the status message
+        $statusMessage = $statusMessages[$status]
+        # Count the number of status messages
+        $statusCount = $statusMessages.Count
+        # Get the index of the status message using for loop
+        $statusIndex = [array]::IndexOf($statusMessages.Keys, $status)
+        # Calculate the percentage complete based on the index of the status message
+        $PercentComplete = ($statusIndex / ($statusCount - 1)) * 100
+    }
+    Write-ToLog -message "Percent Complete: $PercentComplete" -Level Verbose
+    Write-ToLog -Message "Status: $statusMessage" -Level Verbose
     if ($form) {
-
         if ($username -and $newLocalUsername -and $profileSize -and $LocalPath) {
             # Pass in the migration details
-            Update-ProgressForm -ProgressBar $ProgressBar -PercentComplete $PercentComplete -Status $Status -logLevel $logLevel -username $username -newLocalUsername $newLocalUsername -profileSize $profileSize -LocalPath $LocalPath
+            # Output the all details parameters
+            Write-ToLog -Message "Username: $username NewLocalUsername: $newLocalUsername ProfileSize: $profileSize LocalPath: $LocalPath" -Level Verbose
+            Update-ProgressForm -progressBar $progressBar -percentComplete $PercentComplete -Status $statusMessage -username $username -newLocalUsername $newLocalUsername -profileSize $profileSize -localPath $LocalPath
         } else {
-            Update-ProgressForm -ProgressBar $ProgressBar -PercentComplete $PercentComplete -Status $Status -logLevel $logLevel
+            Update-ProgressForm -progressBar $progressBar -percentComplete $PercentComplete -Status $statusMessage -logLevel $logLevel
         }
     } else {
-        Write-Progress -Activity "Migration Progress" -PercentComplete $PercentComplete -Status $Status
+        Write-Progress -Activity "Migration Progress" -percentComplete $percentComplete -status $statusMessage
     }
 }
 
@@ -1947,16 +1983,11 @@ Function Start-Migration {
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
 
-        $progressCount = 16
-        $progressCounter = 1
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
         Write-ToLog -Message:("Form is set to $isForm") -Level Verbose
 
         If ($isForm) {
-
-
-
             $SelectedUserName = $inputObject.SelectedUserName
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
             $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
@@ -1971,10 +2002,7 @@ Function Start-Migration {
             $script:Progressbar = $Progressbar
 
 
-            Write-ToProgress -form $isForm -ProgressBar $Progressbar -PercentComplete 5 -Status "Starting Migration. Please wait..." -username $SelectedUserName -newLocalUsername $JumpCloudUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath # TODO: Old or New Profile Path?
-
-            # Log all variables
-            Write-ToLog -Message:("SelectedUserName: $SelectedUserName`nSelectedUserSID: $SelectedUserSID`nOldUserProfileImagePath: $oldUserProfileImagePath`nJumpCloudUserName: $JumpCloudUserName`nTempPassword: $TempPassword`nLeaveDomain: $LeaveDomain`nForceReboot: $ForceReboot`nUpdateHomePath: $UpdateHomePath`nInstallJCAgent: $InstallJCAgent`nAutobindJCUser: $AutobindJCUser`nBindAsAdmin: $BindAsAdmin`nSetDefaultWindowsUser: $SetDefaultWindowsUser`nAdminDebug: $AdminDebug`nJumpCloudConnectKey: $JumpCloudConnectKey`nJumpCloudAPIKey: $JumpCloudAPIKey`nJumpCloudOrgID: $JumpCloudOrgID`nProgressbar: $Progressbar`nProfileSize: $profileSize`nLocalPath: $oldUserProfileImagePath") -Verbose
+            Write-ToProgress -form $isForm -ProgressBar $Progressbar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath # TODO: Old or New Profile Path?
 
             if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
                 $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
@@ -2140,8 +2168,7 @@ Function Start-Migration {
 
 
         $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
-        $progressPercent = ($progressCounter++ / $progressCount * 100)
-        Write-ToProgress -form $isForm -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Installing JumpCloud Agent"
+        Write-ToProgress -ProgressBar $Progressbar -Status "Install" -form $isForm
 
         # Add value to the progress bar
 
@@ -2168,8 +2195,7 @@ Function Start-Migration {
         # While loop for breaking out of log gracefully:
         $MigrateUser = $true
         while ($MigrateUser) {
-            $progressPercent = ($progressCounter++ / $progressCount * 100)
-            Write-ToProgress  -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Creating backup of user files" -form $isForm
+            Write-ToProgress  -ProgressBar $Progressbar -Status "BackupUserFiles" -form $isForm
 
             ### Begin Backup Registry for Selected User ###
             Write-ToLog -Message:('Creating Backup of User Registry Hive')
@@ -2203,8 +2229,7 @@ Function Start-Migration {
             }
             $admuTracker.newUserCreate.pass = $true
             # Initialize the Profile & Set SID
-            $progressPercent = ($progressCounter++ / $progressCount * 100)
-            Write-ToProgress  -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Initializing new user profile" -form $isForm
+            Write-ToProgress  -ProgressBar $Progressbar -Status "UserProfileUnit" -form $isForm
 
             $NewUserSID = New-LocalUserProfile -username:($JumpCloudUsername) -ErrorVariable profileInit
             if ($profileInit) {
@@ -2231,8 +2256,7 @@ Function Start-Migration {
 
             ### Begin backup user registry for new user
             try {
-                $progressPercent = ($progressCounter++ / $progressCount * 100)
-                Write-ToProgress -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Backing up registry hive" -form $isForm
+                Write-ToProgress -ProgressBar $Progressbar -Status "BackupRegHive" -form $isForm
 
                 Backup-RegistryHive -profileImagePath $newUserProfileImagePath -SID $NewUserSID
             } catch {
@@ -2246,9 +2270,8 @@ Function Start-Migration {
 
             ### Begin Test Registry Steps
             # Test Registry Access before edits
-            $progressPercent = ($progressCounter++ / $progressCount * 100)
 
-            Write-ToProgress -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Verifying registry hives" -form $isForm
+            Write-ToProgress -ProgressBar $Progressbar -Status "VerifyRegHive" -form $isForm
 
             Write-ToLog -Message:('Verifying registry files can be loaded and unloaded')
             try {
@@ -2261,8 +2284,7 @@ Function Start-Migration {
             }
             $admuTracker.testRegLoadUnload.pass = $true
             ### End Test Registry
-            $progressPercent = ($progressCounter++ / $progressCount * 100)
-            Write-ToProgress -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Copying local user registry" -form $isForm
+            Write-ToProgress -ProgressBar $Progressbar -Status "CopyLocalReg" -form $isForm
 
             Write-ToLog -Message:('Begin new local user registry copy') -Level Verbose
             # Give us admin rights to modify
@@ -2279,8 +2301,7 @@ Function Start-Migration {
                     }
                 }
             }
-            $progressPercent = ($progressCounter++ / $progressCount * 100)
-            Write-ToProgress -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Getting ACLs" -form $isForm
+            Write-ToProgress -ProgressBar $Progressbar -Status "GetACL" -form $isForm
 
             Write-ToLog -Message:("Get ACLs for $($newUserProfileImagePath)")
             $acl = Get-Acl ($newUserProfileImagePath)
@@ -2303,8 +2324,7 @@ Function Start-Migration {
             Write-ToLog -Message:("Applying ACL...")
             $acl | Set-Acl $newUserProfileImagePath
 
-            $progressPercent = ($progressCounter++ / $progressCount * 100)
-            Write-ToProgress -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Copying selected user to new user" -form $isForm
+            Write-ToProgress -ProgressBar $Progressbar -Status "CopyUser" -form $isForm
             try {
                 # Load New User Profile Registry Keys
                 Set-UserRegistryLoadState -op "Load" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID -hive root
@@ -2370,8 +2390,8 @@ Function Start-Migration {
                     }
                 }
             }
-            $progressPercent = ($progressCounter++ / $progressCount * 100)
-            Write-ToProgress -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Copying user registry files" -form $isForm
+
+            Write-ToProgress -ProgressBar $Progressbar -Status "CopyUserRegFiles" -form $isForm
             #TODO: Out NULL?
             reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
             if ($?) {
@@ -2425,8 +2445,7 @@ Function Start-Migration {
             $admuTracker.copyRegistry.pass = $true
 
             # Copy the profile containing the correct access and data to the destination profile
-            $progressPercent = ($progressCounter++ / $progressCount * 100)
-            Write-ToProgress -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Copying merged profiles to destination profile path" -form $isForm
+            Write-ToProgress -ProgressBar $Progressbar -Status "CopyMergedProfile" -form $isForm
             Write-ToLog -Message:('Copying merged profiles to destination profile path')
 
             # Set Registry Check Key for New User
@@ -2471,8 +2490,7 @@ Function Start-Migration {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
             }
-            $progressPercent = ($progressCounter++ / $progressCount * 100)
-            Write-ToProgress -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Copying default protocols and apps" -form $isForm
+            Write-ToProgress -ProgressBar $Progressbar -Status "CopyDefaultProtocols" -form $isForm
 
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $SelectedUserSid
             Write-ToLog -Message:('Found ' + $fileTypeAssociations.count + ' File Type Associations')
@@ -2786,8 +2804,7 @@ Function Start-Migration {
             $validateNTUserDatPermissions, $validateNTUserDatPermissionsResults = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'
 
             $validateUsrClassDatPermissions, $validateUsrClassDatPermissionsResults = Test-DATFilePermission -path "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat" -username $JumpCloudUserName -type 'ntfs'
-            $progressPercent = ($progressCounter++ / $progressCount * 100)
-            Write-ToProgress -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Validating user permissions" -form $isForm
+            Write-ToProgress -ProgressBar $Progressbar -Status "ValidateUserPermissions" -form $isForm
 
             if ($validateNTUserDatPermissions ) {
                 Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath) `n$($validateNTUserDatPermissionsResults | Out-String)")
@@ -2802,8 +2819,7 @@ Function Start-Migration {
             ## End Regedit Block ##
 
             ### Active Setup Registry Entry ###
-            $progressPercent = ($progressCounter++ / $progressCount * 100)
-            Write-ToProgress -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Creating registry entries" -form $isForm
+            Write-ToProgress -ProgressBar $Progressbar -Status "CreateRegEntries" -form $isForm
 
             Write-ToLog -Message:('Creating HKLM Registry Entries') -Level Verbose
             # Root Key Path
@@ -2838,8 +2854,7 @@ Function Start-Migration {
             }
             # $admuTracker.activeSetupHKLM = $true
             ### End Active Setup Registry Entry Region ###
-            $progressPercent = ($progressCounter++ / $progressCount * 100)
-            Write-ToProgress -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Downloading UWP application" -form $isForm
+            Write-ToProgress -ProgressBar $Progressbar -Status "DownloadUWPApps" -form $isForm
 
             Write-ToLog -Message:('Updating UWP Apps for new user') -Level Verbose
             $newUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
@@ -2861,8 +2876,7 @@ Function Start-Migration {
                     $AzureDomainStatus = ($line.trimstart('DomainJoined : '))
                 }
             }
-            $progressPercent = ($progressCounter++ / $progressCount * 100)
-            Write-ToProgress -ProgressBar $Progressbar -PercentComplete $progressPercent -Status "Checking AD status" -form $isForm
+            Write-ToProgress -ProgressBar $Progressbar -Status "CheckADStatus" -form $isForm
 
             Write-ToLog "AzureAD Status: $AzureADStatus" -Level Verbose
             if ($AzureADStatus -eq 'YES' -or $netBiosName -match 'AzureAD') {
@@ -2906,7 +2920,7 @@ Function Start-Migration {
                 # TODO: Get the checksum
                 # $admuTracker.uwpDownloadExe = $true
             }
-            Write-ToProgress -form $isForm -ProgressBar $Progressbar -PercentComplete 100  -Status "Profile Conversion Completed"
+            Write-ToProgress -ProgressBar $Progressbar -Status "ConversionComplete" -form $isForm
             Write-ToLog -Message:('Profile Conversion Completed') -Level Verbose
 
 
@@ -3058,7 +3072,7 @@ Function Start-Migration {
         }
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) {
             Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile) -Level Verbose
-            Write-ToProgress -ProgressBar $Progressbar -PercentComplete 100 -Status "Migration Completed Succesfully" -form $isForm
+            Write-ToProgress -ProgressBar $Progressbar -Status "MigrationComplete" -form $isForm
             Write-ToLog -Message:('Tool options chosen were : ' + "`nInstall JC Agent = " + $InstallJCAgent + "`nLeave Domain = " + $LeaveDomain + "`nForce Reboot = " + $ForceReboot + "`nUpdate Home Path = " + $UpdateHomePath + "`nAutobind JC User = " + $AutobindJCUser) -Level Verbose
             if (!$isForm) {
                 Show-Result -domainUser $SelectedUserName -localUser "$($localComputerName)\$($JumpCloudUserName)" -success $true -profilePath $newUserProfileImagePath -logPath $jcAdmuLogFile
@@ -3067,7 +3081,7 @@ Function Start-Migration {
             Write-ToLog -Message:("ADMU encoutered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warn
             Write-ToLog -Message:("The following migration steps were reverted to their original state: $FixedErrors") -Level Warn
             Write-ToLog -Message:('Script finished with errors; Log file location: ' + $jcAdmuLogFile) -Level Error
-            Write-ToProgress -ProgressBar $Progressbar -PercentComplete 100 -Status $Script:ErrorMessage -form $isForm -logLevel "Error"
+            Write-ToProgress -ProgressBar $Progressbar -Status $Script:ErrorMessage -form $isForm -logLevel "Error"
             if (!$isForm) {
                 Show-Result -domainUser $SelectedUserName -localUser "$($localComputerName)\$($JumpCloudUserName)" -success $false -profilePath $newUserProfileImagePath -admuTrackerInput $admuTracker -FixedErrors $FixedErrors -logPath $jcAdmuLogFile
             }
