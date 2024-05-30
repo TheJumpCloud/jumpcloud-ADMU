@@ -957,13 +957,6 @@ Function Write-ToLog {
         $logMessage = "$FormattedDate $LevelText $Message" + "`r`n"
         if ($Script:ProgressBar) {
             Update-LogTextBlock -LogText $logMessage -ProgressBar $Script:ProgressBar
-            # if ($Level -eq 'Error') {
-            #     Update-LogTextBlock -LogText $logMessage -ProgressBar $Script:ProgressBar
-            #     Update-ProgressForm -ProgressBar $Script:ProgressBar -logLevel "Error" -Status:($message)
-            #     #Write-ToProgressLog -Status $logMessage -logLevel "Error" -ProgressBar $Script:ProgressBar -form $true
-            # } else {
-
-            # }
         }
         # Write log entry to $Path
         "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
@@ -1839,7 +1832,7 @@ function Error-Map {
             $Script:ErrorMessage = "Rename Error: NTUser.dat could not be renamed to NTUser.dat.bak. Please go to log file for more information."
         }
         "backup_error" {
-            Write-ToLog -Message:("Registry Backup Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors")   -Level Error
+            Write-ToLog -Message:("Registry Backup Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
 
             $Script:ErrorMessage = "Registry Backup Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Please go to log file for more information."
         }
@@ -1916,8 +1909,6 @@ function Write-ToProgress {
         # Calculate the percentage complete based on the index of the status message
         $PercentComplete = ($statusIndex / ($statusCount - 1)) * 100
     }
-    Write-ToLog -message "Percent Complete: $PercentComplete" -Level Verbose
-    Write-ToLog -Message "Status: $statusMessage" -Level Verbose
     if ($form) {
         if ($username -and $newLocalUsername -and $profileSize -and $LocalPath) {
             # Pass in the migration details
