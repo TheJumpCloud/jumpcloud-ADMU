@@ -42,7 +42,7 @@ function New-ProgressForm{
     ResizeMode="NoResize"
     Background="White" Width="700" Height="530">
     <Grid>
-        <Image Name="JCLogoImg" Margin="10,12,0,0" HorizontalAlignment="Left" Source="/JC oceanblue tm.png" Height="33" Width="500" VerticalAlignment="Top"/>
+        <Image Name="JCLogoImg" Margin="10,12,0,0" HorizontalAlignment="Left" Height="33" Width="500" VerticalAlignment="Top"/>
         <GroupBox Header="Migration Details" FontWeight="Bold" Width="auto" Height="148" MaxHeight="160" Margin="10,50,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
             <Grid HorizontalAlignment="Left" Height="61" Margin="10,0,0,0" VerticalAlignment="Center" Width="auto" MinWidth="245" MinHeight="100">
                 <Grid.ColumnDefinitions>
