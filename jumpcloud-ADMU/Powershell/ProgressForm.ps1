@@ -42,24 +42,23 @@ function New-ProgressForm{
     ResizeMode="NoResize"
     Background="White" Width="700" Height="530">
     <Grid>
-        <Image Name="JCLogoImg" Margin="75,15,454,0" Source="/JC oceanblue tm.png" Height="28" VerticalAlignment="Top"/>
-        <GroupBox Header="Migration Details" FontWeight="Bold" Width="303" Height="148" MaxHeight="160" Margin="10,50,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
-            <Grid HorizontalAlignment="Left" Height="61" Margin="10,0,0,0" VerticalAlignment="Center" Width="276" MinWidth="245" MinHeight="100">
+        <Image Name="JCLogoImg" Margin="10,12,0,0" HorizontalAlignment="Left" Source="/JC oceanblue tm.png" Height="33" Width="500" VerticalAlignment="Top"/>
+        <GroupBox Header="Migration Details" FontWeight="Bold" Width="auto" Height="148" MaxHeight="160" Margin="10,50,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <Grid HorizontalAlignment="Left" Height="61" Margin="10,0,0,0" VerticalAlignment="Center" Width="auto" MinWidth="245" MinHeight="100">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="110"/>
-                    <ColumnDefinition Width="165"/>
+                    <ColumnDefinition Width="118"/>
+                    <ColumnDefinition Width="auto"/>
                 </Grid.ColumnDefinitions>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="25"/>
                     <RowDefinition Height="25"/>
                     <RowDefinition Height="25"/>
                     <RowDefinition Height="25"/>
-
                 </Grid.RowDefinitions>
                 <Label Content="Username: " HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Column="0" Height="25" Width="69" />
                 <Label Content="ProfileSize: " HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Column="0" Grid.Row="1" Height="25" Width="71" />
                 <Label Content="LocalPath:" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Column="0" Grid.Row="2" Height="25" Width="63" />
-                <Label Content="NewLocalUsername:" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="3" Height="25" Width="114" />
+                <Label Content="NewLocalUsername:" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="3" Height="25" Width="118" />
                 <Label Name="Username" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="0"/>
                 <Label Name="ProfileSize" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="1"/>
                 <Label Name="LocalPath" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="2"/>
@@ -70,15 +69,27 @@ function New-ProgressForm{
         <GroupBox Header="Migration Status" FontWeight="Bold" Width="670" Height="83" MaxHeight="160" Margin="10,206,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
             <StackPanel Height="45" Width="660" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,0,0,0">
                 <TextBlock Name="Status" TextWrapping="Wrap" Text="Status: " Width="auto"  FontSize="12" Height="auto" Margin="5,5,5,5" HorizontalAlignment="Left" FontWeight="Normal"/>
-                <ProgressBar Name="ProgressBar" Height="12" Width="549" Foreground="#90b7fc" HorizontalAlignment="Center" VerticalAlignment="Top"/>
+                <ProgressBar Name="ProgressBar" Height="12" Width="549" Foreground="#52C4C1" HorizontalAlignment="Center" VerticalAlignment="Top">
+                    <ProgressBar.Resources>
+                        <Style TargetType="Border">
+                            <Setter Property="CornerRadius" Value="3"/>
+                        </Style>
+                    </ProgressBar.Resources>
+                </ProgressBar>
             </StackPanel>
         </GroupBox>
 
-        <StackPanel>
-            <Expander Height="140" Header="View Log" Margin="10,307,0,60" Background="AliceBlue" HorizontalAlignment="Center" Width="536" VerticalAlignment="Bottom">
+        <StackPanel HorizontalAlignment="Left">
+            <Expander Height="140" Header="View Log" Margin="10,307,0,60" Background="AliceBlue" HorizontalAlignment="Center" Width="670">
+                <Expander.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="5"/>
+                    </Style>
+                </Expander.Resources>
                 <Expander.Content>
-                    <ScrollViewer Name="ScrollLog" Margin="0,10,0,9" Foreground="Gray" HorizontalScrollBarVisibility = "Auto">
-                        <TextBlock Name="LogTextBlock" TextWrapping="Wrap" FontWeight="Medium" FontSize="12" >
+
+                    <ScrollViewer Name="ScrollLog" Foreground="Gray" HorizontalScrollBarVisibility = "Auto" VerticalAlignment="Center" Height="98">
+                        <TextBlock Name="LogTextBlock" TextWrapping="Wrap" FontWeight="Medium" FontSize="11" >
                         </TextBlock>
                     </ScrollViewer>
                 </Expander.Content>
@@ -86,14 +97,35 @@ function New-ProgressForm{
         </StackPanel>
 
         <Grid HorizontalAlignment="Center" Margin="0,455,0,0" Width="700" VerticalAlignment="Top" Height="54" >
-            <Button Name="ViewLogButton" Content="View Log" HorizontalAlignment="Left"  VerticalAlignment="Bottom" Height="26" Width="70"  IsEnabled="False" FontWeight="Normal" Margin="403,0,0,18"/>
-            <Button Name="StartJCADMUButton" Content="Re-run JCADMU" HorizontalAlignment="Left"  Height="26" Width="70" FontSize="9" VerticalAlignment="Bottom" IsEnabled="False" FontWeight="Normal" Margin="478,0,0,18"/>
-            <Button Name="ExitButton" Content="Exit" Height="26" Width="70" HorizontalAlignment="Left" VerticalAlignment="Bottom" IsEnabled="False"  FontWeight="Normal" Margin="553,0,0,18"/>
+            <Button Name="ViewLogButton" Content="View Log" HorizontalAlignment="Left"  VerticalAlignment="Top" Height="26" Width="70"  IsEnabled="False" FontWeight="Normal" Margin="459,9,0,0">
+                <Button.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="3"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
+
+            <Button Name="StartJCADMUButton" Content="Rerun" HorizontalAlignment="Left"  Height="26" Width="70" VerticalAlignment="Top" IsEnabled="False" FontWeight="Normal" Margin="534,9,0,0">
+                <Button.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="3"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
+            <Button Name="ExitButton" Content="Exit" Height="26" Width="70" HorizontalAlignment="Left" VerticalAlignment="Top" IsEnabled="False"  FontWeight="Normal" Margin="609,9,0,0">
+                <Button.Resources>
+                    <Style TargetType="Border">
+                        <Setter Property="CornerRadius" Value="3"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
         </Grid>
     </Grid>
 </Window>
 "@
-
+# Colors
+# Foreground="#90b7fc" Darkblue
+# Foreground="#52C4C1" Teal
     # Create a runspace to run the form in
     $newRunspace.ApartmentState = "STA"
     $newRunspace.ThreadOptions = "ReuseThread"
@@ -108,20 +140,17 @@ function New-ProgressForm{
         ([xml]$SyncHash.XAML).SelectNodes("//*[@Name]") | % { $SyncHash."$($_.Name)" = $SyncHash.Window.FindName($_.Name) }
         # Image
         $SyncHash.JCLogoImg.Source = $syncHash.base64JCLogo
-
-        # TODO: Icon
-        #$SyncHash.Window.Icon = $syncHash.base64JCLogo
-        # Automatically scroll to the bottom of the log
+        $syncHash.Username.Content = $syncHash.UsernameInput
+        $syncHash.ProfileSize.Content = $syncHash.ProfileSizeInput
+        $syncHash.LocalPath.Content = $syncHash.LocalPathInput
+        $syncHash.NewLocalUsername.Content = $syncHash.NewLocalUsernameInput
 
         # Scroll to end of Log
         $syncHash.ScrollLog.ScrollToEnd()
 
 
         $updateForm = {
-            $syncHash.Username.Content = $syncHash.UsernameInput
-            $syncHash.ProfileSize.Content = $syncHash.ProfileSizeInput
-            $syncHash.LocalPath.Content = $syncHash.LocalPathInput
-            $syncHash.NewLocalUsername.Content = $syncHash.NewLocalUsernameInput
+
             # Migration Details
 
             if ($SyncHash.closeWindow -eq $True) {
@@ -153,10 +182,7 @@ function New-ProgressForm{
 
             # Update Status Text
             $SyncHash.Status.Text = $SyncHash.StatusInput
-            if ($SyncHash.SecondsRemainingInput) {
-                $TimeRemaining = [System.TimeSpan]::FromSeconds($SyncHash.SecondsRemainingInput)
-                $SyncHash.TimeRemaining.Text = '{0:00}:{1:00}:{2:00}' -f $TimeRemaining.Hours, $TimeRemaining.Minutes, $TimeRemaining.Seconds
-            }
+
         }
         # View Log Button
         $SyncHash.ViewLogButton.Add_Click({
@@ -193,13 +219,10 @@ function New-ProgressForm{
         $syncHash.Window.Show() | Out-Null
           $appContext = [System.Windows.Forms.ApplicationContext]::new()
           [void][System.Windows.Forms.Application]::Run($appContext)
-          $syncHash.Error = $Error
     })
-
     # Invoke PS Command
     $psCommand.Runspace = $newRunspace
     $data = $psCommand.BeginInvoke()
-
 
     Register-ObjectEvent -InputObject $SyncHash.Runspace -EventName 'AvailabilityChanged' -Action {
         if ($Sender.RunspaceAvailability -eq "Available") {
@@ -223,16 +246,11 @@ function Update-ProgressForm {
         [string]$localPath,
         [string]$newLocalUsername
     )
-        # Make as $script: to make it global
-        # $ProgressBar.UsernameInput = $username
-        # $ProgressBar.ProfileSizeInput = $profileSize
-        # $ProgressBar.LocalPathInput = $localPath
-        # $ProgressBar.NewLocalUsernameInput = $newLocalUsername
 
-    if ($username -and $profileSize -and $localPath -and $newLocalUsername) {
+    if ($username -or $profileSize -or $localPath -or $newLocalUsername) {
         #Write-toLog -message "Migration details updated: Username: $username, ProfileSize: $profileSize, LocalPath: $localPath, NewLocalUsername: $newLocalUsername"
         $ProgressBar.UsernameInput = $username
-        $ProgressBar.ProfileSizeInput = $profileSize
+        $ProgressBar.ProfileSizeInput = "$($profileSize)GB"
         $ProgressBar.LocalPathInput = $localPath
         $ProgressBar.NewLocalUsernameInput = $newLocalUsername
     }

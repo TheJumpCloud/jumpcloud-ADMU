@@ -1910,10 +1910,8 @@ function Write-ToProgress {
         $PercentComplete = ($statusIndex / ($statusCount - 1)) * 100
     }
     if ($form) {
-        if ($username -and $newLocalUsername -and $profileSize -and $LocalPath) {
-            # Pass in the migration details
-            # Output the all details parameters
-            Write-ToLog -Message "Username: $username NewLocalUsername: $newLocalUsername ProfileSize: $profileSize LocalPath: $LocalPath" -Level Verbose
+        if ($username -or $newLocalUsername -or $profileSize -or $LocalPath) {
+            # Pass in the migration details to the progress bar
             Update-ProgressForm -progressBar $progressBar -percentComplete $PercentComplete -Status $statusMessage -username $username -newLocalUsername $newLocalUsername -profileSize $profileSize -localPath $LocalPath
         } else {
             Update-ProgressForm -progressBar $progressBar -percentComplete $PercentComplete -Status $statusMessage -logLevel $logLevel
@@ -1930,11 +1928,10 @@ function Get-ProfileSize {
         [System.String]
         $profilePath
     )
-    $profilePath = "C:\Users\KenTest"
     $files = Get-ChildItem -Path $profilePath -Recurse -Force | Where-Object { -not $_.PSIsContainer } | Measure-Object -Property Length -Sum
     $profileSizeSum = $files.Sum
     $totalSizeGB = [math]::round($profileSizeSum / 1GB, 1)
-
+    Write-ToLog -Message:("Profile Size: $totalSizeGB GB")
     return $totalSizeGB
 }
 Function Start-Migration {
