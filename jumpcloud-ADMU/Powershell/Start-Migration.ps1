@@ -1,77 +1,4 @@
 #region Functions
-#. $psScriptRoot\ProgressForm.ps1
-function Show-Result {
-    [CmdletBinding()]
-    param (
-        [Parameter()]
-        [string]
-        $domainUser,
-        [Parameter()]
-        [System.Object]
-        $admuTrackerInput,
-        [Parameter()]
-        [string[]]
-        $FixedErrors,
-        [Parameter()]
-        [string]
-        $profilePath,
-        [Parameter()]
-        [string]
-        $localUser,
-        [Parameter()]
-        [string]
-        $logPath,
-        [Parameter(Mandatory = $true)]
-        [bool]
-        $success
-    )
-    process {
-        # process tasks
-        if ($success) {
-            $message = "ADMU completed successfully:`n"
-            $message += "$domainUser was migrated to $localUser.`n"
-            $message += "$($localUser)'s Account Details:`n"
-            $message += "Profile Path: $profilePath`n"
-        } else {
-            $message = "ADMU did not complete sucessfully:`n"
-            $message = "$domainUser was not migrated.`n"
-            $failures = $($admuTrackerInput.Keys | Where-Object { $admuTrackerInput[$_].fail -eq $true } )
-            if ($failures) {
-                $message += "`nEncounted errors on the following steps:`n"
-                foreach ($item in $failures) {
-                    $message += "$item`n"
-                }
-            }
-            if ($FixedErrors) {
-                $message += "`nChanges in the following steps were reverted:`n"
-                foreach ($item in $FixedErrors) {
-                    $message += "$item`n"
-                }
-            }
-            #TODO: verbose messaging for errors
-            # foreach ($item in $failures)
-            # {
-            #     $message += "-------------------------------------------------------- `n"
-            #     $message += "Step Failure Reason: $($admuTrackerInput[$item].remedy) `n"
-            #     $message += "Step Description: $($admuTrackerInput[$item].description) `n"
-            #     $message += "-------------------------------------------------------- `n"
-            # }
-            # foreach ($item in $FixedErrors)
-            # {
-            #     $message += "-------------------------------------------------------- `n"
-            #     $message += "Step: $item | was reverted to its orgional state`n"
-            #     $message += "-------------------------------------------------------- `n"
-            # }
-        }
-        $message += "`nClick 'OK' to open the ADMU log"
-        $wshell = New-Object -ComObject Wscript.Shell
-        $var = $wshell.Popup("$message", 0, "ADMU Status", 0x1 + 0x40)
-        if ($var -eq 1) {
-            notepad $logPath
-        }
-        # return $var
-    }
-}
 function Test-RegistryValueMatch {
 
     param (
@@ -2025,18 +1952,11 @@ Function Start-Migration {
             $LeaveDomain = $InputObject.LeaveDomain
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
-            # $script:AdminDebug = $inputObject.AdminDebug
-            # Write-ToLog "Admin Debug: $script:AdminDebug"
-            $displayGuiPrompt = $true
-            Add-Type -AssemblyName System.Windows.Forms
-            # Use these
-            #     WindowStyle="SingleBorderWindow"
-            # ResizeMode="NoResize"
-            # Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1000" Height="520">
-
+        } else {
+            $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
         }
 
-        $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
+
         $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
 
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')

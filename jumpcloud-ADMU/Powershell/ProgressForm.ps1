@@ -277,6 +277,3 @@ function Update-LogTextBlock {
     # Update the progress bar
     $ProgressBar.LogText += $LogText
 }
-
-# $newProgress = New-ProgressForm
-# Update-ProgressForm -ProgressBar $newProgress -PercentComplete 50 -Status "Migration in progress" -logLevel "Info" -username "testuser" -profileSize "1GB" -localPath "C:\Users\testuser" -newLocalUsername "newtestuser"
