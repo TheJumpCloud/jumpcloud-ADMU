@@ -1,0 +1,61 @@
+Function Test-UserRegistryLoadState {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [ValidateScript( { Test-Path $_ })]
+        [System.String]$ProfilePath,
+        # User Security Identifier
+        [Parameter(Mandatory = $true)]
+        [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
+        [System.String]$UserSid
+    )
+    begin {
+        $results = REG QUERY HKU *>&1
+        # Tests to check that the reg items are not loaded
+        If ($results -match $UserSid) {
+            Write-ToLog "REG Keys are loaded, attempting to unload"
+            try {
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
+            } catch {
+                Error-Map -Error:("load_unload_error")
+
+                Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
+            }
+        }
+    }
+    process {
+        # Load New User Profile Registry Keys
+        try {
+            Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
+            Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
+        } catch {
+            Error-Map -Error:("load_unload_error")
+            Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
+        }
+        # Load Selected User Profile Keys
+        # Unload "Selected" and "NewUser"
+        try {
+            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
+            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
+        } catch {
+            Error-Map -Error:("load_unload_error")
+
+            Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
+        }
+    }
+    end {
+        $results = REG QUERY HKU *>&1
+        # Tests to check that the reg items are not loaded
+        If ($results -match $UserSid) {
+            Write-ToLog "REG Keys are loaded, attempting to unload"
+            try {
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
+                Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
+            } catch {
+                Error-Map -Error:("load_unload_error")
+                throw "Registry Keys are still loaded after Test-UserRegistryLoadState Testing Exiting..."
+            }
+        }
+    }
+}
