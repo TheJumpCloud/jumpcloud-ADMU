@@ -128,8 +128,8 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: ${{ secrets.AWS_REGION }}
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_NUMBER }}:role/${{ secrets.AWS_ROLE_NAME }}
+          aws-region: us-west-2
+          role-to-assume: arn:aws:iam::868503801984:role/GithubActionsCI-admu-cd
           role-session-name: GHA_ADMU_TEST
       - name: Sts GetCallerIdentity
         run: |
