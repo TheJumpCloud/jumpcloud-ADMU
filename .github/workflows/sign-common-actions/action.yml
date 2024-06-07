@@ -79,8 +79,8 @@ runs:
       env:
         OBJECT_LOCK_ENABLED: "true"
         OBJECT_LOCK_YEARS: "3"
-        PRERELEASE_ARTIFACT_BUCKET: "jumpcloud-prerelease-artifacts-ct"
-        PRERELEASE_ARTIFACT_BUCKET_REGION: "us-east-1"
+        PRERELEASE_ARTIFACT_BUCKET: "jumpcloud-prerelease-artifacts"
+        PRERELEASE_ARTIFACT_BUCKET_REGION: ${{ secrets.AWS_REGION }}
       with:
         script: |
           const script = require(`${process.env.GITHUB_ACTION_PATH}/index.js`)
