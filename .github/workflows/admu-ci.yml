@@ -35,8 +35,7 @@ jobs:
           pr_id=$(gh pr view ${BRANCH_NAME} --json number  --jq '.number' )
           echo "pr_id=${pr_id}" >> $GITHUB_OUTPUT
 
-          pr_labels=$(gh pr view ${BRANCH_NAME} --json labels | jq -r '[.labels.[].name] | join(
-            " ")' )
+          pr_labels=$(gh pr view ${BRANCH_NAME} --json labels | jq -r '[.labels.[].name] | join(" ")' )
           echo "pr_labels=${pr_labels}" >> $GITHUB_OUTPUT
 
           echo "pr_id=${pr_id}"
