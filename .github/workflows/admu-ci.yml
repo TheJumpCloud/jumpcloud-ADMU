@@ -35,7 +35,7 @@ jobs:
           pr_id=$(gh pr view ${BRANCH_NAME} --json number  --jq '.number' )
           echo "pr_id=${pr_id}" >> $GITHUB_OUTPUT
 
-          pr_labels=$(gh pr view ${BRANCH_NAME} --json labels  --jq '.labels' )
+          pr_labels=$(gh pr view ${BRANCH_NAME} --json labels  --jq '.labels.[].name' )
           echo "pr_labels=${pr_labels}" >> $GITHUB_OUTPUT
 
           echo "pr_id=${pr_id}"
@@ -43,14 +43,14 @@ jobs:
   Filter-Branch:
     runs-on: ubuntu-latest
     needs: ["Setup-Variables"]
-    if: contains( needs.Setup-Variables.outputs.PR_LABELS.*.name, 'ADMU')
+    if: contains( needs.Setup-Variables.outputs.PR_LABELS, 'ADMU')
     steps:
       - run: echo "Building JumpCloud Module 'ADMU'"
   Check-PR-Labels:
     needs: ["Filter-Branch", "Setup-Variables"]
     runs-on: ubuntu-latest
     env:
-      PR_LABELS: ${{ needs.Setup-Variables.outputs.PR_LABELS }}
+      PR_LABEL_LIST: ${{ needs.Setup-Variables.outputs.PR_LABELS }}
     outputs:
       RELEASE_TYPE: ${{ steps.validate.outputs.RELEASE_TYPE }}
     steps:
@@ -58,7 +58,7 @@ jobs:
         id: validate
         shell: pwsh
         run: |
-          $PR_LABEL_LIST=$(echo ${PR_LABELS} | jq -r '.[].name')
+          $PR_LABEL_LIST=$(echo ${PR_LABELS}')
           if ("ADMU" -in $PR_LABEL_LIST) {
               write-host "Starting Build for PowerShell Module Release"
           }
