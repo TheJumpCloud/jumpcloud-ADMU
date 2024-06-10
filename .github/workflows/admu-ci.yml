@@ -142,7 +142,7 @@ jobs:
         run: |
           . "${{ github.workspace }}/Deploy/build.ps1" -ModuleVersionType $env:RELEASE_TYPE -ModuleName "JumpCloud.ADMU"
       - name: Sign and Upload
-        uses: ./.github/workflows/sign-common-actions/sign-and-upload
+        uses: ./.github/workflows/sign-common-actions
         with:
           files: |-
             ${{ github.workspace }}/jumpcloud-ADMU/Exe/gui_jcadmu.exe
