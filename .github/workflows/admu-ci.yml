@@ -144,9 +144,9 @@ jobs:
       - name: Sign and Upload
         uses: ./.github/workflows/sign-common-actions
         with:
-          upload-only-files: |-
-            ${{ github.workspace }}/jumpcloud-ADMU/Exe/gui_jcadmu.exe
-            ${{ github.workspace }}/jumpcloud-ADMU/Exe/uwp_jcadmu.exe
+          files: |-
+            jumpcloud-ADMU/Exe/gui_jcadmu.exe
+            jumpcloud-ADMU/Exe/uwp_jcadmu.exe
           SM_API_KEY: ${{ secrets.SM_V2_API_KEY }}
           SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_V2_CLIENT_CERT_PASSWORD }}
           SM_CLIENT_CERT_FILE_B64: ${{ secrets.SM_V2_CLIENT_CERT_FILE_B64 }}
