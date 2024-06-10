@@ -29,6 +29,7 @@ jobs:
       PR_ID: ${{ steps.get_pr_id.outputs.pr_id }}
       PR_LABELS: ${{ steps.get_pr_id.outputs.pr_labels }}
     steps:
+      - uses: actions/checkout@v4
       - name: get_pr_id
         run: |
           pr_id=$(gh pr view ${BRANCH_NAME} --json number  --jq '.number' )
