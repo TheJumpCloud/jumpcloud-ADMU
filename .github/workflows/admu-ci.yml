@@ -35,7 +35,8 @@ jobs:
           pr_id=$(gh pr view ${BRANCH_NAME} --json number  --jq '.number' )
           echo "pr_id=${pr_id}" >> $GITHUB_OUTPUT
 
-          pr_labels=$(gh pr view ${BRANCH_NAME} --json labels  --jq '.labels.[].name' )
+          pr_labels=$(gh pr view ${BRANCH_NAME} --json labels | jq -r '[.labels.[].name] | join(
+            " ")' )
           echo "pr_labels=${pr_labels}" >> $GITHUB_OUTPUT
 
           echo "pr_id=${pr_id}"
@@ -58,7 +59,7 @@ jobs:
         id: validate
         shell: pwsh
         run: |
-          $PR_LABEL_LIST=$(echo ${PR_LABELS}')
+          $PR_LABEL_LIST=$(echo ${PR_LABELS})
           if ("ADMU" -in $PR_LABEL_LIST) {
               write-host "Starting Build for PowerShell Module Release"
           }
