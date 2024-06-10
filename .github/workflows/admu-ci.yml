@@ -19,14 +19,32 @@ permissions:
   id-token: write
 
 jobs:
+  Setup-Variables:
+    runs-on: ubuntu-latest
+    env:
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+    outputs:
+      PR_ID: ${{ steps.get_pr_id.outputs.pr_id }}
+      PR_LABELS: ${{ steps.get_pr_id.outputs.pr_labels }}
+    steps:
+      - name: get_pr_id
+        run: |
+          pr_id=$(gh pr view ${BRANCH_NAME} --json number  --jq '.number' )
+          echo "pr_id=${pr_id}" >> $GITHUB_OUTPUT
+
+          pr_labels=$(gh pr view ${BRANCH_NAME} --json labels  --jq '.labels' )
+          echo "pr_labels=${pr_labels}" >> $GITHUB_OUTPUT
   Filter-Branch:
     runs-on: ubuntu-latest
-    # if: contains(github.event.pull_request.labels.*.name, 'ADMU')
+    needs: ["Setup-Variables"]
+    if: contains(needs.Setup-Variables.PR_LABELS.*.name, 'ADMU')
     steps:
       - run: echo "Building JumpCloud Module 'ADMU'"
   Check-PR-Labels:
-    needs: ["Filter-Branch"]
+    needs: ["Filter-Branch", "Setup-Variables"]
     runs-on: ubuntu-latest
+    env:
+      PR_LABELS: ${{ needs.Setup-Variables.outputs.PR_LABELS }}
     outputs:
       RELEASE_TYPE: ${{ steps.validate.outputs.RELEASE_TYPE }}
     steps:
@@ -34,7 +52,7 @@ jobs:
         id: validate
         shell: pwsh
         run: |
-          $PR_LABEL_LIST=$(curl -s "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" | jq -r '.[].name')
+          $PR_LABEL_LIST=$(echo ${PR_LABELS} | jq -r '.[].name')
           if ("ADMU" -in $PR_LABEL_LIST) {
               write-host "Starting Build for PowerShell Module Release"
           }
