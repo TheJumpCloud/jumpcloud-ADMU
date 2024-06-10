@@ -43,7 +43,7 @@ jobs:
   Filter-Branch:
     runs-on: ubuntu-latest
     needs: ["Setup-Variables"]
-    if: contains( fromJson(needs.Setup-Variables.outputs.PR_LABELS).*.name, 'ADMU')
+    if: contains( fromJson(needs.Setup-Variables.outputs.PR_LABELS).*.name, '"ADMU"')
     steps:
       - run: echo "Building JumpCloud Module 'ADMU'"
   Check-PR-Labels:
