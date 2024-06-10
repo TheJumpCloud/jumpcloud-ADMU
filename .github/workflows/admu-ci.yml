@@ -3,11 +3,12 @@ name: ADMU Module CI
 # env:
 # define env vars
 
-on:
-  pull_request:
-    branches:
-      - master
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+on: 
+  - push
+  # pull_request:
+  #   branches:
+  #     - master
+  #   types: [opened, synchronize, reopened, labeled, unlabeled]
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
