@@ -119,6 +119,7 @@ jobs:
     needs: ["Setup-Build-Dependancies", "Check-PR-Labels"]
     runs-on: windows-latest
     timeout-minutes: 10
+    environment: Production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v3
