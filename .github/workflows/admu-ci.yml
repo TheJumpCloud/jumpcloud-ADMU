@@ -151,6 +151,7 @@ jobs:
           SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_CLIENT_CERT_PASSWORD }}
           SM_CLIENT_CERT_FILE_B64: ${{ secrets.SM_V2_CLIENT_CERT_FILE_B64 }}
           SM_HOST: ${{ secrets.SM_HOST }}
+          region: ${{ secrets.AWS_REGION }}
       - name: Upload Nuspec
         uses: actions/upload-artifact@v3
         with:

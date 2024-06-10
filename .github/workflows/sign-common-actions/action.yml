@@ -1,6 +1,9 @@
 name: "Sign and Upload"
 description: "Signs binaries and uploads the binaries and a signing manifest to S3"
 inputs:
+  region:
+    description: "aws region"
+    required: true
   files:
     description: |
       Paths to unsigned binaries separated by newlines
@@ -80,7 +83,7 @@ runs:
         OBJECT_LOCK_ENABLED: "true"
         OBJECT_LOCK_YEARS: "3"
         PRERELEASE_ARTIFACT_BUCKET: "jumpcloud-prerelease-artifacts"
-        PRERELEASE_ARTIFACT_BUCKET_REGION: ${{ secrets.AWS_REGION }}
+        PRERELEASE_ARTIFACT_BUCKET_REGION: ${{ inputs.region }}
       with:
         script: |
           const script = require(`${process.env.GITHUB_ACTION_PATH}/index.js`)
