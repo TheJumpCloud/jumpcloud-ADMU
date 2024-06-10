@@ -21,7 +21,7 @@ permissions:
 jobs:
   Filter-Branch:
     runs-on: ubuntu-latest
-    if: contains(github.event.pull_request.labels.*.name, 'ADMU')
+    # if: contains(github.event.pull_request.labels.*.name, 'ADMU')
     steps:
       - run: echo "Building JumpCloud Module 'ADMU'"
   Check-PR-Labels:
