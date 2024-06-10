@@ -23,7 +23,8 @@ jobs:
   Setup-Variables:
     runs-on: ubuntu-latest
     env:
-      BRANCH_NAME: ${{ github.head_ref || github.ref_name }} 
+      BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
     outputs:
       PR_ID: ${{ steps.get_pr_id.outputs.pr_id }}
       PR_LABELS: ${{ steps.get_pr_id.outputs.pr_labels }}
