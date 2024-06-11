@@ -1,14 +1,3 @@
-## 2.6.9
-
-Release Date: May 24, 2024
-
-#### RELEASE NOTES
-
-```
-* Sign and upload artifact manifest
-
-```
-
 ## 2.6.8
 
 Release Date: May 14, 2024
