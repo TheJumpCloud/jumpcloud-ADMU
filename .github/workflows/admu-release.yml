@@ -5,6 +5,9 @@ on:
       - closed
     branches:
       - master
+permissions:
+  contents: read
+  id-token: write
 jobs:
   Check-If-Merged:
     if: github.event.pull_request.merged == true
@@ -102,6 +105,7 @@ jobs:
   Build-Sign-ADMU:
     runs-on: windows-latest
     needs: ["Setup-Build-Dependancies", "Check-PR-Labels"]
+    environment: Production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
@@ -159,12 +163,23 @@ jobs:
           smctl.exe keypair ls > nul 2>&1
           C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user > nul 2>&1
           smksp_cert_sync.exe > nul 2>&1
-      - name: Sign ADMU EXE
-        shell: pwsh
-        env:
-          SM_CODE_SIGNING_CERT_SHA1_HASH: ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}
-        run: |
-          ${{ github.workspace }}/Deploy/Sign.ps1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_NUMBER }}:role/${{ secrets.AWS_ROLE_NAME }}
+          role-session-name: GHA_ADMU_SIGN_EXE
+      - name: Sign and Upload
+        uses: ./.github/workflows/sign-common-actions
+        with:
+          files: |-
+            jumpcloud-ADMU/Exe/gui_jcadmu.exe
+            jumpcloud-ADMU/Exe/uwp_jcadmu.exe
+          SM_API_KEY: ${{ secrets.SM_V2_API_KEY }}
+          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_V2_CLIENT_CERT_PASSWORD }}
+          SM_CLIENT_CERT_FILE_B64: ${{ secrets.SM_V2_CLIENT_CERT_FILE_B64 }}
+          SM_HOST: ${{ secrets.SM_HOST }}
+          region: ${{ secrets.AWS_REGION }}
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -173,7 +188,6 @@ jobs:
             ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec
             ${{ github.workspace }}/JumpCloud.ADMU.*.nupkg
-
   Draft-GH-Release:
     needs: [Build-Sign-ADMU]
     runs-on: ubuntu-latest
