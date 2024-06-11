@@ -69,10 +69,12 @@ if (!($env:INPUT_FILES)) {
     Exit 0
 }
 
-smksp_registrar.exe list
-smctl.exe keypair ls
-C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user
-smksp_cert_sync.exe
+# write the following out to null
+smksp_registrar.exe list | Out-Null
+smctl.exe keypair ls | Out-Null
+C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user | Out-Null
+smksp_cert_sync.exe | Out-Null
 
+# invoke sign
 Invoke-Sign $env:INPUT_FILES.Split([Environment]::Newline) $env:IS_RELEASE_BUILD
 if (-not $?) { Exit 1 }

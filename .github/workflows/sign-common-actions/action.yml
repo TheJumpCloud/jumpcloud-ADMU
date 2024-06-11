@@ -58,23 +58,13 @@ runs:
         echo "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools" >> $GITHUB_PATH
         echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools" >> $GITHUB_PATH
 
-    # - name: GPG signing with Secure Software Manager
-    #   if: runner.os == 'Linux'
-    #   uses: digicert/ssm-gpg-signing@v0.0.2
+    - name: GPG signing with Secure Software Manager
+      if: runner.os == 'Linux'
+      uses: digicert/ssm-gpg-signing@v0.0.2
 
-    # - name: Setup Software Trust Manager code signing
-    #   if: runner.os == 'Windows'
-    #   uses: digicert/ssm-code-signing@v0.0.2
-
-    - name: Setup STM KSP for Code Signing
-      shell: cmd
-      run: |
-        curl -X GET https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -H "x-api-key:${{ inputs.SM_API_KEY }}" -o smtools-windows-x64.msi
-        msiexec /i smtools-windows-x64.msi /quiet /qn
-        smksp_registrar.exe list > nul 2>&1
-        smctl.exe keypair ls > nul 2>&1
-        C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user > nul 2>&1
-        smksp_cert_sync.exe > nul 2>&1
+    - name: Setup Software Trust Manager code signing
+      if: runner.os == 'Windows'
+      uses: digicert/ssm-code-signing@v0.0.2
 
     - name: Sign
       if: runner.os == 'Windows'
