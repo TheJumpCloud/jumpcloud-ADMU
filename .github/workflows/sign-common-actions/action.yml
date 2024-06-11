@@ -82,6 +82,7 @@ runs:
       shell: pwsh
       env:
         INPUT_FILES: ${{ inputs.files }}
+        IS_RELEASE_BUILD: true
 
     - name: Install AWS S3 SDK
       run: npm --prefix "${GITHUB_ACTION_PATH}" install @aws-sdk/client-s3
