@@ -6,7 +6,6 @@ Release Date: May 14, 2024
 
 ```
 * Addresses a specific case that would prevent migration when a user's `NTUSER.DAT` registry hive was set with a `system` attribute
-
 ```
 
 ## 2.6.7
