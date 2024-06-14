@@ -150,7 +150,7 @@ jobs:
         id: admu-version
         shell: pwsh
         run: |
-          $content = Get-Content -Path "${{ github.workspace }}/PowerShell/JumpCloud.ADMU.psd1" -Raw
+          $content = Get-Content -Path "${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.psd1" -Raw
           $matches = $content | Select-String -Pattern "ModuleVersion.*([0-9]+.[0-9]+.[0-9])"
           $version = $matches.matches.groups[1].value
           echo "RELEASE_VERSION=$version" >> $env:GITHUB_OUTPUT
