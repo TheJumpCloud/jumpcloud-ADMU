@@ -7,6 +7,9 @@ on:
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+permissions:
+  contents: read
+  id-token: write
 # define jobs
 jobs:
   Filter-Branch:
@@ -109,6 +112,7 @@ jobs:
   Build-Module:
     needs: ["Setup-Build-Dependancies", "Check-PR-Labels"]
     runs-on: windows-latest
+    environment: Production
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -133,6 +137,34 @@ jobs:
             ${{ github.workspace }}/Jumpcloud-ADMU/Powershell/Form.ps1
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psd1
           retention-days: 1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_NUMBER }}:role/${{ secrets.AWS_ROLE_NAME }}
+          role-session-name: GHA_ADMU_SIGN_EXE
+      - name: Set ADMU ENV VERSION
+        id: admu-version
+        shell: pwsh
+        run: |
+          $content = Get-Content -Path "${{ github.workspace }}/PowerShell/JumpCloud.ADMU.psd1" -Raw
+          $matches = $content | Select-String -Pattern "ModuleVersion.*([0-9]+.[0-9]+.[0-9])"
+          $version = $matches.matches.groups[1].value
+          echo "RELEASE_VERSION=$version" >> $env:GITHUB_OUTPUT
+      - name: Sign and Upload
+        uses: ./.github/workflows/sign-common-actions
+        env:
+          RELEASE_VERSION: ${{ steps.admu-version.outputs.RELEASE_VERSION }}
+        with:
+          files: |-
+            jumpcloud-ADMU/Exe/gui_jcadmu.exe
+            jumpcloud-ADMU/Exe/uwp_jcadmu.exe
+          SM_API_KEY: ${{ secrets.SM_V2_API_KEY }}
+          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_V2_CLIENT_CERT_PASSWORD }}
+          SM_CLIENT_CERT_FILE_B64: ${{ secrets.SM_V2_CLIENT_CERT_FILE_B64 }}
+          SM_HOST: ${{ secrets.SM_HOST }}
+          region: ${{ secrets.AWS_REGION }}
+          version: ${{ env.RELEASE_VERSION }}
   Test-Module:
     needs: ["Setup-Build-Dependancies", "Check-PR-Labels", "Build-Module"]
     runs-on: windows-latest
