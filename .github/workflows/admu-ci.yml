@@ -1,8 +1,4 @@
 name: ADMU Module CI
-
-# env:
-# define env vars
-
 on:
   pull_request:
     branches:
@@ -69,7 +65,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup PowerShell Module Cache
         id: cacher
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
           key: PS-Dependancies
@@ -113,10 +109,11 @@ jobs:
   Build-Module:
     needs: ["Setup-Build-Dependancies", "Check-PR-Labels"]
     runs-on: windows-latest
+    environment: Production
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
           key: PS-Dependancies
@@ -151,7 +148,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: jumpcloud-admu-build
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
           key: PS-Dependancies

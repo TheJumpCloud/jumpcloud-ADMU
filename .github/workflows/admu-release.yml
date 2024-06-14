@@ -5,6 +5,9 @@ on:
       - closed
     branches:
       - master
+permissions:
+  contents: read
+  id-token: write
 jobs:
   Check-If-Merged:
     if: github.event.pull_request.merged == true
@@ -59,7 +62,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup PowerShell Module Cache
         id: cacher
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
           key: PS-Dependancies
@@ -102,9 +105,10 @@ jobs:
   Build-Sign-ADMU:
     runs-on: windows-latest
     needs: ["Setup-Build-Dependancies", "Check-PR-Labels"]
+    environment: Production
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v3
+      - uses: actions/cache@v4
         with:
           path: "/home/runner/.local/share/powershell/Modules/"
           key: PS-Dependancies
@@ -136,35 +140,34 @@ jobs:
           $moduleRootDirectories = Get-ChildItem -Directory -Path:("$NupkgPathDirectory/nupkg_module")
           Write-Host "Module Files:\n$moduleRootFiles"
           Write-Host "Module Directories:\n$moduleRootDirectories"
-      - name: Setup Code Signing Variables
-        shell: bash
-        run: |
-          # Create Client Cert File
-          echo "${{ secrets.SM_V2_CLIENT_CERT_FILE_B64 }}" | base64 --decode > /d/Certificate_pkcs12.p12
-          # Create Environment Variables
-          echo "::set-output name=version::${GITHUB_REF#refs/tags/v}"
-          echo "SM_HOST=${{ secrets.SM_HOST }}" >> "$GITHUB_ENV"
-          echo "SM_API_KEY=${{ secrets.SM_V2_API_KEY }}" >> "$GITHUB_ENV"
-          echo "SM_CLIENT_CERT_FILE=D:\\Certificate_pkcs12.p12" >> "$GITHUB_ENV"
-          echo "SM_CLIENT_CERT_PASSWORD=${{ secrets.SM_V2_CLIENT_CERT_PASSWORD }}" >> "$GITHUB_ENV"
-          echo "C:\Program Files (x86)\Windows Kits\10\App Certification Kit" >> $GITHUB_PATH
-          echo "C:\Program Files (x86)\Microsoft SDKs\Windows\v10.0A\bin\NETFX 4.8 Tools" >> $GITHUB_PATH
-          echo "C:\Program Files\DigiCert\DigiCert One Signing Manager Tools" >> $GITHUB_PATH
-      - name: Setup SSM KSP for Code Signing
-        shell: cmd
-        run: |
-          curl -X GET https://one.digicert.com/signingmanager/api-ui/v1/releases/smtools-windows-x64.msi/download -H "x-api-key:%SM_API_KEY%" -o smtools-windows-x64.msi
-          msiexec /i smtools-windows-x64.msi /quiet /qn
-          smksp_registrar.exe list > nul 2>&1
-          smctl.exe keypair ls > nul 2>&1
-          C:\Windows\System32\certutil.exe -csp "DigiCert Signing Manager KSP" -key -user > nul 2>&1
-          smksp_cert_sync.exe > nul 2>&1
-      - name: Sign ADMU EXE
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_NUMBER }}:role/${{ secrets.AWS_ROLE_NAME }}
+          role-session-name: GHA_ADMU_SIGN_EXE
+      - name: Set ADMU ENV VERSION
+        id: admu-version
         shell: pwsh
-        env:
-          SM_CODE_SIGNING_CERT_SHA1_HASH: ${{ secrets.SM_CODE_SIGNING_CERT_SHA1_HASH }}
         run: |
-          ${{ github.workspace }}/Deploy/Sign.ps1
+          $content = Get-Content -Path "${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.psd1" -Raw
+          $matches = $content | Select-String -Pattern "ModuleVersion.*([0-9]+.[0-9]+.[0-9])"
+          $version = $matches.matches.groups[1].value
+          echo "RELEASE_VERSION=$version" >> $env:GITHUB_OUTPUT
+      - name: Sign and Upload
+        uses: ./.github/workflows/sign-common-actions
+        env:
+          RELEASE_VERSION: ${{ steps.admu-version.outputs.RELEASE_VERSION }}
+        with:
+          files: |-
+            jumpcloud-ADMU/Exe/gui_jcadmu.exe
+            jumpcloud-ADMU/Exe/uwp_jcadmu.exe
+          SM_API_KEY: ${{ secrets.SM_V2_API_KEY }}
+          SM_CLIENT_CERT_PASSWORD: ${{ secrets.SM_V2_CLIENT_CERT_PASSWORD }}
+          SM_CLIENT_CERT_FILE_B64: ${{ secrets.SM_V2_CLIENT_CERT_FILE_B64 }}
+          SM_HOST: ${{ secrets.SM_HOST }}
+          region: ${{ secrets.AWS_REGION }}
+          version: ${{ env.RELEASE_VERSION }}
       - name: Upload Release Artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -173,7 +176,6 @@ jobs:
             ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec
             ${{ github.workspace }}/JumpCloud.ADMU.*.nupkg
-
   Draft-GH-Release:
     needs: [Build-Sign-ADMU]
     runs-on: ubuntu-latest
