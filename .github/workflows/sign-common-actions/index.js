@@ -147,9 +147,10 @@ const {
       RUNNER_ARCH,
       RUNNER_NAME,
       RUNNER_OS,
+      ADMU_VERSION,
     } = process.env
 
-    const buildType = IS_RELEASE_BUILD === 'true' ? `release/${GITHUB_REF_NAME}` : 'dev';
+    const buildType = IS_RELEASE_BUILD === 'true' ? `release/${ADMU_VERSION}` : 'dev';
     const shortSha = GITHUB_SHA.substring(0, 10);
     const platform = RUNNER_OS.toLowerCase();
 

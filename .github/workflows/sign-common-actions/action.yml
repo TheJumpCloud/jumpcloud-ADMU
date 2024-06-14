@@ -4,6 +4,8 @@ inputs:
   region:
     description: "aws region"
     required: true
+  version:
+    description: version of ADMU release
   files:
     description: |
       Paths to unsigned binaries separated by newlines
@@ -40,7 +42,25 @@ runs:
     - name: Set Up Env Vars
       shell: bash
       run: |
-        if [[ "${CI}" == "true" ]] && [[ "${GITHUB_REF_TYPE}" == "tag" ]] && [[ "${GITHUB_REF_NAME}" =~ ^v?[0-9]+.[0-9]+.[0-9]+$ ]]; then
+        # Admu validate release
+        # get the PR lables
+        PR_LABEL_LIST=$(curl -s "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" | jq -r '.[].name')
+        # validate ADMU is in the label
+        if [[ " ${PR_LABEL_LIST[*]} " =~ "ADMU" ]]; then
+            validRelease=true
+        fi
+
+        myArray=("major" "minor" "patch" "manual")
+        # validate there is a release type
+        for str in ${PR_LABEL_LIST[@]}; do
+            for pr_str in ${myArray[@]}; do
+                if [[ "$pr_str" == "$str" ]]; then
+                    validReleaseVersion=true
+                    echo "$pr_str found!"
+                fi
+            done
+        done
+        if [[ "${CI}" == "true" ]] && [[ $validRelease ]] && [[ $validReleaseVersion ]]; then
           echo "IS_RELEASE_BUILD=true" >> "$GITHUB_ENV"
         else
           echo "IS_RELEASE_BUILD=false" >> "$GITHUB_ENV"
@@ -72,7 +92,6 @@ runs:
       shell: pwsh
       env:
         INPUT_FILES: ${{ inputs.files }}
-        IS_RELEASE_BUILD: true
 
     - name: Install AWS S3 SDK
       run: npm --prefix "${GITHUB_ACTION_PATH}" install @aws-sdk/client-s3
@@ -85,6 +104,7 @@ runs:
         OBJECT_LOCK_YEARS: "3"
         PRERELEASE_ARTIFACT_BUCKET: "jumpcloud-prerelease-artifacts"
         PRERELEASE_ARTIFACT_BUCKET_REGION: ${{ inputs.region }}
+        ADMU_VERSION: ${{ inputs.version }}
       with:
         script: |
           const script = require(`${process.env.GITHUB_ACTION_PATH}/index.js`)
