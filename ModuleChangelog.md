@@ -1,3 +1,13 @@
+## 2.6.9
+
+Release Date: June 14, 2024
+
+#### RELEASE NOTES
+
+```
+* Update Release Jobs to sign and build using common action.
+```
+
 ## 2.6.8
 
 Release Date: May 14, 2024
