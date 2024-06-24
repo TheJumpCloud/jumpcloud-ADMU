@@ -1,10 +1,9 @@
 ## 2.7.0
 
-Release Date: February 16, 2024
+Release Date: June 28, 2024
 
 
 #### RELEASE NOTES
-
 
 #### Bug Fixes:
 
@@ -12,6 +11,54 @@ Release Date: February 16, 2024
 * When loading/ unloading a user's registry hive and an error is encounered, the tool will attempt to close any processes owned by that user.
 * Added error mapping function to provide useful information for troubleshooting to admin when an error pops up.
 * Added a validation to check if jumpcloud username and local username are the same
+```
+
+
+## 2.6.8
+
+Release Date: May 14, 2024
+
+#### RELEASE NOTES
+
+```
+* Addresses a specific case that would prevent migration when a user's `NTUSER.DAT` registry hive was set with a `system` attribute
+```
+
+## 2.6.7
+
+Release Date: Mar 29, 2024
+
+#### RELEASE NOTES
+
+```
+* Fixes an issue with hybrid unjoin would not leave local domain
+```
+
+## 2.6.6
+
+Release Date: Mar 28, 2024
+
+#### RELEASE NOTES
+
+```
+* Update Signing Certificate
+```
+
+## 2.6.4
+
+Release Date: Mar 6, 2024
+
+#### RELEASE NOTES
+
+```
+* Addresses an issue with the `leaveDomain` parameter where devices that were hybrid joined would not leave the domain.
+```
+
+#### Bug Fixes:
+
+```
+* When selecting "leave domain" in the GUI or specifying the `leaveDomain` parameter using the PowerShell module, hybrid joined devices will now leave the domain successfully
+* Set the PowerShell module to release
 ```
 
 ## 2.6.2

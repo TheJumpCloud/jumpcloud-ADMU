@@ -659,6 +659,88 @@ function Set-RegistryExe {
 
 }
 
+function Test-FileAttribute {
+    [CmdletBinding()]
+    param (
+        # Profile path
+        [Parameter(Mandatory = $true)]
+        [ValidateScript( { Test-Path $_ })]
+        [System.String]$ProfilePath,
+        # Attribute to Test
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("ReadOnly", "Hidden", "System", "Archive", "Normal", "Temporary", "Offline")]
+        [System.String]
+        $Attribute
+    )
+
+    begin {
+        $profileProperties = Get-ItemProperty -Path $ProfilePath
+    }
+
+    process {
+        $attributes = $($profileProperties.Attributes)
+    }
+
+    end {
+        if ($attributes -match $Attribute) {
+            return $true
+        } else {
+            return $false
+        }
+    }
+}
+function Set-FileAttribute {
+    [CmdletBinding()]
+    param (
+        # Profile path
+        [Parameter(Mandatory = $true)]
+        [ValidateScript( { Test-Path $_ })]
+        [System.String]
+        $ProfilePath,
+        # Attribute to Remove
+        [Parameter(Mandatory = $true)]
+        [ValidateSet("ReadOnly", "Hidden", "System", "Archive", "Normal", "Temporary", "Offline")]
+        [System.String]
+        $Attribute,
+        # Operation verb (add/ remove)
+        [Parameter(Mandatory = $true)]
+        [ValidateSet( "Add", "Remove" )]
+        [System.String]
+        $Operation
+    )
+
+    begin {
+        $profilePropertiesBefore = Get-ItemProperty -Path $ProfilePath
+        $attributesBefore = $($profilePropertiesBefore.Attributes)
+    }
+
+    process {
+        Write-ToLog "$profilePath attributes before: $($attributesBefore)"
+        # remove item with bitwise operators, keeping what was set but removing the $attribute
+        switch ($Operation) {
+            "Remove" {
+                $profilePropertiesBefore.Attributes = $profilePropertiesBefore.Attributes -band -bnot [System.IO.FileAttributes]::$Attribute
+            }
+            "Add" {
+                $profilePropertiesBefore.Attributes = $profilePropertiesBefore.Attributes -bxor [System.IO.FileAttributes]::$Attribute
+            }
+        }
+        $attributeTest = Test-FileAttribute -ProfilePath $ProfilePath -Attribute $Attribute
+    }
+    end {
+        $profilePropertiesAfter = Get-ItemProperty -Path $ProfilePath
+        $attributesAfter = $($profilePropertiesBefore.Attributes)
+        Write-ToLog "$profilePath attributes after: $($attributesAfter)"
+
+        if ($attributeTest) {
+            return $true
+        } else {
+            return $false
+        }
+    }
+}
+
+
 Function Test-UserRegistryLoadState {
     [CmdletBinding()]
     param (
@@ -680,7 +762,6 @@ Function Test-UserRegistryLoadState {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
             } catch {
                 Error-Map -Error:("load_unload_error")
-
                 Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
             }
         }
@@ -1418,107 +1499,6 @@ Function Restart-ComputerWithDelay {
         Restart-Computer -ComputerName $env:COMPUTERNAME -Force
     }
 }
-# Invoke system class “InvokeAsSystemSvc.exe” to execute the ADMU.ps1 script
-Function Invoke-AsSystem {
-    #
-    # Invoke-AsSystem is a quick hack to run a PS ScriptBlock as the System account
-    # It is possible to pass and retrieve object through the pipeline, though objects
-    # are passed as serialized objects using export/clixml.
-    #
-
-    param(
-        [scriptblock] $Process = { Get-ChildItem },
-        [scriptblock] $Begin = {} ,
-        [scriptblock] $End = {} ,
-        [int] $Depth = 4
-    )
-    begin {
-        Function Test-Elevated {
-            $wid = [System.Security.Principal.WindowsIdentity ]::GetCurrent()
-            $prp = new-object System.Security.Principal.WindowsPrincipal($wid )
-            $adm = [System.Security.Principal.WindowsBuiltInRole ]::Administrator
-            $prp.IsInRole( $adm)
-        }
-        $code = @"
-using System;
-using System.ServiceProcess;
-namespace CosmosKey.Powershell.InvokeAsSystemSvc
-{
-    class TempPowershellService : ServiceBase
-    {
-        static void Main()
-        {
-            ServiceBase.Run(new ServiceBase[] { new TempPowershellService() });
-        }
-        protected override void OnStart(string[] args)
-        {
-            string[] clArgs = Environment.GetCommandLineArgs();
-            try
-            {
-                string argString = String.Format(
-                    "-command .{{import-clixml '{0}' | .'{1}' | export-clixml -Path '{2}' -Depth {3}}}",
-                    clArgs[1],
-                    clArgs[2],
-                    clArgs[3],
-                    clArgs[5]);
-                System.Diagnostics.Process.Start("powershell", argString).WaitForExit();
-                System.IO.File.AppendAllText(clArgs[4], "success");
-            }
-            catch (Exception e)
-            {
-                System.IO.File.AppendAllText(clArgs[4], "fail\r\n" + e.Message);
-            }
-        }
-        protected override void OnStop()
-        {
-        }
-    }
-}
-"@
-        if ( -not (Test-Elevated)) {
-            throw "Process is not running as an eleveated process. Please run as elevated."
-        }
-        [void][ System.Reflection.Assembly]::LoadWithPartialName( "System.ServiceProcess")
-        $serviceNamePrefix = "MyTempPowershellSvc"
-        $timeStamp = get-date -Format yyyyMMdd-HHmmss
-        $serviceName = "{0}-{1}" -f $serviceNamePrefix , $timeStamp
-        $tempPSexe = "{0}.exe" -f $serviceName , $timeStamp
-        $tempPSout = "{0}.out" -f $serviceName , $timeStamp
-        $tempPSin = "{0}.in" -f $serviceName , $timeStamp
-        $tempPSscr = "{0}.ps1" -f $serviceName , $timeStamp
-        $tempPScomplete = "{0}.end" -f $serviceName , $timeStamp
-        $servicePath = Join-Path $env:temp $tempPSexe
-        $outPath = Join-Path $env:temp $tempPSout
-        $inPath = Join-Path $env:temp $tempPSin
-        $scrPath = Join-Path $env:temp $tempPSscr
-        $completePath = Join-Path $env:temp $tempPScomplete
-        $serviceImagePath = "`"{0}`" `"{1}`" `"{2}`" `"{3}`" `"{4}`" {5}" -f $servicePath, $inPath , $scrPath, $outPath, $completePath , $depth
-        Add-Type $code -ReferencedAssemblies "System.ServiceProcess" -OutputAssembly $servicePath -OutputType WindowsApplication | Out-Null
-        $objectsFromPipeline = new-object Collections.ArrayList
-        $script = "BEGIN {{{0}}}`nPROCESS {{{1}}}`nEND {{{2}}}" -f $Begin.ToString() , $Process. ToString(), $End.ToString()
-        $script.ToString() | Out-File -FilePath $scrPath -Force
-    }
-
-    process {
-        [void] $objectsFromPipeline.Add( $_)
-    }
-
-    end {
-        $objectsFromPipeline | Export-Clixml -Path $inPath -Depth $Depth
-        New-Service -Name $serviceName -BinaryPathName $serviceImagePath -DisplayName $serviceName -Description $serviceName -StartupType Manual | out-null
-        $service = Get-Service $serviceName
-        $service.Start() | out-null
-        while ( -not (test-path $completePath)) {
-            start-sleep -Milliseconds 100
-        }
-        $service.Stop() | Out-Null
-        do {
-            $service = Get-Service $serviceName
-        } while ($service.Status -ne "Stopped")
-        ( Get-WmiObject win32_service -Filter "name='$serviceName'" ).delete() | out-null
-        Import-Clixml -Path $outPath
-    }
-}
 # Function to validate if NTUser.dat has SYSTEM, Administrators, and the specified user as full control
 function Test-DATFilePermission {
     param (
@@ -1749,6 +1729,7 @@ function Error-Map {
         }
         "rename_original_registry_file_error" {
             Write-ToLog -message:("Rename Error: Registry files cannot be renamed. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
+
 
             $Script:ErrorMessage = "Rename Error: Registry files cannot be renamed. Please go to log file for more information."
         }
@@ -2108,6 +2089,18 @@ Function Start-Migration {
             ### Begin Backup Registry for Selected User ###
             Write-ToLog -Message:('Creating Backup of User Registry Hive')
             # Get Profile Image Path from Registry
+
+            $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
+            #### Begin check for Registry system attribute
+            if (Test-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System") {
+                Set-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System" -Operation "Remove"
+            } Else {
+                $profileProperties = Get-ItemProperty -Path "$oldUserProfileImagePath\NTUSER.DAT"
+                $attributes = $($profileProperties.Attributes)
+                Write-ToLog "$oldUserProfileImagePath\NTUSER.DAT attributes: $($attributes)"
+            }
+            #### End check for Registry system attribute
+
 
             # Backup Registry NTUSER.DAT and UsrClass.dat files
             try {
@@ -2781,12 +2774,14 @@ Function Start-Migration {
                     $AzureADStatus = ($line.trimstart('AzureADJoined : '))
                 }
                 if ($line -match "DomainJoined : ") {
+
                     $AzureDomainStatus = ($line.trimstart('DomainJoined : '))
                 }
             }
             Write-ToProgress -ProgressBar $Progressbar -Status "CheckADStatus" -form $isForm
 
             Write-ToLog "AzureAD Status: $AzureADStatus" -Level Verbose
+
             if ($AzureADStatus -eq 'YES' -or $netBiosName -match 'AzureAD') {
                 # Find Appx User Apps by Username
                 try {
@@ -2853,64 +2848,75 @@ Function Start-Migration {
 
             #region Leave Domain or AzureAD
 
-            if (($AzureADStatus -eq 'YES') -or ($AzureDomainStatus -eq 'YES')){
-                if ($LeaveDomain -eq $true) {
-                    if ($AzureADStatus -match 'YES') {
-                        # Check if user is not NTAUTHORITY\SYSTEM
-                        if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).user.Value -match "S-1-5-18")) -eq $false) {
-                            Write-ToLog -Message:('User not NTAuthority\SYSTEM. Invoking as System to leave AzureAD') -Level Verbose
-                            try {
-                                Invoke-AsSystem { dsregcmd.exe /leave }
-                            } catch {
-                                Write-ToLog -Message:('Unable to leave domain') -Level:('Warn')
-                            }
-                            # Get Azure AD Status
-                            $ADStatus = dsregcmd.exe /status
-                            foreach ($line in $ADStatus) {
-                                if ($line -match "AzureADJoined : ") {
-                                    $AzureADStatus = ($line.trimstart('AzureADJoined : '))
-                                }
-                                if ($line -match "EnterpriseJoined : ") {
-                                    $AzureEnterpriseStatus = ($line.trimstart('EnterpriseJoined : '))
-                                }
-                                if ($line -match "DomainJoined : ") {
-                                    $AzureDomainStatus = ($line.trimstart('DomainJoined : '))
-                                }
-                            }
-                            # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
-                            if ($AzureADStatus -match 'NO') {
-                                Write-toLog -message "Left Azure AD domain successfully`nDevice Domain State`nAzureADJoined : $AzureADStatus`nEnterpriseJoined : $AzureEnterpriseStatus`nDomainJoined : $AzureDomainStatus" -Level Verbose
-
-                            } else {
-                                Write-ToLog -Message:('Unable to leave domain') -Level:('Warn')
-                            }
-
+            $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+            if ($LeaveDomain -eq $true) {
+                if ($AzureADStatus -match 'YES' -or $LocalDomainStatus -match 'YES') {
+                    try {
+                        if ($LocalDomainStatus -match 'NO') {
+                            dsregcmd.exe /leave # Leave Azure AD
                         } else {
-                            try {
-                                Write-ToLog -Message:('Leaving AzureAD Domain with dsregcmd.exe ')
-                                dsregcmd.exe /leave
-                            } catch {
-                                Write-ToLog -Message:('Unable to leave domain') -Level:('Warn')
-                                # $admuTracker.leaveDomain.fail = $true
-                            }
+                            Remove-Computer -force #Leave local AD or Hybrid
                         }
-                    } else {
-                        Try {
-                            Write-ToLog -Message:('Leaving Domain')
-                            $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
-                        } Catch {
-                            Write-ToLog -Message:('Unable to leave domain') -Level:('Warn')
-                            # $admuTracker.leaveDomain.fail = $true
+                    } catch {
+                        Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
+                    }
+                    # Get Azure AD Status
+                    $ADStatus = dsregcmd.exe /status
+                    foreach ($line in $ADStatus) {
+                        if ($line -match "AzureADJoined : ") {
+                            $AzureADStatus = ($line.trimstart('AzureADJoined : '))
+                        }
+                        if ($line -match "DomainJoined : ") {
+                            $LocalDomainStatus = ($line.trimstart('DomainJoined : '))
                         }
                     }
-                    $admuTracker.leaveDomain.pass = $true
-                }
-            } else {
-                if ($LeaveDomain -eq $true) {
-                    Write-ToLog -Message:('Device is not AzureAD or Domain Joined, no action taken') -Level:('Info')
+                    # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
+                    if ($AzureADStatus -match 'NO') {
+                        Write-toLog -message "Left Azure AD domain successfully. Device Domain State, AzureADJoined : $AzureADStatus"
+                        $admuTracker.leaveDomain.pass = $true
+                    } else {
+                        Write-ToLog -Message:('Unable to leave Azure Domain. Re-running dsregcmd.exe /leave') -Level:('Warn')
+                        dsregcmd.exe /leave # Leave Azure AD
+
+                        $ADStatus = dsregcmd.exe /status
+                        foreach ($line in $ADStatus) {
+                            if ($line -match "AzureADJoined : ") {
+                                $AzureADStatus = ($line.trimstart('AzureADJoined : '))
+                            }
+                        }
+                        if ($AzureADStatus -match 'NO') {
+                            Write-ToLog -Message:('Left Azure AD domain successfully') -Level:('Info')
+                            $admuTracker.leaveDomain.pass = $true
+                        } else {
+                            Write-ToLog -Message:('Unable to leave Azure AD domain') -Level:('Warn')
+                            $admuTracker.leaveDomain.fail = $true
+                        }
+
+                    }
+
+                    if ($LocalDomainStatus -match 'NO') {
+                        Write-toLog -message "Local Domain State, Local Domain Joined : $LocalDomainStatus"
+                        $admuTracker.leaveDomain.pass = $true
+                    } else {
+                        Write-ToLog -Message:('Unable to leave local domain using remove-computer...Running UnJoinDomainOrWorkGroup') -Level:('Warn')
+                        $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+
+                        $ADStatus = dsregcmd.exe /status
+                        foreach ($line in $ADStatus) {
+                            if ($line -match "DomainJoined : ") {
+                                $LocalDomainStatus = ($line.trimstart('DomainJoined : '))
+                            }
+                        }
+                        if ($LocalDomainStatus -match 'NO') {
+                            Write-ToLog -Message:('Left local domain successfully') -Level:('Info')
+                            $admuTracker.leaveDomain.pass = $true
+                        } else {
+                            Write-ToLog -Message:('Unable to leave local domain') -Level:('Warn')
+                            $admuTracker.leaveDomain.fail = $true
+                        }
+                    }
                 }
             }
-
 
             # re-enable scheduled tasks if they were disabled
             if ($ScheduledTasks) {
