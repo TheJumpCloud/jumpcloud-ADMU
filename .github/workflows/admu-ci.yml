@@ -109,7 +109,6 @@ jobs:
   Build-Module:
     needs: ["Setup-Build-Dependancies", "Check-PR-Labels"]
     runs-on: windows-latest
-    environment: Production
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
