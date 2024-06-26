@@ -137,7 +137,7 @@ function New-ProgressForm{
         # Load an xaml form
 
         $syncHash.Window = [Windows.Markup.XamlReader]::parse( $SyncHash.XAML )
-        ([xml]$SyncHash.XAML).SelectNodes("//*[@Name]") | % { $SyncHash."$($_.Name)" = $SyncHash.Window.FindName($_.Name) }
+        ([xml]$SyncHash.XAML).SelectNodes("//*[@Name]") | ForEach-Object { $SyncHash."$($_.Name)" = $SyncHash.Window.FindName($_.Name) }
         # Image
         $SyncHash.JCLogoImg.Source = $syncHash.base64JCLogo
         $syncHash.Username.Content = $syncHash.UsernameInput
