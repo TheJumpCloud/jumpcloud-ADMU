@@ -88,7 +88,7 @@ function New-ProgressForm{
                 </Expander.Resources>
                 <Expander.Content>
 
-                    <ScrollViewer Name="ScrollLog" Foreground="Gray" HorizontalScrollBarVisibility = "Auto" VerticalAlignment="Center" Height="98">
+                    <ScrollViewer Name="ScrollLog" Foreground="Gray" HorizontalScrollBarVisibility = "Disabled" VerticalAlignment="Center" Height="98">
                         <TextBlock Name="LogTextBlock" TextWrapping="Wrap" FontWeight="Medium" FontSize="11" >
                         </TextBlock>
                     </ScrollViewer>
@@ -274,6 +274,6 @@ function Update-LogTextBlock {
         $ProgressBar,
         [string]$LogText
     )
-    # Update the progress bar
+    # Update the progress bar and add XAML linebreaks
     $ProgressBar.LogText += $LogText
 }
