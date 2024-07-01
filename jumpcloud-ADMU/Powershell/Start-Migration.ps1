@@ -600,7 +600,7 @@ function Get-RegistryExeStatus {
         # write the warning
         Write-Warning "$($resultsObject.TargetObject)"
         Write-Warning "$($resultsObject.InvocationInfo.PositionMessage)"
-        Error-Map -Error:("load_unload_error")
+        Write-AdmuErrorMessage -Error:("load_unload_error")
 
         # return false
         $status = $false
@@ -761,7 +761,7 @@ Function Test-UserRegistryLoadState {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
             } catch {
-                Error-Map -Error:("load_unload_error")
+                Write-AdmuErrorMessage -Error:("load_unload_error")
                 Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
             }
         }
@@ -772,7 +772,7 @@ Function Test-UserRegistryLoadState {
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
         } catch {
-            Error-Map -Error:("load_unload_error")
+            Write-AdmuErrorMessage -Error:("load_unload_error")
             Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
         }
         # Load Selected User Profile Keys
@@ -781,7 +781,7 @@ Function Test-UserRegistryLoadState {
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
         } catch {
-            Error-Map -Error:("load_unload_error")
+            Write-AdmuErrorMessage -Error:("load_unload_error")
 
             Throw "Could Not Unload User Registry During Test-UserRegistryLoadState Unload Process"
         }
@@ -795,7 +795,7 @@ Function Test-UserRegistryLoadState {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
             } catch {
-                Error-Map -Error:("load_unload_error")
+                Write-AdmuErrorMessage -Error:("load_unload_error")
                 throw "Registry Keys are still loaded after Test-UserRegistryLoadState Testing Exiting..."
             }
         }
@@ -837,7 +837,7 @@ Function Backup-RegistryHive {
                 Copy-Item -Path "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -ErrorAction Stop
             } catch {
                 Write-ToLog -Message("Could Not Backup Registry Hives in $($profileImagePath): Exiting...")
-                Error-Map -Error:("backup_error")
+                Write-AdmuErrorMessage -Error:("backup_error")
                 Write-ToLog -Message($_.Exception.Message)
                 throw "Could Not Backup Registry Hives in $($profileImagePath): Exiting..."
             }
@@ -1712,7 +1712,7 @@ function Get-ProtocolTypeAssociation {
 }
 ##### END MIT License #####
 $Script:ErrorMessage = $null
-function Error-Map {
+function Write-AdmuErrorMessage {
     param (
         [string]$ErrorName
     )
@@ -2124,7 +2124,7 @@ Function Start-Migration {
             if ($userExitCode) {
                 Write-ToLog -Message:("$userExitCode") -Level Error
                 Write-ToLog -Message:("The user: $JumpCloudUsername could not be created, exiting") -Level Error
-                Error-Map -ErrorName "user_create_error"
+                Write-AdmuErrorMessage -ErrorName "user_create_error"
                 $admuTracker.newUserCreate.fail = $true
                 break
             }
@@ -2136,7 +2136,7 @@ Function Start-Migration {
             if ($profileInit) {
                 Write-ToLog -Message:("$profileInit")
                 Write-ToLog -Message:("The user: $JumpCloudUsername could not be initalized, exiting")
-                Error-Map -ErrorName "user_init_error"
+                Write-AdmuErrorMessage -ErrorName "user_init_error"
                 $admuTracker.newUserInit.fail = $true
                 break
             } else {
@@ -2459,7 +2459,7 @@ Function Start-Migration {
                     Write-ToLog -Message:("Successfully renamed $ntuserOriginalName with timestamp $renameDate")
                 } else {
                     Write-ToLog -Message:("Failed to rename $ntuserOriginalName with timestamp $renameDate")
-                    Error-Map -Error:("rename_original_registry_file_error")
+                    Write-AdmuErrorMessage -Error:("rename_original_registry_file_error")
                     $admuTracker.renameOriginalFiles.fail = $true
                     break
                 }
@@ -2489,7 +2489,7 @@ Function Start-Migration {
                         Write-ToLog -Message:("Successfully renamed $ntuserOriginalName with timestamp $renameDate")
                     } else {
                         Write-ToLog -Message:("Failed to rename $ntuserOriginalName with timestamp $renameDate")
-                        Error-Map -Error:("rename_original_registry_file_error")
+                        Write-AdmuErrorMessage -Error:("rename_original_registry_file_error")
                         $admuTracker.renameOriginalFiles.fail = $true
                         break
                     }
@@ -2497,7 +2497,7 @@ Function Start-Migration {
                 } catch {
 
                     Write-ToLog -Message("Could not rename original NTUser registry files for backup purposes: Exiting...")
-                    Error-Map -Error:("rename_original_registry_file_error")
+                    Write-AdmuErrorMessage -Error:("rename_original_registry_file_error")
                     Write-ToLog -Message($_.Exception.Message)
                     $admuTracker.renameOriginalFiles.fail = $true
                     break
@@ -2571,7 +2571,7 @@ Function Start-Migration {
                 Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
             } catch {
                 Write-ToLog -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
-                Error-Map -Error:("rename_backup_registry_file_error")
+                Write-AdmuErrorMessage -Error:("rename_backup_registry_file_error")
                 Write-ToLog -Message($_.Exception.Message)
 
                 # attempt to recover:
@@ -2603,7 +2603,7 @@ Function Start-Migration {
 
                         Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
                     } catch {
-                        Error-Map -Error:("rename_backup_registry_file_error")
+                        Write-AdmuErrorMessage -Error:("rename_backup_registry_file_error")
                         Write-ToLog -Message($_.Exception.Message)
                         $admuTracker.renameBackupFiles.fail = $true
                         break
