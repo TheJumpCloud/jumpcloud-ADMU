@@ -33,14 +33,14 @@ function Test-RegistryValueMatch {
         }
     }
 }
-$script:useragent = $null
 function Set-JCUserToSystemAssociation {
     param
     (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(40, 40)][string]$JcApiKey,
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(24, 24)][string]$JcOrgId,
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][string]$JcUserID,
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][bool]$BindAsAdmin
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][bool]$BindAsAdmin,
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][string]$UserAgent
     )
     Begin {
         $config = get-content "$WindowsDrive\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
@@ -79,7 +79,7 @@ function Set-JCUserToSystemAssociation {
         $jsonForm = $Form | ConvertTo-Json
         Try {
             Write-ToLog -Message:("Attempting to bind userID: $JcUserID to systemID: $systemKey")
-            $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JcUserID/associations" -Headers $Headers -Body $jsonForm -UseBasicParsing -UserAgent:($script:useragent)
+            $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JcUserID/associations" -Headers $Headers -Body $jsonForm -UseBasicParsing -UserAgent $UserAgent
             $StatusCode = $Response.StatusCode
         } catch {
             $errorMsg = $_.Exception.Message
@@ -1175,7 +1175,7 @@ function Test-JumpCloudUsername {
     Process {
         Try {
             # Write-ToLog "Searching JC for: $Username"
-            $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/search/systemusers" -Headers $Headers -Body $Body -UseBasicParsing -UserAgent:($script:useragent)
+            $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/search/systemusers" -Headers $Headers -Body $Body -UseBasicParsing
             $Results = $Response.Content | ConvertFrom-Json
 
             $StatusCode = $Response.StatusCode
@@ -1237,14 +1237,14 @@ function Get-mtpOrganization {
         if ($orgID) {
             Write-ToLog -Message "OrgID specified, attempting to validate org..."
             $baseURl = "https://console.jumpcloud.com/api/organizations/$($orgID)"
-            $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing -UserAgent:($script:useragent)
+            $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
             $Content = $Request.Content | ConvertFrom-Json
             $results += $Content
         } else {
             Write-ToLog -Message "No OrgID specified, attempting to search for valid orgs..."
             while ($paginate) {
                 $baseUrl = "https://console.jumpcloud.com/api/organizations"
-                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing -UserAgent:($script:useragent)
+                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
                 $Content = $Request.Content | ConvertFrom-Json
                 $results += $Content.results
                 if ($Content.results.Count -eq $limit) {
@@ -1879,13 +1879,14 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
+        $admuVersion = '2.7.0'
 
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
         Write-ToLog -Message:("Form is set to $isForm") -Level Verbose
 
         If ($isForm) {
-            $useragent = Get-JCUserAgent -isForm $true
+            $useragent = "JumpCloud.ADMU_Application/$($admuVersion)"
             Write-ToLog -Message:("UserAgent: $useragent")
             $SelectedUserName = $inputObject.SelectedUserName
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
@@ -1937,7 +1938,7 @@ Function Start-Migration {
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
         } else {
-            $useragent = Get-JCUserAgent -isForm $false
+            $useragent = "JumpCloud_ADMU.PowershellModule/$($admuVersion)"
             Write-ToLog -Message:("UserAgent: $useragent")
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
         }
@@ -1947,7 +1948,6 @@ Function Start-Migration {
 
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.7.0'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion) -Level Verbose
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
@@ -2817,7 +2817,7 @@ Function Start-Migration {
 
             # Download the appx register exe
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-            Invoke-WebRequest -Uri 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -OutFile 'C:\windows\uwp_jcadmu.exe' -UseBasicParsing -UserAgent:($useragent)
+            Invoke-WebRequest -Uri 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -OutFile 'C:\windows\uwp_jcadmu.exe' -UseBasicParsing
             Start-Sleep -Seconds 5
             try {
                 Get-Item -Path "$windowsDrive\Windows\uwp_jcadmu.exe" -ErrorAction Stop | Out-Null
@@ -2840,7 +2840,7 @@ Function Start-Migration {
 
             #region AutobindUserToJCSystem
             if ($AutobindJCUser -eq $true) {
-                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $JumpCloudUserId -BindAsAdmin $BindAsAdmin
+                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
                 if ($bindResult) {
                     Write-ToLog -Message:('jumpcloud autobind step succeeded for user ' + $JumpCloudUserName) -Level Verbose
                     $admuTracker.autoBind.pass = $true
