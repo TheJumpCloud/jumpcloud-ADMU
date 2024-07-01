@@ -39,7 +39,8 @@ function Set-JCUserToSystemAssociation {
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(40, 40)][string]$JcApiKey,
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(24, 24)][string]$JcOrgId,
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][string]$JcUserID,
-        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][bool]$BindAsAdmin
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][bool]$BindAsAdmin,
+        [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][string]$UserAgent
     )
     Begin {
         $config = get-content "$WindowsDrive\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
@@ -78,7 +79,7 @@ function Set-JCUserToSystemAssociation {
         $jsonForm = $Form | ConvertTo-Json
         Try {
             Write-ToLog -Message:("Attempting to bind userID: $JcUserID to systemID: $systemKey")
-            $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JcUserID/associations" -Headers $Headers -Body $jsonForm -UseBasicParsing
+            $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JcUserID/associations" -Headers $Headers -Body $jsonForm -UseBasicParsing -UserAgent $UserAgent
             $StatusCode = $Response.StatusCode
         } catch {
             $errorMsg = $_.Exception.Message
@@ -1878,12 +1879,15 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
+        $admuVersion = '2.7.0'
 
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
         Write-ToLog -Message:("Form is set to $isForm") -Level Verbose
 
         If ($isForm) {
+            $useragent = "JumpCloud.ADMU_Application/$($admuVersion)"
+            Write-ToLog -Message:("UserAgent: $useragent")
             $SelectedUserName = $inputObject.SelectedUserName
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
             $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
@@ -1934,6 +1938,8 @@ Function Start-Migration {
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
         } else {
+            $useragent = "JumpCloud_ADMU.PowershellModule/$($admuVersion)"
+            Write-ToLog -Message:("UserAgent: $useragent")
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
         }
 
@@ -1942,7 +1948,6 @@ Function Start-Migration {
 
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
-        $admuVersion = '2.7.0'
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion) -Level Verbose
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
@@ -2835,7 +2840,7 @@ Function Start-Migration {
 
             #region AutobindUserToJCSystem
             if ($AutobindJCUser -eq $true) {
-                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $JumpCloudUserId -BindAsAdmin $BindAsAdmin
+                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
                 if ($bindResult) {
                     Write-ToLog -Message:('jumpcloud autobind step succeeded for user ' + $JumpCloudUserName) -Level Verbose
                     $admuTracker.autoBind.pass = $true

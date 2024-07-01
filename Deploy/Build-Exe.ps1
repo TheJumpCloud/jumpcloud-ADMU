@@ -43,8 +43,19 @@ $StartJCADMU = (Get-Content -Path:($FolderPath_ModuleRootPath + '\jumpcloud-ADMU
 $Functions = (Get-Content -Path:($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\Powershell\Start-Migration.ps1') -Raw) -Replace ("`r", "")
 $ProgressForm = (Get-Content -Path:($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\Powershell\ProgressForm.ps1') -Raw) -Replace ("`r", "")
 $Form = (Get-Content -Path:($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\Powershell\Form.ps1') -Raw) -Replace ("`r", "")
+
+# TODO: Add Private functions to $NewContent. This code is commented out for later use.
+# Get file content of /jumpcloud-ADMU/Powershell/Private
+#$PrivateFolder = Get-ChildItem -Path:($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\Powershell\Private\')
 # String manipulation
+# Iterate through each file in the Private folder and append to $Functions
+# ForEach ($File in $PrivateFolder) {
+#     $PrivateFunctions += (Get-Content -Path:($File.FullName) -Raw) -Replace ("`r", "")
+# }
+#$NewContent = $PrivateFunctions
 $NewContent = $StartJCADMU
+# Add Private functions to $NewContent
+
 $NewContent = $NewContent.Replace('# Get script path' + "`n", '')
 $NewContent = $NewContent.Replace('$scriptPath = (Split-Path -Path:($MyInvocation.MyCommand.Path))' + "`n", '')
 $NewContent = $NewContent.Replace('. ($scriptPath + ''\Start-Migration.ps1'')', $Functions)
