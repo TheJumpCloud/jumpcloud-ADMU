@@ -480,7 +480,7 @@ Describe 'Migration Test Scenarios' {
                         }
                         Write-Host "Running Migration, $JCUSERNAME, $SELECTEDCOMPUTERNAME, $TEMPPASS"
                         try {
-                            Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)" | Out-Null
+                            Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)" -ErrorAction SilentlyContinue | Out-Null
                         } Catch {
                             write-host "Migration failed as expected"
                         }
