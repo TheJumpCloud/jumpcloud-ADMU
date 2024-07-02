@@ -601,7 +601,6 @@ function Get-RegistryExeStatus {
         # write the warning
         Write-Warning "$($resultsObject.TargetObject)"
         Write-Warning "$($resultsObject.InvocationInfo.PositionMessage)"
-        Write-AdmuErrorMessage -Error:("load_unload_error")
 
         # return false
         $status = $false
