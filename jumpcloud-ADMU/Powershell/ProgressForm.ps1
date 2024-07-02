@@ -177,7 +177,7 @@ function New-ProgressForm{
                 $syncHash.ErrorBlock.Visibility = "Visible"
                 # Clickable link
                 $SyncHash.ErrorLink.add_RequestNavigate({
-                    param ($sender, $e)
+                    param ($senderParam, $e)
                     [System.Diagnostics.Process]::Start($e.Uri.AbsoluteUri)  # Open the link in the default web browser
                     $e.Handled = $true
     })
