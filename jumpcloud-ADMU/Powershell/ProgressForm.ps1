@@ -67,8 +67,13 @@ function New-ProgressForm{
         </GroupBox>
 
         <GroupBox Header="Migration Status" FontWeight="Bold" Width="670" Height="83" MaxHeight="160" Margin="10,206,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
-            <StackPanel Height="45" Width="660" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="5,0,0,0">
+            <StackPanel Height="60" Width="660" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0">
                 <TextBlock Name="Status" TextWrapping="Wrap" Text="Status: " Width="auto"  FontSize="12" Height="auto" Margin="5,5,5,5" HorizontalAlignment="Left" FontWeight="Normal"/>
+                <TextBlock Name="ErrorBlock" Width="auto" FontSize="12" Height="auto" Margin="5,0,0,0" HorizontalAlignment="Left" FontWeight="Normal" Visibility="Collapsed">
+                    <Hyperlink Name="ErrorLink" NavigateUri="https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors">
+                        https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors
+                    </Hyperlink>
+                </TextBlock>
                 <ProgressBar Name="ProgressBar" Height="12" Width="549" Foreground="#52C4C1" HorizontalAlignment="Center" VerticalAlignment="Top">
                     <ProgressBar.Resources>
                         <Style TargetType="Border">
@@ -168,6 +173,15 @@ function New-ProgressForm{
                 #$syncHash.Status.Foreground = "Red"
                 # Hide Progress Bar
                 $SyncHash.ProgressBar.Visibility = "Hidden"
+                # Show Eorr Link and make clickable
+                $syncHash.ErrorBlock.Visibility = "Visible"
+                # Clickable link
+                $SyncHash.ErrorLink.add_RequestNavigate({
+                    param ($sender, $e)
+                    [System.Diagnostics.Process]::Start($e.Uri.AbsoluteUri)  # Open the link in the default web browser
+                    $e.Handled = $true
+    })
+
             }
             if ($synchash.PercentComplete -eq 100) {
                 $SyncHash.ViewLogButton.IsEnabled = $true
@@ -179,7 +193,6 @@ function New-ProgressForm{
             $SyncHash.LogTextBlock.Text = $syncHash.LogText
             # Update Progress Bar
             $SyncHash.ProgressBar.Value = $SyncHash.PercentComplete
-
             # Update Status Text
             $SyncHash.Status.Text = $SyncHash.StatusInput
 
