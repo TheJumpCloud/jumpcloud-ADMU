@@ -29,6 +29,24 @@ Describe "Module Validation Tests" {
     }
 
     Context 'Check Versioning & Signature' {
+        # Validate ProgressForm.ps1 ADMU version
+        It 'Progress Form Version' {
+            $ProgressFormPath = "$PSScriptRoot\..\ProgressForm.ps1"
+            $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )([0-9]+)\.([0-9]+)\.([0-9]+)'
+            $progressformversion = Select-String -Path:($ProgressFormPath) -Pattern:($VersionRegex)
+            $branchprogressformversion = [version]$progressformversion.Matches.value
+            $masterProgressForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/ProgressForm.ps1 -useBasicParsing).tostring()
+            $masterVersion = Select-String -inputobject:($masterProgressForm) -Pattern:($VersionRegex)
+            $masterprogressformversion = [version]$masterversion.Matches.value
+            if($env:ModuleVersionType -eq "manual"){
+                # Manual Versioning
+                # Given version should be greater than master
+                $branchprogressformversion | Should -BeGreaterThan $masterprogressformversion
+            } else {
+                $branchprogressformversion | Should -BeGreaterThan $masterprogressformversion
+                $branchprogressformversion.$($env:ModuleVersionType) | Should -Be ($masterprogressformversion.$($env:ModuleVersionType) + 1)
+            }
+        }
 
         It 'XAML Form version' {
             $FormPath = "$PSScriptRoot\..\Form.ps1"

@@ -41,12 +41,25 @@ If (Test-Path -Path:($Output)) {
 # Get file contents
 $StartJCADMU = (Get-Content -Path:($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\Powershell\Start-JCADMU.ps1') -Raw) -Replace ("`r", "")
 $Functions = (Get-Content -Path:($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\Powershell\Start-Migration.ps1') -Raw) -Replace ("`r", "")
+$ProgressForm = (Get-Content -Path:($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\Powershell\ProgressForm.ps1') -Raw) -Replace ("`r", "")
 $Form = (Get-Content -Path:($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\Powershell\Form.ps1') -Raw) -Replace ("`r", "")
+
+# TODO: Add Private functions to $NewContent. This code is commented out for later use.
+# Get file content of /jumpcloud-ADMU/Powershell/Private
+#$PrivateFolder = Get-ChildItem -Path:($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\Powershell\Private\')
 # String manipulation
+# Iterate through each file in the Private folder and append to $Functions
+# ForEach ($File in $PrivateFolder) {
+#     $PrivateFunctions += (Get-Content -Path:($File.FullName) -Raw) -Replace ("`r", "")
+# }
+#$NewContent = $PrivateFunctions
 $NewContent = $StartJCADMU
+# Add Private functions to $NewContent
+
 $NewContent = $NewContent.Replace('# Get script path' + "`n", '')
 $NewContent = $NewContent.Replace('$scriptPath = (Split-Path -Path:($MyInvocation.MyCommand.Path))' + "`n", '')
 $NewContent = $NewContent.Replace('. ($scriptPath + ''\Start-Migration.ps1'')', $Functions)
+$NewContent = $NewContent.Replace('. ($scriptPath + ''\ProgressForm.ps1'')', $ProgressForm)
 $NewContent = $NewContent.Replace('$formResults = Invoke-Expression -Command:(''. "'' + $scriptPath + ''\Form.ps1"'')' + "`n", $Form)
 $NewContent = $NewContent -replace('Return \$FormResults', '')
 $NewContent = $NewContent + "`n"
@@ -71,7 +84,7 @@ If ($PSVersion.PSEdition -eq "Core") {
     Import-Module -Name ps2exe
     If (-not [System.String]::IsNullOrEmpty($PSD1Version)) {
         $guiOutputPath = ($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\exe\gui_jcadmu.exe')
-        Invoke-ps2exe -inputFile $Output -outputFile $guiOutputPath -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright "(c) $year" -version $Psd1Version -company 'JumpCloud' -requireAdmin -iconfile '.\Deploy\admu.ico'
+        Invoke-ps2exe -inputFile $Output -outputFile $guiOutputPath -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright "(c) $year" -version $Psd1Version -company 'JumpCloud' -requireAdmin -iconfile ($FolderPath_ModuleRootPath + '\Deploy\admu.ico')
         $guiExeFile = Get-Item $guiOutputPath
         $guiHash = (get-filehash -algorithm SHA256 -path $guiExeFile).Hash
         Write-Host "==== GUI_JCADMU.EXE Build Status ===="

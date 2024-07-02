@@ -1,3 +1,19 @@
+## 2.7.0
+
+Release Date: June 28, 2024
+
+
+#### RELEASE NOTES
+
+#### Bug Fixes:
+
+```
+* When loading/ unloading a user's registry hive and an error is encounered, the tool will attempt to close any processes owned by that user.
+* Added error mapping function to provide useful information for troubleshooting to admin when an error pops up.
+* Added a validation to check if jumpcloud username and local username are the same
+```
+
+
 ## 2.6.8
 
 Release Date: May 14, 2024
@@ -277,7 +293,7 @@ Fix for previous version 1.6.7 where after migrating a domain user with the same
 
 #### BUG FIXES:
 
-Domain users with the same name as the system hostname now initalize correctly and the GUI will allow for migration of these user accounts
+Domain users with the same name as the system hostname now initialize correctly and the GUI will allow for migration of these user accounts
 
 ## 1.6.7
 
