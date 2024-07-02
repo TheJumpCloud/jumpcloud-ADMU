@@ -1720,18 +1720,18 @@ function Write-AdmuErrorMessage {
         "load_unload_error" {
             Write-ToLog -Message "Load/Unload Error: User registry cannot be loaded or unloaded. Verify that the admin running ADMU has permission to the user's NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors" -Level Error
 
-            $Script:ErrorMessage = "Load/Unload Error: User registry cannot be loaded or unloaded. Click thee link below for troubleshooting information."
+            $Script:ErrorMessage = "Load/Unload Error: User registry cannot be loaded or unloaded. Click the link below for troubleshooting information."
         }
         "copy_error" {
             Write-ToLog -Message:("Copy Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
 
-            $Script:ErrorMessage = "Copy Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Click thee link below for troubleshooting information."
+            $Script:ErrorMessage = "Copy Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Click the link below for troubleshooting information."
         }
         "rename_original_registry_file_error" {
             Write-ToLog -message:("Rename Error: Registry files cannot be renamed. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
 
 
-            $Script:ErrorMessage = "Rename Error: Registry files cannot be renamed. Click thee link below for troubleshooting information."
+            $Script:ErrorMessage = "Rename Error: Registry files cannot be renamed. Click the link below for troubleshooting information."
         }
 
         "rename_backup_registry_file_error" {
@@ -1784,24 +1784,24 @@ function Write-ToProgress {
     )
     # Create a hashtable of all status messages
     $statusMessages = [ordered]@{
-        "Init" = "Initializing Migration"
-        "Install"   = "Installing JumpCloud Agent"
-        "BackupUserFiles"       = "Backing up user profile"
-        "UserProfileUnit"     = "Initializing new user profile"
-        "BackupRegHive"      = "Backing up registry hive"
-        "VerifyRegHive"     = "Verifying registry hive"
-        "CopyLocalReg"   = "Copying local user registry"
-        "GetACL"   = "Getting ACLs"
-        "CopyUser"   = "Copying selected user to new user"
-        "CopyUserRegFiles" = "Copying user registry files"
-        "CopyMergedProfile" = "Copying merged profiles to destination profile path"
-        "CopyDefaultProtocols" = "Copying default protocol associations"
+        "Init"                    = "Initializing Migration"
+        "Install"                 = "Installing JumpCloud Agent"
+        "BackupUserFiles"         = "Backing up user profile"
+        "UserProfileUnit"         = "Initializing new user profile"
+        "BackupRegHive"           = "Backing up registry hive"
+        "VerifyRegHive"           = "Verifying registry hive"
+        "CopyLocalReg"            = "Copying local user registry"
+        "GetACL"                  = "Getting ACLs"
+        "CopyUser"                = "Copying selected user to new user"
+        "CopyUserRegFiles"        = "Copying user registry files"
+        "CopyMergedProfile"       = "Copying merged profiles to destination profile path"
+        "CopyDefaultProtocols"    = "Copying default protocol associations"
         "ValidateUserPermissions" = "Validating user permissions"
-        "CreateRegEntries" = "Creating registry entries"
-        "DownloadUWPApps" = "Downloading UWP Apps"
-        "CheckADStatus" = "Checking AD Status"
-        "ConversionComplete" = "Profile conversion complete"
-        "MigrationComplete" = "Migration completed successfully"
+        "CreateRegEntries"        = "Creating registry entries"
+        "DownloadUWPApps"         = "Downloading UWP Apps"
+        "CheckADStatus"           = "Checking AD Status"
+        "ConversionComplete"      = "Profile conversion complete"
+        "MigrationComplete"       = "Migration completed successfully"
     }
     # If status is error message, write to log
     if ($logLevel -eq "Error") {
@@ -2000,7 +2000,7 @@ Function Start-Migration {
         }
 
         $hostname = hostname # Get computer hostname
-        if($JumpCloudUserName -eq $hostname) {
+        if ($JumpCloudUserName -eq $hostname) {
             Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and Hostname cannot be the same. Exiting..."
             break
         }
