@@ -2240,6 +2240,7 @@ Function Start-Migration {
                 # Copy from "SelectedUser" to "NewUser"
             } catch {
                 Write-ToLog -Message("Could not unload registry hives before copy steps: Exiting...")
+                Write-AdmuErrorMessage -ErrorName "load_unload_error"
                 $admuTracker.loadBeforeCopyRegistry.fail = $true
                 break
             }
@@ -2415,6 +2416,7 @@ Function Start-Migration {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID -hive classes
             } catch {
                 Write-ToLog -Message("Could not unload registry hives before copy steps: Exiting...")
+                Write-AdmuErrorMessage -ErrorName "load_unload_error"
                 $admuTracker.unloadBeforeCopyRegistryFiles.fail = $true
                 break
             }
