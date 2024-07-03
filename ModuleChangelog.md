@@ -9,7 +9,8 @@ Release Date: June 28, 2024
 
 ```
 * When loading/ unloading a user's registry hive and an error is encounered, the tool will attempt to close any processes owned by that user.
-* Added error mapping function to provide useful information for troubleshooting to admin when an error pops up.
+* While migrating with the exe application, the ADMU will now show the progress of the migration within a GUI window. Migration logs can be viewed in this window, new migrations can be triggered after a successful or failed migration.
+* An error mapping function was added to the tool to provide better feedback when the tool encounters an issue with a migration. 
 * Added a validation to check if jumpcloud username and local username are the same
 ```
 
