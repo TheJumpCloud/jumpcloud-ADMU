@@ -1999,7 +1999,8 @@ Function Start-Migration {
             break
         }
 
-        $hostname = hostname # Get computer hostname
+        # Get computer hostname
+        $hostname =  $env:computername
         if ($JumpCloudUserName -eq $hostname) {
             Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and Hostname cannot be the same. Exiting..."
             break
