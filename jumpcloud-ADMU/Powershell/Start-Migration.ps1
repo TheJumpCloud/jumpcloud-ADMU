@@ -1717,7 +1717,6 @@ function Write-AdmuErrorMessage {
         [string]$ErrorName
     )
     switch ($ErrorName) {
-        # 1718
         "load_unload_error" {
             Write-ToLog -Message "Load/Unload Error: The user registry cannot be loaded or unloaded. Verify that the admin running ADMU has permission to the user's NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors" -Level Error
 
@@ -1726,18 +1725,12 @@ function Write-AdmuErrorMessage {
         "copy_error" {
             Write-ToLog -Message:("Registry Copy Error: The user registry files can not be coppied. Verify that the admin running ADMU has permission to the user's NTUser.dat/ UsrClass.dat files, no user processes/ services are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
 
-            $Script:ErrorMessage = "Copy Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Click the link below for troubleshooting information."
+            $Script:ErrorMessage = "Registry Copy Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Click the link below for troubleshooting information."
         }
-        "rename_original_registry_file_error" {
-            Write-ToLog -message:("Rename Error: Could not . Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
+        "rename_registry_file_error" {
+            Write-ToLog -message:("Registry Rename Error: Could not rename user registry file. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
 
-            $Script:ErrorMessage = "Rename Error: Registry files cannot be renamed. Click the link below for troubleshooting information."
-        }
-
-        "rename_backup_registry_file_error" {
-            Write-ToLog -Message:("Rename Error: Could not rename user registry files. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
-
-            $Script:ErrorMessage = "Rename Error:Could not create a backup of the user's registry files. Click the link below for troubleshooting information."
+            $Script:ErrorMessage = "Registry Rename Error: Registry files cannot be renamed. Click the link below for troubleshooting information."
         }
         "backup_error" {
             Write-ToLog -Message:("Registry Backup Error: Could not take a backup of the user registry files. Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Verify that no user processes/ services for the migration user are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
@@ -1750,9 +1743,9 @@ function Write-AdmuErrorMessage {
             $Script:ErrorMessage = "User Initialization Error. Click the link below for troubleshooting information."
         }
         "user_create_error" {
-            Write-ToLog -Message:("User Create Error: The new local user could not be created. Verify that the user was not already created before running ADMU. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
+            Write-ToLog -Message:("User Creation Error: The new local user could not be created. Verify that the user was not already created before running ADMU. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
 
-            $Script:ErrorMessage = "User Create Error. Click the link below for troubleshooting information."
+            $Script:ErrorMessage = "User Creation Error. Click the link below for troubleshooting information."
         }
         Default {
             Write-ToLog -Message:("Error occured, please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
@@ -2467,7 +2460,7 @@ Function Start-Migration {
                     Write-ToLog -Message:("Successfully renamed $ntuserOriginalName with timestamp $renameDate")
                 } else {
                     Write-ToLog -Message:("Failed to rename $ntuserOriginalName with timestamp $renameDate")
-                    Write-AdmuErrorMessage -Error:("rename_original_registry_file_error")
+                    Write-AdmuErrorMessage -Error:("rename_registry_file_error")
                     $admuTracker.renameOriginalFiles.fail = $true
                     break
                 }
@@ -2495,14 +2488,14 @@ Function Start-Migration {
                         Write-ToLog -Message:("Successfully renamed $ntuserOriginalName with timestamp $renameDate")
                     } else {
                         Write-ToLog -Message:("Failed to rename $ntuserOriginalName with timestamp $renameDate")
-                        Write-AdmuErrorMessage -Error:("rename_original_registry_file_error")
+                        Write-AdmuErrorMessage -Error:("rename_registry_file_error")
                         $admuTracker.renameOriginalFiles.fail = $true
                         break
                     }
 
                 } catch {
                     Write-ToLog -Message("Could not rename original NTUser registry files for backup purposes: Exiting...")
-                    Write-AdmuErrorMessage -Error:("rename_original_registry_file_error")
+                    Write-AdmuErrorMessage -Error:("rename_registry_file_error")
                     Write-ToLog -Message($_.Exception.Message)
                     $admuTracker.renameOriginalFiles.fail = $true
                     break
@@ -2576,7 +2569,7 @@ Function Start-Migration {
                 Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
             } catch {
                 Write-ToLog -Message("Could not rename backup registry files to a system recognizable name: Exiting...")
-                Write-AdmuErrorMessage -Error:("rename_backup_registry_file_error")
+                Write-AdmuErrorMessage -Error:("rename_registry_file_error")
                 Write-ToLog -Message($_.Exception.Message)
 
                 # attempt to recover:
@@ -2607,7 +2600,7 @@ Function Start-Migration {
                         Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT.BAK" -NewName "$oldUserProfileImagePath\NTUSER.DAT" -Force -ErrorAction Stop
                         Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Force -ErrorAction Stop
                     } catch {
-                        Write-AdmuErrorMessage -Error:("rename_backup_registry_file_error")
+                        Write-AdmuErrorMessage -Error:("rename_registry_file_error")
                         Write-ToLog -Message($_.Exception.Message)
                         $admuTracker.renameBackupFiles.fail = $true
                         break
