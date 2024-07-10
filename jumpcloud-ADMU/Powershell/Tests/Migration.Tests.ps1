@@ -486,7 +486,7 @@ Describe 'Migration Test Scenarios' {
                         }
                         $logContent = Get-Content -Tail 1 C:\Windows\Temp\Jcadmu.log
                         if ($logContent -match "The following migration steps were reverted to their original state: newUserInit") {
-                            write-host "Start Migration Task Failed Sucessfully"
+                            write-host "Start Migration Task Failed Successfully"
                             return $true
                         } else {
                             return $false
@@ -495,7 +495,6 @@ Describe 'Migration Test Scenarios' {
                         # Write-Host "$date - Start migration complete"
                     }) -ArgumentList:($($user.JCUsername), $($user.username), $($user.password), $pathToSM)
                 Write-Host "$(Get-Date -UFormat "%D %r") - Start parallel job to wait for task to be disabled"
-
 
                 Write-Host "Job Details:"
                 # Wait for the job to start a new process

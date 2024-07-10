@@ -2988,8 +2988,8 @@ Function Start-Migration {
 
         } else {
             Write-ToLog -Message:("ADMU encoutered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warn
-            Write-ToLog -Message:("The following migration steps were reverted to their original state: $FixedErrors") -Level Warn
             Write-ToLog -Message:('Script finished with errors; Log file location: ' + $jcAdmuLogFile) -Level Error
+            Write-ToLog -Message:("The following migration steps were reverted to their original state: $FixedErrors") -Level Warn
             Write-ToProgress -ProgressBar $Progressbar -Status $Script:ErrorMessage -form $isForm -logLevel "Error"
             throw "JumpCloud ADMU was unable to migrate $selectedUserName"
         }
