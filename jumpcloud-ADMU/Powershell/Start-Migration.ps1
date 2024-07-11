@@ -897,8 +897,7 @@ Function Get-WindowsDrive {
      https://gallery.technet.microsoft.com/scriptcenter/Write-ToLog-PowerShell-999c32d0
   #>
 # Set a global parameter for debug logging
-$Script:AdminDebug = $false
-$Script:ProgressBar = $null
+
 Function Write-ToLog {
     [CmdletBinding()]
     Param
@@ -1711,7 +1710,6 @@ function Get-ProtocolTypeAssociation {
     return $manifestList
 }
 ##### END MIT License #####
-$Script:ErrorMessage = $null
 function Write-AdmuErrorMessage {
     param (
         [string]$ErrorName
@@ -1875,8 +1873,6 @@ Function Start-Migration {
 
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
-        Write-ToLog -Message:("Form is set to $isForm") -Level Verbose
-
         If ($isForm) {
             $useragent = "JumpCloud.ADMU_Application/$($admuVersion)"
             Write-ToLog -Message:("UserAgent: $useragent")

@@ -40,90 +40,155 @@ function New-ProgressForm{
     Name="Window" Title="JumpCloud ADMU 2.7.0"
     WindowStyle="SingleBorderWindow"
     ResizeMode="NoResize"
-    Background="White" Width="700" Height="530">
+    Background="White" Width="700" Height="560">
+    <Window.Resources>
+        <Style x:Key="NoHeaderGroupBoxStyle" TargetType="{x:Type GroupBox}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type GroupBox}">
+                        <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                            <Grid>
+                                <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" Margin="0" Visibility="Collapsed"/>
+                                <ContentPresenter Margin="3" />
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="LineHeight" Value="21"/>
+            <Setter Property="Foreground" Value="#202D38"/>
+
+        </Style>
+        <Style TargetType="Label">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Foreground" Value="#202D38"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#202D38"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style TargetType="ProgressBar">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ProgressBar">
+                        <Grid>
+                            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1" CornerRadius="4">
+                                <Grid x:Name="PART_Track" ClipToBounds="True" Background="Transparent">
+                                    <Border x:Name="PART_Indicator" Background="{TemplateBinding Foreground}" HorizontalAlignment="Left" CornerRadius="4"/>
+                                </Grid>
+                            </Border>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
     <Grid>
         <Image Name="JCLogoImg" Margin="10,12,0,0" HorizontalAlignment="Left" Height="33" Width="500" VerticalAlignment="Top"/>
-        <GroupBox Header="Migration Details" FontWeight="Bold" Width="auto" Height="148" MaxHeight="160" Margin="10,50,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
-            <Grid HorizontalAlignment="Left" Height="61" Margin="10,0,0,0" VerticalAlignment="Center" Width="auto" MinWidth="245" MinHeight="100">
+
+        <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" FontWeight="Bold" Width="auto" Height="148" MaxHeight="160" Margin="10,55,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
+            <Grid HorizontalAlignment="Left" Height="auto" Margin="10,0,0,0" VerticalAlignment="Center" Width="auto" MinWidth="245" MinHeight="100">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="118"/>
                     <ColumnDefinition Width="auto"/>
                 </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="25"/>
-                    <RowDefinition Height="25"/>
-                    <RowDefinition Height="25"/>
-                    <RowDefinition Height="25"/>
-                </Grid.RowDefinitions>
-                <Label Content="Username: " HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Column="0" Height="25" Width="69" />
-                <Label Content="ProfileSize: " HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Column="0" Grid.Row="1" Height="25" Width="71" />
-                <Label Content="LocalPath:" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Column="0" Grid.Row="2" Height="25" Width="63" />
-                <Label Content="NewLocalUsername:" HorizontalAlignment="Center" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="3" Height="25" Width="118" />
-                <Label Name="Username" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="0"/>
-                <Label Name="ProfileSize" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="1"/>
-                <Label Name="LocalPath" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="2"/>
-                <Label Name="NewLocalUsername" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="3"/>
+                <TextBlock Text="Migration Details" FontWeight="SemiBold" Grid.Row="0" Margin="0,0,0,10" FontSize="12"/>
+                <Label Content="Username: " HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="1" Height="25" Width="69" />
+                <Label Content="ProfileSize: " HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="2" Height="25" Width="71" />
+                <Label Content="LocalPath:" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="3" Height="25" Width="63" />
+                <Label Content="NewLocalUsername:" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="4" Height="25" Width="118" />
+                <Label Name="Username" Content="AzureAD\KenTest" FontWeight="SemiBold" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="22,0,0,0" />
+                <Label Name="ProfileSize" Content="0.8GB" FontWeight="SemiBold" Grid.Row="2" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
+                <Label Name="LocalPath" Content="C:Users\KenTest" FontWeight="SemiBold" Grid.Row="3" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
+                <Label Name="NewLocalUsername" Content="testadmu" FontWeight="SemiBold" Grid.Row="4" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
             </Grid>
         </GroupBox>
+        <Grid Width="680" Margin="10,216,15,0" HorizontalAlignment="Left" VerticalAlignment="Top" >
+            <Grid.RowDefinitions>
+                <RowDefinition Height="auto" MinHeight="94"/>
+                <RowDefinition Height="Auto" MinHeight="130"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Top" Height="94">
+                <StackPanel Height="86" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0" Width="650">
+                    <TextBlock Text="Migration Status" FontWeight="SemiBold" FontSize="12" Margin="5,10,0,0"/>
+                    <TextBlock Name="Status" TextWrapping="Wrap" Text="Status:" LineHeight="15" Width="auto"  FontSize="12" Height="auto" Margin="5,0,5,5" HorizontalAlignment="Left" FontWeight="Normal"/>
+                    <TextBlock Name="ErrorBlock" Width="auto" FontSize="12" Height="auto" Margin="5,0,0,0" HorizontalAlignment="Left" FontWeight="Normal" Visibility="Collapsed">
+            <Hyperlink Name="ErrorLink" NavigateUri="https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors">
+                https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors
+            </Hyperlink>
+                    </TextBlock>
+                    <ProgressBar Name="ProgressBar" Height="8"  Foreground="#41C8c3" VerticalAlignment="Top" Width="645" Margin="5,0,0,20" Value="50" HorizontalAlignment="Left" Visibility="Visible" >
+                    </ProgressBar>
+                </StackPanel>
+            </GroupBox>
 
-        <GroupBox Header="Migration Status" FontWeight="Bold" Width="670" Height="83" MaxHeight="160" Margin="10,206,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
-            <StackPanel Height="60" Width="660" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0">
-                <TextBlock Name="Status" TextWrapping="Wrap" Text="Status: " Width="auto"  FontSize="12" Height="auto" Margin="5,5,5,5" HorizontalAlignment="Left" FontWeight="Normal"/>
-                <TextBlock Name="ErrorBlock" Width="auto" FontSize="12" Height="auto" Margin="5,0,0,0" HorizontalAlignment="Left" FontWeight="Normal" Visibility="Collapsed">
-                    <Hyperlink Name="ErrorLink" NavigateUri="https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors">
-                        https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors
-                    </Hyperlink>
-                </TextBlock>
-                <ProgressBar Name="ProgressBar" Height="12" Width="549" Foreground="#52C4C1" HorizontalAlignment="Center" VerticalAlignment="Top">
-                    <ProgressBar.Resources>
-                        <Style TargetType="Border">
+            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="1" Width="670">
+                <Expander Header="View Log" Background="White" Foreground="#4373C7" HorizontalAlignment="Center" Height="142" Margin="0,10,0,0" Width="660">
+                    <Expander.Resources>
+                        <Style TargetType="{x:Type Border}">
+                            <Setter Property="CornerRadius" Value="5"/>
+                        </Style>
+                    </Expander.Resources>
+                    <Border BorderBrush="#E3E8E9" BorderThickness="1" CornerRadius="5" >
+                        <ScrollViewer Name="ScrollLog" Foreground="Gray" HorizontalScrollBarVisibility="Disabled" VerticalAlignment="Center" Height="98" Width="650">
+                            <TextBlock Name="LogTextBlock" TextWrapping="Wrap" FontWeight="Medium" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Top" HorizontalAlignment="Left">Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+
+The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.</TextBlock>
+                        </ScrollViewer>
+                    </Border>
+                </Expander>
+            </StackPanel>
+
+            <Grid Grid.Row="2" Margin="0,20,10,0" HorizontalAlignment="Right" VerticalAlignment="Top" Height="26" Width="240" >
+
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="0"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="0"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0" Name="ViewLogButton" Content="View Log" Height="26" Width="70"  IsEnabled="False"  Margin="0,0,10,0" HorizontalAlignment="Center">
+                    <Button.Resources>
+                        <Style TargetType="{x:Type Border}">
                             <Setter Property="CornerRadius" Value="3"/>
                         </Style>
-                    </ProgressBar.Resources>
-                </ProgressBar>
-            </StackPanel>
-        </GroupBox>
-
-        <StackPanel HorizontalAlignment="Left">
-            <Expander Height="140" Header="View Log" Margin="10,307,0,60" Background="AliceBlue" HorizontalAlignment="Center" Width="670">
-                <Expander.Resources>
-                    <Style TargetType="Border">
-                        <Setter Property="CornerRadius" Value="5"/>
-                    </Style>
-                </Expander.Resources>
-                <Expander.Content>
-
-                    <ScrollViewer Name="ScrollLog" Foreground="Gray" HorizontalScrollBarVisibility = "Disabled" VerticalAlignment="Center" Height="98">
-                        <TextBlock Name="LogTextBlock" TextWrapping="Wrap" FontWeight="Medium" FontSize="11" >
-                        </TextBlock>
-                    </ScrollViewer>
-                </Expander.Content>
-            </Expander>
-        </StackPanel>
-
-        <Grid HorizontalAlignment="Center" Margin="0,455,0,0" Width="700" VerticalAlignment="Top" Height="54" >
-            <Button Name="ViewLogButton" Content="View Log" HorizontalAlignment="Left"  VerticalAlignment="Top" Height="26" Width="70"  IsEnabled="False" FontWeight="Normal" Margin="459,9,0,0">
-                <Button.Resources>
-                    <Style TargetType="Border">
-                        <Setter Property="CornerRadius" Value="3"/>
-                    </Style>
-                </Button.Resources>
-            </Button>
-
-            <Button Name="StartJCADMUButton" Content="Rerun" HorizontalAlignment="Left"  Height="26" Width="70" VerticalAlignment="Top" IsEnabled="False" FontWeight="Normal" Margin="534,9,0,0">
-                <Button.Resources>
-                    <Style TargetType="Border">
-                        <Setter Property="CornerRadius" Value="3"/>
-                    </Style>
-                </Button.Resources>
-            </Button>
-            <Button Name="ExitButton" Content="Exit" Height="26" Width="70" HorizontalAlignment="Left" VerticalAlignment="Top" IsEnabled="False"  FontWeight="Normal" Margin="609,9,0,0">
-                <Button.Resources>
-                    <Style TargetType="Border">
-                        <Setter Property="CornerRadius" Value="3"/>
-                    </Style>
-                </Button.Resources>
-            </Button>
+                    </Button.Resources>
+                </Button>
+                <Button Grid.Column="2" Name="StartJCADMUButton" Content="Rerun"  Height="26" Width="70" IsEnabled="False" Margin="0,0,10,0">
+                    <Button.Resources>
+                        <Style TargetType="{x:Type Border}">
+                            <Setter Property="CornerRadius" Value="3"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+                <Button Grid.Column="4" Name="ExitButton" Content="Exit" Height="26" Width="70"  VerticalAlignment="Top" IsEnabled="False" Margin="0,0,10,0">
+                    <Button.Resources>
+                        <Style TargetType="{x:Type Border}">
+                            <Setter Property="CornerRadius" Value="3"/>
+                        </Style>
+                    </Button.Resources>
+                </Button>
+            </Grid>
         </Grid>
     </Grid>
 </Window>
