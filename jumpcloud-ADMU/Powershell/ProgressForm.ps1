@@ -242,7 +242,9 @@ The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for t
                 $syncHash.ErrorBlock.Visibility = "Visible"
                 # Clickable link
                 $SyncHash.ErrorLink.add_RequestNavigate({
+                    [System.Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', '', Justification="SenderParam is an event handler and used when the link is clicked https://learn.microsoft.com/en-us/dotnet/api/system.windows.navigation.requestnavigateeventargs.invokeeventhandler?view=windowsdesktop-8.0#system-windows-navigation-requestnavigateeventargs-invokeeventhandler(system-delegate-system-object")]
                     param ($senderParam, $e)
+                    #$senderParam = $senderParam
                     [System.Diagnostics.Process]::Start($e.Uri.AbsoluteUri)  # Open the link in the default web browser
                     $e.Handled = $true
     })

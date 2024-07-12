@@ -206,7 +206,6 @@ function show-mtpSelection {
             <Setter Property="FontWeight" Value="Normal"/>
             <Setter Property="LineHeight" Value="21"/>
             <Setter Property="Foreground" Value="#202D38"/>
-
         </Style>
         <Style TargetType="Label">
             <Setter Property="FontFamily" Value="Segoe UI"/>
@@ -224,11 +223,10 @@ function show-mtpSelection {
             <Setter Property="FontWeight" Value="SemiBold"/>
             <Setter Property="Background" Value="#41C8C3"/>
         </Style>
-
-
     </Window.Resources>
     <Grid Margin="0,0,0,0">
     <Image Name="JCLogoImg" Source="C:\Users\kmara\Downloads\JC oceanblue tm.png" HorizontalAlignment="Left" Height="33" VerticalAlignment="Top" Margin="9,0,0,0" Width="500"/>
+
         <Grid Width="1000" Margin="0,0,0,356">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto"/>
@@ -239,6 +237,7 @@ function show-mtpSelection {
                 <RowDefinition Height="*"/>
             </Grid.RowDefinitions>
 
+            <!-- System Information -->
             <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" Height="186" Margin="10,47,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="295" Grid.Row="0" Grid.Column="0">
                 <Grid HorizontalAlignment="Center" VerticalAlignment="Top" Width="270" MinWidth="245" Margin="0,0,0,0">
                     <Grid.RowDefinitions>
@@ -272,15 +271,14 @@ function show-mtpSelection {
                 </Grid>
             </GroupBox>
 
+            <!-- Domain Accounts ListView -->
             <Border BorderBrush="#E3E8E9" BorderThickness="1.5" CornerRadius="3" Margin="-15,47,0,0" HorizontalAlignment="Center" VerticalAlignment="Top" Width="650" Height="186" Grid.Row="0" Grid.Column="1">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-
                     <Label HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#202D38" Content="Select a domain or Azure AD account to be migrated" Margin="5,5,0,0"/>
-
                     <!-- ListView -->
                     <ListView Name="lvProfileList" Grid.Row="1" BorderBrush="White" Width="638" HorizontalAlignment="Center" Margin="5,10,5,0">
                         <ListView.View>
@@ -297,7 +295,6 @@ function show-mtpSelection {
                                         <Setter Property="Padding" Value="1"/>
                                     </Style>
                                 </GridView.ColumnHeaderContainerStyle>
-
                                 <GridViewColumn Header="System Accounts" DisplayMemberBinding="{Binding UserName}" Width="auto" />
                                 <GridViewColumn Header="Last Login" DisplayMemberBinding="{Binding LastLogin}" Width="auto"/>
                                 <GridViewColumn Header="Currently Active" DisplayMemberBinding="{Binding Loaded}" Width="auto" />
@@ -308,11 +305,9 @@ function show-mtpSelection {
                     </ListView>
                 </Grid>
             </Border>
-
-
         </Grid>
 
-
+        <!-- Account Migration Information -->
         <GroupBox  Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" FontWeight="Bold" Height="268" Width="475" Margin="10,258,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
             <Grid HorizontalAlignment="Left" Height="232" VerticalAlignment="Top" Width="461">
                 <Grid.RowDefinitions>
@@ -332,13 +327,15 @@ function show-mtpSelection {
                 </Grid>
             </Grid>
         </GroupBox>
+
+        <!-- System Migration Information -->
         <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" Width="480"  HorizontalAlignment="Left" MinWidth="480" MinHeight="165" Margin="500,258,10,0" VerticalAlignment="Top" Height="268">
             <Grid HorizontalAlignment="Left" VerticalAlignment="Top" Width="470">
                 <Label FontWeight="SemiBold" Foreground="#202D38" Content="System Migration Options" Margin="5,0,0,233" HorizontalAlignment="Left"/>
                 <TextBlock Name="lbl_connectkey" HorizontalAlignment="Left" Margin="10,121,0,0" Text="JumpCloud Connect Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
                 <PasswordBox Name="tbJumpCloudConnectKey" HorizontalAlignment="Left" Height="23" Margin="10,142,0,0" VerticalAlignment="Top" Width="432"  Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False"/>
                 <TextBlock Name="lbl_apikey" HorizontalAlignment="Left" Margin="10,174,0,0" Text="JumpCloud API Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
-                <PasswordBox Name="tbJumpCloudAPIKey" HorizontalAlignment="Left" Height="23" Margin="10,195,0,0" VerticalAlignment="Top" Width="431"  Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="True" />
+                <PasswordBox Name="tbJumpCloudAPIKey" HorizontalAlignment="Left" Height="23" Margin="10,195,0,0" VerticalAlignment="Top" Width="431"  Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False" />
                 <TextBlock Name="lbl_orgNameTitle" HorizontalAlignment="Left" Margin="10,229,0,0" Text="Organization Name:" VerticalAlignment="Top" FontWeight="Normal"/>
                 <TextBlock Name="lbl_orgName" HorizontalAlignment="Left" Margin="124,229,0,0" Text="Not Currently Connected To A JumpCloud Organization" VerticalAlignment="Top" FontWeight="Normal"/>
                 <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="10,76,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
@@ -352,6 +349,8 @@ function show-mtpSelection {
                 <Image Name="img_apikey_valid" HorizontalAlignment="Left" Height="23" Margin="446,198,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Correct error" />
             </Grid>
         </GroupBox>
+
+        <!-- Migrate Button -->
         <Button Name="bMigrateProfile" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="834,546,0,0" Width="146" Height="26" IsEnabled="False" FontWeight="SemiBold" Content="Migrate Profile">
             <Button.Resources>
                 <Style TargetType="{x:Type Border}">
