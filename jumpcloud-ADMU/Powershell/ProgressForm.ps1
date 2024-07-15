@@ -40,7 +40,7 @@ function New-ProgressForm{
     Name="Window" Title="JumpCloud ADMU 2.7.0"
     WindowStyle="SingleBorderWindow"
     ResizeMode="NoResize"
-    Background="White" Width="700" Height="560">
+    Background="White" Width="720" Height="540">
     <Window.Resources>
         <Style x:Key="NoHeaderGroupBoxStyle" TargetType="{x:Type GroupBox}">
             <Setter Property="Template">
@@ -94,41 +94,43 @@ function New-ProgressForm{
     </Window.Resources>
 
     <Grid>
-        <Image Name="JCLogoImg" Margin="10,12,0,0" HorizontalAlignment="Left" Height="33" Width="500" VerticalAlignment="Top"/>
+        <Image Name="JCLogoImg" Margin="10,10,0,0" HorizontalAlignment="Left" Height="33" Width="500" VerticalAlignment="Top"/>
 
-        <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" FontWeight="Bold" Width="auto" Height="148" MaxHeight="160" Margin="10,55,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
-            <Grid HorizontalAlignment="Left" Height="auto" Margin="10,0,0,0" VerticalAlignment="Center" Width="auto" MinWidth="245" MinHeight="100">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="118"/>
-                    <ColumnDefinition Width="auto"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="Migration Details" FontWeight="SemiBold" Grid.Row="0" Margin="0,0,0,10" FontSize="12"/>
-                <Label Content="Username: " HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="1" Height="25" Width="69" />
-                <Label Content="ProfileSize: " HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="2" Height="25" Width="71" />
-                <Label Content="LocalPath:" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="3" Height="25" Width="63" />
-                <Label Content="NewLocalUsername:" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="4" Height="25" Width="118" />
-                <Label Name="Username" Content="AzureAD\KenTest" FontWeight="SemiBold" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="22,0,0,0" />
-                <Label Name="ProfileSize" Content="0.8GB" FontWeight="SemiBold" Grid.Row="2" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
-                <Label Name="LocalPath" Content="C:Users\KenTest" FontWeight="SemiBold" Grid.Row="3" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
-                <Label Name="NewLocalUsername" Content="testadmu" FontWeight="SemiBold" Grid.Row="4" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
-            </Grid>
-        </GroupBox>
-        <Grid Width="680" Margin="10,216,15,0" HorizontalAlignment="Left" VerticalAlignment="Top" >
+
+        <Grid Margin="10,0,10,0" >
             <Grid.RowDefinitions>
+                <RowDefinition Height="auto" MinHeight="216"/>
                 <RowDefinition Height="auto" MinHeight="94"/>
                 <RowDefinition Height="Auto" MinHeight="130"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" FontWeight="Bold" HorizontalAlignment="Left" VerticalAlignment="Top" Height="94">
-                <StackPanel Height="86" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="5,0,0,0" Width="650">
+            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" FontWeight="Bold" Width="auto" MaxHeight="160" Margin="0,56,0,10" HorizontalAlignment="Left">
+                <Grid HorizontalAlignment="Left" Height="auto" Margin="10,0,0,0" VerticalAlignment="Center" Width="auto" MinWidth="245" MinHeight="100" Grid.Row="0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="118"/>
+                        <ColumnDefinition Width="auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Migration Details" FontWeight="SemiBold" Grid.Row="0" Margin="0,0,0,10" FontSize="12"/>
+                    <Label Content="Username: " HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="1" Height="25" Width="69" />
+                    <Label Content="ProfileSize: " HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="2" Height="25" Width="71" />
+                    <Label Content="LocalPath:" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="3" Height="25" Width="63" />
+                    <Label Content="NewLocalUsername:" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="4" Height="25" Width="118" />
+                    <Label Name="Username" Content="AzureAD\KenTest" FontWeight="SemiBold" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="22,0,0,0" />
+                    <Label Name="ProfileSize" Content="0.8GB" FontWeight="SemiBold" Grid.Row="2" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
+                    <Label Name="LocalPath" Content="C:Users\KenTest" FontWeight="SemiBold" Grid.Row="3" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
+                    <Label Name="NewLocalUsername" Content="testadmu" FontWeight="SemiBold" Grid.Row="4" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
+                </Grid>
+            </GroupBox>
+            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" FontWeight="Bold" Height="94" Grid.Row="1">
+                <StackPanel Height="86" VerticalAlignment="Center">
                     <TextBlock Text="Migration Status" FontWeight="SemiBold" FontSize="12" Margin="5,10,0,0"/>
                     <TextBlock Name="Status" TextWrapping="Wrap" Text="Status:" LineHeight="15" Width="auto"  FontSize="12" Height="auto" Margin="5,0,5,5" HorizontalAlignment="Left" FontWeight="Normal"/>
                     <TextBlock Name="ErrorBlock" Width="auto" FontSize="12" Height="auto" Margin="5,0,0,0" HorizontalAlignment="Left" FontWeight="Normal" Visibility="Collapsed">
@@ -141,8 +143,8 @@ function New-ProgressForm{
                 </StackPanel>
             </GroupBox>
 
-            <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Grid.Row="1" Width="670">
-                <Expander Header="View Log" Background="White" Foreground="#4373C7" HorizontalAlignment="Center" Height="142" Margin="0,10,0,0" Width="660">
+            <StackPanel VerticalAlignment="Center" Grid.Row="2" >
+                <Expander Header="View Log" Background="White" Foreground="#4373C7" Height="142" Margin="0,10,0,0">
                     <Expander.Resources>
                         <Style TargetType="{x:Type Border}">
                             <Setter Property="CornerRadius" Value="5"/>
@@ -150,7 +152,7 @@ function New-ProgressForm{
                     </Expander.Resources>
                     <Border BorderBrush="#E3E8E9" BorderThickness="1" CornerRadius="5" >
                         <ScrollViewer Name="ScrollLog" Foreground="Gray" HorizontalScrollBarVisibility="Disabled" VerticalAlignment="Center" Height="98" Width="650">
-                            <TextBlock Name="LogTextBlock" TextWrapping="Wrap" FontWeight="Medium" FontSize="11" Margin="10,0,0,0" VerticalAlignment="Top" HorizontalAlignment="Left">Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
+                            <TextBlock Name="LogTextBlock" TextWrapping="Wrap" FontWeight="Medium" FontSize="11">Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
 
 The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.</TextBlock>
                         </ScrollViewer>
@@ -158,7 +160,7 @@ The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for t
                 </Expander>
             </StackPanel>
 
-            <Grid Grid.Row="2" Margin="0,20,10,0" HorizontalAlignment="Right" VerticalAlignment="Top" Height="26" Width="240" >
+            <Grid Grid.Row="4" Margin="0,10,0,0" HorizontalAlignment="Right" VerticalAlignment="Top" Height="26" >
 
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -181,7 +183,7 @@ The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for t
                         </Style>
                     </Button.Resources>
                 </Button>
-                <Button Grid.Column="4" Name="ExitButton" Content="Exit" Height="26" Width="70"  VerticalAlignment="Top" IsEnabled="False" Margin="0,0,10,0">
+                <Button Grid.Column="4" Name="ExitButton" Content="Exit" Height="26" Width="70"  VerticalAlignment="Top" IsEnabled="False">
                     <Button.Resources>
                         <Style TargetType="{x:Type Border}">
                             <Setter Property="CornerRadius" Value="3"/>
@@ -192,6 +194,7 @@ The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for t
         </Grid>
     </Grid>
 </Window>
+
 "@
 # Colors
 # Foreground="#90b7fc" Darkblue

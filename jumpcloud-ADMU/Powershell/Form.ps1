@@ -156,7 +156,7 @@ function show-mtpSelection {
         Title="JumpCloud ADMU 2.7.0"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
-        Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1000" Height="620">
+        Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1010" Height="590">
     <Window.Resources>
         <Style TargetType="PasswordBox">
             <Setter Property="Template">
@@ -224,21 +224,24 @@ function show-mtpSelection {
             <Setter Property="Background" Value="#41C8C3"/>
         </Style>
     </Window.Resources>
-    <Grid Margin="0,0,0,0">
-    <Image Name="JCLogoImg" Source="C:\Users\kmara\Downloads\JC oceanblue tm.png" HorizontalAlignment="Left" Height="33" VerticalAlignment="Top" Margin="9,0,0,0" Width="500"/>
+    <Grid>
 
-        <Grid Width="1000" Margin="0,0,0,356">
+
+        <Grid Margin="10,0,10,10">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="Auto"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto" MinWidth="479"/>
+                <ColumnDefinition Width="500"/>
             </Grid.ColumnDefinitions>
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
+                <RowDefinition Height="270"/>
+                <RowDefinition Height="Auto"/>
+
             </Grid.RowDefinitions>
+            <Image Name="JCLogoImg" Source="C:\Users\kmara\Downloads\JC oceanblue tm.png" Height="23" VerticalAlignment="Top" Margin="0,10,258,0" Width="auto" HorizontalAlignment="Left"/>
 
             <!-- System Information -->
-            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" Height="186" Margin="10,47,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="295" Grid.Row="0" Grid.Column="0">
+            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" Height="186" Margin="0,47,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="295" Grid.Row="0" Grid.Column="0">
                 <Grid HorizontalAlignment="Center" VerticalAlignment="Top" Width="270" MinWidth="245" Margin="0,0,0,0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -260,7 +263,7 @@ function show-mtpSelection {
                         <Label Content="Computer Name:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="0" />
                         <Label Content="Domain Name:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="1" />
                         <Label Content="NetBios Name:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="2" />
-                        <Label Content="AzureAD Joined:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="3" />
+                        <Label Content="Entra ID Joined:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="3" />
                         <Label Content="Tenant Name:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="4"/>
                         <Label Name="lbTenantName" Content="Test" FontWeight="Normal" Grid.Column="1" Grid.Row="4" HorizontalAlignment="Right" Margin="0,0,-20,0" />
                         <Label Name="lbAzureAD_Joined" Content="Test" FontWeight="Normal" Grid.Column="1" Grid.Row="3" HorizontalAlignment="Right" Margin="0,0,-20,0"/>
@@ -272,15 +275,19 @@ function show-mtpSelection {
             </GroupBox>
 
             <!-- Domain Accounts ListView -->
-            <Border BorderBrush="#E3E8E9" BorderThickness="1.5" CornerRadius="3" Margin="-15,47,0,0" HorizontalAlignment="Center" VerticalAlignment="Top" Width="650" Height="186" Grid.Row="0" Grid.Column="1">
-                <Grid>
+            <Border BorderBrush="#E3E8E9" BorderThickness="1.5" CornerRadius="3" Margin="0,47,0,0" Grid.Row="0" HorizontalAlignment="Right" Width="675" Grid.ColumnSpan="2">
+                <Grid Margin="5,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="0*"/>
+                    </Grid.ColumnDefinitions>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
-                    <Label HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="SemiBold" Foreground="#202D38" Content="Select a domain or Azure AD account to be migrated" Margin="5,5,0,0"/>
+                    <Label HorizontalAlignment="Left" VerticalAlignment="Top" FontWeight="SemiBold" Foreground="#202D38" Content="Select a domain or Entra ID account to be migrated" Margin="0,5,0,0" Grid.RowSpan="2" Height="26" Width="297"/>
                     <!-- ListView -->
-                    <ListView Name="lvProfileList" Grid.Row="1" BorderBrush="White" Width="638" HorizontalAlignment="Center" Margin="5,10,5,0">
+                    <ListView Name="lvProfileList" Grid.Row="1" BorderBrush="White" Width="Auto" HorizontalAlignment="Left" Margin="0,36,0,0" Grid.ColumnSpan="2">
                         <ListView.View>
                             <GridView AllowsColumnReorder="True">
                                 <GridView.ColumnHeaderContainerStyle>
@@ -305,59 +312,61 @@ function show-mtpSelection {
                     </ListView>
                 </Grid>
             </Border>
-        </Grid>
 
-        <!-- Account Migration Information -->
-        <GroupBox  Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" FontWeight="Bold" Height="268" Width="475" Margin="10,258,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
-            <Grid HorizontalAlignment="Left" Height="232" VerticalAlignment="Top" Width="461">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-                <Label Content="Account Migration Information" Foreground="#202D38" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="SemiBold" Margin="5,0,0,0"/>
-                <Grid Grid.Row="1">
-                    <Label Content="Local Account Username" HorizontalAlignment="Left" Margin="5,5,0,0" VerticalAlignment="Top" TabIndex="2147483645" FontWeight="SemiBold" FontSize="11"/>
-                    <Label Content="Local Account Password&#xD;&#xA;" HorizontalAlignment="Left" Margin="5,59,0,0" VerticalAlignment="Top" FontWeight="SemiBold" Height="27" FontSize="11"/>
-                    <TextBox Name="tbJumpCloudUserName" HorizontalAlignment="Left" Height="23" Margin="10,31,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="427"  FontWeight="SemiBold" FontSize="11" Style="{StaticResource RoundedTextBoxStyle}"/>
-                    <TextBox Name="tbTempPassword" Style="{StaticResource RoundedTextBoxStyle}" HorizontalAlignment="Left" Height="23" Margin="10,86,0,0" TextWrapping="Wrap" Text="Temp123!Temp123!" VerticalAlignment="Top" Width="427" FontWeight="SemiBold" FontSize="11"/>
-                    <Image Name="img_localaccount_info" Height="20" Margin="136,7,311,179" Width="14" Visibility="Visible" ToolTip="The value in this field should match a username in the jc console. A new local user account will be created with this username." />
-                    <Image Name="img_localaccount_valid" HorizontalAlignment="Left" Height="23" Margin="440,33,0,0" VerticalAlignment="Top" Width="14" ToolTip="Local account username can't be empty, contain spaces, already exist on the local system or match the local computer name." Visibility="Visible" />
-                    <Image Name="img_localaccount_password_info" Height="20" Margin="0,63,315,123" Width="14" Visibility="Visible" ToolTip="This temporary password is used on account creation. The password will be overwritten by the users jc password if autobound or manually bound in the console." HorizontalAlignment="Right"/>
-                    <Image Name="img_localaccount_password_valid" HorizontalAlignment="Left" Height="23" Margin="440,86,0,97" Width="14" Visibility="Visible"/>
+            <!-- Account Migration Information -->
+            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" Grid.Row="1" Grid.Column="0" Margin="0,10,0,0">
+                <Grid HorizontalAlignment="Left" VerticalAlignment="Top" Width="461">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Label Content="Account Migration Information" Foreground="#202D38" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="SemiBold" Margin="5,0,0,0"/>
+                    <Grid Grid.Row="1">
+                        <Label Content="Local Account Username" HorizontalAlignment="Left" Margin="5,5,0,0" VerticalAlignment="Top" TabIndex="2147483645" FontWeight="SemiBold" FontSize="11"/>
+                        <Label Content="Local Account Password&#xD;&#xA;" HorizontalAlignment="Left" Margin="5,59,0,0" VerticalAlignment="Top" FontWeight="SemiBold" Height="27" FontSize="11"/>
+                        <TextBox Name="tbJumpCloudUserName" HorizontalAlignment="Left" Height="23" Margin="10,31,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="427"  FontWeight="SemiBold" FontSize="11" Style="{StaticResource RoundedTextBoxStyle}"/>
+                        <TextBox Name="tbTempPassword" Style="{StaticResource RoundedTextBoxStyle}" HorizontalAlignment="Left" Height="23" Margin="10,86,0,0" TextWrapping="Wrap" Text="Temp123!Temp123!" VerticalAlignment="Top" Width="427" FontWeight="SemiBold" FontSize="11"/>
+                        <Image Name="img_localaccount_info" Height="20" Margin="136,7,311,179" Width="14" Visibility="Visible" ToolTip="The value in this field should match a username in the jc console. A new local user account will be created with this username." />
+
+                        <Image Name="img_localaccount_valid" HorizontalAlignment="Left" Height="23" Margin="440,33,0,0" VerticalAlignment="Top" Width="14" ToolTip="Local account username can't be empty, contain spaces, already exist on the local system or match the local computer name." Visibility="Visible" />
+                        <Image Name="img_localaccount_password_info" Height="20" Margin="0,63,315,123" Width="14" Visibility="Visible" ToolTip="This temporary password is used on account creation. The password will be overwritten by the users jc password if autobound or manually bound in the console." HorizontalAlignment="Right"/>
+                        <Image Name="img_localaccount_password_valid" HorizontalAlignment="Left" Height="23" Margin="440,86,0,97" Width="14" Visibility="Visible"/>
+                    </Grid>
                 </Grid>
-            </Grid>
-        </GroupBox>
+            </GroupBox>
 
-        <!-- System Migration Information -->
-        <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" Width="480"  HorizontalAlignment="Left" MinWidth="480" MinHeight="165" Margin="500,258,10,0" VerticalAlignment="Top" Height="268">
-            <Grid HorizontalAlignment="Left" VerticalAlignment="Top" Width="470">
-                <Label FontWeight="SemiBold" Foreground="#202D38" Content="System Migration Options" Margin="5,0,0,233" HorizontalAlignment="Left"/>
-                <TextBlock Name="lbl_connectkey" HorizontalAlignment="Left" Margin="10,121,0,0" Text="JumpCloud Connect Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
-                <PasswordBox Name="tbJumpCloudConnectKey" HorizontalAlignment="Left" Height="23" Margin="10,142,0,0" VerticalAlignment="Top" Width="432"  Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False"/>
-                <TextBlock Name="lbl_apikey" HorizontalAlignment="Left" Margin="10,174,0,0" Text="JumpCloud API Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
-                <PasswordBox Name="tbJumpCloudAPIKey" HorizontalAlignment="Left" Height="23" Margin="10,195,0,0" VerticalAlignment="Top" Width="431"  Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False" />
-                <TextBlock Name="lbl_orgNameTitle" HorizontalAlignment="Left" Margin="10,229,0,0" Text="Organization Name:" VerticalAlignment="Top" FontWeight="Normal"/>
-                <TextBlock Name="lbl_orgName" HorizontalAlignment="Left" Margin="124,229,0,0" Text="Not Currently Connected To A JumpCloud Organization" VerticalAlignment="Top" FontWeight="Normal"/>
-                <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="10,76,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                <CheckBox Name="cb_bindAsAdmin" Content="Bind As Admin" HorizontalAlignment="Left" Margin="118,56,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
-                <CheckBox Name="cb_leavedomain" ToolTipService.ShowOnDisabled="True" Content="Leave Domain" HorizontalAlignment="Left" Margin="10,56,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                <CheckBox Name="cb_autobindjcuser" Content="Autobind JC User" HorizontalAlignment="Left" Margin="118,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" />
-                <Image Name="img_ckey_info" Height="14" Width="14" Visibility="Visible" ToolTip="The Connect Key provides you with a means of associating this system with your JumpCloud organization. The Key is used to deploy the agent to this system." Margin="147,124,309,122" />
-                <Image Name="img_ckey_valid" HorizontalAlignment="Left" Height="23" Margin="446,145,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Connect Key must be 40chars &amp; not contain spaces" />
-                <Image Name="img_apikey_info" HorizontalAlignment="Left" Height="14" Margin="124,177,0,0" VerticalAlignment="Top" Width="14" Visibility="Visible" ToolTip="Click the link for more info on how to obtain the api key. The API key must be from a user with at least 'Manager' or 'Administrator' privileges." RenderTransformOrigin="1.857,-1.066"/>
-                <Image Name="img_apikey_valid" HorizontalAlignment="Left" Height="23" Margin="446,198,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Correct error" />
-            </Grid>
-        </GroupBox>
+            <!-- System Migration Information -->
+            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" MinHeight="165" Margin="10,10,0,0" Grid.Row="1" Grid.Column="1">
+                <Grid HorizontalAlignment="Left" Width="Auto" Height="Auto">
+                    <Label FontWeight="SemiBold" Foreground="#202D38" Content="System Migration Options" Margin="5,0,328,211"/>
+                    <TextBlock Name="lbl_connectkey" HorizontalAlignment="Left" Margin="10,121,0,0" Text="JumpCloud Connect Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
+                    <PasswordBox Name="tbJumpCloudConnectKey" HorizontalAlignment="Left" Height="23" Margin="10,142,0,0" VerticalAlignment="Top" Width="432"  Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False"/>
+                    <TextBlock Name="lbl_apikey" HorizontalAlignment="Left" Margin="10,174,0,0" Text="JumpCloud API Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
+                    <PasswordBox Name="tbJumpCloudAPIKey" HorizontalAlignment="Left" Height="23" Margin="10,195,0,0" VerticalAlignment="Top" Width="432"  Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False" />
+                    <TextBlock Name="lbl_orgNameTitle" HorizontalAlignment="Left" Margin="10,229,0,0" Text="Organization Name:" VerticalAlignment="Top" FontWeight="Normal"/>
+                    <TextBlock Name="lbl_orgName" HorizontalAlignment="Left" Margin="124,229,0,0" Text="Not Currently Connected To A JumpCloud Organization" VerticalAlignment="Top" FontWeight="Normal"/>
+                    <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="10,76,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                    <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                    <CheckBox Name="cb_bindAsAdmin" Content="Bind As Admin" HorizontalAlignment="Left" Margin="118,56,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
+                    <CheckBox Name="cb_leavedomain" ToolTipService.ShowOnDisabled="True" Content="Leave Domain" HorizontalAlignment="Left" Margin="10,56,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                    <CheckBox Name="cb_autobindjcuser" Content="Autobind JC User" HorizontalAlignment="Left" Margin="118,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" />
+                    <Image Name="img_ckey_valid" HorizontalAlignment="Left" Height="23" Margin="446,145,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Connect Key must be 40chars &amp; not contain spaces" />
+                    <Image Name="img_ckey_info" HorizontalAlignment="Left" Height="14" Margin="152,124,0,0" VerticalAlignment="Top" Width="14" Visibility="Visible" ToolTip="The Connect Key provides you with a means of associating this system with your JumpCloud organization. The Key is used to deploy the agent to this system." />
 
-        <!-- Migrate Button -->
-        <Button Name="bMigrateProfile" HorizontalAlignment="Left" VerticalAlignment="Top" Margin="834,546,0,0" Width="146" Height="26" IsEnabled="False" FontWeight="SemiBold" Content="Migrate Profile">
-            <Button.Resources>
-                <Style TargetType="{x:Type Border}">
-                    <Setter Property="CornerRadius" Value="3"/>
-                </Style>
-            </Button.Resources>
-        </Button>
+                    <Image Name="img_apikey_info" HorizontalAlignment="Left" Height="14" Margin="124,177,0,0" VerticalAlignment="Top" Width="14" Visibility="Visible" ToolTip="Click the link for more info on how to obtain the api key. The API key must be from a user with at least 'Manager' or 'Administrator' privileges." />
+                    <Image Name="img_apikey_valid" HorizontalAlignment="Left" Height="23" Margin="446,198,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Correct error" />
+                </Grid>
+            </GroupBox>
+
+            <!-- Migrate Button -->
+            <Button Name="bMigrateProfile" HorizontalAlignment="Right" VerticalAlignment="Top" Width="146" Height="30" IsEnabled="False" FontWeight="SemiBold" Content="Migrate Profile" Grid.Row="2" Grid.Column="1" Margin="0,10,0,0">
+                <Button.Resources>
+                    <Style TargetType="{x:Type Border}">
+                        <Setter Property="CornerRadius" Value="3"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
+        </Grid>
     </Grid>
 </Window>
 '@

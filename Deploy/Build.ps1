@@ -19,7 +19,7 @@ if ($ModuleVersionType -eq 'manual') {
 }
 
 # Run Build-Exe
-# . $PSScriptRoot\Build-Exe.ps1
+. $PSScriptRoot\Build-Exe.ps1
 # Run Build-HelpFiles
 . $PSScriptRoot\Build-HelpFiles.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 # Run Build-NuspecFromPsd1
