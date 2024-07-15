@@ -1988,9 +1988,8 @@ Function Start-Migration {
             break
         }
 
-        # Get computer hostname
-        $hostname = $env:computername
-        if ($JumpCloudUserName -eq $hostname) {
+        # Validate JCUserName and Hostname are not the equal. If eaqual, throw error and exit
+        if ($JumpCloudUserName -eq $env:computername) {
             Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and Hostname cannot be the same. Exiting..."
             break
         }

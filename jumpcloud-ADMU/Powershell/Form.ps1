@@ -523,7 +523,6 @@ $lbNetBios.Content = $NetBiosName
 #AzureADInformation
 $lbAzureAD_Joined.Content = $AzureADStatus
 $lbTenantName.Content = $TenantName
-$hostname = hostname
 Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKey, [object]$tbTempPassword, [object]$lvProfileList, [object]$tbJumpCloudAPIKey) {
     If (![System.String]::IsNullOrEmpty($lvProfileList.SelectedItem.UserName)) {
         If (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) -and (($($tbJumpCloudUserName.Text).length) -le 20) `
@@ -684,7 +683,7 @@ $script:ForceReboot = $false
 $cb_forcereboot.Add_Checked( { $script:ForceReboot = $true })
 $cb_forcereboot.Add_Unchecked( { $script:ForceReboot = $false })
 
-$hostname = hostname
+$hostname = $env:computername
 $tbJumpCloudUserName.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
         If ((Test-IsNotEmpty $tbJumpCloudUserName.Text) -or (!(Test-HasNoSpace $tbJumpCloudUserName.Text)) -or (Test-Localusername $tbJumpCloudUserName.Text) -or (($tbJumpCloudUserName.Text).Length -gt 20) -or $tbJumpCloudUserName.Text -eq $hostname) {
