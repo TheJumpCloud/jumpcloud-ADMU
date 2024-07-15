@@ -1,11 +1,12 @@
 ## 2.7.0
 
-Release Date: June 28, 2024
+Release Date: July 16, 2024
 
 
 #### RELEASE NOTES
 ```
-* UI improvements for Form and replaced terminal progress to proper UI ProgressForm
+* UI improvements for Form
+* While migrating with the exe application, the ADMU will now show the progress of the migration within a GUI window. Migration logs can be viewed in this window, new migrations can be triggered after a successful or failed migration.
 * Updated JC brandings
 * Added an optional param -AdminDebug for showing verbose log messages
 * An error mapping function was added to the tool to provide better feedback when the tool encounters an issue with a migration.
@@ -14,7 +15,6 @@ Release Date: June 28, 2024
 
 ```
 * When loading/ unloading a user's registry hive and an error is encounered, the tool will attempt to close any processes owned by that user.
-* While migrating with the exe application, the ADMU will now show the progress of the migration within a GUI window. Migration logs can be viewed in this window, new migrations can be triggered after a successful or failed migration.
 * Added a validation to check if jumpcloud username and local username are the same
 * UWP wording change
 ```
