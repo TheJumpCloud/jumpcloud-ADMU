@@ -94,7 +94,7 @@ function New-ProgressForm{
     </Window.Resources>
 
     <Grid>
-        <Image Name="JCLogoImg" Margin="10,10,0,0" HorizontalAlignment="Left" Height="33" Width="500" VerticalAlignment="Top"/>
+        <Image Name="JCLogoImg" Source="C:\Users\kmara\Downloads\JC oceanblue tm.png" Margin="10,10,0,0" HorizontalAlignment="Left" Height="23" VerticalAlignment="Top"/>
 
 
         <Grid Margin="10,0,10,0" >
@@ -104,7 +104,7 @@ function New-ProgressForm{
                 <RowDefinition Height="Auto" MinHeight="130"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" FontWeight="Bold" Width="auto" MaxHeight="160" Margin="0,56,0,10" HorizontalAlignment="Left">
+            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" FontWeight="Bold" Width="auto" MaxHeight="160" Margin="0,46,0,10" HorizontalAlignment="Left">
                 <Grid HorizontalAlignment="Left" Height="auto" Margin="10,0,0,0" VerticalAlignment="Center" Width="auto" MinWidth="245" MinHeight="100" Grid.Row="0">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -194,7 +194,6 @@ The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for t
         </Grid>
     </Grid>
 </Window>
-
 "@
 # Colors
 # Foreground="#90b7fc" Darkblue

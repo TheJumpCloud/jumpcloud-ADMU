@@ -156,7 +156,7 @@ function show-mtpSelection {
         Title="JumpCloud ADMU 2.7.0"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
-        Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1010" Height="590">
+        Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1010" Height="580">
     <Window.Resources>
         <Style TargetType="PasswordBox">
             <Setter Property="Template">
@@ -225,9 +225,7 @@ function show-mtpSelection {
         </Style>
     </Window.Resources>
     <Grid>
-
-
-        <Grid Margin="10,0,10,10">
+        <Grid Margin="10,0,10,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" MinWidth="479"/>
                 <ColumnDefinition Width="500"/>
@@ -275,7 +273,7 @@ function show-mtpSelection {
             </GroupBox>
 
             <!-- Domain Accounts ListView -->
-            <Border BorderBrush="#E3E8E9" BorderThickness="1.5" CornerRadius="3" Margin="0,47,0,0" Grid.Row="0" HorizontalAlignment="Right" Width="675" Grid.ColumnSpan="2">
+            <Border BorderBrush="#E3E8E9" BorderThickness="1.2" CornerRadius="4" Margin="303,47,10,0" Grid.Row="0" Grid.ColumnSpan="2" Width="680">
                 <Grid Margin="5,0,0,0">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition/>
@@ -314,7 +312,7 @@ function show-mtpSelection {
             </Border>
 
             <!-- Account Migration Information -->
-            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" Grid.Row="1" Grid.Column="0" Margin="0,10,0,0">
+            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" Grid.Row="1" Grid.Column="2" Margin="10,10,10,0">
                 <Grid HorizontalAlignment="Left" VerticalAlignment="Top" Width="461">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -336,7 +334,7 @@ function show-mtpSelection {
             </GroupBox>
 
             <!-- System Migration Information -->
-            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" MinHeight="165" Margin="10,10,0,0" Grid.Row="1" Grid.Column="1">
+            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" MinHeight="165" Margin="0,10,0,0" Grid.Row="1" Grid.Column="0">
                 <Grid HorizontalAlignment="Left" Width="Auto" Height="Auto">
                     <Label FontWeight="SemiBold" Foreground="#202D38" Content="System Migration Options" Margin="5,0,328,211"/>
                     <TextBlock Name="lbl_connectkey" HorizontalAlignment="Left" Margin="10,121,0,0" Text="JumpCloud Connect Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
@@ -351,15 +349,14 @@ function show-mtpSelection {
                     <CheckBox Name="cb_leavedomain" ToolTipService.ShowOnDisabled="True" Content="Leave Domain" HorizontalAlignment="Left" Margin="10,56,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                     <CheckBox Name="cb_autobindjcuser" Content="Autobind JC User" HorizontalAlignment="Left" Margin="118,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" />
                     <Image Name="img_ckey_valid" HorizontalAlignment="Left" Height="23" Margin="446,145,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Connect Key must be 40chars &amp; not contain spaces" />
-                    <Image Name="img_ckey_info" HorizontalAlignment="Left" Height="14" Margin="152,124,0,0" VerticalAlignment="Top" Width="14" Visibility="Visible" ToolTip="The Connect Key provides you with a means of associating this system with your JumpCloud organization. The Key is used to deploy the agent to this system." />
-
-                    <Image Name="img_apikey_info" HorizontalAlignment="Left" Height="14" Margin="124,177,0,0" VerticalAlignment="Top" Width="14" Visibility="Visible" ToolTip="Click the link for more info on how to obtain the api key. The API key must be from a user with at least 'Manager' or 'Administrator' privileges." />
+                    <Image Name="img_ckey_info" HorizontalAlignment="Left" Height="14" Margin="152,124,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="The Connect Key provides you with a means of associating this system with your JumpCloud organization. The Key is used to deploy the agent to this system." />
+                    <Image Name="img_apikey_info" HorizontalAlignment="Left" Height="14" Margin="124,177,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Click the link for more info on how to obtain the api key. The API key must be from a user with at least 'Manager' or 'Administrator' privileges." />
                     <Image Name="img_apikey_valid" HorizontalAlignment="Left" Height="23" Margin="446,198,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Correct error" />
                 </Grid>
             </GroupBox>
 
             <!-- Migrate Button -->
-            <Button Name="bMigrateProfile" HorizontalAlignment="Right" VerticalAlignment="Top" Width="146" Height="30" IsEnabled="False" FontWeight="SemiBold" Content="Migrate Profile" Grid.Row="2" Grid.Column="1" Margin="0,10,0,0">
+            <Button Name="bMigrateProfile" HorizontalAlignment="Right" VerticalAlignment="Top" Width="146" Height="30" IsEnabled="False" FontWeight="SemiBold" Content="Migrate Profile" Grid.Row="2" Grid.Column="1" Margin="0,10,10,0">
                 <Button.Resources>
                     <Style TargetType="{x:Type Border}">
                         <Setter Property="CornerRadius" Value="3"/>
