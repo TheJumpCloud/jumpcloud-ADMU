@@ -153,7 +153,7 @@ function show-mtpSelection {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.7.0"
+        Title="JumpCloud ADMU 2.7.1"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1010" Height="580">
@@ -698,11 +698,11 @@ $tbJumpCloudUserName.add_TextChanged( {
             $img_localaccount_valid.Source = DecodeBase64Image -ImageBase64 $ActiveBase64
             $img_localaccount_valid.ToolTip = $null
         }
-        if($tbJumpCloudUserName.Text -eq $hostname){
+        if ($tbJumpCloudUserName.Text -eq $hostname) {
             Write-ToLog "JumpCloud Username can not be the same as the hostname"
             $script:bMigrateProfile.IsEnabled = $false
             $img_localaccount_valid.ToolTip = "JumpCloud Username can not be the same as the hostname. Please change the username."
-            }
+        }
     })
 
 $tbJumpCloudConnectKey.Add_PasswordChanged( {

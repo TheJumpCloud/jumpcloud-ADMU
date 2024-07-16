@@ -13,7 +13,7 @@ function DecodeBase64Image {
     $ObjBitmapImage
 }
 
-function New-ProgressForm{
+function New-ProgressForm {
     # Synchash the values
     [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null
     [System.Reflection.Assembly]::LoadWithPartialName('presentationframework') | Out-Null
@@ -37,7 +37,7 @@ function New-ProgressForm{
     <Window
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Name="Window" Title="JumpCloud ADMU 2.7.0"
+    Name="Window" Title="JumpCloud ADMU 2.7.1"
     WindowStyle="SingleBorderWindow"
     ResizeMode="NoResize"
     Background="White" Width="720" Height="540">
@@ -195,9 +195,9 @@ The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for t
     </Grid>
 </Window>
 "@
-# Colors
-# Foreground="#90b7fc" Darkblue
-# Foreground="#52C4C1" Teal
+    # Colors
+    # Foreground="#90b7fc" Darkblue
+    # Foreground="#52C4C1" Teal
     # Create a runspace to run the form in
     $newRunspace.ApartmentState = "STA"
     $newRunspace.ThreadOptions = "ReuseThread"
@@ -206,106 +206,106 @@ The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for t
 
     # Add the form code to the powershell instance
     $psCommand = [PowerShell]::Create().AddScript({
-        # Load an xaml form
+            # Load an xaml form
 
-        $syncHash.Window = [Windows.Markup.XamlReader]::parse( $SyncHash.XAML )
+            $syncHash.Window = [Windows.Markup.XamlReader]::parse( $SyncHash.XAML )
         ([xml]$SyncHash.XAML).SelectNodes("//*[@Name]") | ForEach-Object { $SyncHash."$($_.Name)" = $SyncHash.Window.FindName($_.Name) }
-        # Image
-        $SyncHash.JCLogoImg.Source = $syncHash.base64JCLogo
-        $syncHash.Username.Content = $syncHash.UsernameInput
-        $syncHash.ProfileSize.Content = $syncHash.ProfileSizeInput
-        $syncHash.LocalPath.Content = $syncHash.LocalPathInput
-        $syncHash.NewLocalUsername.Content = $syncHash.NewLocalUsernameInput
+            # Image
+            $SyncHash.JCLogoImg.Source = $syncHash.base64JCLogo
+            $syncHash.Username.Content = $syncHash.UsernameInput
+            $syncHash.ProfileSize.Content = $syncHash.ProfileSizeInput
+            $syncHash.LocalPath.Content = $syncHash.LocalPathInput
+            $syncHash.NewLocalUsername.Content = $syncHash.NewLocalUsernameInput
 
-        # Scroll to end of Log
-        $syncHash.ScrollLog.ScrollToEnd()
+            # Scroll to end of Log
+            $syncHash.ScrollLog.ScrollToEnd()
 
 
-        $updateForm = {
+            $updateForm = {
 
-            # Migration Details
+                # Migration Details
 
-            if ($SyncHash.closeWindow -eq $True) {
-                $syncHash.Window.Close()
-                [System.Windows.Forms.Application]::Exit()
-                Break
+                if ($SyncHash.closeWindow -eq $True) {
+                    $syncHash.Window.Close()
+                    [System.Windows.Forms.Application]::Exit()
+                    Break
+                }
+                # IF close window button is clicked
+                if ($SyncHash.Closing) {
+                    $SyncHash.Window.Close()
+                    [System.Windows.Forms.Application]::Exit()
+                    Break
+                }
+                if ($SyncHash.logLevel -eq "Error") {
+                    #$syncHash.Status.Foreground = "Red"
+                    # Hide Progress Bar
+                    $SyncHash.ProgressBar.Visibility = "Hidden"
+                    # Show Eorr Link and make clickable
+                    $syncHash.ErrorBlock.Visibility = "Visible"
+                    # Clickable link
+                    $SyncHash.ErrorLink.add_RequestNavigate({
+                            #Sender is an event handler and used when the link is clicked https://learn.microsoft.com/en-us/dotnet/api/system.windows.navigation.requestnavigateeventargs.invokeeventhandler?view=windowsdesktop-8.0#system-windows-navigation-requestnavigateeventargs-invokeeventhandler(system-delegate-system-object
+                            # Suppress PSScriptAnalyzer rule that warns about 'Sender' being an automatic variable
+                            # <pragma>disable PSAvoidUsingAutomaticVariable
+                            param ($SenderParam, $e)
+                            if (-not $SenderParam) {
+                                Write-Error "SenderParam needs to be populated"
+                            }
+                            [System.Diagnostics.Process]::Start($e.Uri.AbsoluteUri)  # Open the link in the default web browser
+                            $e.Handled = $true
+                        })
+
+                }
+                if ($synchash.PercentComplete -eq 100) {
+                    $SyncHash.ViewLogButton.IsEnabled = $true
+                    $SyncHash.StartJCADMUButton.IsEnabled = $true
+                    $SyncHash.ExitButton.IsEnabled = $true
+                }
+
+                # Update Log TextBlock
+                $SyncHash.LogTextBlock.Text = $syncHash.LogText
+                # Update Progress Bar
+                $SyncHash.ProgressBar.Value = $SyncHash.PercentComplete
+                # Update Status Text
+                $SyncHash.Status.Text = $SyncHash.StatusInput
+
             }
-            # IF close window button is clicked
-            if ($SyncHash.Closing) {
-                $SyncHash.Window.Close()
-                [System.Windows.Forms.Application]::Exit()
-                Break
-            }
-            if ($SyncHash.logLevel -eq "Error") {
-                #$syncHash.Status.Foreground = "Red"
-                # Hide Progress Bar
-                $SyncHash.ProgressBar.Visibility = "Hidden"
-                # Show Eorr Link and make clickable
-                $syncHash.ErrorBlock.Visibility = "Visible"
-                # Clickable link
-                $SyncHash.ErrorLink.add_RequestNavigate({
-                    #Sender is an event handler and used when the link is clicked https://learn.microsoft.com/en-us/dotnet/api/system.windows.navigation.requestnavigateeventargs.invokeeventhandler?view=windowsdesktop-8.0#system-windows-navigation-requestnavigateeventargs-invokeeventhandler(system-delegate-system-object
-                    # Suppress PSScriptAnalyzer rule that warns about 'Sender' being an automatic variable
-                    # <pragma>disable PSAvoidUsingAutomaticVariable
-                    param ($SenderParam, $e)
-                    if (-not $SenderParam) {
-                        Write-Error "SenderParam needs to be populated"
+            # View Log Button
+            $SyncHash.ViewLogButton.Add_Click({
+                    # Open log \Windows\Temp\jcAdmu.log
+                    $scriptPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
+                    # Open the log
+                    Invoke-Item -Path:($scriptPath)
+                })
+            # Start JCADMU Button
+            $syncHash.StartJCADMUButton.Add_Click({
+                    # Get the path of the exe then rerun
+                    $exeFilePath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+                    Start-Process -FilePath $exeFilePath
+                    # Close the current window
+                    $syncHash.CloseWindow = $true
+                })
+
+            $synchash.ExitButton.Add_Click({
+                    $syncHash.CloseWindow = $true
+                })
+
+            # Time to update the form
+            $syncHash.Window.Add_SourceInitialized( {
+                    $timer = new-object System.Windows.Threading.DispatcherTimer
+                    $timer.Interval = [TimeSpan]"0:0:0.01"
+                    $timer.Add_Tick( $updateForm )
+                    $timer.Start()
+                    if (!$timer.IsEnabled ) {
+                        $clock.Close()
+                        Write-Error "Timer didn't start"
                     }
-                    [System.Diagnostics.Process]::Start($e.Uri.AbsoluteUri)  # Open the link in the default web browser
-                    $e.Handled = $true
-    })
+                } )
 
-            }
-            if ($synchash.PercentComplete -eq 100) {
-                $SyncHash.ViewLogButton.IsEnabled = $true
-                $SyncHash.StartJCADMUButton.IsEnabled = $true
-                $SyncHash.ExitButton.IsEnabled = $true
-            }
-
-            # Update Log TextBlock
-            $SyncHash.LogTextBlock.Text = $syncHash.LogText
-            # Update Progress Bar
-            $SyncHash.ProgressBar.Value = $SyncHash.PercentComplete
-            # Update Status Text
-            $SyncHash.Status.Text = $SyncHash.StatusInput
-
-        }
-        # View Log Button
-        $SyncHash.ViewLogButton.Add_Click({
-            # Open log \Windows\Temp\jcAdmu.log
-            $scriptPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
-            # Open the log
-           Invoke-Item -Path:($scriptPath)
-       })
-        # Start JCADMU Button
-        $syncHash.StartJCADMUButton.Add_Click({
-            # Get the path of the exe then rerun
-            $exeFilePath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
-            Start-Process -FilePath $exeFilePath
-            # Close the current window
-            $syncHash.CloseWindow = $true
+            $syncHash.Window.Show() | Out-Null
+            $appContext = [System.Windows.Forms.ApplicationContext]::new()
+            [void][System.Windows.Forms.Application]::Run($appContext)
         })
-
-        $synchash.ExitButton.Add_Click({
-            $syncHash.CloseWindow = $true
-        })
-
-        # Time to update the form
-        $syncHash.Window.Add_SourceInitialized( {
-            $timer = new-object System.Windows.Threading.DispatcherTimer
-            $timer.Interval = [TimeSpan]"0:0:0.01"
-            $timer.Add_Tick( $updateForm )
-            $timer.Start()
-            if (!$timer.IsEnabled ) {
-                $clock.Close()
-                Write-Error "Timer didn't start"
-            }
-        } )
-
-        $syncHash.Window.Show() | Out-Null
-          $appContext = [System.Windows.Forms.ApplicationContext]::new()
-          [void][System.Windows.Forms.Application]::Run($appContext)
-    })
     # Invoke PS Command
     $psCommand.Runspace = $newRunspace
     $data = $psCommand.BeginInvoke()
