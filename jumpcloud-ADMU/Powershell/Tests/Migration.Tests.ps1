@@ -368,6 +368,17 @@ Describe 'Migration Test Scenarios' {
             { Start-Migration -JumpCloudAPIKey $env:PESTER_APIKEY -AutobindJCUser $true -JumpCloudUserName "$($user2)" -SelectedUserName "$ENV:COMPUTERNAME\$($user1)" -TempPassword "$($Password)" } | Should -Throw
         }
     }
+    Context 'Start-Migration Fails when LocalUsername and JumpCloudUsername are the same' {
+        It 'local and jumpcloud usernames are the same' {
+            Write-Host "`nStart-Migration Fails when LocalUsername and JumpCloudUsername are the same"
+            $Password = "Temp123!"
+            $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            InitUser -UserName $user1 -Password $Password
+            write-host "`nRunning: Start-Migration -JumpCloudUserName testUser -SelectedUserName testUser -TempPassword $($Password)`n"
+            { Start-Migration -JumpCloudAPIKey $env:PESTER_APIKEY -JumpCloudUserName "testUser" -SelectedUserName "$ENV:COMPUTERNAME\testUser" -TempPassword "$($Password)" } | Should -Throw
+        }
+    }
     Context 'Start-Migration on Local Accounts Expecting Failed Results (Test Reversal Functionallity)' {
         BeforeEach {
             # Remove the log from previous runs
@@ -469,13 +480,13 @@ Describe 'Migration Test Scenarios' {
                         }
                         Write-Host "Running Migration, $JCUSERNAME, $SELECTEDCOMPUTERNAME, $TEMPPASS"
                         try {
-                            Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)" | Out-Null
+                            Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)" -ErrorAction SilentlyContinue | Out-Null
                         } Catch {
                             write-host "Migration failed as expected"
                         }
                         $logContent = Get-Content -Tail 1 C:\Windows\Temp\Jcadmu.log
                         if ($logContent -match "The following migration steps were reverted to their original state: newUserInit") {
-                            write-host "Start Migration Task Failed Sucessfully"
+                            write-host "Start Migration Task Failed Successfully"
                             return $true
                         } else {
                             return $false
@@ -484,7 +495,6 @@ Describe 'Migration Test Scenarios' {
                         # Write-Host "$date - Start migration complete"
                     }) -ArgumentList:($($user.JCUsername), $($user.username), $($user.password), $pathToSM)
                 Write-Host "$(Get-Date -UFormat "%D %r") - Start parallel job to wait for task to be disabled"
-
 
                 Write-Host "Job Details:"
                 # Wait for the job to start a new process

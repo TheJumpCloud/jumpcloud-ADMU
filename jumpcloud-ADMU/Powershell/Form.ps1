@@ -1,6 +1,16 @@
+# Hides Powershell Window
+$ShowWindowAsync = Add-Type -MemberDefinition @"
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+"@ -Name "Win32ShowWindowAsync" -Namespace "Win32Functions" -PassThru
+# PID of the current process
+# Get PID of the current process
+$FormWindowPIDHandle = (Get-Process -Id $pid).MainWindowHandle
+$ShowWindowAsync::ShowWindowAsync($FormWindowPIDHandle, 0) | Out-Null
+# PID
 Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Loading ADMU GUI..'
 # Base64 Encoded Strings of our Images
-$JCLogoBase64 = "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"
+$JCLogoBase64 = "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"
 $ErrorBase64 = "iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAFiSURBVHgBpVPNSsNAEJ4ZzwWv/lKfoPUN2oOl3lYKelAoPpkIelBQ4smih8YnMI8QqlQbL0JbT2bH2di0MXFD2n6w7OzMzscwMx/CP3hpqhoBtcWsySlHTmYPEL1Q67vtB8dJ52Dy8dZUZQY8k1ODfPgEur7WcfwM0eueqiJRVzyrUAQMn6x1ffPR8aZEphLN9JwmKR0fQunkKLKHF1cwvLzOkBHqXVMZmbeGOSpJQnJMK4xJvUZLQdzQBWD6GQ2HSCvbpzAIZvbgw0pGsNImZKxAAYTjcU6UZV0Qqrbw9/usCs4lgjLlRcMgQTTKJQJD5EMB6NGXPShbTwz8ZIuHg0SzE43PQKSDE111YRkwqWiz+82Drk1f6/c30d3fb9lo/I3O7U7UbAQ+NesOc1ciEhHx/nJMsKxop+M3DiNAKDBFGZBr/sYkfypKotdQiggVMlRkIvHC+nJcDfp8q+O46Zwfa3qRu77hWMMAAAAASUVORK5CYII="
 $ActiveBase64 = "iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAGKSURBVHgBlZRPTsJQEMbfTBvccgTcKYFQlxJM2hvUEygnID2CJ6jKAZQTgCcoorK1Cf5hZ4/A1oQ3Y98j1FKLbWfTvnn9fp3ON68gcqL15NtsGhfIbLOAxibLITOECPJh0fUmWQ2kF0eB3zBreCcAbPFPsBCR/JbO0vGiP6Bm4FtYM4I4UxflYgVC9rfVwW8lxmsFSAIjks5HzwtRrYyDSpWko46Avq6oPRu6bPK4jIoFR0x0HotVH61kQ0oHCcktC5FA+jOIqb+zpxwGwE6eKA+yPPUi1U9AY5wR2CiArXQOiEfv3cGhuuZBVD9jhxo7mniN2WqkoGt1XfQGl4L5qgiSwNrz2y/e3Uws3SaKIMwcIgl+zOTriEbQfPatMhAdqI8O3edsadjxfOgWQlRFxBM92a2Xm6DofO2FxGYoc3Sz1xjPBYuVqBrMK2WGutUg5QqxdCrBNpC+0iYgFcqlNcqT7DDugUzj6XY+U/8lyHuuPfNdMtEFFp3tmYL4BQQwhbUcvZ1506zmB49h1CYDMPPcAAAAAElFTkSuQmCC"
 $BlueBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAwAAAAMCAYAAABWdVznAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAElSURBVHgBbVE7TsNAEH2z+dQ+wnKCmIY6nICCIEIXdymIYk4AnCBBEETpVBQWSjgBpEM0+Ag+ghGiQIl3GH/BcUaa1erNe292ZglFuAsLGzMGmwGItCCRZACGh1lvXtAoPYcLjYZ5AbEuDZg8wHRTMfEUtycXCax2kolCzI4dud3kYhcjf5J1GD1NwOyiHq+StqT1B/GhEnK3yjNzGLOPzdqpkhM+bJW7FBGBFMPEEZpNXW+qOgrZNoqwxEXj4SwUu0GNT/yZCIKttl5e7WyZJbUPEfB1BWx9PaebA63wfwbmEPF61cC7H+KgtyeEbBbT/oHisdz61ecYB/f9NyqBc/9K0EvUQ54VO7g7Xaa6Smn4qNFsHclH2cmAst4A7e8lpk45yy8GxWbP/ZW8WwAAAABJRU5ErkJggg=="
@@ -143,92 +153,217 @@ function show-mtpSelection {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.6.8"
+        Title="JumpCloud ADMU 2.7.0"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
-        Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1000" Height="520">
+        Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1010" Height="580">
+    <Window.Resources>
+        <Style TargetType="PasswordBox">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="PasswordBox">
+                        <Border
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1"
+                                CornerRadius="1.5">
+                            <ScrollViewer x:Name="PART_ContentHost" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="RoundedTextBoxStyle" TargetType="TextBox">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="1.5">
+                            <ScrollViewer x:Name="PART_ContentHost" Margin="2,2,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="NoHeaderGroupBoxStyle" TargetType="{x:Type GroupBox}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type GroupBox}">
+                        <Border BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="4">
+                            <Grid>
+                                <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" Margin="0" Visibility="Collapsed"/>
+                                <ContentPresenter Margin="3" />
+                            </Grid>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="LineHeight" Value="21"/>
+            <Setter Property="Foreground" Value="#202D38"/>
+        </Style>
+        <Style TargetType="Label">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+        </Style>
+        <Style TargetType="CheckBox">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="Foreground" Value="#202D38"/>
+        </Style>
+        <Style TargetType="Button">
+            <Setter Property="FontFamily" Value="Segoe UI"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Foreground" Value="#202D38"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Background" Value="#41C8C3"/>
+        </Style>
+    </Window.Resources>
+    <Grid>
+        <Grid Margin="10,0,10,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" MinWidth="479"/>
+                <ColumnDefinition Width="500"/>
+            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="270"/>
+                <RowDefinition Height="Auto"/>
 
-    <Grid Margin="0,0,0,0">
-        <Grid.RowDefinitions>
-            <RowDefinition/>
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="118*"/>
-            <ColumnDefinition Width="57*"/>
-            <ColumnDefinition Width="23*"/>
-        </Grid.ColumnDefinitions>
-        <ListView Name="lvProfileList" MinWidth="960" MinHeight="120" Width="960" MaxWidth="960" MaxHeight="120" Height="110" Margin="10,187,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="3">
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="System Accounts" DisplayMemberBinding="{Binding UserName}" Width="300"/>
-                    <GridViewColumn Header="Last Login" DisplayMemberBinding="{Binding LastLogin}" Width="135"/>
-                    <GridViewColumn Header="Currently Active" DisplayMemberBinding="{Binding Loaded}" Width="145" />
-                    <GridViewColumn Header="Local Admin" DisplayMemberBinding="{Binding IsLocalAdmin}" Width="115"/>
-                    <GridViewColumn Header="Local Path" DisplayMemberBinding="{Binding LocalPath}" Width="225"/>
-                </GridView>
-            </ListView.View>
-        </ListView>
-        <GroupBox Header="System Migration Options" Width="480" FontWeight="Bold" HorizontalAlignment="Left" MinWidth="480" MinHeight="165" Margin="10,306,0,0" VerticalAlignment="Top" Height="168">
-            <Grid HorizontalAlignment="Left" Height="141" VerticalAlignment="Top" Width="470">
-                <TextBlock Name="lbl_connectkey" HorizontalAlignment="Left" Margin="3,13,0,0" Text="JumpCloud Connect Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
-                <PasswordBox Name="tbJumpCloudConnectKey" HorizontalAlignment="Left" Height="23" Margin="178,10,0,0" VerticalAlignment="Top" Width="271" Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False"/>
-                <TextBlock Name="lbl_apikey" HorizontalAlignment="Left" Margin="3,42,0,0" Text="JumpCloud API Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
-                <PasswordBox Name="tbJumpCloudAPIKey" HorizontalAlignment="Left" Height="23" Margin="178,40,0,0" VerticalAlignment="Top" Width="271" Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False"/>
-                <TextBlock Name="lbl_orgNameTitle" HorizontalAlignment="Left" Margin="3,64,0,0" Text="Organization Name:" VerticalAlignment="Top" FontWeight="Normal"/>
-                <TextBlock Name="lbl_orgName" HorizontalAlignment="Left" Margin="118,64,0,0" Text="Not Currently Connected To A JumpCloud Organization" VerticalAlignment="Top" FontWeight="Normal"/>
-                <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="10,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="123,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                <CheckBox Name="cb_bindAsAdmin" Content="Bind As Admin" HorizontalAlignment="Left" Margin="253,101,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
-                <CheckBox Name="cb_leavedomain" ToolTipService.ShowOnDisabled="True" Content="Leave Domain" HorizontalAlignment="Left" Margin="10,123,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                <CheckBox Name="cb_autobindjcuser" Content="Autobind JC User" HorizontalAlignment="Left" Margin="123,123,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
-                <Image Name="img_ckey_info" HorizontalAlignment="Left" Height="14" Margin="157,13,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="The Connect Key provides you with a means of associating this system with your JumpCloud organization. The Key is used to deploy the agent to this system." />
-                <Image Name="img_ckey_valid" HorizontalAlignment="Left" Height="14" Margin="454,13,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Connect Key must be 40chars &amp; not contain spaces" />
-                <Image Name="img_apikey_info" HorizontalAlignment="Left" Height="14" Margin="157,42,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Click the link for more info on how to obtain the api key. The API key must be from a user with at least 'Manager' or 'Administrator' privileges." RenderTransformOrigin="1.857,-1.066"/>
-                <Image Name="img_apikey_valid" HorizontalAlignment="Left" Height="14" Margin="454,42,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Correct error" />
-            </Grid>
-        </GroupBox>
-        <GroupBox Header="Account Migration Information" FontWeight="Bold" Height="107" Width="475" Margin="495,306,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Grid.ColumnSpan="3">
-            <Grid HorizontalAlignment="Left" Height="66" VerticalAlignment="Top" Width="461">
-                <Label Content="Local Account Username :" HorizontalAlignment="Left" Margin="0,8,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.ColumnSpan="2"/>
-                <Label Content="Local Account Password :" HorizontalAlignment="Left" Margin="0,36,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.ColumnSpan="2"/>
-                <TextBox Name="tbJumpCloudUserName" HorizontalAlignment="Left" Height="23" Margin="192,10,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="235" Text="Username should match JumpCloud username" Background="#FFC6CBCF" FontWeight="Bold" />
-                <TextBox Name="tbTempPassword" HorizontalAlignment="Left" Height="23" Margin="192,38,0,0" TextWrapping="Wrap" Text="Temp123!Temp123!" VerticalAlignment="Top" Width="235" FontWeight="Normal"/>
-                <Image Name="img_localaccount_info" HorizontalAlignment="Left" Height="14" Margin="169,12,0,0" VerticalAlignment="Top" Width="14" Visibility="Visible" ToolTip="The value in this field should match a username in the jc console. A new local user account will be created with this username." />
-                <Image Name="img_localaccount_valid" HorizontalAlignment="Left" Height="14" Margin="432,12,0,0" VerticalAlignment="Top" Width="14" ToolTip="Local account username can't be empty, contain spaces, already exist on the local system or match the local computer name." Visibility="Visible" />
-                <Image Name="img_localaccount_password_info" HorizontalAlignment="Left" Height="14" Margin="169,42,0,0" VerticalAlignment="Top" Width="14" Visibility="Visible" ToolTip="This temporary password is used on account creation. The password will be ovewritten by the users jc password if autobound or manually bound in the console."/>
-                <Image Name="img_localaccount_password_valid" HorizontalAlignment="Left" Height="14" Margin="432,40,0,0" VerticalAlignment="Top" Width="14" Visibility="Visible"/>
-            </Grid>
-        </GroupBox>
-        <GroupBox Header="System Information" FontWeight="Bold" Width="303" Height="148" MaxHeight="160" Margin="10,34,0,0" HorizontalAlignment="Left" VerticalAlignment="Top">
-            <Grid HorizontalAlignment="Left" Height="125" Margin="10,0,0,0" VerticalAlignment="Center" Width="245" MinWidth="245" MinHeight="125">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="125"/>
-                    <ColumnDefinition Width="125"/>
-                </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="25"/>
-                    <RowDefinition Height="25"/>
-                    <RowDefinition Height="25"/>
-                    <RowDefinition Height="25"/>
-                    <RowDefinition Height="25"/>
-                </Grid.RowDefinitions>
-                <Label Content="Computer Name:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="0" />
-                <Label Content="Domain Name:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="1" />
-                <Label Content="NetBios Name:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="2" />
-                <Label Content="AzureAD Joined:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="3" />
-                <Label Content="Tenant Name:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="4"/>
-                <Label Name="lbTenantName" Content="" FontWeight="Normal" Grid.Column="3" Grid.Row="4"/>
-                <Label Name="lbAzureAD_Joined" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="3"/>
-                <Label Name="lbComputerName" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="0"/>
-                <Label Name="lbDomainName" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="1"/>
-                <Label Name="lbNetBios" Content="" FontWeight="Normal" Grid.Column="1" Grid.Row="2"/>
-            </Grid>
-        </GroupBox>
-        <Image Name="JCLogoImg" HorizontalAlignment="Left" Height="33" VerticalAlignment="Top" Margin="9,0,0,0" Width="500"/>
-        <Button Name="bMigrateProfile" Content="Select Profile" HorizontalAlignment="Left" Margin="237,418,0,0" VerticalAlignment="Top" Width="146" Height="26" IsEnabled="False" Grid.Column="1" Grid.ColumnSpan="2"/>
-        <GroupBox Header="Migration Steps" HorizontalAlignment="Left" Height="148" VerticalAlignment="Top" Width="655" FontWeight="Bold" Margin="315,34,0,0" Grid.ColumnSpan="3">
-            <TextBlock HorizontalAlignment="Center" TextWrapping="Wrap" VerticalAlignment="Top" Height="118" Width="632" FontWeight="Normal"><Run Text="1. Select a domain or AzureAD account to be migrated to a local account from the list below."/><LineBreak/><Run Text="2. Enter a local account username and temporary password. The selected account will be migrated to this local account."/><LineBreak/><Run Text="3.(Optionally) Select Install JC Agent and provide a Connect Key to install the JC agent on this system."/><LineBreak/><Run Text="4.(Optionally) Select Autobind JC User and provide an API Key to bind the new local username to your JC organization."/><LineBreak/><Run Text="5.(Optionally) Select Force Reboot and/or Leave Domain as required."/><LineBreak/><Run Text="6. Click the Migrate Profile button."/><LineBreak/><Run Text="For further information check out the JC ADMU Wiki. - https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki"/></TextBlock>
-        </GroupBox>
+            </Grid.RowDefinitions>
+            <Image Name="JCLogoImg" Source="C:\Users\kmara\Downloads\JC oceanblue tm.png" Height="23" VerticalAlignment="Top" Margin="0,10,258,0" Width="auto" HorizontalAlignment="Left"/>
+
+            <!-- System Information -->
+            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" Height="186" Margin="0,47,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="295" Grid.Row="0" Grid.Column="0">
+                <Grid HorizontalAlignment="Center" VerticalAlignment="Top" Width="270" MinWidth="245" Margin="0,0,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Label Content="System Information" Foreground="#202D38" HorizontalAlignment="Left" VerticalAlignment="Top" FontWeight="SemiBold" Grid.ColumnSpan="2" Margin="0,3,0,0"/>
+                    <Grid Grid.Row="1" Margin="0,0,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="125"/>
+                            <ColumnDefinition Width="125"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="30"/>
+                            <RowDefinition Height="30"/>
+                            <RowDefinition Height="30"/>
+                            <RowDefinition Height="30"/>
+                            <RowDefinition Height="30"/>
+                        </Grid.RowDefinitions>
+                        <Label Content="Computer Name:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="0" />
+                        <Label Content="Domain Name:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="1" />
+                        <Label Content="NetBios Name:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="2" />
+                        <Label Content="Entra ID Joined:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="3" />
+                        <Label Content="Tenant Name:" HorizontalAlignment="Left" Margin="0,0,0,0" VerticalAlignment="Top" FontWeight="Normal" Grid.Column="0" Grid.ColumnSpan="1" Grid.Row="4"/>
+                        <Label Name="lbTenantName" Content="Test" FontWeight="Normal" Grid.Column="1" Grid.Row="4" HorizontalAlignment="Right" Margin="0,0,-20,0" />
+                        <Label Name="lbAzureAD_Joined" Content="Test" FontWeight="Normal" Grid.Column="1" Grid.Row="3" HorizontalAlignment="Right" Margin="0,0,-20,0"/>
+                        <Label Name="lbComputerName" Content="Test" FontWeight="Normal" Grid.Column="1" Grid.Row="0" HorizontalAlignment="Right" Margin="0,0,-20,0"/>
+                        <Label Name="lbDomainName" Content="Test" FontWeight="Normal" Grid.Column="1" Grid.Row="1" HorizontalAlignment="Right" Margin="0,0,-20,0"/>
+                        <Label Name="lbNetBios" Content="Test" FontWeight="Normal" Grid.Column="1" Grid.Row="2" HorizontalAlignment="Right" Margin="0,0,-20,0"/>
+                    </Grid>
+                </Grid>
+            </GroupBox>
+
+            <!-- Domain Accounts ListView -->
+            <Border BorderBrush="#E3E8E9" BorderThickness="1.2" CornerRadius="4" Margin="303,47,10,0" Grid.Row="0" Grid.ColumnSpan="2" Width="680">
+                <Grid Margin="5,0,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition/>
+                        <ColumnDefinition Width="0*"/>
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Label HorizontalAlignment="Left" VerticalAlignment="Top" FontWeight="SemiBold" Foreground="#202D38" Content="Select a domain or Entra ID account to be migrated" Margin="0,5,0,0" Grid.RowSpan="2" Height="26" Width="297"/>
+                    <!-- ListView -->
+                    <ListView Name="lvProfileList" Grid.Row="1" BorderBrush="White" Width="Auto" HorizontalAlignment="Left" Margin="0,36,0,0" Grid.ColumnSpan="2">
+                        <ListView.View>
+                            <GridView AllowsColumnReorder="True">
+                                <GridView.ColumnHeaderContainerStyle>
+                                    <Style TargetType="{x:Type GridViewColumnHeader}">
+                                        <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                        <Setter Property="BorderBrush" Value="White"/>
+                                        <Setter Property="Background" Value="White"/>
+                                        <Setter Property="FontSize" Value="11"/>
+                                        <Setter Property="FontFamily" Value="Segoe UI"/>
+                                        <Setter Property="FontWeight" Value="SemiBold"/>
+                                        <Setter Property="Foreground" Value="#202D38"/>
+                                        <Setter Property="Padding" Value="1"/>
+                                    </Style>
+                                </GridView.ColumnHeaderContainerStyle>
+                                <GridViewColumn Header="System Accounts" DisplayMemberBinding="{Binding UserName}" Width="auto" />
+                                <GridViewColumn Header="Last Login" DisplayMemberBinding="{Binding LastLogin}" Width="auto"/>
+                                <GridViewColumn Header="Currently Active" DisplayMemberBinding="{Binding Loaded}" Width="auto" />
+                                <GridViewColumn Header="Local Admin" DisplayMemberBinding="{Binding IsLocalAdmin}" Width="auto"/>
+                                <GridViewColumn Header="Local Path" DisplayMemberBinding="{Binding LocalPath}" Width="auto"/>
+                            </GridView>
+                        </ListView.View>
+                    </ListView>
+                </Grid>
+            </Border>
+
+            <!-- Account Migration Information -->
+            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" Grid.Row="1" Grid.Column="2" Margin="10,10,10,0">
+                <Grid HorizontalAlignment="Left" VerticalAlignment="Top" Width="461">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Label Content="Account Migration Information" Foreground="#202D38" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="SemiBold" Margin="5,0,0,0"/>
+                    <Grid Grid.Row="1">
+                        <Label Content="Local Account Username" HorizontalAlignment="Left" Margin="5,5,0,0" VerticalAlignment="Top" TabIndex="2147483645" FontWeight="SemiBold" FontSize="11"/>
+                        <Label Content="Local Account Password&#xD;&#xA;" HorizontalAlignment="Left" Margin="5,59,0,0" VerticalAlignment="Top" FontWeight="SemiBold" Height="27" FontSize="11"/>
+                        <TextBox Name="tbJumpCloudUserName" HorizontalAlignment="Left" Height="23" Margin="10,31,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="427"  FontWeight="SemiBold" FontSize="11" Style="{StaticResource RoundedTextBoxStyle}"/>
+                        <TextBox Name="tbTempPassword" Style="{StaticResource RoundedTextBoxStyle}" HorizontalAlignment="Left" Height="23" Margin="10,86,0,0" TextWrapping="Wrap" Text="Temp123!Temp123!" VerticalAlignment="Top" Width="427" FontWeight="SemiBold" FontSize="11"/>
+                        <Image Name="img_localaccount_info" Height="20" Margin="136,7,311,179" Width="14" Visibility="Visible" ToolTip="The value in this field should match a username in the jc console. A new local user account will be created with this username." />
+
+                        <Image Name="img_localaccount_valid" HorizontalAlignment="Left" Height="23" Margin="440,33,0,0" VerticalAlignment="Top" Width="14" ToolTip="Local account username can't be empty, contain spaces, already exist on the local system or match the local computer name." Visibility="Visible" />
+                        <Image Name="img_localaccount_password_info" Height="20" Margin="0,63,315,123" Width="14" Visibility="Visible" ToolTip="This temporary password is used on account creation. The password will be overwritten by the users jc password if autobound or manually bound in the console." HorizontalAlignment="Right"/>
+                        <Image Name="img_localaccount_password_valid" HorizontalAlignment="Left" Height="23" Margin="440,86,0,97" Width="14" Visibility="Visible"/>
+                    </Grid>
+                </Grid>
+            </GroupBox>
+
+            <!-- System Migration Information -->
+            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" MinHeight="165" Margin="0,10,0,0" Grid.Row="1" Grid.Column="0">
+                <Grid HorizontalAlignment="Left" Width="Auto" Height="Auto">
+                    <Label FontWeight="SemiBold" Foreground="#202D38" Content="System Migration Options" Margin="5,0,328,211"/>
+                    <TextBlock Name="lbl_connectkey" HorizontalAlignment="Left" Margin="10,121,0,0" Text="JumpCloud Connect Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
+                    <PasswordBox Name="tbJumpCloudConnectKey" HorizontalAlignment="Left" Height="23" Margin="10,142,0,0" VerticalAlignment="Top" Width="432"  Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False"/>
+                    <TextBlock Name="lbl_apikey" HorizontalAlignment="Left" Margin="10,174,0,0" Text="JumpCloud API Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
+                    <PasswordBox Name="tbJumpCloudAPIKey" HorizontalAlignment="Left" Height="23" Margin="10,195,0,0" VerticalAlignment="Top" Width="432"  Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False" />
+                    <TextBlock Name="lbl_orgNameTitle" HorizontalAlignment="Left" Margin="10,229,0,0" Text="Organization Name:" VerticalAlignment="Top" FontWeight="Normal"/>
+                    <TextBlock Name="lbl_orgName" HorizontalAlignment="Left" Margin="124,229,0,0" Text="Not Currently Connected To A JumpCloud Organization" VerticalAlignment="Top" FontWeight="Normal"/>
+                    <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="10,76,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                    <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                    <CheckBox Name="cb_bindAsAdmin" Content="Bind As Admin" HorizontalAlignment="Left" Margin="118,56,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
+                    <CheckBox Name="cb_leavedomain" ToolTipService.ShowOnDisabled="True" Content="Leave Domain" HorizontalAlignment="Left" Margin="10,56,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
+                    <CheckBox Name="cb_autobindjcuser" Content="Autobind JC User" HorizontalAlignment="Left" Margin="118,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" />
+                    <Image Name="img_ckey_valid" HorizontalAlignment="Left" Height="23" Margin="446,145,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Connect Key must be 40chars &amp; not contain spaces" />
+                    <Image Name="img_ckey_info" HorizontalAlignment="Left" Height="14" Margin="152,124,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="The Connect Key provides you with a means of associating this system with your JumpCloud organization. The Key is used to deploy the agent to this system." />
+                    <Image Name="img_apikey_info" HorizontalAlignment="Left" Height="14" Margin="124,177,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Click the link for more info on how to obtain the api key. The API key must be from a user with at least 'Manager' or 'Administrator' privileges." />
+                    <Image Name="img_apikey_valid" HorizontalAlignment="Left" Height="23" Margin="446,198,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Correct error" />
+                </Grid>
+            </GroupBox>
+
+            <!-- Migrate Button -->
+            <Button Name="bMigrateProfile" HorizontalAlignment="Right" VerticalAlignment="Top" Width="146" Height="30" IsEnabled="False" FontWeight="SemiBold" Content="Migrate Profile" Grid.Row="2" Grid.Column="1" Margin="0,10,10,0">
+                <Button.Resources>
+                    <Style TargetType="{x:Type Border}">
+                        <Setter Property="CornerRadius" Value="3"/>
+                    </Style>
+                </Button.Resources>
+            </Button>
+        </Grid>
     </Grid>
 </Window>
 '@
@@ -294,6 +429,9 @@ if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
         }
         if ($line -match "TenantName : ") {
             $TenantName = ($line.trimstart('WorkplaceTenantName : '))
+        }
+        if ($line -match "DomainJoined : ") {
+            $AzureDomainStatus = ($line.trimstart('DomainJoined : '))
         }
     }
 } else {
@@ -385,7 +523,6 @@ $lbNetBios.Content = $NetBiosName
 #AzureADInformation
 $lbAzureAD_Joined.Content = $AzureADStatus
 $lbTenantName.Content = $TenantName
-
 Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKey, [object]$tbTempPassword, [object]$lvProfileList, [object]$tbJumpCloudAPIKey) {
     If (![System.String]::IsNullOrEmpty($lvProfileList.SelectedItem.UserName)) {
         If (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) -and (($($tbJumpCloudUserName.Text).length) -le 20) `
@@ -423,11 +560,9 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
             Return $true
         } Elseif ($lvProfileList.selectedItem.Username -eq 'UNKNOWN ACCOUNT') {
             # Unmatched Profile, prevent migration
-            $script:bMigrateProfile.Content = "Select Domain Profile"
             $script:bMigrateProfile.IsEnabled = $false
             Return $false
         } elseif (($($lvProfileList.selectedItem.Username) -split '\\')[0] -match $WmiComputerSystem.Name) {
-            $script:bMigrateProfile.Content = "Select Domain Profile"
             $script:bMigrateProfile.IsEnabled = $false
             Return $false
         } Else {
@@ -436,7 +571,6 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
             Return $false
         }
     } Else {
-        $script:bMigrateProfile.Content = "Select Profile"
         $script:bMigrateProfile.IsEnabled = $false
         Return $false
     }
@@ -532,21 +666,27 @@ $cb_autobindjcuser.Add_Unchecked( {
         }
     })
 
-# Leave Domain checkbox
 
+# Leave Domain checkbox
+if (($AzureADStatus -eq 'Yes') -or ($AzureDomainStatus -eq 'Yes')) {
+    $script:cb_leavedomain.IsEnabled = $true
+} else {
+    Write-ToLog "Device is not AzureAD Joined or Domain Joined. Leave Domain Checkbox Disabled."
+    $script:cb_leavedomain.IsEnabled = $false
+}
 $script:LeaveDomain = $false
 $cb_leavedomain.Add_Checked( { $script:LeaveDomain = $true })
 $cb_leavedomain.Add_Unchecked( { $script:LeaveDomain = $false })
-
 
 # Force Reboot checkbox
 $script:ForceReboot = $false
 $cb_forcereboot.Add_Checked( { $script:ForceReboot = $true })
 $cb_forcereboot.Add_Unchecked( { $script:ForceReboot = $false })
 
+$hostname = $env:computername
 $tbJumpCloudUserName.add_TextChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If ((Test-IsNotEmpty $tbJumpCloudUserName.Text) -or (!(Test-HasNoSpace $tbJumpCloudUserName.Text)) -or (Test-Localusername $tbJumpCloudUserName.Text) -or (($tbJumpCloudUserName.Text).Length -gt 20)) {
+        If ((Test-IsNotEmpty $tbJumpCloudUserName.Text) -or (!(Test-HasNoSpace $tbJumpCloudUserName.Text)) -or (Test-Localusername $tbJumpCloudUserName.Text) -or (($tbJumpCloudUserName.Text).Length -gt 20) -or $tbJumpCloudUserName.Text -eq $hostname) {
             $tbJumpCloudUserName.Background = "#FFC6CBCF"
             $tbJumpCloudUserName.BorderBrush = "#FFF90000"
             $img_localaccount_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
@@ -558,6 +698,11 @@ $tbJumpCloudUserName.add_TextChanged( {
             $img_localaccount_valid.Source = DecodeBase64Image -ImageBase64 $ActiveBase64
             $img_localaccount_valid.ToolTip = $null
         }
+        if($tbJumpCloudUserName.Text -eq $hostname){
+            Write-ToLog "JumpCloud Username can not be the same as the hostname"
+            $script:bMigrateProfile.IsEnabled = $false
+            $img_localaccount_valid.ToolTip = "JumpCloud Username can not be the same as the hostname. Please change the username."
+            }
     })
 
 $tbJumpCloudConnectKey.Add_PasswordChanged( {
@@ -634,7 +779,6 @@ $lvProfileList.Add_SelectionChanged( {
         }
         $hku = ('HKU:\' + $SelectedUserSID)
         if (Test-Path -Path $hku) {
-            $script:bMigrateProfile.Content = "User Registry Loaded"
             $script:bMigrateProfile.IsEnabled = $false
             $script:tbJumpCloudUserName.IsEnabled = $false
             $script:tbTempPassword.IsEnabled = $false
@@ -666,8 +810,6 @@ $bMigrateProfile.Add_Click( {
                 Write-ToLog "$($tbJumpCloudUserName.Text) not found in the JumpCloud console"
                 return
             }
-
-
             if ( -not [string]::isnullorempty($JCSystemUsername) ) {
                 # Regex to get the username from the domain\username string and compare it to JCSystemUsername
                 #Get all the local users
@@ -709,7 +851,6 @@ $bMigrateProfile.Add_Click( {
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('LeaveDomain') -Value:($LeaveDomain)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ForceReboot') -Value:($ForceReboot)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('SelectedUserName') -Value:($SelectedUserName)
-
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudUserName') -Value:($tbJumpCloudUserName.Text)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('TempPassword') -Value:($tbTempPassword.Text)
         Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudConnectKey') -Value:($tbJumpCloudConnectKey.Password)
