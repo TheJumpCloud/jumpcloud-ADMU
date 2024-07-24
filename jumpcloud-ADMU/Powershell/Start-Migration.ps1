@@ -1869,7 +1869,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.7.2'
+        $admuVersion = '2.7.3'
 
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -2764,10 +2764,11 @@ Function Start-Migration {
             foreach ($line in $ADStatus) {
                 if ($line -match "AzureADJoined : ") {
                     $AzureADStatus = ($line.trimstart('AzureADJoined : '))
+                    Write-ToLog "AzureAD Status: $AzureADStatus"
                 }
                 if ($line -match "DomainJoined : ") {
-
-                    $AzureDomainStatus = ($line.trimstart('DomainJoined : '))
+                    $LocalDomainStatus = ($line.trimstart('DomainJoined : '))
+                    Write-ToLog "Local Domain Status: $LocalDomainStatus"
                 }
             }
             Write-ToProgress -ProgressBar $Progressbar -Status "CheckADStatus" -form $isForm

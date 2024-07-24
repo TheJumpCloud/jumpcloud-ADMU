@@ -1,3 +1,14 @@
+## 2.7.3
+
+Release Date: July 24, 2024
+
+#### RELEASE NOTES
+
+#### Bug Fixes:
+
+```
+* Fixed an issue with leave local AD
+```
 ## 2.7.2
 
 Release Date: July 16, 2024
