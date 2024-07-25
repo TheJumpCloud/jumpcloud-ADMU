@@ -1,6 +1,6 @@
 ## 2.7.3
 
-Release Date: July 24, 2024
+Release Date: July 25, 2024
 
 #### RELEASE NOTES
 
