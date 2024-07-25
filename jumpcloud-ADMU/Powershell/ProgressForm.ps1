@@ -37,10 +37,10 @@ function New-ProgressForm {
     <Window
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Name="Window" Title="JumpCloud ADMU 2.7.2"
+    Name="Window" Title="JumpCloud ADMU 2.7.3"
     WindowStyle="SingleBorderWindow"
     ResizeMode="NoResize"
-    Background="White" Width="720" Height="540">
+    Background="White" Width="720" Height="550  ">
     <Window.Resources>
         <Style x:Key="NoHeaderGroupBoxStyle" TargetType="{x:Type GroupBox}">
             <Setter Property="Template">
