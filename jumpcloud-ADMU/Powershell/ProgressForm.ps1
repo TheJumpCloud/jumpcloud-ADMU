@@ -40,7 +40,7 @@ function New-ProgressForm {
     Name="Window" Title="JumpCloud ADMU 2.7.3"
     WindowStyle="SingleBorderWindow"
     ResizeMode="NoResize"
-    Background="White" Width="720" Height="540">
+    Background="White" Width="720" Height="550  ">
     <Window.Resources>
         <Style x:Key="NoHeaderGroupBoxStyle" TargetType="{x:Type GroupBox}">
             <Setter Property="Template">
