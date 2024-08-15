@@ -1,3 +1,15 @@
+## 2.7.4
+
+Release Date: August 14, 2024
+
+#### RELEASE NOTES
+
+#### Bug Fixes:
+
+```
+* Fixed an freezing issue with UWP app/form when interacted
+* Updated useragent text
+```
 ## 2.7.3
 
 Release Date: July 25, 2024
