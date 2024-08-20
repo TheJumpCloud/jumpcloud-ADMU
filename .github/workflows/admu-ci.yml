@@ -100,16 +100,25 @@ jobs:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
         run: |
           . "${{ github.workspace }}/Deploy/build.ps1" -ModuleVersionType $env:RELEASE_TYPE -ModuleName "JumpCloud.ADMU"
+      - name: Prepare Upload
+        shell: powershell
+        run: |
+          - name: Prepare Upload
+            shell: powershell
+            run: |
+              $destinationFolder = "${{ github.workspace }}/Jumpcloud-ADMU/Combined"
+              New-Item -ItemType Directory -Path $destinationFolder -Force
+
+              Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec" -Destination $destinationFolder -Force
+              Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/Docs/*.md" -Destination $destinationFolder -Force
+              Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe" -Destination $destinationFolder -Force
+              Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/Powershell/Form.ps1" -Destination $destinationFolder -Force
+              Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psd1" -Destination $destinationFolder -Force
       - name: Upload Nuspec
         uses: PaloAltoNetworks/upload-secure-artifact@b0e2f8dc09b06aa38239ad1b9e5b5b57b4732abc
         with:
           name: jumpcloud-admu-build
-          path: |
-            ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec
-            ${{ github.workspace }}/Jumpcloud-ADMU/Docs/*.md
-            ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe
-            ${{ github.workspace }}/Jumpcloud-ADMU/Powershell/Form.ps1
-            ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psd1
+          path: ${{ github.workspace }}/Jumpcloud-ADMU/Combined
           retention-days: 1
   Test-Module:
     needs: ["Setup-Build-Dependancies", "Check-PR-Labels", "Build-Module"]
