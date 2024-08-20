@@ -103,17 +103,14 @@ jobs:
       - name: Prepare Upload
         shell: powershell
         run: |
-          - name: Prepare Upload
-            shell: powershell
-            run: |
-              $destinationFolder = "${{ github.workspace }}/Jumpcloud-ADMU/Combined"
-              New-Item -ItemType Directory -Path $destinationFolder -Force
+          $destinationFolder = "${{ github.workspace }}/Jumpcloud-ADMU/Combined"
+          New-Item -ItemType Directory -Path $destinationFolder -Force
 
-              Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec" -Destination $destinationFolder -Force
-              Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/Docs/*.md" -Destination $destinationFolder -Force
-              Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe" -Destination $destinationFolder -Force
-              Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/Powershell/Form.ps1" -Destination $destinationFolder -Force
-              Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psd1" -Destination $destinationFolder -Force
+          Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec" -Destination $destinationFolder -Force
+          Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/Docs/*.md" -Destination $destinationFolder -Force
+          Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe" -Destination $destinationFolder -Force
+          Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/Powershell/Form.ps1" -Destination $destinationFolder -Force
+          Copy-Item -Path "${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psd1" -Destination $destinationFolder -Force
       - name: Upload Nuspec
         uses: PaloAltoNetworks/upload-secure-artifact@b0e2f8dc09b06aa38239ad1b9e5b5b57b4732abc
         with:
