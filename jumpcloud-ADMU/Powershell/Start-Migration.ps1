@@ -1833,20 +1833,6 @@ function Get-ProfileSize {
     Write-ToLog -Message:("Profile Size: $totalSizeGB GB")
     return $totalSizeGB
 }
-
-function Get-DomainStatus {
-    $ADStatus = dsregcmd.exe /status
-    foreach ($line in $ADStatus) {
-        if ($line -match "AzureADJoined : ") {
-            $AzureADStatus = ($line.trimstart('AzureADJoined : '))
-        }
-        if ($line -match "DomainJoined : ") {
-            $LocalDomainStatus = ($line.trimstart('DomainJoined : '))
-        }
-    }
-    # Return both statuses
-    return $AzureADStatus, $LocalDomainStatus
-}
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
     Param (
@@ -1883,12 +1869,12 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.7.4'
+        $admuVersion = '2.7.1'
 
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
         If ($isForm) {
-            $useragent = "JumpCloud_ADMU.Application/$($admuVersion)"
+            $useragent = "JumpCloud.ADMU_Application/$($admuVersion)"
             Write-ToLog -Message:("UserAgent: $useragent")
             $SelectedUserName = $inputObject.SelectedUserName
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
@@ -1940,7 +1926,7 @@ Function Start-Migration {
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
         } else {
-            $useragent = "JumpCloud_ADMU.Powershell/$($admuVersion)"
+            $useragent = "JumpCloud_ADMU.PowershellModule/$($admuVersion)"
             Write-ToLog -Message:("UserAgent: $useragent")
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
         }
@@ -2772,9 +2758,21 @@ Function Start-Migration {
             }
             $appxList = @()
 
-            Write-ToProgress -ProgressBar $Progressbar -Status "CheckADStatus" -form $isForm
             # Get Azure AD Status
-            $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
+
+            $ADStatus = dsregcmd.exe /status
+            foreach ($line in $ADStatus) {
+                if ($line -match "AzureADJoined : ") {
+                    $AzureADStatus = ($line.trimstart('AzureADJoined : '))
+                }
+                if ($line -match "DomainJoined : ") {
+
+                    $AzureDomainStatus = ($line.trimstart('DomainJoined : '))
+                }
+            }
+            Write-ToProgress -ProgressBar $Progressbar -Status "CheckADStatus" -form $isForm
+
+            Write-ToLog "AzureAD Status: $AzureADStatus" -Level Verbose
 
             if ($AzureADStatus -eq 'YES' -or $netBiosName -match 'AzureAD') {
                 # Find Appx User Apps by Username
@@ -2844,66 +2842,71 @@ Function Start-Migration {
 
             $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
             if ($LeaveDomain -eq $true) {
-                if ($AzureADStatus -match 'YES' -and $LocalDomainStatus -match 'YES') {
-                    Write-ToLog -Message:('Device is HYBRID joined')
-                    $ADJoined = "Hybrid"
-                } elseif ($AzureADStatus -match 'NO' -and $LocalDomainStatus -match 'Yes') {
-                    Write-ToLog -Message:('Device is Local Domain joined')
-                    $ADJoined = "LocalJoined"
-                } elseif ($AzureADStatus -match 'YES' -and $LocalDomainStatus -match 'NO') {
-                    Write-ToLog -Message:('Device is Azure AD joined')
-                    $ADJoined = "AzureADJoined"
-                }
-                if ($ADJoined) {
-                    switch ($ADJoined) {
-                        "Hybrid" {
-                            Remove-Computer -force #LeaveHybrid
-                            $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
-                            if ($AzureADStatus -match 'NO' -and $LocalDomainStatus -match 'NO') {
-                                Write-ToLog -Message:('Left Hybrid Domain successfully') -Level:('Info')
-                                $admuTracker.leaveDomain.pass = $true
-                            } else {
-                                Write-ToLog -Message:('Unable to leave Hybrid Domain') -Level:('Warn')
-                                $admuTracker.leaveDomain.fail = $true
-                            }
-                        }
-                        "LocalJoined" {
-                            $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
-                            $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
-                            if ($AzureADStatus -match 'NO' -and $LocalDomainStatus -match 'NO') {
-                                Write-ToLog -Message:('Left local domain successfully') -Level:('Info')
-                                $admuTracker.leaveDomain.pass = $true
-                            } else {
-                                Write-ToLog -Message:('Unable to leave local domain') -Level:('Warn')
-                                $admuTracker.leaveDomain.fail = $true
-                            }
-                        }
-                        "AzureADJoined" {
+                if ($AzureADStatus -match 'YES' -or $LocalDomainStatus -match 'YES') {
+                    try {
+                        if ($LocalDomainStatus -match 'NO') {
                             dsregcmd.exe /leave # Leave Azure AD
-                            # Get Azure AD Status after running dsregcmd.exe /leave
-                            $AzureADStatus = Get-DomainStatus
-                            # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
-                            if ($AzureADStatus -match 'NO') {
-                                Write-toLog -message "Left Azure AD domain successfully. Device Domain State, AzureADJoined : $AzureADStatus"
-                                $admuTracker.leaveDomain.pass = $true
-                            } else {
-                                Write-ToLog -Message:('Unable to leave Azure Domain. Re-running dsregcmd.exe /leave') -Level:('Warn')
-                                dsregcmd.exe /leave # Leave Azure AD
-
-                                $AzureADStatus = Get-DomainStatus
-                                if ($AzureADStatus -match 'NO') {
-                                    Write-ToLog -Message:('Left Azure AD domain successfully') -Level:('Info')
-                                    $admuTracker.leaveDomain.pass = $true
-                                } else {
-                                    Write-ToLog -Message:('Unable to leave Azure AD domain') -Level:('Warn')
-                                    $admuTracker.leaveDomain.fail = $true
-                                }
-
-                            }
+                        } else {
+                            Remove-Computer -force #Leave local AD or Hybrid
+                        }
+                    } catch {
+                        Write-ToLog -Message:('Unable to leave domain, JumpCloud agent will not start until resolved') -Level:('Warn')
+                    }
+                    # Get Azure AD Status
+                    $ADStatus = dsregcmd.exe /status
+                    foreach ($line in $ADStatus) {
+                        if ($line -match "AzureADJoined : ") {
+                            $AzureADStatus = ($line.trimstart('AzureADJoined : '))
+                        }
+                        if ($line -match "DomainJoined : ") {
+                            $LocalDomainStatus = ($line.trimstart('DomainJoined : '))
                         }
                     }
-                } else {
-                    Write-ToLog -Message:('Device is not joined to a domain, skipping leave domain step')
+                    # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
+                    if ($AzureADStatus -match 'NO') {
+                        Write-toLog -message "Left Azure AD domain successfully. Device Domain State, AzureADJoined : $AzureADStatus"
+                        $admuTracker.leaveDomain.pass = $true
+                    } else {
+                        Write-ToLog -Message:('Unable to leave Azure Domain. Re-running dsregcmd.exe /leave') -Level:('Warn')
+                        dsregcmd.exe /leave # Leave Azure AD
+
+                        $ADStatus = dsregcmd.exe /status
+                        foreach ($line in $ADStatus) {
+                            if ($line -match "AzureADJoined : ") {
+                                $AzureADStatus = ($line.trimstart('AzureADJoined : '))
+                            }
+                        }
+                        if ($AzureADStatus -match 'NO') {
+                            Write-ToLog -Message:('Left Azure AD domain successfully') -Level:('Info')
+                            $admuTracker.leaveDomain.pass = $true
+                        } else {
+                            Write-ToLog -Message:('Unable to leave Azure AD domain') -Level:('Warn')
+                            $admuTracker.leaveDomain.fail = $true
+                        }
+
+                    }
+
+                    if ($LocalDomainStatus -match 'NO') {
+                        Write-toLog -message "Local Domain State, Local Domain Joined : $LocalDomainStatus"
+                        $admuTracker.leaveDomain.pass = $true
+                    } else {
+                        Write-ToLog -Message:('Unable to leave local domain using remove-computer...Running UnJoinDomainOrWorkGroup') -Level:('Warn')
+                        $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+
+                        $ADStatus = dsregcmd.exe /status
+                        foreach ($line in $ADStatus) {
+                            if ($line -match "DomainJoined : ") {
+                                $LocalDomainStatus = ($line.trimstart('DomainJoined : '))
+                            }
+                        }
+                        if ($LocalDomainStatus -match 'NO') {
+                            Write-ToLog -Message:('Left local domain successfully') -Level:('Info')
+                            $admuTracker.leaveDomain.pass = $true
+                        } else {
+                            Write-ToLog -Message:('Unable to leave local domain') -Level:('Warn')
+                            $admuTracker.leaveDomain.fail = $true
+                        }
+                    }
                 }
             }
 

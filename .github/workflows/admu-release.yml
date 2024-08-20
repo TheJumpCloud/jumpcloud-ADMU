@@ -29,29 +29,8 @@ jobs:
     steps:
       - name: Validate-PR-Version-Labels
         id: validate
-        shell: pwsh
         run: |
-          $PR_LABEL_LIST=$(curl -s "https://api.github.com/repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/labels" | jq -r '.[].name')
-          if ("ADMU" -in $PR_LABEL_LIST) {
-              write-host "Starting Build for ADMU Module Release"
-          }
-          # validate type from label list:
-          $types = @('major', 'minor', 'patch', 'manual')
-          $typeCount = 0
-          foreach ($item in $PR_LABEL_LIST) {
-              if ($item -in $types) {
-                  write-host "$item"
-                  $typeCount += 1
-                  $RELEASE_TYPE = $item
-              }
-          }
-
-          if ($typeCount -eq 1) {
-              echo "RELEASE_TYPE=$RELEASE_TYPE" >> $env:GITHUB_OUTPUT
-          } else {
-              throw "Multiple or invalid release types were found on PR"
-              exit 1
-          }
+          echo "skipped"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   Setup-Build-Dependancies:

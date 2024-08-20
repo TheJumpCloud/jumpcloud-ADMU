@@ -1,44 +1,9 @@
-## 2.7.4
-
-Release Date: August 14, 2024
-
-#### RELEASE NOTES
-
-#### Bug Fixes:
-
-```
-* Fixed an freezing issue with UWP app/form when interacted
-* Updated useragent text
-```
-## 2.7.3
-
-Release Date: July 25, 2024
-
-#### RELEASE NOTES
-
-#### Bug Fixes:
-
-```
-* Fixed an issue with leave local AD
-```
-## 2.7.2
+## 2.7.0
 
 Release Date: July 16, 2024
 
-#### RELEASE NOTES
-
-#### Bug Fixes:
-
-```
-* When a system had more than 5 local user accounts, the GUI window would stretch to show multiple accounts and the Migrate button would become hidden. The window size is set to a static value in this release.
-```
-
-## 2.7.1
-
-Release Date: July 16, 2024
 
 #### RELEASE NOTES
-
 ```
 * UI improvements for Form
 * While migrating with the exe application, the ADMU will now show the progress of the migration within a GUI window. Migration logs can be viewed in this window, new migrations can be triggered after a successful or failed migration.
@@ -46,7 +11,6 @@ Release Date: July 16, 2024
 * Added an optional param -AdminDebug for showing verbose log messages
 * An error mapping function was added to the tool to provide better feedback when the tool encounters an issue with a migration.
 ```
-
 #### Bug Fixes:
 
 ```
@@ -54,6 +18,7 @@ Release Date: July 16, 2024
 * Added a validation to check if jumpcloud username and local username are the same
 * UWP wording change
 ```
+
 
 ## 2.6.8
 
