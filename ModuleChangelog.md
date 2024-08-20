@@ -1,3 +1,15 @@
+## 2.7.5
+
+Release Date: August 20, 2024
+
+#### RELEASE NOTES
+
+#### Bug Fixes:
+
+```
+* Testing - DO NOT MERGE
+```
+
 ## 2.7.4
 
 Release Date: August 14, 2024
