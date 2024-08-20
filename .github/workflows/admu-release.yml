@@ -169,7 +169,7 @@ jobs:
           region: ${{ secrets.AWS_REGION }}
           version: ${{ env.RELEASE_VERSION }}
       - name: Upload Release Artifacts
-        uses: actions/upload-artifact@v3
+        uses: PaloAltoNetworks/upload-secure-artifact@b0e2f8dc09b06aa38239ad1b9e5b5b57b4732abc
         with:
           name: jumpcloud-admu
           path: |
