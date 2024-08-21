@@ -1,3 +1,17 @@
+## 2.7.5
+
+Release Date: August 21, 2024
+
+#### RELEASE NOTES
+
+This release reverts changes from 2.7.4 in the UWP app, specifically the xaml form was reverted back to the original windows form to display progress of the Appx/ File Association during first boot. This release adds additional logging to the UWP app.
+
+#### Bug Fixes:
+
+```
+* Reverted UWP changes from 2.7.4 to address reports of the UWP app freezing on first login
+```
+
 ## 2.7.4
 
 Release Date: August 14, 2024
@@ -10,6 +24,7 @@ Release Date: August 14, 2024
 * Fixed an freezing issue with UWP app/form when interacted
 * Updated useragent text
 ```
+
 ## 2.7.3
 
 Release Date: July 25, 2024
@@ -21,6 +36,7 @@ Release Date: July 25, 2024
 ```
 * Fixed an issue with leave local AD
 ```
+
 ## 2.7.2
 
 Release Date: July 16, 2024
