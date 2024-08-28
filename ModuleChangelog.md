@@ -1,3 +1,15 @@
+## 2.7.6
+
+Release Date: August 21, 2024
+
+#### RELEASE NOTES
+
+This fixes an issue with disabled Migrate Button
+
+#### Bug Fixes:
+```
+* Fixed an issue with Migrate Button disabled when there is a username is inputted before JC API key
+```
 ## 2.7.5
 
 Release Date: August 21, 2024
