@@ -169,7 +169,7 @@ jobs:
           region: ${{ secrets.AWS_REGION }}
           version: ${{ env.RELEASE_VERSION }}
       - name: Upload Release Artifacts
-        uses: actions/upload-artifact@v3
+        uses: TheJumpCloud/common-github-actions/upload-secure-artifact@v2
         with:
           name: jumpcloud-admu
           path: |
@@ -182,7 +182,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download ADMU artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: jumpcloud-admu
       - name: Build Draft Release
@@ -211,7 +211,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download ADMU artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: jumpcloud-admu
       - name: Publish
