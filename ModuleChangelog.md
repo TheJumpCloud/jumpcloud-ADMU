@@ -8,7 +8,7 @@ This fixes an issue with disabled Migrate Button
 
 #### Bug Fixes:
 ```
-* Fixed an issue with Migrate Button disabled when there is a username is inputted before JC API key
+* Fixed an issue with ADMU UI "Migrate Profile" button where it remained disabled even though all the required fields were satisfied.
 ```
 ## 2.7.5
 
