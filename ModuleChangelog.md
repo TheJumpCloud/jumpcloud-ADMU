@@ -1,6 +1,18 @@
-## 2.7.5
+## 2.7.6
 
 Release Date: August 21, 2024
+
+#### RELEASE NOTES
+
+This fixes an issue with disabled Migrate Button
+
+#### Bug Fixes:
+```
+* Fixed an issue with ADMU UI "Migrate Profile" button where it remained disabled even though all the required fields were satisfied.
+```
+## 2.7.5
+
+Release Date: August 28, 2024
 
 #### RELEASE NOTES
 
