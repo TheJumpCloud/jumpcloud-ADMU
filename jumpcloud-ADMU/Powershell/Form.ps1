@@ -739,11 +739,7 @@ $tbJumpCloudAPIKey.Add_PasswordChanged( {
                 $tbJumpCloudAPIKey.BorderBrush = "#FFC6CBCF"
                 $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ActiveBase64
                 $img_apikey_valid.ToolTip = $null
-                # If connect key is populated, and jumpcloudusername is populated, and autobindjcuser is checked
-                if ($tbJumpCloudAPIKey -and $tbJumpCloudUserName.Text) {
-                    # Enable migration button
-                    $script:bMigrateProfile.IsEnabled = $true
-                }
+                Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
             } catch {
                 $OrgSelection = ""
                 $lbl_orgName.Text = ""
