@@ -12,7 +12,7 @@ This fixes an issue with disabled Migrate Button
 ```
 ## 2.7.5
 
-Release Date: August 21, 2024
+Release Date: August 28, 2024
 
 #### RELEASE NOTES
 
