@@ -169,7 +169,7 @@ jobs:
           region: ${{ secrets.AWS_REGION }}
           version: ${{ env.RELEASE_VERSION }}
       - name: Upload Release Artifacts
-        uses: TheJumpCloud/common-github-actions/upload-secure-artifact@v2
+        uses: ./github/actions/upload-secure-artifact
         with:
           name: jumpcloud-admu
           path: |

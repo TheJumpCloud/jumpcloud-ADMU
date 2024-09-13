@@ -122,7 +122,7 @@ jobs:
         run: |
           . "${{ github.workspace }}/Deploy/build.ps1" -ModuleVersionType $env:RELEASE_TYPE -ModuleName "JumpCloud.ADMU"
       - name: Upload Nuspec
-        uses: TheJumpCloud/common-github-actions/upload-secure-artifact@v2
+        uses: ./github/actions/upload-secure-artifact
         with:
           name: jumpcloud-admu-build
           path: |
