@@ -1,6 +1,6 @@
 # This was manually copied from JumpCloud's internal actions repository.
 # It may need to be updated from time to time.
-# Latest Update: 9/12/2024
+# Latest Update: 9/16/2024
 
 name: "Upload Secure Artifact"
 description: "Upload an artifact, but only after it has been scanned for secrets, etc."
@@ -45,6 +45,14 @@ runs:
       - uses: actions/setup-go@v5
         with:
           go-version: 1.23
+      # macOs runners use bash<4, which doesn't support double asterisks in globs.
+      # Update the bash version here since we need it.
+      - name: Configure Bash - macOS
+        if: runner.os == 'macOS'
+        run: |
+          brew install bash
+          /bin/bash --version
+        shell: bash
       - name: Install Gitleaks
         run: |
           ### Install Gitleaks ###
@@ -74,10 +82,14 @@ runs:
         id: scan-artifacts
         run: |
           ### Scan Artifacts ###
+          # Ensure that double asterisks are expanded
+          shopt -s globstar
+          expanded_path=$(echo ${{ inputs.path }})
+
           # Create a directory to store the artifacts
           mkdir -p "${ARTIFACTS_DIR}"
           # Copy the artifact to the artifacts directory
-          for path in ${{ inputs.path }}; do
+          for path in ${expanded_path}; do
             echo "Copying path: $path"
             if [[ ! -e $path ]]; then
               echo "Skipping non-existent path: $path"
@@ -131,4 +143,9 @@ runs:
           ### Clean Up Tmp Artifacts Directory ###
           # Remove the artifacts directory in case this action is used multiple times in the same job.
           rm -rf "${ARTIFACTS_DIR}"
+        shell: bash
+      - name: Clean Up gitleaks
+        run: |
+          ### Clean Up gitleaks ###
+          rm -rf gitleaks
         shell: bash
