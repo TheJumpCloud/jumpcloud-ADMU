@@ -172,10 +172,7 @@ jobs:
         uses: ./github/actions/upload-secure-artifact
         with:
           name: jumpcloud-admu
-          path: |
-            ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe
-            ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec
-            ${{ github.workspace }}/JumpCloud.ADMU.*.nupkg
+          path: ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec ${{ github.workspace }}/JumpCloud.ADMU.*.nupkg
   Draft-GH-Release:
     needs: [Build-Sign-ADMU]
     runs-on: ubuntu-latest
