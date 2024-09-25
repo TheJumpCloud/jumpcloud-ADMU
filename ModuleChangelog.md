@@ -1,3 +1,15 @@
+## 2.7.7
+
+Release Date: September 25, 2024
+
+#### RELEASE NOTES
+
+This release fixes an issue with users unable to use Search on Windows 10
+
+#### Bug Fixes:
+```
+* Resolved an issue causing Windows 10 Search to fail or become unresponsive for users after migration.
+```
 ## 2.7.6
 
 Release Date: August 21, 2024
