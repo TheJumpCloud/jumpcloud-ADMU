@@ -1,3 +1,15 @@
+## 2.7.7
+
+Release Date: September 25, 2024
+
+#### RELEASE NOTES
+
+This release resolves an issue on Windows 10 systems where users were unable to use the search bar post-migration
+
+#### Bug Fixes:
+```
+* Resolves an issue on Windows 10 systems where users were unable to use the search bar post-migration
+```
 ## 2.7.6
 
 Release Date: August 21, 2024
