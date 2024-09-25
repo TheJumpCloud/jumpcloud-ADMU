@@ -1883,7 +1883,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.7.6'
+        $admuVersion = '2.7.7'
 
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -2729,6 +2729,7 @@ Function Start-Migration {
             Write-ToProgress -ProgressBar $Progressbar -Status "CreateRegEntries" -form $isForm
 
             Write-ToLog -Message:('Creating HKLM Registry Entries') -Level Verbose
+
             # Root Key Path
             $ADMUKEY = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
             # Remove Root from key to pass into functions
@@ -2765,7 +2766,14 @@ Function Start-Migration {
 
             Write-ToLog -Message:('Updating UWP Apps for new user') -Level Verbose
             $newUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
-
+            # IF windows 10 remove the windows.search then it will be recreated on login
+            if ($systemVersion.OSName -match "Windows 10") {
+                $searchFolder = "$newUserProfileImagePath\AppData\Local\Packages\Microsoft.Windows.Search_cw5n1h2txyewy"
+                Write-ToLog -Message:('Removing Windows.Search_ folder' + $searchFolder)
+                if (Test-Path $searchFolder) {
+                    Remove-Item -Path $searchFolder -Recurse -Force
+                }
+            }
             $path = $newUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
             If (!(test-path $path)) {
                 New-Item -ItemType Directory -Force -Path $path
