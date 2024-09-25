@@ -2298,6 +2298,14 @@ Function Start-Migration {
                         write-ToLog -Message:("key not found $key")
                     }
                 }
+
+                # Remove Windows.Search_ folder
+
+                $searchFolder = "$newUserProfileImagePath\AppData\Local\Packages\Microsoft.Windows.Search_cw5n1h2txyewy"
+                Write-ToLog -Message:('Removing Windows.Search_ folder' + $searchFolder)
+                if (Test-Path $searchFolder) {
+                    Remove-Item -Path $searchFolder -Recurse -Force
+                }
             }
 
             Write-ToProgress -ProgressBar $Progressbar -Status "CopyUserRegFiles" -form $isForm
