@@ -8,7 +8,7 @@ This release fixes an issue with users unable to use Search on Windows 10
 
 #### Bug Fixes:
 ```
-* Resolved an issue causing Windows 10 Search to fail or become unresponsive for users after migration.
+* Resolves an issue on Windows 10 systems where users were unable to use the search bar post-migration
 ```
 ## 2.7.6
 
