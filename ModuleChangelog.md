@@ -4,7 +4,7 @@ Release Date: September 25, 2024
 
 #### RELEASE NOTES
 
-This release fixes an issue with users unable to use Search on Windows 10
+This release resolves an issue on Windows 10 systems where users were unable to use the search bar post-migration
 
 #### Bug Fixes:
 ```
