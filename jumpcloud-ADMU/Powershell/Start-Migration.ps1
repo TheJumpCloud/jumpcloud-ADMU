@@ -2767,7 +2767,7 @@ Function Start-Migration {
             Write-ToLog -Message:('Updating UWP Apps for new user') -Level Verbose
             $newUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
             # IF windows 10
-            if ($systemVersion.OSName -eq "Windows 10") {
+            if ($systemVersion.OSName -match "Windows 10") {
                 $searchFolder = "$newUserProfileImagePath\AppData\Local\Packages\Microsoft.Windows.Search_cw5n1h2txyewy"
                 Write-ToLog -Message:('Removing Windows.Search_ folder' + $searchFolder)
                 if (Test-Path $searchFolder) {
