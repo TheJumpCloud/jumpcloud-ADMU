@@ -2737,6 +2737,16 @@ Function Start-Migration {
             Write-ToProgress -ProgressBar $Progressbar -Status "CreateRegEntries" -form $isForm
 
             Write-ToLog -Message:('Creating HKLM Registry Entries') -Level Verbose
+            # IF windows 10
+            if ($systemVersion.OSName -eq "Windows 10") {
+                $searchFolder = "$newUserProfileImagePath\AppData\Local\Packages\Microsoft.Windows.Search_cw5n1h2txyewy"
+                Write-ToLog -Message:('Removing Windows.Search_ folder' + $searchFolder)
+                if (Test-Path $searchFolder) {
+                    Remove-Item -Path $searchFolder -Recurse -Force
+                }
+            }
+
+
             # Root Key Path
             $ADMUKEY = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
             # Remove Root from key to pass into functions
