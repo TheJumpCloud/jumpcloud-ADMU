@@ -2298,14 +2298,6 @@ Function Start-Migration {
                         write-ToLog -Message:("key not found $key")
                     }
                 }
-
-                # Remove Windows.Search_ folder
-
-                $searchFolder = "$newUserProfileImagePath\AppData\Local\Packages\Microsoft.Windows.Search_cw5n1h2txyewy"
-                Write-ToLog -Message:('Removing Windows.Search_ folder' + $searchFolder)
-                if (Test-Path $searchFolder) {
-                    Remove-Item -Path $searchFolder -Recurse -Force
-                }
             }
 
             Write-ToProgress -ProgressBar $Progressbar -Status "CopyUserRegFiles" -form $isForm
@@ -2737,15 +2729,6 @@ Function Start-Migration {
             Write-ToProgress -ProgressBar $Progressbar -Status "CreateRegEntries" -form $isForm
 
             Write-ToLog -Message:('Creating HKLM Registry Entries') -Level Verbose
-            # IF windows 10
-            if ($systemVersion.OSName -eq "Windows 10") {
-                $searchFolder = "$newUserProfileImagePath\AppData\Local\Packages\Microsoft.Windows.Search_cw5n1h2txyewy"
-                Write-ToLog -Message:('Removing Windows.Search_ folder' + $searchFolder)
-                if (Test-Path $searchFolder) {
-                    Remove-Item -Path $searchFolder -Recurse -Force
-                }
-            }
-
 
             # Root Key Path
             $ADMUKEY = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
@@ -2783,7 +2766,14 @@ Function Start-Migration {
 
             Write-ToLog -Message:('Updating UWP Apps for new user') -Level Verbose
             $newUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
-
+            # IF windows 10
+            if ($systemVersion.OSName -eq "Windows 10") {
+                $searchFolder = "$newUserProfileImagePath\AppData\Local\Packages\Microsoft.Windows.Search_cw5n1h2txyewy"
+                Write-ToLog -Message:('Removing Windows.Search_ folder' + $searchFolder)
+                if (Test-Path $searchFolder) {
+                    Remove-Item -Path $searchFolder -Recurse -Force
+                }
+            }
             $path = $newUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
             If (!(test-path $path)) {
                 New-Item -ItemType Directory -Force -Path $path
