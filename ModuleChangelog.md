@@ -1,3 +1,11 @@
+## 2.7.8
+
+Release Date: October 2, 2024
+
+#### RELEASE NOTES
+
+This release adds Windows OS version, edition, and build number information to the log
+
 ## 2.7.7
 
 Release Date: September 25, 2024
