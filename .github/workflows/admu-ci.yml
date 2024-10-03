@@ -122,15 +122,10 @@ jobs:
         run: |
           . "${{ github.workspace }}/Deploy/build.ps1" -ModuleVersionType $env:RELEASE_TYPE -ModuleName "JumpCloud.ADMU"
       - name: Upload Nuspec
-        uses: actions/upload-artifact@v3
+        uses: ./.github/actions/upload-secure-artifact
         with:
           name: jumpcloud-admu-build
-          path: |
-            ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec
-            ${{ github.workspace }}/Jumpcloud-ADMU/Docs/*.md
-            ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe
-            ${{ github.workspace }}/Jumpcloud-ADMU/Powershell/Form.ps1
-            ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psd1
+          path: ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec ${{ github.workspace }}/Jumpcloud-ADMU/Docs/*.md ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe ${{ github.workspace }}/Jumpcloud-ADMU/Powershell/Form.ps1 ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psd1
           retention-days: 1
   Test-Module:
     needs: ["Setup-Build-Dependancies", "Check-PR-Labels", "Build-Module"]
@@ -143,7 +138,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: jumpcloud-admu-build
       - uses: actions/cache@v4

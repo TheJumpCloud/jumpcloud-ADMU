@@ -168,21 +168,20 @@ jobs:
           SM_HOST: ${{ secrets.SM_HOST }}
           region: ${{ secrets.AWS_REGION }}
           version: ${{ env.RELEASE_VERSION }}
-      - name: Upload Release Artifacts
-        uses: actions/upload-artifact@v3
-        with:
-          name: jumpcloud-admu
-          path: |
-            ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe
-            ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec
-            ${{ github.workspace }}/JumpCloud.ADMU.*.nupkg
+      - run: pwd
+        shell: bash
+      # - name: Upload Release Artifacts
+      #   uses: D:/a/jumpcloud-ADMU/jumpcloud-ADMU/github/actions/upload-secure-artifact
+      #   with:
+      #     name: jumpcloud-admu
+      #     path: ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec ${{ github.workspace }}/JumpCloud.ADMU.*.nupkg
   Draft-GH-Release:
     needs: [Build-Sign-ADMU]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Download ADMU artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: jumpcloud-admu
       - name: Build Draft Release
@@ -211,7 +210,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download ADMU artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: jumpcloud-admu
       - name: Publish
