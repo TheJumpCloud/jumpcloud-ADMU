@@ -2875,7 +2875,7 @@ Function Start-Migration {
                                 $admuTracker.leaveDomain.pass = $true
                             } else {
                                 Write-ToLog -Message:('Unable to leave Hybrid Domain') -Level:('Warn')
-                                $admuTracker.leaveDomain.fail = $true
+                                # here we would typically fail migration but doing so would remove the system account
                             }
                         }
                         "LocalJoined" {
@@ -2886,7 +2886,7 @@ Function Start-Migration {
                                 $admuTracker.leaveDomain.pass = $true
                             } else {
                                 Write-ToLog -Message:('Unable to leave local domain') -Level:('Warn')
-                                $admuTracker.leaveDomain.fail = $true
+                                # here we would typically fail migration but doing so would remove the system account
                             }
                         }
                         "AzureADJoined" {
@@ -2907,7 +2907,7 @@ Function Start-Migration {
                                     $admuTracker.leaveDomain.pass = $true
                                 } else {
                                     Write-ToLog -Message:('Unable to leave Azure AD domain') -Level:('Warn')
-                                    $admuTracker.leaveDomain.fail = $true
+                                    # here we would typically fail migration but doing so would remove the system account
                                 }
 
                             }
