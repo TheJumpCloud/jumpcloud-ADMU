@@ -1,3 +1,18 @@
+## 2.7.8
+
+Release Date: October 14, 2024
+
+#### RELEASE NOTES
+
+This release prevents the ADMU from considering the migration a failure if the leave domain step does not complete as expected.
+This release adds Windows OS version, edition, and build number information to the log
+
+#### Bug Fixes:
+
+```
+* When the ADMU encounters an issue with leaving the domain, the tool would mark this step a failure and attempt to revert the newly created user. In doing so the account being migrated was erroneously removed. This release allows for the leave domain step to fail but does not consider the failure of that step to be an overall migration failure. Migration can still succeed if the system fails to leave the domain for any reason.
+```
+
 ## 2.7.7
 
 Release Date: September 25, 2024

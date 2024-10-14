@@ -1871,7 +1871,7 @@ Function Start-Migration {
         $netBiosName = Get-NetBiosName
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
         $localComputerName = $WmiComputerSystem.Name
-        $systemVersion = Get-ComputerInfo | Select-Object OSName, OSVersion, OsHardwareAbstractionLayer
+        $systemVersion = Get-ComputerInfo | Select-Object OSName, OSVersion, OsHardwareAbstractionLayer, OsBuildNumber, WindowsEditionId
         $windowsDrive = Get-WindowsDrive
         $jcAdmuTempPath = "$windowsDrive\Windows\Temp\JCADMU\"
         $jcAdmuLogFile = "$windowsDrive\Windows\Temp\jcAdmu.log"
@@ -1883,7 +1883,10 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.7.7'
+        $admuVersion = '2.7.8'
+
+        # Log Windows System Version Information
+        Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
 
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -2872,7 +2875,7 @@ Function Start-Migration {
                                 $admuTracker.leaveDomain.pass = $true
                             } else {
                                 Write-ToLog -Message:('Unable to leave Hybrid Domain') -Level:('Warn')
-                                $admuTracker.leaveDomain.fail = $true
+                                # here we would typically fail migration but doing so would remove the system account
                             }
                         }
                         "LocalJoined" {
@@ -2883,7 +2886,7 @@ Function Start-Migration {
                                 $admuTracker.leaveDomain.pass = $true
                             } else {
                                 Write-ToLog -Message:('Unable to leave local domain') -Level:('Warn')
-                                $admuTracker.leaveDomain.fail = $true
+                                # here we would typically fail migration but doing so would remove the system account
                             }
                         }
                         "AzureADJoined" {
@@ -2904,7 +2907,7 @@ Function Start-Migration {
                                     $admuTracker.leaveDomain.pass = $true
                                 } else {
                                     Write-ToLog -Message:('Unable to leave Azure AD domain') -Level:('Warn')
-                                    $admuTracker.leaveDomain.fail = $true
+                                    # here we would typically fail migration but doing so would remove the system account
                                 }
 
                             }
