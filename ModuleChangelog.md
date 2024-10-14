@@ -5,6 +5,7 @@ Release Date: October 14, 2024
 #### RELEASE NOTES
 
 This release prevents the ADMU from considering the migration a failure if the leave domain step does not complete as expected.
+This release adds Windows OS version, edition, and build number information to the log
 
 #### Bug Fixes:
 
