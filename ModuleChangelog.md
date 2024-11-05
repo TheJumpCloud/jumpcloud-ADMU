@@ -1,3 +1,15 @@
+## 2.7.
+
+Release Date: November 7, 2024
+
+#### RELEASE NOTES
+
+This release removes 40 char API key validation
+
+#### Bug Fixes:
+
+```
+```
 ## 2.7.8
 
 Release Date: October 14, 2024

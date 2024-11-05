@@ -36,7 +36,7 @@ function Test-RegistryValueMatch {
 function Set-JCUserToSystemAssociation {
     param
     (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(40, 40)][string]$JcApiKey,
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][string]$JcApiKey,
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][ValidateLength(24, 24)][string]$JcOrgId,
         [Parameter(Mandatory = $true, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][string]$JcUserID,
         [Parameter(Mandatory = $false, ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)][bool]$BindAsAdmin,
@@ -1862,7 +1862,7 @@ Function Start-Migration {
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$SetDefaultWindowsUser = $true,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AdminDebug = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudAPIKey,
+        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][string]$JumpCloudAPIKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(24, 24)][string]$JumpCloudOrgID,
         [Parameter(ParameterSetName = "form")][Object]$inputObject)
 
@@ -1883,7 +1883,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.7.8'
+        $admuVersion = '2.7.9'
 
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
@@ -1912,7 +1912,7 @@ Function Start-Migration {
             if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
                 $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
             }
-            if (($inputObject.JumpCloudAPIKey).Length -eq 40) {
+            if ($inputObject.JumpCloudAPIKey) {
                 $JumpCloudAPIKey = $inputObject.JumpCloudAPIKey
                 $ValidatedJumpCloudOrgID = $inputObject.JumpCloudOrgID
             }
