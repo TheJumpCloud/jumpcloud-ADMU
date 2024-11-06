@@ -741,6 +741,9 @@ $tbJumpCloudAPIKey.Add_PasswordChanged( {
                 $img_apikey_valid.ToolTip = $null
                 Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
             } catch {
+                $script:bMigrateProfile.IsEnabled = $false
+                $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
+                $img_apikey_valid.ToolTip = "Please enter a valid JumpCloud API Key"
                 $OrgSelection = ""
                 $lbl_orgName.Text = ""
                 $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
