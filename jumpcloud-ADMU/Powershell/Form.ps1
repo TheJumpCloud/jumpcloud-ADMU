@@ -153,7 +153,7 @@ function show-mtpSelection {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.7.8"
+        Title="JumpCloud ADMU 2.7.9"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -525,7 +525,7 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
     If (![System.String]::IsNullOrEmpty($lvProfileList.SelectedItem.UserName)) {
         If (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) -and (($($tbJumpCloudUserName.Text).length) -le 20) `
                 -and ((Test-CharLen -len 40 -testString $tbJumpCloudConnectKey.Password) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Password) -and ($cb_installjcagent.IsChecked -eq $true))`
-                -and ((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Password) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Password) -and ($cb_autobindjcuser.IsChecked -eq $true))`
+                -and (!(Test-IsNotEmpty $tbJumpCloudAPIKey.Password) -and ($cb_autobindjcuser.IsChecked -eq $true))`
                 -and ((Test-CharLen -len 24 -testString $Env:selectedOrgID) -and (Test-HasNoSpace $Env:selectedOrgID) -and ($cb_autobindjcuser.IsChecked -eq $true))`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
                 -and !(($($lvProfileList.selectedItem.Username) -split '\\')[0] -match $WmiComputerSystem.Name)`
@@ -541,7 +541,7 @@ Function Test-Button([object]$tbJumpCloudUserName, [object]$tbJumpCloudConnectKe
             $script:bMigrateProfile.IsEnabled = $true
             Return $true
         } ElseIf (!(Test-IsNotEmpty $tbJumpCloudUserName.Text) -and (Test-HasNoSpace $tbJumpCloudUserName.Text) -and (($($tbJumpCloudUserName.Text).length) -le 20) `
-                -and ((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Password) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Password) -and ($cb_autobindjcuser.IsChecked -eq $true) -and ($cb_installjcagent.IsChecked -eq $false))`
+                -and (!(Test-IsNotEmpty $tbJumpCloudAPIKey.Password) -and ($cb_autobindjcuser.IsChecked -eq $true) -and ($cb_installjcagent.IsChecked -eq $false))`
                 -and ((Test-CharLen -len 24 -testString $Env:selectedOrgID) -and (Test-HasNoSpace $Env:selectedOrgID) -and ($cb_autobindjcuser.IsChecked -eq $true) -and ($cb_installjcagent.IsChecked -eq $false))`
                 -and !(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)`
                 -and !(Test-Localusername $tbJumpCloudUserName.Text)) {
@@ -629,7 +629,7 @@ $cb_autobindjcuser.Add_Checked( { $cb_bindAsAdmin.IsEnabled = $true })
 $cb_bindAsAdmin.Add_Checked( { $script:BindAsAdmin = $true })
 $cb_autobindjcuser.Add_Checked( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Password) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Password)) -eq $false) {
+        If (Test-IsNotEmpty $tbJumpCloudAPIKey.Password ) {
             #$tbJumpCloudAPIKey.Tooltip = "API Key Must be 40chars & Not Contain Spaces"
             $tbJumpCloudAPIKey.Background = "#FFC6CBCF"
             $tbJumpCloudAPIKey.BorderBrush = "#FFF90000"
@@ -652,7 +652,7 @@ $cb_autobindjcuser.Add_Unchecked( { $cb_bindAsAdmin.IsChecked = $false })
 $cb_bindAsAdmin.Add_Unchecked( { $script:BindAsAdmin = $false })
 $cb_autobindjcuser.Add_Unchecked( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Password) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Password) -or ($cb_autobindjcuser.IsEnabled)) -eq $false) {
+        If ((!(Test-IsNotEmpty $tbJumpCloudAPIKey.Password) -or ($cb_autobindjcuser.IsEnabled)) -eq $false) {
             #$tbJumpCloudAPIKey.Tooltip = "API Key Must be 40chars & Not Contain Spaces"
             $tbJumpCloudAPIKey.Background = "#FFC6CBCF"
             $tbJumpCloudAPIKey.BorderBrush = "#FFF90000"
@@ -721,11 +721,11 @@ $tbJumpCloudConnectKey.Add_PasswordChanged( {
 
 $tbJumpCloudAPIKey.Add_PasswordChanged( {
         Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
-        If (((Test-CharLen -len 40 -testString $tbJumpCloudAPIKey.Password) -and (Test-HasNoSpace $tbJumpCloudAPIKey.Password)) -eq $false) {
+        If (Test-IsNotEmpty $tbJumpCloudAPIKey.Password) {
             $tbJumpCloudAPIKey.Background = "#FFC6CBCF"
             $tbJumpCloudAPIKey.BorderBrush = "#FFF90000"
             $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
-            $img_apikey_valid.ToolTip = "Jumpcloud API Key must be 40chars & not contain spaces."
+            $img_apikey_valid.ToolTip = "Please enter a valid JumpCloud API Key"
 
         } Else {
             # Get org name/ id
@@ -741,6 +741,9 @@ $tbJumpCloudAPIKey.Add_PasswordChanged( {
                 $img_apikey_valid.ToolTip = $null
                 Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
             } catch {
+                $script:bMigrateProfile.IsEnabled = $false
+                $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
+                $img_apikey_valid.ToolTip = "Please enter a valid JumpCloud API Key"
                 $OrgSelection = ""
                 $lbl_orgName.Text = ""
                 $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
