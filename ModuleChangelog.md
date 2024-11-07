@@ -1,4 +1,4 @@
-## 2.7.
+## 2.7.9
 
 Release Date: November 7, 2024
 
