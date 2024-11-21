@@ -2013,7 +2013,7 @@ Function Start-Migration {
 
 
         Write-ToLog -Message:("Bind as admin = $($BindAsAdmin)")
-
+        $trackAccountMerge = $false
         # Track migration steps
         $admuTracker = [Ordered]@{
             backupOldUserReg              = @{'pass' = $false; 'fail' = $false }
@@ -2247,11 +2247,14 @@ Function Start-Migration {
             } catch {
                 Write-ToLog -Message("Could not unload registry hives before copy steps: Exiting...")
                 Write-AdmuErrorMessage -ErrorName "load_unload_error"
+                # Todo: Do not delete the user if the registry copy fails
                 $admuTracker.loadBeforeCopyRegistry.fail = $true
                 break
             }
             $admuTracker.loadBeforeCopyRegistry.pass = $true
-
+            ### Merge Selected User Profile to New User Profile
+            ### Do not delete the profile user if the registry copy fails past this point
+            $trackAccountMerge = $true
             reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
             if ($?) {
                 Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/NTUSER.DAT.BAK" + ' To: ' + "$oldUserProfileImagePath/NTUSER.DAT.BAK")
@@ -2963,8 +2966,12 @@ Function Start-Migration {
                         'newUserInit' {
                             Write-ToLog -Message:("Attempting to revert $($trackedStep) steps") -Level Verbose
                             try {
-                                Remove-LocalUserProfile -username $JumpCloudUserName
-                                Write-ToLog -Message:("User: $JumpCloudUserName was successfully removed from the local system") -Level Verbose
+                                if ($trackAccountMerge -eq $false) {
+                                    Remove-LocalUserProfile -username $JumpCloudUserName
+                                    Write-ToLog -Message:("User: $JumpCloudUserName was successfully removed from the local system") -Level Verbose
+                                } else {
+                                    Write-ToLog -Message:("User: $JumpCloudUserName was not removed from the local system") -Level Verbose
+                                }
                             } catch {
                                 Write-ToLog -Message:("Could not remove the $JumpCloudUserName profile and user account") -Level Error
                             }
