@@ -5,7 +5,7 @@ Release Date: November 21, 2024
 #### RELEASE NOTES
 ```
 * This release removes 40 char API key validation
-* When the migration fails during the account copy/merge processes, the tool would revert and remove the newly created account. We risk deleting user data once we do the current reversal in this step. To combat this, we have added a tracker to not remove the created profile during account merge failure.
+* When the migration fails during the account copy/merge processes, the tool would revert and remove the newly created account. We risk deleting user data once we do the account reversal in this step. To combat this, we have added a tracker to not remove the created account profile during account merge failure.
 * Remove unused .exe files
 ```
 #### Bug Fixes:
