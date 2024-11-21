@@ -9,8 +9,9 @@ Release Date: November 21, 2024
 * Remove unused .exe files
 ```
 #### Bug Fixes:
-
 ```
+* Fix progress form buttons disabled when JCAgent install fails
+* Fix issue with JCUsername that have a localUsername where progress form GUI get's stuck during migration when AutoBind is selected
 ```
 ## 2.7.8
 

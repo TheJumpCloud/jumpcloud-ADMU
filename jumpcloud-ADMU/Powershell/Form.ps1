@@ -804,7 +804,7 @@ $bMigrateProfile.Add_Click( {
                 Write-ToLog "ConnectKey is populated, JumpCloud agent will be installed"
             }
 
-            $testResult, $JumpCloudUserId, $jcUsername, $JCSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $tbJumpCloudAPIKey.Password -JumpCloudOrgID $Env:selectedOrgID -Username $tbJumpCloudUserName.Text -Prompt $true
+            $testResult, $JumpCloudUserId, $JCSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $tbJumpCloudAPIKey.Password -JumpCloudOrgID $Env:selectedOrgID -Username $tbJumpCloudUserName.Text -Prompt $true
             if ($testResult) {
                 Write-ToLog "Matched $($tbJumpCloudUserName.Text) with user in the JumpCloud Console"
             } else {
@@ -824,13 +824,13 @@ $bMigrateProfile.Add_Click( {
                     # Create a pop up that warns user then press ok to continue
                     Write-ToLog "JCSystemUsername $($JCSystemUsername) is the same as the another profile on this system"
                     $wshell = New-Object -ComObject Wscript.Shell
-                    $message = "The JumpCloud User: $($jcUsername) has a local account username of: $($jcsystemUserName). A local account already exists on this system with username: $($JCSystemUsername), please consider removing either the local account on this system or removing the local user account field from the JumpCloud user."
+                    $message = "The JumpCloud User: $($tbJumpCloudUserName.Text) has a local account username of: $($jcsystemUserName). A local account already exists on this system with username: $($JCSystemUsername), please consider removing either the local account on this system or removing the local user account field from the JumpCloud user."
                     $var = $wshell.Popup("$message", 0, "JumpCloud SystemUsername and Local Computer Username Validation", 0)
                     # the user can not continue with migration at this stage
                     return
                 }
                 $wshell = New-Object -ComObject Wscript.Shell
-                $message = "The JumpCloud User: $($jcUsername) has a local account username of: $($jcsystemUserName). After migration $($SelectedUserName) would be migrated and accessible with the local account username of: $($jcsystemUserName) Would you like to continue?"
+                $message = "The JumpCloud User: $($tbJumpCloudUserName.Text) has a local account username of: $($jcsystemUserName). After migration $($SelectedUserName) would be migrated and accessible with the local account username of: $($jcsystemUserName) Would you like to continue?"
                 $var = $wshell.Popup("$message", 0, "JumpCloud Local User Validation", 64 + 4)
                 # If user selects yes then migrate the local user profile to the JumpCloud User
 
@@ -841,7 +841,7 @@ $bMigrateProfile.Add_Click( {
                     return
                 }
             } else {
-                Write-ToLog "User $($jcUsername) does not have a local account on this system"
+                Write-ToLog "User $($tbJumpCloudUserName.Text) does not have a local account on this system"
             }
         }
         # Build FormResults object
