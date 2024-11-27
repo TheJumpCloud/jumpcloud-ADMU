@@ -12,6 +12,7 @@ Release Date: November 21, 2024
 ```
 * Fix progress form buttons disabled when JCAgent install fails
 * Fix issue with JCUsername that have a localUsername where progress form GUI get's stuck during migration when AutoBind is selected
+* Fix issue with MTP selection popups when migrating a user that belongs to an MTP
 ```
 ## 2.7.8
 
