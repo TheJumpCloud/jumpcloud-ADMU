@@ -1909,6 +1909,7 @@ Function Start-Migration {
             if ($inputObject.JumpCloudAPIKey) {
                 $JumpCloudAPIKey = $inputObject.JumpCloudAPIKey
                 $JumpCloudOrgID = $inputObject.JumpCloudOrgID
+                $ValidatedJumpCloudOrgID = $inputObject.JumpCloudOrgID
             }
             $InstallJCAgent = $inputObject.InstallJCAgent
             $AutobindJCUser = $inputObject.AutobindJCUser
