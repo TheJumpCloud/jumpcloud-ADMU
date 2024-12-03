@@ -1,14 +1,18 @@
 ## 2.7.9
 
-Release Date: November 7, 2024
+Release Date: November 21, 2024
 
 #### RELEASE NOTES
-
-This release removes 40 char API key validation
-
-#### Bug Fixes:
-
 ```
+* This release removes 40 char API key validation
+* When the migration fails during the account copy/merge processes, the tool would revert and remove the newly created account. We risk deleting user data once we do the account reversal in this step. To combat this, we have added a tracker to not remove the created account profile during account merge failure.
+* Remove unused .exe files
+```
+#### Bug Fixes:
+```
+* Fix progress form buttons disabled when JCAgent install fails
+* Fix issue with JCUsername that have a localUsername where progress form GUI get's stuck during migration when AutoBind is selected
+* Fix issue with MTP selection popups when migrating a user that belongs to an MTP
 ```
 ## 2.7.8
 

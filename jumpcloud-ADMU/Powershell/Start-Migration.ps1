@@ -1186,16 +1186,16 @@ function Test-JumpCloudUsername {
         # Search User should return 200 success
         If ($StatusCode -ne 200) {
             Write-ToLog -Message "JumpCloud username could not be found"
-            Return $false, $null, $null, $null
+            Return $false, $null, $null
         }
         If ($Results.totalCount -eq 1 -and $($Results.results[0].username) -eq $Username) {
             # write-host $Results.results[0]._id
             Write-ToLog -Message "Identified JumpCloud User`nUsername: $($Results.results[0].username)`nID: $($Results.results[0]._id)"
             if ($Results.results[0].SystemUsername) {
                 Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].SystemUsername)"
-                return $true, $Results.results[0]._id, $Results.results[0].username, $Results.results[0].SystemUsername
+                return $true, $Results.results[0]._id, $Results.results[0].SystemUsername
             } else {
-                return $true, $Results.results[0]._id, $Results.results[0].username, $null
+                return $true, $Results.results[0]._id, $null
             }
 
 
@@ -1205,7 +1205,7 @@ function Test-JumpCloudUsername {
                 $wshell = New-Object -ComObject Wscript.Shell
                 $var = $wshell.Popup("$message", 0, "ADMU Status", 0x0 + 0x40)
             }
-            Return $false, $null, $null, $null
+            Return $false, $null, $null
         }
     }
 }
@@ -1899,43 +1899,31 @@ Function Start-Migration {
             $profileSize = Get-ProfileSize -profilePath $oldUserProfileImagePath
 
             $JumpCloudUserName = $inputObject.JumpCloudUserName
-            $TempPassword = $inputObject.TempPassword
-
-            # Make $progressbar global
-            # Write to progress bar
-            $Progressbar = New-ProgressForm
-            $script:Progressbar = $Progressbar
 
 
-            Write-ToProgress -form $isForm -ProgressBar $Progressbar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath # TODO: Old or New Profile Path?
+
 
             if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
                 $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
             }
             if ($inputObject.JumpCloudAPIKey) {
                 $JumpCloudAPIKey = $inputObject.JumpCloudAPIKey
+                $JumpCloudOrgID = $inputObject.JumpCloudOrgID
                 $ValidatedJumpCloudOrgID = $inputObject.JumpCloudOrgID
             }
             $InstallJCAgent = $inputObject.InstallJCAgent
             $AutobindJCUser = $inputObject.AutobindJCUser
 
-            if ($AutoBindJCUser -eq $true) {
-                # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
-                $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $ValidatedJumpCloudOrgID -Username $JumpCloudUserName
-                # Write to log all variables above
-                Write-ToLog -Message:("Test-JumpCloudUsername Results:`nUserFound: $($ret)`nJumpCloudUserName: $($JumpCloudUserName)`nJumpCloudUserId: $($JumpCloudUserId)`nJumpCloudsystemUserName: $($JumpCloudsystemUserName)")
-
-                if ($JumpCloudsystemUserName) {
-                    $JumpCloudUsername = $JumpCloudsystemUserName
-                }
-                if ($ret -eq $false) {
-                    Write-toLog ("The specified JumpCloudUsername does not exist")
-                    break
-                }
-            }
-
+            # Validate JumpCloudsystemUserName to write to the GUI
+            $ret, $JumpCloudUserId, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+            $TempPassword = $inputObject.TempPassword
+            Write-ToLog -Message:("Test-JumpCloudUsername Results:`nUserFound: $($ret)`nJumpCloudUserName: $($JumpCloudUserName)`nJumpCloudUserId: $($JumpCloudUserId)`nJumpCloudsystemUserName: $($JumpCloudsystemUserName)")
+            # Write to progress bar
+            $script:Progressbar = New-ProgressForm
             if ($JumpCloudsystemUserName) {
-                $JumpCloudUserName = $JumpCloudsystemUserName
+                Write-ToProgress -form $isForm -ProgressBar $Progressbar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudsystemUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath
+            } else {
+                Write-ToProgress -form $isForm -ProgressBar $Progressbar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath
             }
 
             $BindAsAdmin = $inputObject.BindAsAdmin
@@ -1963,18 +1951,23 @@ Function Start-Migration {
         if ($AutobindJCUser) {
             if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
                 # Validate Org/ APIKEY & Return OrgID
-                $ValidatedJumpCloudOrgID = (Get-mtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)[0]
-                If (-Not $ValidatedJumpCloudOrgID) {
-                    Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
-                    break
+                # If not $isForm, validate the API Key and OrgID
+                if (!$isForm) {
+                    $ValidatedJumpCloudOrgID = (Get-mtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)[0]
+                    If (-Not $ValidatedJumpCloudOrgID) {
+                        Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
+                        break
+                    }
                 }
             } elseif ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
                 # Attempt To Validate Org/ APIKEY & Return OrgID
                 # Error thrown in Get-mtpOrganization if MTPKEY
-                $ValidatedJumpCloudOrgID = (Get-mtpOrganization -apiKey $JumpCloudAPIKey -inputType)[0]
-                If (-Not $ValidatedJumpCloudOrgID) {
-                    Throw [System.Management.Automation.ValidationMetadataException] "ORG ID Could not be validated"
-                    break
+                if (!$isForm) {
+                    $ValidatedJumpCloudOrgID = (Get-mtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)[0]
+                    If (-Not $ValidatedJumpCloudOrgID) {
+                        Throw [System.Management.Automation.ValidationMetadataException] "ORG ID Could not be validated"
+                        break
+                    }
                 }
             } elseif ((([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
                 # Throw Error
@@ -1986,7 +1979,7 @@ Function Start-Migration {
                 break
             }
             # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
-            $ret, $JumpCloudUserId, $JumpCloudUsername, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+            $ret, $JumpCloudUserId, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
             # Write to log all variables above
             Write-ToLog -Message:("JumpCloudUserName: $($JumpCloudUserName), JumpCloudsystemUserName = $($JumpCloudsystemUserName)")
 
@@ -2013,7 +2006,7 @@ Function Start-Migration {
 
 
         Write-ToLog -Message:("Bind as admin = $($BindAsAdmin)")
-
+        $trackAccountMerge = $false
         # Track migration steps
         $admuTracker = [Ordered]@{
             backupOldUserReg              = @{'pass' = $false; 'fail' = $false }
@@ -2085,6 +2078,7 @@ Function Start-Migration {
                 Write-ToLog -Message:("JumpCloud Agent Install Done") -Level Verbose
             } else {
                 Write-ToLog -Message:("JumpCloud Agent Install Failed") -Level Error
+                Write-ToProgress -ProgressBar $Progressbar -Status "JC Agent Install failed " -form $isForm -logLevel Error
                 exit
             }
         } elseif ($InstallJCAgent -eq $true -and ($AgentService)) {
@@ -2247,11 +2241,12 @@ Function Start-Migration {
             } catch {
                 Write-ToLog -Message("Could not unload registry hives before copy steps: Exiting...")
                 Write-AdmuErrorMessage -ErrorName "load_unload_error"
+                # Todo: Do not delete the user if the registry copy fails
                 $admuTracker.loadBeforeCopyRegistry.fail = $true
                 break
             }
             $admuTracker.loadBeforeCopyRegistry.pass = $true
-
+            ### Merge Selected User Profile to New User Profile
             reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
             if ($?) {
                 Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/NTUSER.DAT.BAK" + ' To: ' + "$oldUserProfileImagePath/NTUSER.DAT.BAK")
@@ -2699,6 +2694,7 @@ Function Start-Migration {
 
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUsername + '.' + $NetBiosName)
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
+            $trackAccountMerge = $true
             # logging
             Write-ToLog -Message:('New User Profile Path: ' + $newUserProfileImagePath + ' New User SID: ' + $NewUserSID)
             Write-ToLog -Message:('Old User Profile Path: ' + $oldUserProfileImagePath + ' Old User SID: ' + $SelectedUserSID)
@@ -2963,8 +2959,12 @@ Function Start-Migration {
                         'newUserInit' {
                             Write-ToLog -Message:("Attempting to revert $($trackedStep) steps") -Level Verbose
                             try {
-                                Remove-LocalUserProfile -username $JumpCloudUserName
-                                Write-ToLog -Message:("User: $JumpCloudUserName was successfully removed from the local system") -Level Verbose
+                                if ($trackAccountMerge -eq $false) {
+                                    Remove-LocalUserProfile -username $JumpCloudUserName
+                                    Write-ToLog -Message:("User: $JumpCloudUserName was successfully removed from the local system") -Level Verbose
+                                } else {
+                                    Write-ToLog -Message:("User: $JumpCloudUserName was not removed from the local system") -Level Verbose
+                                }
                             } catch {
                                 Write-ToLog -Message:("Could not remove the $JumpCloudUserName profile and user account") -Level Error
                             }
