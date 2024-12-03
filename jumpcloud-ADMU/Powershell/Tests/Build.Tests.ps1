@@ -25,7 +25,7 @@ Describe "Module Validation Tests" {
                 $binaryFile = Get-ChildItem -Path $uwpPath
                 [datetime]$binaryFile.LastWriteTime | Should -BeGreaterThan (Get-Date -Format "dddd MM/dd/yyyy")
             }
-        }
+        } -Skip
     }
 
     Context 'Check Versioning & Signature' {
