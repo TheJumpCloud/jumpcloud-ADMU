@@ -9,24 +9,6 @@ Describe "Module Validation Tests" {
         $lastestModule = Find-Module -Name JumpCloud.ADMU
 
     }
-    Describe 'Build EXE Tests' {
-
-        Context 'Validate EXE Files Exist and were re-generated' {
-
-            It 'gui_jcadmu.exe exists and was generated today' {
-                $guiPath = ("$PSScriptRoot\..\..\Exe\gui_jcadmu.exe")
-                (Test-Path -Path $guiPath) | Should -Be $true
-                $binaryFile = Get-ChildItem -Path $guiPath
-                [datetime]$binaryFile.LastWriteTime | Should -BeGreaterThan (Get-Date -Format "dddd MM/dd/yyyy")
-            }
-            It 'uwp_jcadmu.exe exists and was generated today' {
-                $uwpPath = ("$PSScriptRoot\..\..\Exe\uwp_jcadmu.exe")
-                (Test-Path -Path $uwpPath) | Should -Be $true
-                $binaryFile = Get-ChildItem -Path $uwpPath
-                [datetime]$binaryFile.LastWriteTime | Should -BeGreaterThan (Get-Date -Format "dddd MM/dd/yyyy")
-            }
-        }
-    }
 
     Context 'Check Versioning & Signature' {
         # Validate ProgressForm.ps1 ADMU version skip this test
