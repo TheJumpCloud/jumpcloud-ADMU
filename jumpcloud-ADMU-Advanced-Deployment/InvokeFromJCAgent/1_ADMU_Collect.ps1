@@ -44,16 +44,11 @@ function Get-ADMUSystemsForMigration {
         } else {
             $systems = Get-JCSystem -os windows
         }
-        # if ($systemID) {
-        # } else {
-        # $systems = Get-JCSystem -os "windows"
-        # }
         $list = New-Object System.Collections.ArrayList
 
     }
     process {
         foreach ($system in $systems) {
-            # if ($system.domainInfo.partOfDomain) {
             $users = Get-JCsdkSystemInsightUser -Filter @("system_id:eq:$($system.id)")
             # get the administrator account:
             $adminUser = $users | Where-Object { $_.uid -eq 500 }
@@ -73,8 +68,6 @@ function Get-ADMUSystemsForMigration {
                     }
                 ) | Out-Null
             }
-            # }
-
         }
     }
     end {
