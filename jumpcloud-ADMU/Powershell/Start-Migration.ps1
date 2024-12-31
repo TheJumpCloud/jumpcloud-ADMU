@@ -1745,6 +1745,12 @@ function Write-AdmuErrorMessage {
 
             $Script:ErrorMessage = "User Creation Error. Click the link below for troubleshooting information."
         }
+        "user_folder_error" {
+            Write-ToLog -Message:("User Folder Error: The user's main folders are not default and are redirected. Verify that the user's main folders path are default and not redirected to another path (ie. Network Drive). Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
+
+            $Script:ErrorMessage = "User Folder Error. Click the link below for troubleshooting information."
+        }
+
         Default {
             Write-ToLog -Message:("Error occured, please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
 
@@ -1847,6 +1853,72 @@ function Get-DomainStatus {
     # Return both statuses
     return $AzureADStatus, $LocalDomainStatus
 }
+
+# Function to validate that the user main folders are default and not redirected
+function Test-UserFolder {
+    param (
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $UserSid
+    )
+    if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
+        Write-ToLog "Mounting HKEY_USERS"
+        New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
+    }
+    $UserFolders = @( "Desktop", "Documents", "Downloads", "Favorites", "Music", "Pictures", "Videos" )
+# Support doc for personal folders: https://support.microsoft.com/en-us/topic/operation-to-change-a-personal-folder-location-fails-in-windows-ffb95139-6dbb-821d-27ec-62c9aaccd720
+    $regFoldersPath = "HKEY_USERS:\$($usersid)\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+    if (Test-Path -Path $regFoldersPath) {
+        # Save all the boolean to a hash table
+        foreach ($userFolder in $UserFolders) {
+            switch ($userFolder) {
+                "Desktop" {
+                    $folder = "Desktop"
+                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\$($folder)$"
+                }
+                "Documents" {
+                    $folder = "Personal"
+                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\Documents$"
+                }
+                "Downloads" {
+                    $folder = "{374DE290-123F-4565-9164-39C4925E467B}"
+                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\Downloads$"
+                }
+                "Favorites" {
+                    $folder = "Favorites"
+                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\Favorites$"
+                }
+                "Music" {
+                    $folder = "My Music"
+                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\Music$"
+                }
+                "Pictures" {
+                    $folder = "My Pictures"
+                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\Pictures$"
+                }
+                "Videos" {
+                    $folder = "My Video"
+                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\Videos$"
+                }
+            }
+            $folderValue = Get-ItemPropertyValue -Path $regFoldersPath -Name $folder
+
+            if ($folderValue -notmatch $regex) {
+                Write-ToLog -Message:("User Shell Folder: $($folder) does not have the default path") -Level Error
+                #TODO: Add error message to the list
+                Write-AdmuErrorMessage -ErrorName "user_folder_error"
+                return $false
+            } else {
+                Write-ToLog -Message:("User Shell Folder: $($folder) has default path") -Level verbose
+                #return $true
+            }
+        }
+        Return $true
+    } else {
+        Write-ToLog -Message:("User Shell Folders not found for user: $($usersid)") -Level Error
+        return $false
+    }
+}
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
     Param (
@@ -1884,7 +1956,6 @@ Function Start-Migration {
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
         $admuVersion = '2.7.9'
-
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
 
@@ -1934,6 +2005,11 @@ Function Start-Migration {
             $useragent = "JumpCloud_ADMU.Powershell/$($admuVersion)"
             Write-ToLog -Message:("UserAgent: $useragent")
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
+            # Validate the user folders are default and not redirected
+            $userFolderTest = Test-UserFolder -UserSid $SelectedUserSid
+            if (-not $userFolderTest) {
+                throw "User folders are not default and not redirected"
+            }
         }
 
 
