@@ -1912,7 +1912,7 @@ function Test-UserFolderRedirect {
                     Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue) does not match default path  - $($defaultRegFolder)") -Level Error
                     $isFolderRedirected = $false
                 } else {
-                    Write-ToLog -Message:("User Shell Folder: $($userFolder) is default") -Level Verbose
+                    Write-ToLog -Message:("User Shell Folder: $($userFolder) is default")
                 }
             }
         } else {

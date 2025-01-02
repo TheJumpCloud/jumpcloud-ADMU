@@ -719,19 +719,19 @@ Describe 'Functions' {
         }
         # Test for Test-UserFolderRedirect should be default values
         It 'Test-UserFolderRedirect - Default values' {
-            $folderRedirect = Test-UserFolderRedirect -SID $currentSID
+            $folderRedirect = Test-UserFolderRedirect -UserSid $currentSID
             $folderRedirect | Should -Be $true
         }
         # Test for Test-UserFolderRedirect with one of the folder redirect values changed
         It 'Test-UserFolderRedirect - One value changed' {
             # Change the value of the folder Desktop to a different value
             Set-ValueToKey -registryRoot LocalMachine -keyPath "HKEY_USERS:$($currentSID)\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -name "Desktop" -value "\\server\share\desktop"
-            $folderRedirect = Test-UserFolderRedirect -SID $currentSID
+            $folderRedirect = Test-UserFolderRedirect -UserSid $currentSID
             $folderRedirect | Should -Be $false
         }
         # Test for Invalid SID or Invalid User Shell Folder
         It 'Test-UserFolderRedirect - Invalid SID or Invalid User Shell Folder' {
-            $folderRedirect = Test-UserFolderRedirect -SID "Invalid-3361044348-30300820-1001"
+            $folderRedirect = Test-UserFolderRedirect -UserSid "Invalid-3361044348-30300820-1001"
             $folderRedirect | Should -Be $false
         }
     }
