@@ -750,7 +750,9 @@ Function Test-UserRegistryLoadState {
         # User Security Identifier
         [Parameter(Mandatory = $true)]
         [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
-        [System.String]$UserSid
+        [System.String]$UserSid,
+        [Parameter(Mandatory = $false)]
+        [bool]$ValidateFolder
     )
     begin {
         $results = REG QUERY HKU *>&1
@@ -770,7 +772,11 @@ Function Test-UserRegistryLoadState {
         try {
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
-            $isFolderRedirect = Test-UserFolderRedirect -UserSid $UserSid
+            if ($ValidateFolder) {
+                $isFolderRedirect = Test-UserFolderRedirect -UserSid $UserSid
+            } else {
+                Write-ToLog "Skipping User Shell Folder Validation..."
+            }
         } catch {
             Write-AdmuErrorMessage -Error:("load_unload_error")
             Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
@@ -798,9 +804,11 @@ Function Test-UserRegistryLoadState {
             }
         }
         # If isFolderRedirect is false throw error
-        if (!$isFolderRedirect) {
+        if (!$isFolderRedirect -and $ValidateFolder) {
             Write-AdmuErrorMessage -Error:("user_folder_error")
             throw "Main user folders are redirected, exiting..."
+        } elseif ($ValidateFolder -eq $false) {
+            Write-ToLog "Skipping User Shell Folder Validation..."
         } else {
             Write-ToLog "Main user folders are default for Usersid: $($UserSid), continuing..."
         }
@@ -1941,6 +1949,7 @@ Function Start-Migration {
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][string]$JumpCloudAPIKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(24, 24)][string]$JumpCloudOrgID,
+        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ValidateUserShellFolder = $true,
         [Parameter(ParameterSetName = "form")][Object]$inputObject)
 
     Begin {
@@ -2251,8 +2260,8 @@ Function Start-Migration {
 
             Write-ToLog -Message:('Verifying registry files can be loaded and unloaded')
             try {
-                Test-UserRegistryLoadState -ProfilePath $newUserProfileImagePath -UserSid $newUserSid
-                Test-UserRegistryLoadState -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
+                Test-UserRegistryLoadState -ProfilePath $newUserProfileImagePath -UserSid $newUserSid -ValidateFolder $ValidateUserShellFolder
+                Test-UserRegistryLoadState -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID -ValidateFolder $ValidateUserShellFolder
             } catch {
                 Write-ToLog -Message:('Could not load and unload registry of migration user during Test-UserRegistryLoadState, exiting') -level Warn
                 $admuTracker.testRegLoadUnload.fail = $true

@@ -713,23 +713,29 @@ Describe 'Functions' {
     # Test for Test-UserFolderRedirect
     Context 'Validates that the User shell folder for default values' {
         BeforeAll {
-            $currentSID = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
-            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
-                Write-ToLog "Mounting HKEY_USERS"
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
+            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }
+            #$currentSID = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
+            $newUser = "ADMU_User" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $password = '$T#st1234'
+            InitUser -UserName $newUser -Password $Password
+
+            $userSid = Test-UsernameOrSID -usernameOrSid $newUser
+            # Load the registry hive for the user and add _admu after the sid
+            REG LOAD HKU\$($userSid)_admu "C:\Users\$newUser\NTUSER.DAT" *>&1
         }
         # Test for Test-UserFolderRedirect should be default values
         It 'Test-UserFolderRedirect - Default values' {
-            $folderRedirect = Test-UserFolderRedirect -UserSid $currentSID
+            $folderRedirect = Test-UserFolderRedirect -UserSid $userSid
             $folderRedirect | Should -Be $true
         }
         # Test for Test-UserFolderRedirect with one of the folder redirect values changed
         It 'Test-UserFolderRedirect - One value changed' {
             # Change the value of the folder Desktop to a different value
-            $folderPath = "HKEY_USERS:\$($currentSID)\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+            $folderPath = "HKEY_USERS:\$($userSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
             Set-ItemProperty -Path $folderpath -Name Desktop -Value "\\server\share\desktop"
-            {Test-UserFolderRedirect -UserSid $currentSID} | Should -Throw
+            {Test-UserFolderRedirect -UserSid $userSid} | Should -Throw
             # Change the value of the folder Desktop back to the default value
             Set-ItemProperty -Path $folderpath -Name Desktop -Value "%USERPROFILE%\Desktop"
 
