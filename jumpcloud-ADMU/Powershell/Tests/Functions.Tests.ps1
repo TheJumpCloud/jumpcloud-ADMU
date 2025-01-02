@@ -713,9 +713,11 @@ Describe 'Functions' {
     # Test for Test-UserFolderRedirect
     Context 'Validates that the User shell folder for default values' {
         BeforeAll {
-            $currentUser = $(whoami) -replace "$(hostname)\\", ("")
-            $currentSID = Get-SID -User:($currentUser)
-            $currentSID | Should -Match "^S-\d-\d+-(\d+-){1,14}\d+$"
+            $currentSID = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
+            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
+                Write-ToLog "Mounting HKEY_USERS"
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
+            }
         }
         # Test for Test-UserFolderRedirect should be default values
         It 'Test-UserFolderRedirect - Default values' {
@@ -725,14 +727,16 @@ Describe 'Functions' {
         # Test for Test-UserFolderRedirect with one of the folder redirect values changed
         It 'Test-UserFolderRedirect - One value changed' {
             # Change the value of the folder Desktop to a different value
-            Set-ValueToKey -registryRoot LocalMachine -keyPath "HKEY_USERS:$($currentSID)\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders" -name "Desktop" -value "\\server\share\desktop"
-            $folderRedirect = Test-UserFolderRedirect -UserSid $currentSID
-            $folderRedirect | Should -Be $false
+            $folderPath = "HKEY_USERS:\$($currentSID)\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+            Set-ItemProperty -Path $folderpath -Name Desktop -Value "\\server\share\desktop"
+            {Test-UserFolderRedirect -UserSid $currentSID} | Should -Throw
+            # Change the value of the folder Desktop back to the default value
+            Set-ItemProperty -Path $folderpath -Name Desktop -Value "%USERPROFILE%\Desktop"
+
         }
         # Test for Invalid SID or Invalid User Shell Folder
         It 'Test-UserFolderRedirect - Invalid SID or Invalid User Shell Folder' {
-            $folderRedirect = Test-UserFolderRedirect -UserSid "Invalid-3361044348-30300820-1001"
-            $folderRedirect | Should -Be $false
+            {Test-UserFolderRedirect -UserSid "Invalid-3361044348-30300820-1001"} | Should -Throw
         }
     }
 }
