@@ -767,16 +767,14 @@ Function Test-UserRegistryLoadState {
         }
     }
     process {
-        # Load New User Profile Registry Keys
         try {
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
+            $folderRedirect = Test-UserFolderRedirect -UserSid $UserSid
         } catch {
             Write-AdmuErrorMessage -Error:("load_unload_error")
             Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
         }
-        # Load Selected User Profile Keys
-        # Unload "Selected" and "NewUser"
         try {
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
@@ -798,6 +796,13 @@ Function Test-UserRegistryLoadState {
                 Write-AdmuErrorMessage -Error:("load_unload_error")
                 throw "Registry Keys are still loaded after Test-UserRegistryLoadState Testing Exiting..."
             }
+        }
+        # If folderRedirect is false throw error
+        if (!$folderRedirect) {
+            Write-AdmuErrorMessage -Error:("user_folder_error")
+            throw "Main user folders are redirected, exiting..."
+        } else {
+            Write-ToLog "Main user folders are default for Usersid: $($UserSid), continuing..."
         }
     }
 }
@@ -1746,8 +1751,7 @@ function Write-AdmuErrorMessage {
             $Script:ErrorMessage = "User Creation Error. Click the link below for troubleshooting information."
         }
         "user_folder_error" {
-            Write-ToLog -Message:("User Folder Error: The user's main folders are not default and are redirected. Verify that the user's main folders path are default and not redirected to another path (ie. Network Drive). Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
-
+            Write-ToLog -Message:("User Folder Error: One of the user's main folder (Desktop, Downloads, Documents, Favorites, Pictures, Videos, Music) path is redirected. Verify that the user's main folders path are default and not redirected to another path (ie. Network Drive). Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
             $Script:ErrorMessage = "User Folder Error. Click the link below for troubleshooting information."
         }
 
@@ -1855,68 +1859,69 @@ function Get-DomainStatus {
 }
 
 # Function to validate that the user main folders are default and not redirected
-function Test-UserFolder {
+function Test-UserFolderRedirect {
     param (
         [Parameter(Mandatory = $true)]
         [System.String]
         $UserSid
     )
-    if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
-        Write-ToLog "Mounting HKEY_USERS"
-        New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
-    }
-    $UserFolders = @( "Desktop", "Documents", "Downloads", "Favorites", "Music", "Pictures", "Videos" )
-# Support doc for personal folders: https://support.microsoft.com/en-us/topic/operation-to-change-a-personal-folder-location-fails-in-windows-ffb95139-6dbb-821d-27ec-62c9aaccd720
-    $regFoldersPath = "HKEY_USERS:\$($usersid)\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
-    if (Test-Path -Path $regFoldersPath) {
-        # Save all the boolean to a hash table
-        foreach ($userFolder in $UserFolders) {
-            switch ($userFolder) {
-                "Desktop" {
-                    $folder = "Desktop"
-                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\$($folder)$"
-                }
-                "Documents" {
-                    $folder = "Personal"
-                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\Documents$"
-                }
-                "Downloads" {
-                    $folder = "{374DE290-123F-4565-9164-39C4925E467B}"
-                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\Downloads$"
-                }
-                "Favorites" {
-                    $folder = "Favorites"
-                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\Favorites$"
-                }
-                "Music" {
-                    $folder = "My Music"
-                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\Music$"
-                }
-                "Pictures" {
-                    $folder = "My Pictures"
-                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\Pictures$"
-                }
-                "Videos" {
-                    $folder = "My Video"
-                    $regex = "^[A-Z]:\\Users\\[a-zA-Z0-9]+\\Videos$"
-                }
-            }
-            $folderValue = Get-ItemPropertyValue -Path $regFoldersPath -Name $folder
-
-            if ($folderValue -notmatch $regex) {
-                Write-ToLog -Message:("User Shell Folder: $($folder) does not have the default path") -Level Error
-                #TODO: Add error message to the list
-                Write-AdmuErrorMessage -ErrorName "user_folder_error"
-                return $false
-            } else {
-                Write-ToLog -Message:("User Shell Folder: $($folder) has default path") -Level verbose
-                #return $true
-            }
+    begin {
+        $isFolderRedirected = $true
+        if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
+            Write-ToLog "Mounting HKEY_USERS"
+            New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
         }
-        Return $true
-    } else {
-        Write-ToLog -Message:("User Shell Folders not found for user: $($usersid)") -Level Error
-        return $false
+        $UserFolders = @( "Desktop", "Documents", "Downloads", "Favorites", "Music", "Pictures", "Videos" )
+        # Support doc for personal folders: https://support.microsoft.com/en-us/topic/operation-to-change-a-personal-folder-location-fails-in-windows-ffb95139-6dbb-821d-27ec-62c9aaccd720
+        $regFoldersPath = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+        Write-ToLog -Message:("Checking User Shell Folders for USERSID: $($UserSid)")
+    }
+    process {
+
+        if (Test-Path -Path $regFoldersPath) {
+            # Save all the boolean to a hash table
+            foreach ($userFolder in $UserFolders) {
+                switch ($userFolder) {
+                    "Desktop" {
+                        $folderRegKey = "Desktop"
+                    }
+                    "Documents" {
+                        $folderRegKey  = "Personal"
+                    }
+                    "Downloads" {
+                        $folderRegKey  = "{374DE290-123F-4565-9164-39C4925E467B}"
+                    }
+                    "Favorites" {
+                        $folderRegKey  = "Favorites"
+                    }
+                    "Music" {
+                        $folderRegKey  = "My Music"
+                    }
+                    "Pictures" {
+                        $folderRegKey  = "My Pictures"
+                    }
+                    "Videos" {
+                        $folderRegKey  = "My Video"
+                    }
+                }
+
+                $folderRegKeyValue = (Get-Item -path $regFoldersPath ).GetValue($folderRegKey , '', 'DoNotExpandEnvironmentNames')
+                $defaultRegFolder = "%USERPROFILE%\$userFolder"
+
+                if ($folderRegKeyValue -ne $defaultRegFolder) {
+                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue) does not match default path  - $($defaultRegFolder)") -Level Error
+                    $isFolderRedirected = $false
+                } else {
+                    Write-ToLog -Message:("User Shell Folder: $($userFolder) is default") -Level Verbose
+                }
+            }
+        } else {
+            Write-ToLog -Message:("User Shell registry folders not found in registry") -Level Error
+            $isFolderRedirected = $false
+        }
+    }
+    end {
+        return $isFolderRedirected
     }
 }
 Function Start-Migration {
@@ -1970,10 +1975,6 @@ Function Start-Migration {
             $profileSize = Get-ProfileSize -profilePath $oldUserProfileImagePath
 
             $JumpCloudUserName = $inputObject.JumpCloudUserName
-
-
-
-
             if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
                 $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
             }
@@ -2003,13 +2004,7 @@ Function Start-Migration {
             $UpdateHomePath = $inputObject.UpdateHomePath
         } else {
             $useragent = "JumpCloud_ADMU.Powershell/$($admuVersion)"
-            Write-ToLog -Message:("UserAgent: $useragent")
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
-            # Validate the user folders are default and not redirected
-            $userFolderTest = Test-UserFolder -UserSid $SelectedUserSid
-            if (-not $userFolderTest) {
-                throw "User folders are not default and not redirected"
-            }
         }
 
 
