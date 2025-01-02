@@ -770,7 +770,7 @@ Function Test-UserRegistryLoadState {
         try {
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
-            $folderRedirect = Test-UserFolderRedirect -UserSid $UserSid
+            $isFolderRedirect = Test-UserFolderRedirect -UserSid $UserSid
         } catch {
             Write-AdmuErrorMessage -Error:("load_unload_error")
             Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
@@ -797,8 +797,8 @@ Function Test-UserRegistryLoadState {
                 throw "Registry Keys are still loaded after Test-UserRegistryLoadState Testing Exiting..."
             }
         }
-        # If folderRedirect is false throw error
-        if (!$folderRedirect) {
+        # If isFolderRedirect is false throw error
+        if (!$isFolderRedirect) {
             Write-AdmuErrorMessage -Error:("user_folder_error")
             throw "Main user folders are redirected, exiting..."
         } else {
