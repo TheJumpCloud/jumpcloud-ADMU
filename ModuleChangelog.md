@@ -1,3 +1,15 @@
+## 2.7.10
+
+Release Date: January 3, 2025
+
+#### RELEASE NOTES
+```
+* This release prevents ADMU from migrating if one of the main user folders (Desktop, Downloads, Documents, Pictures, Music, Videos, Favorites) are redirected to network shared path
+```
+#### Bug Fixes:
+```
+* Fix issue when migrating a user with one of their main user folders are redirected to a network path. ADMU will now throw an error and prevent migration if any of the primary user folders (Desktop, Downloads, Documents, Pictures, Music, Videos, Favorites) are redirected to network shared path
+```
 ## 2.7.9
 
 Release Date: November 21, 2024

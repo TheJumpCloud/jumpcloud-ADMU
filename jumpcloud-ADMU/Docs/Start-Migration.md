@@ -14,16 +14,19 @@ Starts the JumpCloud Active Directory Migration process.
 ## SYNTAX
 
 ### cmd
+
 ```
 Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPassword <String>
  [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
  [-AutobindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-SetDefaultWindowsUser <Boolean>]
- [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>] [<CommonParameters>]
+ [-AdminDebug <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>]
+ [-ValidateUserShellFolder <Boolean>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
 ### form
+
 ```
-Start-Migration [-inputObject <Object>] [<CommonParameters>]
+Start-Migration [-inputObject <Object>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -259,7 +262,40 @@ Accept wildcard characters: False
 ```
 
 ### -SetDefaultWindowsUser
-Option to set the windows default login user to the migrated user post-migration. This parameter is not required and will default to $true (the next login window user will be the migrated user). Set to $false if you'd like to disable this functionality during migration. 
+
+Option to set the windows default login user to the migrated user post-migration. This parameter is not required and will default to $true (the next login window user will be the migrated user). Set to $false if you'd like to disable this functionality during migration.
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -AdminDebug
+
+Option to display detailed messages during migration. This parameter is optional, but if set to $true, the CLI will show verbose output during the migration process
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ValidateUserShellFolder
+
+Option to bypass User Shell Folder validation. When set to `$false`, the migration will not verify whether folders (Desktop, Downloads, Documents, Videos, Pictures, Music, Favorites) are redirected to another location, such as a network shared folder (e.g., `\\192.168.50.78\SharedFolder\USERNAME\Desktop`). Use this parameter with caution. After migration, the user may encounter a shared folder error and will need to provide account credentials to restore their shared folders
 
 ```yaml
 Type: System.Boolean
@@ -274,14 +310,17 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### None
+
 ## OUTPUTS
 
 ### System.Object
+
 ## NOTES
 
 ## RELATED LINKS

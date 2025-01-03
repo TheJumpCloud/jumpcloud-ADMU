@@ -750,7 +750,9 @@ Function Test-UserRegistryLoadState {
         # User Security Identifier
         [Parameter(Mandatory = $true)]
         [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
-        [System.String]$UserSid
+        [System.String]$UserSid,
+        [Parameter(Mandatory = $false)]
+        [bool]$ValidateDirectory
     )
     begin {
         $results = REG QUERY HKU *>&1
@@ -767,16 +769,19 @@ Function Test-UserRegistryLoadState {
         }
     }
     process {
-        # Load New User Profile Registry Keys
         try {
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
+            if ($ValidateDirectory) {
+                # return boolean for redirected user directories
+                $isFolderRedirect = Test-UserFolderRedirect -UserSid $UserSid
+            } else {
+                Write-ToLog "Skipping User Shell Folder Validation..."
+            }
         } catch {
             Write-AdmuErrorMessage -Error:("load_unload_error")
             Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
         }
-        # Load Selected User Profile Keys
-        # Unload "Selected" and "NewUser"
         try {
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
@@ -798,6 +803,15 @@ Function Test-UserRegistryLoadState {
                 Write-AdmuErrorMessage -Error:("load_unload_error")
                 throw "Registry Keys are still loaded after Test-UserRegistryLoadState Testing Exiting..."
             }
+        }
+        # If isFolderRedirect is false throw error
+        if ($isFolderRedirect -and $ValidateDirectory) {
+            Write-AdmuErrorMessage -Error:("user_folder_redirection_error")
+            throw "Main user folders are redirected, exiting..."
+        } elseif ($ValidateDirectory -eq $false) {
+            Write-ToLog "Skipping User Shell Folder Validation..."
+        } else {
+            Write-ToLog "Main user folders are default for Usersid: $($UserSid), continuing..."
         }
     }
 }
@@ -1745,6 +1759,10 @@ function Write-AdmuErrorMessage {
 
             $Script:ErrorMessage = "User Creation Error. Click the link below for troubleshooting information."
         }
+        "user_folder_redirection_error" {
+            Write-ToLog -Message:("User Folder Redirection Error: One of the user's main folder (Desktop, Downloads, Documents, Favorites, Pictures, Videos, Music) path is redirected. Verify that the user's main folders path are set to default and not redirected to another path (ie. Network Drive). Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
+            $Script:ErrorMessage = "User Folder Redirection Error. Click the link below for troubleshooting information."
+        }
         Default {
             Write-ToLog -Message:("Error occured, please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Error
 
@@ -1847,6 +1865,74 @@ function Get-DomainStatus {
     # Return both statuses
     return $AzureADStatus, $LocalDomainStatus
 }
+
+# Function to validate that the user main folders are default and not redirected
+function Test-UserFolderRedirect {
+    param (
+        [Parameter(Mandatory = $true)]
+        [System.String]
+        $UserSid
+    )
+    begin {
+        if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
+            Write-ToLog "Mounting HKEY_USERS"
+            New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
+        }
+        $UserFolders = @( "Desktop", "Documents", "Downloads", "Favorites", "Music", "Pictures", "Videos" )
+        # Support doc for personal folders: https://support.microsoft.com/en-us/topic/operation-to-change-a-personal-folder-location-fails-in-windows-ffb95139-6dbb-821d-27ec-62c9aaccd720
+        $regFoldersPath = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+        Write-ToLog -Message:("Checking User Shell Folders for USERSID: $($UserSid)")
+    }
+    process {
+
+        if (Test-Path -Path $regFoldersPath) {
+            $redirectedDirectory = $false
+            # Save all the boolean to a hash table
+            foreach ($userFolder in $UserFolders) {
+                switch ($userFolder) {
+                    "Desktop" {
+                        $folderRegKey = "Desktop"
+                    }
+                    "Documents" {
+                        $folderRegKey  = "Personal"
+                    }
+                    "Downloads" {
+                        $folderRegKey  = "{374DE290-123F-4565-9164-39C4925E467B}"
+                    }
+                    "Favorites" {
+                        $folderRegKey  = "Favorites"
+                    }
+                    "Music" {
+                        $folderRegKey  = "My Music"
+                    }
+                    "Pictures" {
+                        $folderRegKey  = "My Pictures"
+                    }
+                    "Videos" {
+                        $folderRegKey  = "My Video"
+                    }
+                }
+                # Get the registry value for the user folder
+                $folderRegKeyValue = (Get-Item -path $regFoldersPath ).GetValue($folderRegKey , '', 'DoNotExpandEnvironmentNames')
+                $defaultRegFolder = "%USERPROFILE%\$userFolder"
+                # If the registry value does not match the default path, set redirectedDirectory to true and log the error
+                if ($folderRegKeyValue -ne $defaultRegFolder) {
+                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue) does not match default path  - $($defaultRegFolder)") -Level Error
+                    $redirectedDirectory = $true
+                } else {
+                    Write-ToLog -Message:("User Shell Folder: $($userFolder) is default")
+                }
+            }
+        } else {
+            # If the registry path does not exist, set redirectedDirectory to true and log the error
+            Write-ToLog -Message:("User Shell registry folders not found in registry") -Level Error
+            $redirectedDirectory = $true
+        }
+    }
+    end {
+        return $redirectedDirectory
+    }
+}
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
     Param (
@@ -1864,6 +1950,7 @@ Function Start-Migration {
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][string]$JumpCloudAPIKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(24, 24)][string]$JumpCloudOrgID,
+        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ValidateUserShellFolder = $true,
         [Parameter(ParameterSetName = "form")][Object]$inputObject)
 
     Begin {
@@ -1883,8 +1970,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.7.9'
-
+        $admuVersion = '2.7.10'
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
 
@@ -1899,10 +1985,6 @@ Function Start-Migration {
             $profileSize = Get-ProfileSize -profilePath $oldUserProfileImagePath
 
             $JumpCloudUserName = $inputObject.JumpCloudUserName
-
-
-
-
             if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
                 $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
             }
@@ -1932,7 +2014,6 @@ Function Start-Migration {
             $UpdateHomePath = $inputObject.UpdateHomePath
         } else {
             $useragent = "JumpCloud_ADMU.Powershell/$($admuVersion)"
-            Write-ToLog -Message:("UserAgent: $useragent")
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
         }
 
@@ -2180,8 +2261,8 @@ Function Start-Migration {
 
             Write-ToLog -Message:('Verifying registry files can be loaded and unloaded')
             try {
-                Test-UserRegistryLoadState -ProfilePath $newUserProfileImagePath -UserSid $newUserSid
-                Test-UserRegistryLoadState -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID
+                Test-UserRegistryLoadState -ProfilePath $newUserProfileImagePath -UserSid $newUserSid -ValidateDirectory $ValidateUserShellFolder
+                Test-UserRegistryLoadState -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID -ValidateDirectory $ValidateUserShellFolder
             } catch {
                 Write-ToLog -Message:('Could not load and unload registry of migration user during Test-UserRegistryLoadState, exiting') -level Warn
                 $admuTracker.testRegLoadUnload.fail = $true
