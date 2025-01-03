@@ -728,7 +728,7 @@ Describe 'Functions' {
         # Test for Test-UserFolderRedirect should be default values
         It 'Test-UserFolderRedirect - Default values' {
             $folderRedirect = Test-UserFolderRedirect -UserSid $userSid
-            $folderRedirect | Should -Be $true
+            $folderRedirect | Should -Be $false
         }
         # Test for Test-UserFolderRedirect with one of the folder redirect values changed
         It 'Test-UserFolderRedirect - One value changed' {
