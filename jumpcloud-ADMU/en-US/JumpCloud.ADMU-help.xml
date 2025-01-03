@@ -171,6 +171,30 @@
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>AdminDebug</maml:name>
+          <maml:description>
+            <maml:para>Option to display detailed messages during migration. This parameter is optional, but if set to $true, the CLI will show verbose output during the migration process</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ValidateUserShellFolder</maml:name>
+          <maml:description>
+            <maml:para>Option to bypass User Shell Folder validation. When set to `$false`, the migration will not verify whether folders (Desktop, Downloads, Documents, Videos, Pictures, Music, Favorites) are redirected to another location, such as a network shared folder (e.g., `\192.168.50.78\SharedFolder\USERNAME\Desktop`). Use this parameter with caution. After migration, the user may encounter a shared folder error and will need to provide account credentials to restore their shared folders</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
       </command:syntaxItem>
       <command:syntaxItem>
         <maml:name>Start-Migration</maml:name>
@@ -349,6 +373,30 @@
         <maml:name>SetDefaultWindowsUser</maml:name>
         <maml:description>
           <maml:para>Option to set the windows default login user to the migrated user post-migration. This parameter is not required and will default to $true (the next login window user will be the migrated user). Set to $false if you'd like to disable this functionality during migration.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>AdminDebug</maml:name>
+        <maml:description>
+          <maml:para>Option to display detailed messages during migration. This parameter is optional, but if set to $true, the CLI will show verbose output during the migration process</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ValidateUserShellFolder</maml:name>
+        <maml:description>
+          <maml:para>Option to bypass User Shell Folder validation. When set to `$false`, the migration will not verify whether folders (Desktop, Downloads, Documents, Videos, Pictures, Music, Favorites) are redirected to another location, such as a network shared folder (e.g., `\192.168.50.78\SharedFolder\USERNAME\Desktop`). Use this parameter with caution. After migration, the user may encounter a shared folder error and will need to provide account credentials to restore their shared folders</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>

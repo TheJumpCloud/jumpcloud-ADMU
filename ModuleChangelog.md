@@ -1,6 +1,6 @@
 ## 2.7.10
 
-Release Date: January 2, 2025
+Release Date: January 3, 2025
 
 #### RELEASE NOTES
 ```
