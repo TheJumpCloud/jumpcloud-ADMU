@@ -162,25 +162,6 @@ Describe 'Functions' {
         }
     }
 
-    Context 'DenyInteractiveLogonRight Function' -Skip {
-        #SeDenyInteractiveLogonRight not present in circleci instance
-        It 'User exists on system' {
-            # $objUser = New-Object System.Security.Principal.NTAccount("circleci")
-            # $strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
-            # DenyInteractiveLogonRight -SID $strSID.Value
-            # $secpolFile = "C:\Windows\temp\ur_orig.inf"
-            # if (Test-Path $secpolFile)
-            # {
-            #     Remove-Item $secpolFile -Force
-            # }
-            # secedit /export /areas USER_RIGHTS /cfg C:\Windows\temp\ur_orig.inf
-            # $secpol = (Get-Content $secpolFile)
-            # $regvaluestring = $secpol | Where-Object { $_ -like "*SeDenyInteractiveLogonRight*" }
-            # $regvaluestring.Contains($strSID.Value) | Should -Be $true
-        }
-
-    }
-
     Context 'Register-NativeMethod Function' -Skip {
         # Register a C# Method to PWSH context we effectively test this with Migration tests
     }
@@ -454,19 +435,6 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Test-Domainusername Function' {
-        # Requires domainjoined system
-        It 'Test-Domainusername - exists' -skip {
-
-            Test-Domainusername -field 'bob.lazar' | Should -Be $true
-        }
-
-        It 'Test-Domainusername - does not exist' {
-
-            Test-Domainusername -field 'bob.lazarz' | Should -Be $false
-        }
-    }
-
     Context 'Install-JumpCloudAgent Function' {
         BeforeAll {
             Mock Get-WindowsDrive { Return "C:" }
@@ -497,15 +465,15 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Convert-SID Function' {
+    Context 'Convert-SecurityIdentifier Function' {
         BeforeAll {
             $newUserPassword = ConvertTo-SecureString -String 'Temp123!' -AsPlainText -Force
             New-localUser -Name 'sidTest' -password $newUserPassword -Description "Created By JumpCloud ADMU tests"
             New-LocalUserProfile -username:('sidTest')
         }
-        It 'Convert-SID - circleci SID' {
+        It 'Convert-SecurityIdentifier - circleci SID' {
             $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\sidTest' | Select-Object SID).SID
-            (Convert-SID -Sid $circlecisid) | Should -match 'sidTest'
+            (Convert-SecurityIdentifier -Sid $circlecisid) | Should -match 'sidTest'
         }
     }
 
@@ -735,14 +703,14 @@ Describe 'Functions' {
             # Change the value of the folder Desktop to a different value
             $folderPath = "HKEY_USERS:\$($userSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
             Set-ItemProperty -Path $folderpath -Name Desktop -Value "\\server\share\desktop"
-            {Test-UserFolderRedirect -UserSid $userSid} | Should -Throw
+            { Test-UserFolderRedirect -UserSid $userSid } | Should -Throw
             # Change the value of the folder Desktop back to the default value
             Set-ItemProperty -Path $folderpath -Name Desktop -Value "%USERPROFILE%\Desktop"
 
         }
         # Test for Invalid SID or Invalid User Shell Folder
         It 'Test-UserFolderRedirect - Invalid SID or Invalid User Shell Folder' {
-            {Test-UserFolderRedirect -UserSid "Invalid-3361044348-30300820-1001"} | Should -Throw
+            { Test-UserFolderRedirect -UserSid "Invalid-3361044348-30300820-1001" } | Should -Throw
         }
     }
 }
