@@ -1,4 +1,4 @@
-function DecodeBase64Image {
+function Get-ImageFromB64 {
     param (
         [Parameter(Mandatory = $true)]
         [String]$ImageBase64

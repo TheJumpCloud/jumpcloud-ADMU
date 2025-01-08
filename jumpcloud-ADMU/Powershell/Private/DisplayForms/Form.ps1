@@ -237,15 +237,15 @@ Function Show-SelectionForm {
     $xaml.SelectNodes("//*[@*[contains(translate(name(.),'n','N'),'Name')]]")  | ForEach-Object {
         New-Variable  -Name $_.Name -Value $Form.FindName($_.Name) -Force
     }
-    $JCLogoImg.Source = DecodeBase64Image -ImageBase64 $JCLogoBase64
-    $img_ckey_info.Source = DecodeBase64Image -ImageBase64 $BlueBase64
-    $img_ckey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
-    $img_apikey_info.Source = DecodeBase64Image -ImageBase64 $BlueBase64
-    $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
-    $img_localaccount_info.Source = DecodeBase64Image -ImageBase64 $BlueBase64
-    $img_localaccount_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
-    $img_localaccount_password_info.Source = DecodeBase64Image -ImageBase64 $BlueBase64
-    $img_localaccount_password_valid.Source = DecodeBase64Image -ImageBase64 $ActiveBase64
+    $JCLogoImg.Source = Get-ImageFromB64 -ImageBase64 $JCLogoBase64
+    $img_ckey_info.Source = Get-ImageFromB64 -ImageBase64 $BlueBase64
+    $img_ckey_valid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
+    $img_apikey_info.Source = Get-ImageFromB64 -ImageBase64 $BlueBase64
+    $img_apikey_valid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
+    $img_localaccount_info.Source = Get-ImageFromB64 -ImageBase64 $BlueBase64
+    $img_localaccount_valid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
+    $img_localaccount_password_info.Source = Get-ImageFromB64 -ImageBase64 $BlueBase64
+    $img_localaccount_password_valid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
     # Define misc static variables
 
     $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
@@ -544,13 +544,13 @@ Function Show-SelectionForm {
             If ((Test-IsNotEmpty $tbJumpCloudUserName.Text) -or (!(Test-HasNoSpace $tbJumpCloudUserName.Text)) -or (Test-Localusername $tbJumpCloudUserName.Text) -or (($tbJumpCloudUserName.Text).Length -gt 20) -or $tbJumpCloudUserName.Text -eq $hostname) {
                 $tbJumpCloudUserName.Background = "#FFC6CBCF"
                 $tbJumpCloudUserName.BorderBrush = "#FFF90000"
-                $img_localaccount_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
+                $img_localaccount_valid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
                 $img_localaccount_valid.ToolTip = "Local account username can't be empty, contain spaces, already exist on the local system or match the local computer name. Username must only be 20 characters long"
             } Else {
                 $tbJumpCloudUserName.Background = "white"
                 $tbJumpCloudUserName.FontWeight = "Normal"
                 $tbJumpCloudUserName.BorderBrush = "#FFC6CBCF"
-                $img_localaccount_valid.Source = DecodeBase64Image -ImageBase64 $ActiveBase64
+                $img_localaccount_valid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
                 $img_localaccount_valid.ToolTip = $null
             }
             if ($tbJumpCloudUserName.Text -eq $hostname) {
@@ -565,13 +565,13 @@ Function Show-SelectionForm {
             If (((Test-CharLen -len 40 -testString $tbJumpCloudConnectKey.Password) -and (Test-HasNoSpace $tbJumpCloudConnectKey.Password)) -eq $false) {
                 $tbJumpCloudConnectKey.Background = "#FFC6CBCF"
                 $tbJumpCloudConnectKey.BorderBrush = "#FFF90000"
-                $img_ckey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
+                $img_ckey_valid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
                 $img_ckey_valid.ToolTip = "Connect Key must be 40chars & not contain spaces."
             } Else {
                 $tbJumpCloudConnectKey.Background = "white"
                 $tbJumpCloudConnectKey.FontWeight = "Normal"
                 $tbJumpCloudConnectKey.BorderBrush = "#FFC6CBCF"
-                $img_ckey_valid.Source = DecodeBase64Image -ImageBase64 $ActiveBase64
+                $img_ckey_valid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
                 $img_ckey_valid.ToolTip = $null
             }
         })
@@ -581,7 +581,7 @@ Function Show-SelectionForm {
             If (Test-IsNotEmpty $tbJumpCloudAPIKey.Password) {
                 $tbJumpCloudAPIKey.Background = "#FFC6CBCF"
                 $tbJumpCloudAPIKey.BorderBrush = "#FFF90000"
-                $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
+                $img_apikey_valid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
                 $img_apikey_valid.ToolTip = "Please enter a valid JumpCloud API Key"
 
             } Else {
@@ -594,16 +594,16 @@ Function Show-SelectionForm {
                     $tbJumpCloudAPIKey.Tooltip = $null
                     $tbJumpCloudAPIKey.FontWeight = "Normal"
                     $tbJumpCloudAPIKey.BorderBrush = "#FFC6CBCF"
-                    $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ActiveBase64
+                    $img_apikey_valid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
                     $img_apikey_valid.ToolTip = $null
                     Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
                 } catch {
                     $bMigrateProfile.IsEnabled = $false
-                    $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
+                    $img_apikey_valid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
                     $img_apikey_valid.ToolTip = "Please enter a valid JumpCloud API Key"
                     $OrgSelection = ""
                     $lbl_orgName.Text = ""
-                    $img_apikey_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
+                    $img_apikey_valid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
                     Write-ToLog "MTP KEY MAY BE WRONG"
                 }
             }
@@ -613,14 +613,14 @@ Function Show-SelectionForm {
             If ((!(Test-IsNotEmpty $tbTempPassword.Text) -and (Test-HasNoSpace $tbTempPassword.Text)) -eq $false) {
                 $tbTempPassword.Background = "#FFC6CBCF"
                 $tbTempPassword.BorderBrush = "#FFF90000"
-                $img_localaccount_password_valid.Source = DecodeBase64Image -ImageBase64 $ErrorBase64
+                $img_localaccount_password_valid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
                 $img_localaccount_password_valid.ToolTip = "Local Account Temp Password should not be empty or contain spaces, it should also meet local password policy req. on the system."
             } Else {
                 $tbTempPassword.Background = "white"
                 $tbTempPassword.Tooltip = $null
                 $tbTempPassword.FontWeight = "Normal"
                 $tbTempPassword.BorderBrush = "#FFC6CBCF"
-                $img_localaccount_password_valid.Source = DecodeBase64Image -ImageBase64 $ActiveBase64
+                $img_localaccount_password_valid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
                 $img_localaccount_password_valid.ToolTip = $null
             }
         })

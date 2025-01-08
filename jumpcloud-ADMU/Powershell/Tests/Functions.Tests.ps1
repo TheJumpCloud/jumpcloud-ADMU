@@ -219,11 +219,11 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Get-SID Function' {
-        It 'Tests that Get-SID returns a valid regex matched SID for the current user' {
+    Context 'Get-SecurityIdentifier Function' {
+        It 'Tests that Get-SecurityIdentifier returns a valid regex matched SID for the current user' {
             # SID of current user should match SID regex pattern
             $currentUser = $(whoami) -replace "$(hostname)\\", ("")
-            $currentSID = Get-SID -User:($currentUser)
+            $currentSID = Get-SecurityIdentifier -User:($currentUser)
             $currentSID | Should -Match "^S-\d-\d+-(\d+-){1,14}\d+$"
         }
     }
@@ -231,7 +231,7 @@ Describe 'Functions' {
     Context 'Set-UserRegistryLoadState Function' -Skip {
         # Unload and load user registry - we are testing this in Migration tests
         It 'Load ' {
-            # $circlecisid = (Get-SID -User:'circleci')
+            # $circlecisid = (Get-SecurityIdentifier -User:'circleci')
             # Set-UserRegistryLoadState -op Load -ProfilePath 'C:\Users\circleci\' -UserSid $circlecisid
             # $path = 'HKU:\' $circlecisid_'_a
             # Test-Path -Path 'HKU:\$($circlecisid)'

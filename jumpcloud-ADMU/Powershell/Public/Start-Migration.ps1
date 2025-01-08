@@ -932,13 +932,13 @@ Function Start-Migration {
             if ($AzureADStatus -eq 'YES' -or $netBiosName -match 'AzureAD') {
                 # Find Appx User Apps by Username
                 try {
-                    $appxList = Get-AppXpackage -user (Convert-Sid $SelectedUserSID) | Select-Object InstallLocation
+                    $appxList = Get-AppXpackage -user (Convert-SecurityIdentifier $SelectedUserSID) | Select-Object InstallLocation
                 } catch {
                     Write-ToLog -Message "Could not determine AppXPackages for selected user, this is okay. Rebuilding UWP Apps from AllUsers list"
                 }
             } else {
                 try {
-                    $appxList = Get-AppXpackage -user (Convert-Sid $SelectedUserSID) | Select-Object InstallLocation
+                    $appxList = Get-AppXpackage -user (Convert-SecurityIdentifier $SelectedUserSID) | Select-Object InstallLocation
                 } catch {
                     Write-ToLog -Message "Could not determine AppXPackages for selected user, this is okay. Rebuilding UWP Apps from AllUsers list"
                 }

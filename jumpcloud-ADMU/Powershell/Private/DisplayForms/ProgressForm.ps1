@@ -9,7 +9,7 @@ function New-ProgressForm {
     $syncHash.StatusInput = ''
     $syncHash.LogText = @()
     $synchash.logLevel = ''
-    $syncHash.base64JCLogo = DecodeBase64Image -ImageBase64 $JCLogoBase64
+    $syncHash.base64JCLogo = Get-ImageFromB64 -ImageBase64 $JCLogoBase64
     $synchash.closeWindow = $false
 
     # Migration Details
