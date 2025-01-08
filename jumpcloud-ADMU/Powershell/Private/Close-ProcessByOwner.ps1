@@ -4,7 +4,7 @@ function Close-ProcessByOwner {
         # Parameter help description
         [Parameter(Mandatory = $true)]
         [System.Object]
-        $ProcesssList,
+        $ProcessList,
         # force close processes
         [Parameter()]
         [bool]
@@ -18,7 +18,7 @@ function Close-ProcessByOwner {
     process {
         switch ($force) {
             $true {
-                foreach ($item in $ProcesssList) {
+                foreach ($item in $ProcessList) {
                     Write-ToLog "Attempting to close processID: $($item.ProcessId)"
                     $tkStatus = taskkill /t /f /PID $item.ProcessId 2>&1
                     $tkSuccess = if ($tkStatus -match "ERROR") {
@@ -36,7 +36,7 @@ function Close-ProcessByOwner {
                 }
             }
             $false {
-                foreach ($item in $ProcesssList) {
+                foreach ($item in $ProcessList) {
                     $resultList.Add(
                         [PSCustomObject]@{
                             ProcessName = $item.ProcessName
