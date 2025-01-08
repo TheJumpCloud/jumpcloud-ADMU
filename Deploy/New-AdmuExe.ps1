@@ -61,7 +61,7 @@ $NewContent = $NewContent.Replace('$scriptPath = (Split-Path -Path:($MyInvocatio
 $NewContent = $NewContent.Replace('. ($scriptPath + ''\Start-Migration.ps1'')', $Functions)
 $NewContent = $NewContent.Replace('. ($scriptPath + ''\ProgressForm.ps1'')', $ProgressForm)
 $NewContent = $NewContent.Replace('$formResults = Invoke-Expression -Command:(''. "'' + $scriptPath + ''\Form.ps1"'')' + "`n", $Form)
-$NewContent = $NewContent -replace('Return \$FormResults', '')
+$NewContent = $NewContent -replace ('Return \$FormResults', '')
 $NewContent = $NewContent + "`n"
 $NewContent = $NewContent -split "`n" | ForEach-Object { If ($_.Trim()) {
         $_
