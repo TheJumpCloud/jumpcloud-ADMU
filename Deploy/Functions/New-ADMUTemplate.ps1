@@ -28,9 +28,9 @@ Function New-ADMUTemplate {
         # define empty string to build the template file
         $templateString = ""
         # Public Functions
-        $Public = @( Get-ChildItem -Path "$PSScriptRoot/../jumpcloud-ADMU/Powershell/Public/*.ps1" -Recurse)
+        $Public = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Public/*.ps1" -Recurse)
         # Load all functions from private folders except for the forms and assets
-        $Private = @( Get-ChildItem -Path "$PSScriptRoot/../jumpcloud-ADMU/Powershell/Private/*.ps1" -Recurse | Where-Object { ($_.fullname -notmatch "DisplayForms") -AND ($_.fullname -notmatch "DisplayAssets") } )
+        $Private = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/*.ps1" -Recurse | Where-Object { ($_.fullname -notmatch "DisplayForms") -AND ($_.fullname -notmatch "DisplayAssets") } )
     }
     process {
         #define Run As Admin block
@@ -65,12 +65,12 @@ $PrivateFunctionsContent
         # Define string for forms
         $formsContent = ""
         # Add Form Assets to template:
-        $Assets = @( Get-ChildItem -Path "$PSScriptRoot/../jumpcloud-ADMU/Powershell/Private/DisplayAssets/*.ps1" -Recurse )
+        $Assets = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/DisplayAssets/*.ps1" -Recurse )
         foreach ($item in $Assets) {
             $AssetContent = Get-Content $item.FullName -Raw
             $formsContent += "$($AssetContent)" + [Environment]::NewLine
         }
-        $Forms = @( Get-ChildItem -Path "$PSScriptRoot/../jumpcloud-ADMU/Powershell/Private/DisplayForms/*.ps1" -Recurse )
+        $Forms = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/DisplayForms/*.ps1" -Recurse )
         # Optionally hide debug window:
         if ($hidePowerShellWindow) {
             $hideRegion = @"
