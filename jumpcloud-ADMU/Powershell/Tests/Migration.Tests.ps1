@@ -19,8 +19,8 @@ BeforeAll {
     write-host "Importing Build Variables:"
     . $PSScriptRoot\BuildVariables.ps1
     # import functions from start migration
-    write-host "Importing Start-Migration Script:"
-    . $PSScriptRoot\..\Start-Migration.ps1
+    write-host "Importing Start-Migration Module:"
+    Import-Module "$PSScriptRoot/../JumpCloud.ADMU.psd1" -Force
     # setup tests (This creates any of the users in the build vars dictionary)
     write-host "Running SetupAgent Script:"
     . $PSScriptRoot\SetupAgent.ps1
