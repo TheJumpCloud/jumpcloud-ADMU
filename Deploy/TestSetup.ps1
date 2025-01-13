@@ -11,7 +11,7 @@ process {
   #}
 
   # Load functions
-  $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Private/*.ps1" -Recurse)
+  $Private = @( Get-ChildItem -Path "$PSScriptRoot/../jumpcloud-ADMU/Powershell/Private/*.ps1" -Recurse)
   Foreach ($Import in $Private) {
     Try {
       . $Import.FullName
@@ -19,7 +19,7 @@ process {
       Write-Error -Message "Failed to import function $($Import.FullName): $_"
     }
   }
-  $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Public/*.ps1" -Recurse)
+  $Private = @( Get-ChildItem -Path "$PSScriptRoot/../jumpcloud-ADMU/Powershell/Public/*.ps1" -Recurse)
   Foreach ($Import in $Private) {
     Try {
       . $Import.FullName

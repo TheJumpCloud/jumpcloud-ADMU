@@ -11,8 +11,7 @@ BeforeAll {
     Function Get-WindowsDrive {
         return 'drive'
     }
-    # TODO: import private functions:
-    Write-Host "Dot-Sourcing Private Functions"
+    # Import Private Functions:
     $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Private/*.ps1" -Recurse)
     Foreach ($Import in $Private) {
         Try {

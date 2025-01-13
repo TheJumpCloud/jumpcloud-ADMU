@@ -16,9 +16,24 @@ BeforeAll {
     # import build variables for test cases
     write-host "Importing Build Variables:"
     . $PSScriptRoot\BuildVariables.ps1
-    # import functions from start migration
-    write-host "Importing Start-Migration Script:"
-    . $PSScriptRoot\..\Start-Migration.ps1
+    # Import Private Functions:
+    $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Private/*.ps1" -Recurse)
+    Foreach ($Import in $Private) {
+        Try {
+            . $Import.FullName
+        } Catch {
+            Write-Error -Message "Failed to import function $($Import.FullName): $_"
+        }
+    }
+    # Import Public Functions:
+    $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Public/*.ps1" -Recurse)
+    Foreach ($Import in $Private) {
+        Try {
+            . $Import.FullName
+        } Catch {
+            Write-Error -Message "Failed to import function $($Import.FullName): $_"
+        }
+    }
     # setup tests (This creates any of the users in the build vars dictionary)
     write-host "Running SetupAgent Script:"
     . $PSScriptRoot\SetupAgent.ps1
