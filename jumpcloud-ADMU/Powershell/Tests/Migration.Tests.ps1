@@ -22,7 +22,7 @@ BeforeAll {
     Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
     # import functions from start migration
     write-host "Importing Start-Migration Module:"
-    Import-Module "$PSScriptRoot/../JumpCloud.ADMU.psd1" -Force
+    Import-Module "$PSScriptRoot/../../JumpCloud.ADMU.psd1" -Force
     write-host "Importing private functions:"
     $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Private/*.ps1" -Recurse)
     Foreach ($Import in $Private) {

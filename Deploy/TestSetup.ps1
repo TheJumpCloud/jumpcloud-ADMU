@@ -11,7 +11,22 @@ process {
   #}
 
   # Load functions
-  . $PSScriptRoot\..\jumpcloud-ADMU\Powershell\Start-Migration.ps1
+  $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Private/*.ps1" -Recurse)
+  Foreach ($Import in $Private) {
+    Try {
+      . $Import.FullName
+    } Catch {
+      Write-Error -Message "Failed to import function $($Import.FullName): $_"
+    }
+  }
+  $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Public/*.ps1" -Recurse)
+  Foreach ($Import in $Private) {
+    Try {
+      . $Import.FullName
+    } Catch {
+      Write-Error -Message "Failed to import function $($Import.FullName): $_"
+    }
+  }
 
   #USMT & VC Variables
   $jcAdmuTempPath = 'C:\Windows\Temp\JCADMU\'
