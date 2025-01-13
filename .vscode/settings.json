@@ -10,5 +10,9 @@
   "powershell.scriptAnalysis.settingsPath": "jumpcloud-ADMU/Powershell/Tests/PSScriptAnalyzerSettings.psd1",
   "powershell.codeFormatting.preset": "OTBS",
   "powershell.scriptAnalysis.enable": true,
-  "files.trimTrailingWhitespace": true
+  "files.trimTrailingWhitespace": true,
+  "search.useIgnoreFiles": false,
+  "cSpell.words": [
+    "ADMU",
+  ]
 }
