@@ -111,7 +111,7 @@ Describe 'Functions' {
             $Password = "Temp123!"
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # If User Exists, remove from the org
-            $users = Get-JCSDKUser
+            $users = Get-JCSdkUser
             if ("$($user.JCUsername)" -in $users.Username) {
                 $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
                 Write-Host "Found JumpCloud User, $($existing.Id) removing..."
@@ -187,7 +187,7 @@ Describe 'Functions' {
         }
 
         It 'User does not exist on system and throws exception' {
-            { New-LocalUserProfile -username:('userdoesntexist') -ErrorAction Stop } | Should -Throw
+            { New-LocalUserProfile -username:('UserDoesNotExist') -ErrorAction Stop } | Should -Throw
         }
     }
 
