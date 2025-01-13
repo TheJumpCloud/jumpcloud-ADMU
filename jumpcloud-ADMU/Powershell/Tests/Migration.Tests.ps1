@@ -18,9 +18,20 @@ BeforeAll {
     # import build variables for test cases
     write-host "Importing Build Variables:"
     . $PSScriptRoot\BuildVariables.ps1
+    Write-Host "Running Connect-JCOnline"
+    Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
     # import functions from start migration
     write-host "Importing Start-Migration Module:"
     Import-Module "$PSScriptRoot/../JumpCloud.ADMU.psd1" -Force
+    write-host "Importing private functions:"
+    $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Private/*.ps1" -Recurse)
+    Foreach ($Import in $Private) {
+        Try {
+            . $Import.FullName
+        } Catch {
+            Write-Error -Message "Failed to import function $($Import.FullName): $_"
+        }
+    }
     # setup tests (This creates any of the users in the build vars dictionary)
     write-host "Running SetupAgent Script:"
     . $PSScriptRoot\SetupAgent.ps1

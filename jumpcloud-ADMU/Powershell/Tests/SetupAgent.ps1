@@ -2,8 +2,15 @@
 
 # Dot-source the variables for setupAgent/ migration tests:
 . $PSScriptRoot\BuildVariables.ps1
-# Dot-source start-migration
-. $PSScriptRoot\..\Start-Migration.ps1
+# Dot-source private functions
+$Private = @( Get-ChildItem -Path "$PSScriptRoot/../Private/*.ps1" -Recurse)
+Foreach ($Import in $Private) {
+    Try {
+        . $Import.FullName
+    } Catch {
+        Write-Error -Message "Failed to import function $($Import.FullName): $_"
+    }
+}
 
 # This helper function creates new local users and initializes their home directories
 # If the user exists and was created by the ADMU, the tool will attempt to remove the profile

@@ -129,7 +129,8 @@ jobs:
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec
             ${{ github.workspace }}/Jumpcloud-ADMU/Docs/*.md
             ${{ github.workspace }}/Jumpcloud-ADMU/en-Us/JumpCloud.ADMU-help.xml
-            ${{ github.workspace }}/Jumpcloud-ADMU/PowerShell/**/*.ps1
+            ${{ github.workspace }}/Jumpcloud-ADMU/PowerShell/Private/**/*.ps1
+            ${{ github.workspace }}/Jumpcloud-ADMU/PowerShell/Public/**/*.ps1
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psd1
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psm1
           retention-days: 1
