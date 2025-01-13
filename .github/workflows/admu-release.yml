@@ -121,7 +121,7 @@ jobs:
       - name: Pack nuspec
         shell: pwsh
         run: |
-          # set psm1 to point to public/start-migartion
+          # set psm1 to point to public/start-migration
           $psm1Path = "${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.psm1"
           $psm1Content = Get-Content -path $psm1Path
           $psm1Content = $psm1Content -replace "\\Powershell\\", "\Public\"
