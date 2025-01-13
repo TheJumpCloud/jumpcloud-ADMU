@@ -1,11 +1,18 @@
+##
+# This script will:
+# Run Build-Module (update changelog & validate versions across required files)
+# Run Build-Exe (windows systems only)
+# Build-NuspecFromPSD1
+##
 [CmdletBinding()]
 param (
-    [Parameter()]
+    [Parameter(Mandatory = $true)]
+    [ValidateSet("Major", "Minor", "Patch", "Manual")]
     [System.string]
     $ModuleVersionType,
     [Parameter()]
     [System.string]
-    $ModuleName
+    $ModuleName = "JumpCloud.ADMU"
 )
 
 # Run Get-Config:
@@ -17,9 +24,12 @@ if ($ModuleVersionType -eq 'manual') {
 } else {
     . $PSScriptRoot\Build-Module.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 }
-
-# Run Build-Exe
-. $PSScriptRoot\Build-Exe.ps1
+# Create a new ADMU Template file in this directory for testing/ Building EXE
+New-ADMUTemplate -ExportPath "$PSScriptRoot/admuTemplate.ps1"
+# Run Build-Exe On Windows Systems
+if ($IsWindows) {
+    . $PSScriptRoot\Build-Exe.ps1
+}
 # Run Build-HelpFiles
 . $PSScriptRoot\Build-HelpFiles.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 # Run Build-NuspecFromPsd1

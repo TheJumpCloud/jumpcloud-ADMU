@@ -20,7 +20,8 @@ If (-not $ADMUGetConfig) {
 
 $nuspecFiles = @(
     @{src = ".\en-Us\JumpCloud.ADMU-help.xml"; target = "./" },
-    @{src = ".\Powershell\Start-Migration.ps1"; target = "./Public" },
+    @{src = ".\Powershell\Private\**\*.ps1"; target = "./Private" },
+    @{src = ".\Powershell\Public\**\*.ps1"; target = "./Public" },
     @{src = ".\Docs\*.md"; target = "./Docs" },
     @{src = ".\JumpCloud.ADMU.psd1" },
     @{src = ".\JumpCloud.ADMU.psm1" }

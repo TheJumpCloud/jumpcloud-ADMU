@@ -4,14 +4,22 @@ BeforeAll {
         . $PSScriptRoot\..\..\..\Deploy\TestSetup.ps1 -TestOrgConnectKey $env:PESTER_CONNECTKEY
     }
     Write-Host "Script Location: $PSScriptRoot"
-    Write-Host "Dot-Sourcing Start-Migration Script"
-    . $PSScriptRoot\..\Start-Migration.ps1
-    Write-Host "Dot-Sourcing Test Functions"
+    # setting test variables
     . $PSScriptRoot\SetupAgent.ps1
     Write-Host "Running Connect-JCOnline"
     Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
     Function Get-WindowsDrive {
         return 'drive'
+    }
+    # TODO: import private functions:
+    Write-Host "Dot-Sourcing Private Functions"
+    $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Private/*.ps1" -Recurse)
+    Foreach ($Import in $Private) {
+        Try {
+            . $Import.FullName
+        } Catch {
+            Write-Error -Message "Failed to import function $($Import.FullName): $_"
+        }
     }
 }
 Describe 'Functions' {

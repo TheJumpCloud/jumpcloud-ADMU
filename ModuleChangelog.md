@@ -1,31 +1,57 @@
+## 2.7.11
+
+Release Date: January 13, 2025
+
+#### RELEASE NOTES
+
+```
+This release addresses some code quality issues and a bug-fix for certain Windows 11 systems where migrated users could lost access to use Windows search post-migration.
+```
+
+#### IMPROVEMENTS:
+
+- Functions in this release are now broken up into individual files to de-clutter the Start-Migration script
+
+#### BUG FIXES:
+
+- Windows 11 systems with a specific build and Microsoft KB installed could lose access to the Windows Start search menu post-migration, this release applies the same fix in 2.4.3 (At the time then only affected Windows 10 systems) to Windows 11 systems.
+
 ## 2.7.10
 
 Release Date: January 3, 2025
 
 #### RELEASE NOTES
+
 ```
 * This release prevents ADMU from migrating if one of the main user folders (Desktop, Downloads, Documents, Pictures, Music, Videos, Favorites) are redirected to network shared path
 ```
+
 #### Bug Fixes:
+
 ```
 * Fix issue when migrating a user with one of their main user folders are redirected to a network path. ADMU will now throw an error and prevent migration if any of the primary user folders (Desktop, Downloads, Documents, Pictures, Music, Videos, Favorites) are redirected to network shared path
 ```
+
 ## 2.7.9
 
 Release Date: November 21, 2024
 
 #### RELEASE NOTES
+
 ```
 * This release removes 40 char API key validation
 * When the migration fails during the account copy/merge processes, the tool would revert and remove the newly created account. We risk deleting user data once we do the account reversal in this step. To combat this, we have added a tracker to not remove the created account profile during account merge failure.
 * Remove unused .exe files
 ```
+
 #### Bug Fixes:
+
 ```
 * Fix progress form buttons disabled when JCAgent install fails
 * Fix issue with JCUsername that have a localUsername where progress form GUI get's stuck during migration when AutoBind is selected
 * Fix issue with MTP selection popups when migrating a user that belongs to an MTP
 ```
+
 ## 2.7.8
 
 Release Date: October 14, 2024
@@ -50,9 +76,11 @@ Release Date: September 25, 2024
 This release resolves an issue on Windows 10 systems where users were unable to use the search bar post-migration
 
 #### Bug Fixes:
+
 ```
 * Resolves an issue on Windows 10 systems where users were unable to use the search bar post-migration
 ```
+
 ## 2.7.6
 
 Release Date: August 21, 2024
@@ -62,9 +90,11 @@ Release Date: August 21, 2024
 This fixes an issue with disabled Migrate Button
 
 #### Bug Fixes:
+
 ```
 * Fixed an issue with ADMU UI "Migrate Profile" button where it remained disabled even though all the required fields were satisfied.
 ```
+
 ## 2.7.5
 
 Release Date: August 28, 2024

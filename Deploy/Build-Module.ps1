@@ -25,7 +25,7 @@ if ($ManualModuleVersion) {
     $SemeanticVersion = Select-String -InputObject $ManualModuleVersionRetrieval -pattern ($SemanticRegex)
     $ModuleVersion = $SemeanticVersion[0].Matches.Value
 } else {
-    $PSGalleryInfo = Get-PSGalleryModuleVersion -Name:($ModuleName) -ReleaseType:($RELEASETYPE) #('Major', 'Minor', 'Patch')
+    $PSGalleryInfo = Get-PSGalleryModuleVersion -Name:($ModuleName) -ReleaseType:($ModuleVersionType) #('Major', 'Minor', 'Patch')
     $ModuleVersion = $PSGalleryInfo.NextVersion
 }
 Write-Host ('[status]PowerShell Gallery Name:' + $PSGalleryInfo.Name + ';CurrentVersion:' + $PSGalleryInfo.Version + '; NextVersion:' + $ModuleVersion )
@@ -48,7 +48,7 @@ New-ModuleManifest -Path:($FilePath_psd1) `
     -FunctionsToExport:($Functions_Public.BaseName | Sort-Object) `
     -RootModule:((Get-Item -Path:($FilePath_psm1)).Name) `
     -ModuleVersion:($ModuleVersion) `
-    -Author:('JumpCloud Solutions Architect Team') `
+    -Author:('JumpCloud Customer Tools Team') `
     -CompanyName:('JumpCloud') `
     -Copyright:('(c) JumpCloud. All rights reserved.') `
     -Description:('Powershell Module to run JumpCloud Active Directory Migration Utility.')
