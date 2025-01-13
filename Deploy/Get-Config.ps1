@@ -11,8 +11,8 @@ Write-Host "======= Begin Get-Config ======="
 $env:ModuleVersionType = $ModuleVersionType
 $env:MODULENAME = $ModuleName
 # Populate variables
-$ModuleFolderName = "$PSScriptroot/../JumpCloud-ADMU/"
-$DEPLOYFOLDER = "$PSScriptroot"
+$ModuleFolderName = "$PSScriptRoot/../JumpCloud-ADMU/"
+$DEPLOYFOLDER = "$PSScriptRoot"
 $RELEASETYPE = $ModuleVersionType
 $GitHubWikiUrl = 'https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/'
 $ScriptRoot = Switch ($env:DEPLOYFOLDER) {

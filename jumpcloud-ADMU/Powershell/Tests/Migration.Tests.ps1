@@ -127,7 +127,7 @@ Describe 'Migration Test Scenarios' {
 
     # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
     Context 'Start-Migration on local accounts (Test Functionallity)' {
-        It "username extists for testing" {
+        It "username exists for testing" {
             foreach ($user in $userTestingHash.Values) {
                 $user.username | Should -Not -BeNullOrEmpty
                 $user.JCusername | Should -Not -BeNullOrEmpty
@@ -176,7 +176,7 @@ Describe 'Migration Test Scenarios' {
         It "Test UWP_JCADMU was downloaded & exists" {
             Test-Path "C:\Windows\uwp_jcadmu.exe" | Should -Be $true
         }
-        It "Account of a prior migration can be sucessfully migrated again and not overwrite registry backup files" {
+        It "Account of a prior migration can be successfully migrated again and not overwrite registry backup files" {
             $Password = "Temp123!"
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })

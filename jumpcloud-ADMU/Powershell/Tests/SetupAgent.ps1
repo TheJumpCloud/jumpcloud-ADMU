@@ -40,7 +40,7 @@ Function InitUser {
         New-LocalUserProfile -username "$($UserName)" -ErrorVariable profileInit
         if ($profileInit) {
             Write-Log -Message:("$profileInit")
-            Write-Log -Message:("The user: $($UserName) could not be initalized, exiting")
+            Write-Log -Message:("The user: $($UserName) could not be initialized, exiting")
             exit 1
         }
     }

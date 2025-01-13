@@ -54,7 +54,7 @@ jobs:
           }
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  Setup-Build-Dependancies:
+  Setup-Build-Dependencies:
     needs: ["Filter-Branch", "Check-PR-Labels"]
     runs-on: windows-latest
     timeout-minutes: 10
@@ -65,7 +65,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
-          key: PS-Dependancies
+          key: PS-Dependencies
       - name: Install dependencies
         if: steps.cacher.outputs.cache-hit != 'true'
         shell: pwsh
@@ -76,7 +76,7 @@ jobs:
               Write-Host ('[status]Installing package provider NuGet');
               Install-PackageProvider -Name:('NuGet') -Scope:('CurrentUser') -Force
           }
-          # define dependancies for this ci workflow:
+          # define dependencies for this ci workflow:
           $PSDependencies = @{
               'PowerShellGet'                         = @{Repository = 'PSGallery'; RequiredVersion = '3.0.12-beta' }
               'ps2exe'                                = @{Repository = 'PSGallery'; RequiredVersion = '1.0.13' }
@@ -104,14 +104,14 @@ jobs:
           }
   Build-Sign-ADMU:
     runs-on: windows-latest
-    needs: ["Setup-Build-Dependancies", "Check-PR-Labels"]
+    needs: ["Setup-Build-Dependencies", "Check-PR-Labels"]
     environment: Production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
         with:
           path: "/home/runner/.local/share/powershell/Modules/"
-          key: PS-Dependancies
+          key: PS-Dependencies
       - name: Build ADMU Module
         shell: powershell
         env:
