@@ -1,6 +1,6 @@
 # jumpcloud-ADMU
 
-Jumpcloud Active Directory Migration Utility.
+JumpCloud Active Directory Migration Utility.
 
 ## Development
 
@@ -11,15 +11,12 @@ This project is being developed in Powershell using XAML front-end.
 The directory `Deploy` contains a set of scripts used in the pipeline for CI and CD.
 
 - **admu.ico:** Icon file used in .exe generation
-- **ADMU.ps1:** Combined single file output used in .exe generation
-- **Build.ps1:** Builds .exe utilizing ps2exe module
+- **Build.ps1:** Builds entire module and related help documentation
 - **Build-HelpFiles.ps1:** Uses PlatyPS to generate function help file
+- **New-ADMUExe.ps1:** Builds a copy of all code files into a single file, Invokes PS2EXE to create an executable
 - **BuildNuspecFromPsd1.ps1:** Builds Nuspec from Powershell Module to publish
 - **Get-Config.ps1:** Used to set project configuration vars from CI pipeline
-- **Invoke-GitCommit.ps1:** Git commit script used in pipeline
-- **Sign.ps1:** Signs .exe with codesigning certificate
 - **TestSetup.ps1:** Ran in pipeline to clear & install latest JC agent using ADMU functions
-
 - **Get-PSGalleryModuleVersion.ps1:** Used to increment and find currently published module version
 - **New-ModuleChangeLog.ps1:** Used to generate and add to module changelog md file
 
@@ -27,22 +24,9 @@ The directory `Docs` contains the generated and populated help files for the Pow
 
 - **`Start-Migration.md`:** Help file for start-migration function
 
-The directory `jumpcloud-ADMU\Exe\` contains the signed .exe output from the pipeline build used in the release steps.
-
-- **gui_jcadmu.exe:** Signed executable file
-
-The directory `jumpcloud-ADMU\Gpo\` contains the GPO's used in mass deployment/invoke-command scenario scripts.
-
 The directory `jumpcloud-ADMU\Powershell\` contains the Powershell scripts used by the ADMU.
 
-- **Form.ps1:** XAML & form logic
-- **Functions.ps1:** Utilized functions in gui & Start-Migration Function
-- **InvokePester.ps1:** Calls invoke-pester with formated output for pipeline
-- **Start-JCADMU.ps1:** Calls Form.ps1 & passes output to Start-Migration Function as object
-
 The directory `jumpcloud-ADMU\Powershell\Tests\` contains the signed .exe output from the pipeline build used in the release steps.
-
-- **gui_jcadmu.exe:** Signed executable file
 
 The directory `jumpcloud-ADMU-Advanced-Deployment` contains powershell scripts to run discovery and migration in a mass deployment scenario.
 
@@ -51,24 +35,20 @@ The directory `jumpcloud-ADMU-Advanced-Deployment` contains powershell scripts t
 
 ### CI\CD Pipeline
 
-https://dev.azure.com/JumpCloudPowershell/JumpCloud%20ADMU/_build?definitionId=24&_a=summary
-
 The pipeline runs the following steps on CI builds:
 
 - **Powershell Build Script:** Builds exe from powershell scripts
-- **Powershell Sign exe:** Signs exe build with code signing certificate
-- **Test Setup Script:** Setup build server with domain joined agent system
-- **InvokePester Script:** Runs pester tests & verifys execuatable signature
+- **InvokePester Script:** Runs pester tests & verify executable signature
 - **Copy Files to:powershell:** Copy powershell files to artifact directory for use on release
 - **Copy Files to:exe:** Copy exe to artifact directory for use on release
 - **Publish Artifact: ADMU:** Publish artifact directory to pipeline artifact
-- **Invoke-GitCommit - BranchName:** Commit execuatble build back to branch if previous steps pass without issue
+- **Invoke-GitCommit - BranchName:** Commit executable build back to branch if previous steps pass without issue
 
 The pipeline runs the following steps on CD releases:
 
-- **_JumpCloudADMU-CI artifact:** powershell & exe files from successful build branch
+- **\_JumpCloudADMU-CI artifact:** powershell & exe files from successful build branch
 - **GH Release (create):** GitHub release draft is created containing artifact assets
-    - Update Tag & Release notes
+  - Update Tag & Release notes
 
 ### Testing
 
@@ -84,8 +64,13 @@ Build.Tests.ps1
 - Checks built exe build number
 
 Functions.Tests.ps1
-gpo.Tests.ps1
+
+- Unit tests for the functions used in `Start-Migration`
+
+Migration.Tests.ps1
+
+- Tests the functionality of the `Start-Migration` function
 
 PSScriptAnalyzer.Tests.ps1
 
-- Runs psscriptanalyzer against powershell directory with custom exclude rules.
+- Runs PSScriptAnalyzer on powershell directory with custom exclude rules.

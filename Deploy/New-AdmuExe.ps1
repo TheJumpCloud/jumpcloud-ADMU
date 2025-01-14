@@ -38,13 +38,13 @@ Write-Host "Psd1 Version: $PSD1Version"
 # Validate Version
 $FormVersion | Should -Be $PSD1Version
 
-# Build ADMU.PS1 File:
-. $PSScriptRoot\New-ADMUTemplate.ps1
-New-ADMUTemplate
 # Clear existing file
 If (Test-Path -Path:("$PSScriptRoot/admuTemplate.ps1")) {
     "A Template file exists"
 } else {
+    # Build ADMU.PS1 File:
+    . $PSScriptRoot\New-ADMUTemplate.ps1
+    New-ADMUTemplate -ExportPath "$PSScriptRoot/admuTemplate.ps1"
     throw "A template file does not exist, an EXE can not be built."
 }
 

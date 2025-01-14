@@ -28,7 +28,7 @@ if ($ModuleVersionType -eq 'manual') {
 New-ADMUTemplate -ExportPath "$PSScriptRoot/admuTemplate.ps1"
 # Run Build-Exe On Windows Systems
 if ($IsWindows) {
-    . $PSScriptRoot\Build-Exe.ps1
+    . $PSScriptRoot\New-ADMUExe.ps1
 }
 # Run Build-HelpFiles
 . $PSScriptRoot\Build-HelpFiles.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
