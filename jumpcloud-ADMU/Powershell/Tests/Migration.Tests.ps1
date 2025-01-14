@@ -240,12 +240,13 @@ Describe 'Migration Test Scenarios' {
             # variables for test
             $CommandBody = '
             try {
-                . "D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Public\Start-Migration.ps1"
+                # . "D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Public\Start-Migration.ps1"
+                Import-Module "D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\JumpCloud.ADMU.psd1" -Force
             } catch {
                 Write-Host "no file exists"
             }
             try {
-                . "C:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Public\Start-Migration.ps1"
+                Import-Module "C:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\JumpCloud.ADMU.psd1" -Force
             } catch {
                 Write-Host "no file exists"
             }
@@ -406,7 +407,7 @@ Describe 'Migration Test Scenarios' {
             foreach ($user in $JCReversionHash.Values) {
                 # Begin background job before Start-Migration
                 # define path to start migration for parallel job:
-                $pathToSM = "$PSScriptRoot\..\Start-Migration.ps1"
+                $pathToSM = "$PSScriptRoot\..\Public\Start-Migration.ps1"
 
                 Write-Host "$(Get-Date -UFormat "%D %r") - Start parallel job to wait for new user directory"
                 $waitJob = Start-Job -ScriptBlock:( {
