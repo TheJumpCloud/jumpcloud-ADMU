@@ -81,7 +81,7 @@ $PrivateFunctionsContent
 `"@ -Name "Win32ShowWindowAsync" -Namespace "Win32Functions" -PassThru
 # PID of the current process
 # Get PID of the current process
-`$FormWindowPIDHandle = (Get-Process -Id $pid).MainWindowHandle
+`$FormWindowPIDHandle = (Get-Process -Id `$pid).MainWindowHandle
 `$ShowWindowAsync::ShowWindowAsync(`$FormWindowPIDHandle, 0) | Out-Null
 # PID
 "@
