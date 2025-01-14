@@ -198,7 +198,7 @@ Describe 'Migration Test Scenarios' {
             (Get-ChildItem "C:\Users\$user1\AppData\Local\Microsoft\Windows\" -Hidden | Where-Object { $_.Name -match "UsrClass_original" }).Count | Should -Be 2
 
         }
-        It "Start-Migration should throw if the jumpcloud user already exists & not migrate anything" {
+        It "Start-Migration should throw if the JumpCloud user already exists & not migrate anything" {
             $Password = "Temp123!"
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -240,12 +240,12 @@ Describe 'Migration Test Scenarios' {
             # variables for test
             $CommandBody = '
             try {
-                . "D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Start-Migration.ps1"
+                . "D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Public\Start-Migration.ps1"
             } catch {
                 Write-Host "no file exists"
             }
             try {
-                . "C:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Start-Migration.ps1"
+                . "C:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Public\Start-Migration.ps1"
             } catch {
                 Write-Host "no file exists"
             }
@@ -380,7 +380,7 @@ Describe 'Migration Test Scenarios' {
         }
     }
     Context 'Start-Migration Fails when LocalUsername and JumpCloudUsername are the same' {
-        It 'local and jumpcloud usernames are the same' {
+        It 'local and JumpCloud usernames are the same' {
             Write-Host "`nStart-Migration Fails when LocalUsername and JumpCloudUsername are the same"
             $Password = "Temp123!"
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -390,7 +390,7 @@ Describe 'Migration Test Scenarios' {
             { Start-Migration -JumpCloudAPIKey $env:PESTER_APIKEY -JumpCloudUserName "testUser" -SelectedUserName "$ENV:COMPUTERNAME\testUser" -TempPassword "$($Password)" } | Should -Throw
         }
     }
-    Context 'Start-Migration on Local Accounts Expecting Failed Results (Test Reversal Functionallity)' {
+    Context 'Start-Migration on Local Accounts Expecting Failed Results (Test Reversal Functionality)' {
         BeforeEach {
             # Remove the log from previous runs
             # Not necessary but will be used in future tests to check log results
