@@ -76,7 +76,7 @@ Function Write-ToLog {
         } else {
             Switch ($Level) {
                 'Error' {
-                    Write-Error $Message
+                    # Write-Error $Message
                     $LevelText = 'ERROR:'
                 }
                 'Warn' {
