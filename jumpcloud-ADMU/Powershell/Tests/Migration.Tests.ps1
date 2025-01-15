@@ -126,7 +126,7 @@ Describe 'Migration Test Scenarios' {
 
 
     # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
-    Context 'Start-Migration on local accounts (Test Functionallity)' -skip {
+    Context 'Start-Migration on local accounts (Test Functionality)' -skip {
         It "username exists for testing" {
             foreach ($user in $userTestingHash.Values) {
                 $user.username | Should -Not -BeNullOrEmpty

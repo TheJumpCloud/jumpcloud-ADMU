@@ -98,7 +98,8 @@ Function Write-ToLog {
             Update-LogTextBlock -LogText $logMessage -ProgressBar $Script:ProgressBar
         }
         # Write log entry to $Path
-        "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
+        Add-Content -Value "$FormattedDate $LevelText $Message" -Path $Path -Encoding utf8
+        # "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append -Encoding utf8
     }
     End {
 

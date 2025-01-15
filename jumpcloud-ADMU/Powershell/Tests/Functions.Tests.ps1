@@ -465,13 +465,6 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Get-NetBiosName Function' {
-        # Requires domainjoined system
-        It 'Get-NetBiosName - JCADB2' -Skip {
-            Get-NetBiosName | Should -Be 'JCADB2'
-        }
-    }
-
     Context 'Convert-SecurityIdentifier Function' {
         BeforeAll {
             $newUserPassword = ConvertTo-SecureString -String 'Temp123!' -AsPlainText -Force

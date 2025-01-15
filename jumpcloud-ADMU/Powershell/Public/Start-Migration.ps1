@@ -223,7 +223,7 @@ Function Start-Migration {
             if ($agentInstallStatus) {
                 Write-ToLog -Message:("JumpCloud Agent Install Done") -Level Verbose
             } else {
-                Write-ToLog -Message:("JumpCloud Agent Install Failed") -Level Error
+                Write-ToLog -Message:("JumpCloud Agent Install Failed") -Level Warn
                 Write-ToProgress -ProgressBar $Progressbar -Status "JC Agent Install failed " -form $isForm -logLevel Error
                 exit
             }
@@ -256,7 +256,7 @@ Function Start-Migration {
             try {
                 Backup-RegistryHive -profileImagePath $oldUserProfileImagePath -SID $SelectedUserSID
             } catch {
-                Write-ToLog -Message("Could Not Backup Registry Hives: Exiting...") -Level Error
+                Write-ToLog -Message("Could Not Backup Registry Hives: Exiting...") -Level Warn
                 Write-ToLog -Message($_.Exception.Message)
                 $admuTracker.backupOldUserReg.fail = $true
                 break
@@ -272,8 +272,8 @@ Function Start-Migration {
             New-localUser -Name $JumpCloudUsername -password $newUserPassword -Description "Created By JumpCloud ADMU" -ErrorVariable userExitCode | Out-Null
 
             if ($userExitCode) {
-                Write-ToLog -Message:("$userExitCode") -Level Error
-                Write-ToLog -Message:("The user: $JumpCloudUsername could not be created, exiting") -Level Error
+                Write-ToLog -Message:("$userExitCode") -Level Warn
+                Write-ToLog -Message:("The user: $JumpCloudUsername could not be created, exiting") -Level Warn
                 Write-AdmuErrorMessage -ErrorName "user_create_error"
                 $admuTracker.newUserCreate.fail = $true
                 break
@@ -488,12 +488,12 @@ Function Start-Migration {
             if ($validateRegistryPermission) {
                 Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are correct `n$($validateRegistryPermissionResult | Out-String)")
             } else {
-                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and selected user have have Full Control `n$($validateRegistryPermissionResult | Out-String)") -Level Error
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and selected user have have Full Control `n$($validateRegistryPermissionResult | Out-String)") -Level Warn
             }
             if ($validateRegistryPermissionClasses) {
                 Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are correct `n$($validateRegistryPermissionClassesResult | out-string)")
             } else {
-                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and selected user have have Full Control `n$($validateRegistryPermissionClassesResult | Out-String)") -Level Error
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and selected user have have Full Control `n$($validateRegistryPermissionClassesResult | Out-String)") -Level Warn
             }
 
             $admuTracker.copyRegistry.pass = $true
@@ -861,12 +861,12 @@ Function Start-Migration {
             if ($validateNTUserDatPermissions ) {
                 Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath) `n$($validateNTUserDatPermissionsResults | Out-String)")
             } else {
-                Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($datPath)\NTUSER.DAT to ensure Administrators, System, and selected user have have Full Control `n$($validateNTUserDatPermissionsResults | Out-String)") -level Error
+                Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($datPath)\NTUSER.DAT to ensure Administrators, System, and selected user have have Full Control `n$($validateNTUserDatPermissionsResults | Out-String)") -Level Warn
             }
             if ($validateUsrClassDatPermissions) {
                 Write-ToLog -Message:("UsrClass.dat Permissions are correct $($datPath)`n$($validateUsrClassDatPermissionsResults | out-string)")
             } else {
-                Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control `n$($validateUsrClassDatPermissionsResults | Out-String)") -level Error
+                Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control `n$($validateUsrClassDatPermissionsResults | Out-String)") -Level Warn
             }
             ## End Regedit Block ##
 
@@ -964,8 +964,8 @@ Function Start-Migration {
             try {
                 Get-Item -Path "$windowsDrive\Windows\uwp_jcadmu.exe" -ErrorAction Stop | Out-Null
             } catch {
-                Write-ToLog -Message("Could not find uwp_jcadmu.exe in $windowsDrive\Windows\ UWP Apps will not migrate") -Level Error
-                Write-ToLog -Message($_.Exception.Message) -Level Error
+                Write-ToLog -Message("Could not find uwp_jcadmu.exe in $windowsDrive\Windows\ UWP Apps will not migrate") -Level Warn
+                Write-ToLog -Message($_.Exception.Message) -Level Warn
                 # TODO: Test and return non terminating error here if failure
                 # TODO: Get the checksum
                 # $admuTracker.uwpDownloadExe = $true
@@ -1112,7 +1112,7 @@ Function Start-Migration {
                                     Write-ToLog -Message:("User: $JumpCloudUserName was not removed from the local system") -Level Verbose
                                 }
                             } catch {
-                                Write-ToLog -Message:("Could not remove the $JumpCloudUserName profile and user account") -Level Error
+                                Write-ToLog -Message:("Could not remove the $JumpCloudUserName profile and user account") -Level Warn
                             }
                             $FixedErrors += "$trackedStep"
                             # Create a list of scheduled tasks that are disabled
@@ -1124,7 +1124,7 @@ Function Start-Migration {
                         }
 
                         Default {
-                            # Write-ToLog -Message:("default error") -Level Error
+                            # Write-ToLog -Message:("default error") -Level Warn
                         }
                     }
                 }
@@ -1138,9 +1138,9 @@ Function Start-Migration {
         } else {
             Write-ToLog -Message:("ADMU encoutered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warn
             Write-ToLog -Message:("The following migration steps were reverted to their original state: $FixedErrors") -Level Warn
-            Write-ToLog -Message:('Script finished with errors; Log file location: ' + $jcAdmuLogFile) -Level Error
+            Write-ToLog -Message:('Script finished with errors; Log file location: ' + $jcAdmuLogFile) -Level Warn
             Write-ToProgress -ProgressBar $Progressbar -Status $Script:ErrorMessage -form $isForm -logLevel "Error"
-            throw "JumpCloud ADMU was unable to migrate $selectedUserName"
+            Throw "JumpCloud ADMU was unable to migrate $selectedUserName"
         }
     }
 }
