@@ -496,7 +496,9 @@ Describe 'Migration Test Scenarios' {
                         } Catch {
                             write-host "Migration failed as expected"
                         }
-                        $logContent = Get-Content -Tail 1 C:\Windows\Temp\Jcadmu.log
+                        $logContent = Get-Content -Tail 10 C:\Windows\Temp\Jcadmu.log
+                        Write-Host "last 10 lines of log:"
+                        Write-Host $logContent
                         if ($logContent -match "The following migration steps were reverted to their original state: newUserInit") {
                             write-host "Start Migration Task Failed Successfully"
                             return $true
