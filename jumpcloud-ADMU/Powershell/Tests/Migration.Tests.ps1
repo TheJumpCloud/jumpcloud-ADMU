@@ -498,13 +498,9 @@ Describe 'Migration Test Scenarios' {
                         }
                         if (Test-Path "C:\Windows\Temp\Jcadmu.log") {
                             Write-Host "log located in c drive"
-                            $logContent = Get-Content -Tail 10 C:\Windows\Temp\Jcadmu.log
+                            $logContent = Get-Content C:\Windows\Temp\Jcadmu.log
                         }
-                        if (Test-Path "D:\Windows\Temp\Jcadmu.log") {
-                            Write-Host "log located in D drive"
-                            $logContent = Get-Content -Tail 10 D:\Windows\Temp\Jcadmu.log
-                        }
-                        Write-Host "last 10 lines of log:"
+                        Write-Host "last lines of log:"
                         Write-Host $logContent
                         if ($logContent -match "The following migration steps were reverted to their original state: newUserInit") {
                             write-host "Start Migration Task Failed Successfully"
