@@ -47,7 +47,7 @@ function Remove-LocalUserProfile {
             # Remove the User SID
             # TODO: if the profile SID is loaded in registry skip this and note in log
             # Match the user SID
-            $matchedKey = get-childitem -path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object { $_.Name -match $UserSid }
+            $matchedKey = Get-ChildItem -path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' | Where-Object { $_.Name -match $UserSid }
             # Set the Matched Key Path to PSPath so PowerShell can use the path
             $matchedKeyPath = $($matchedKey.Name) -replace "HKEY_LOCAL_MACHINE", "HKLM:"
             # Remove the UserSid Key from the ProfileList
