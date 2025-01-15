@@ -21,7 +21,7 @@ BeforeAll {
         }
     }
 }
-Describe 'Functions' -skip {
+Describe 'Functions' {
     BeforeAll {
         Mock Get-WindowsDrive { return "C:" }
     }
