@@ -285,7 +285,7 @@ Function Start-Migration {
             $NewUserSID = New-LocalUserProfile -username:($JumpCloudUsername) -ErrorVariable profileInit
             if ($profileInit) {
                 Write-ToLog -Message:("$profileInit")
-                Write-ToLog -Message:("The user: $JumpCloudUsername could not be initalized, exiting")
+                Write-ToLog -Message:("The user: $JumpCloudUsername could not be initialized, exiting")
                 Write-AdmuErrorMessage -ErrorName "user_init_error"
                 $admuTracker.newUserInit.fail = $true
                 break

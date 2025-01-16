@@ -6,7 +6,7 @@ function Test-UserFolderRedirect {
         $UserSid
     )
     begin {
-        if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
+        if ("HKEY_USERS" -notin (Get-PSDrive | select-object name).Name) {
             Write-ToLog "Mounting HKEY_USERS"
             New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
         }

@@ -56,10 +56,10 @@ function Set-JCUserToSystemAssociation {
     End {
         # Associations post should return 204 success no content
         if ($StatusCode -eq 204) {
-            Write-ToLog -Message:("Associations Endpoint returened statusCode $statusCode [success]") -Level:('Warn')
+            Write-ToLog -Message:("Associations Endpoint returned statusCode $statusCode [success]") -Level:('Warn')
             return $true
         } else {
-            Write-ToLog -Message:("Associations Endpoint returened statusCode $statusCode | $errorMsg") -Level:('Warn')
+            Write-ToLog -Message:("Associations Endpoint returned statusCode $statusCode | $errorMsg") -Level:('Warn')
             return $false
         }
     }

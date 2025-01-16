@@ -9,21 +9,21 @@ function Test-RegistryValueMatch {
         [ValidateNotNullOrEmpty()]$Value,
 
         [parameter(Mandatory = $true)]
-        [ValidateNotNullOrEmpty()]$stringmatch
+        [ValidateNotNullOrEmpty()]$stringMatch
 
     )
 
     $ErrorActionPreference = "SilentlyContinue"
-    $regvalue = Get-ItemPropertyValue -Path $Path -Name $Value
+    $regValue = Get-ItemPropertyValue -Path $Path -Name $Value
     $ErrorActionPreference = "Continue"
     $out = 'Value For ' + $Value + ' Is ' + $1 + ' On ' + $Path
 
 
-    if ([string]::IsNullOrEmpty($regvalue)) {
-        write-host 'KEY DOESNT EXIST OR IS EMPTY'
+    if ([string]::IsNullOrEmpty($regValue)) {
+        write-host 'KEY DOES NOT EXIST OR IS EMPTY'
         return $false
     } else {
-        if ($regvalue -match ($stringmatch)) {
+        if ($regValue -match ($stringMatch)) {
             Write-Host $out
             return $true
         } else {

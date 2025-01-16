@@ -9,7 +9,7 @@ function Write-AdmuErrorMessage {
             $Script:ErrorMessage = "Load/Unload Error: User registry cannot be loaded or unloaded. Click the link below for troubleshooting information."
         }
         "copy_error" {
-            Write-ToLog -Message:("Registry Copy Error: The user registry files can not be coppied. Verify that the admin running ADMU has permission to the user's NTUser.dat/ UsrClass.dat files, no user processes/ services are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Warn
+            Write-ToLog -Message:("Registry Copy Error: The user registry files can not be copied. Verify that the admin running ADMU has permission to the user's NTUser.dat/ UsrClass.dat files, no user processes/ services are running. Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Warn
 
             $Script:ErrorMessage = "Registry Copy Error: Verify that the admin running ADMU has permission to NTUser.dat/UsrClass.dat. Click the link below for troubleshooting information."
         }

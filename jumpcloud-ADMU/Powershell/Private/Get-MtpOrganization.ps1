@@ -48,7 +48,7 @@ function Get-mtpOrganization {
             Write-ToLog -Message "API Key Validated`nOrgName: $($results.DisplayName)"
             $orgs = $results._id, $results.DisplayName
         } elseif (($results.count -gt 1)) {
-            Write-ToLog -Message "Found $($results.count) orgs with the specifed API Key"
+            Write-ToLog -Message "Found $($results.count) orgs with the specified API Key"
             # initial prompt for MTP selection
             switch ($inputType) {
                 $true {
@@ -68,7 +68,7 @@ function Get-mtpOrganization {
 
     }
     end {
-        #returned org as an object [0]=id [1]=dispalyName
+        #returned org as an object [0]=id [1]=displayName
         return $orgs
     }
 }

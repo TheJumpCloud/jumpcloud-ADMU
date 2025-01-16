@@ -22,8 +22,8 @@ Write-Host ('[status]Check PowerShell Gallery for module version info')
 if ($ManualModuleVersion) {
     $ManualModuleVersionRetrieval = Get-Content -Path:($FilePath_psd1) | Where-Object { $_ -like '*ModuleVersion*' }
     $SemanticRegex = [Regex]"[0-9]+.[0-9]+.[0-9]+"
-    $SemeanticVersion = Select-String -InputObject $ManualModuleVersionRetrieval -pattern ($SemanticRegex)
-    $ModuleVersion = $SemeanticVersion[0].Matches.Value
+    $semanticVersion = Select-String -InputObject $ManualModuleVersionRetrieval -pattern ($SemanticRegex)
+    $ModuleVersion = $semanticVersion[0].Matches.Value
 } else {
     $PSGalleryInfo = Get-PSGalleryModuleVersion -Name:($ModuleName) -ReleaseType:($ModuleVersionType) #('Major', 'Minor', 'Patch')
     $ModuleVersion = $PSGalleryInfo.NextVersion
@@ -62,7 +62,7 @@ If ($ModuleChangelogVersion -ne $PSD1Version) {
     ($NewModuleChangelogRecord + ($ModuleChangelog | Out-String)).Trim() | Set-Content -Path:($FilePath_ModuleChangelog) -Force
 } else {
     # Get content between latest version and last
-    $ModuleChangelogContent = Get-Content -Path:($FilePath_ModuleChangelog) | Select -First 3
+    $ModuleChangelogContent = Get-Content -Path:($FilePath_ModuleChangelog) | Select-Object -First 3
     $ReleaseDateRegex = [regex]'(?<=Release Date:\s)(.*)'
     $ReleaseDateRegexMatch = $ModuleChangelogContent | Select-String -Pattern $ReleaseDateRegex
     $ReleaseDate = $ReleaseDateRegexMatch.Matches.Value

@@ -51,7 +51,7 @@ function Set-UserRegistryLoadState {
                             $processList = Get-ProcessByOwner -username $username
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                             }
                             Set-UserRegistryLoadstate -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
                         }
@@ -65,7 +65,7 @@ function Set-UserRegistryLoadState {
                             $processList = Get-ProcessByOwner -username $username
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                             }
                             Set-UserRegistryLoadstate -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
                         }
@@ -87,7 +87,7 @@ function Set-UserRegistryLoadState {
                             $processList = Get-ProcessByOwner -username $username
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                             }
                             Set-UserRegistryLoadstate -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
                         }
@@ -103,7 +103,7 @@ function Set-UserRegistryLoadState {
                             $processList = Get-ProcessByOwner -username $username
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                             }
                             Set-UserRegistryLoadstate -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
                         }

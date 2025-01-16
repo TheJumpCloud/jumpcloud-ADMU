@@ -21,7 +21,7 @@ Function Backup-RegistryHive {
             $processList = Get-ProcessByOwner -username $domainUsername
             if ($processList) {
                 Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
-                # $CloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
             }
             try {
                 Write-ToLog -Message("Initial backup was not successful, trying again...")
