@@ -499,12 +499,16 @@ Describe 'Migration Test Scenarios' {
                         # validate users was removed:
                         $localUsers = Get-LocalUser
                         $localUsers.Name | Should -Not -Contain "$JCUSERNAME"
-                        if (Test-Path "C:\Windows\Temp\Jcadmu.log") {
+                        if (Test-Path "C:\Windows\Temp\jcAdmu.log") {
                             Write-Host "log located in c drive"
-                            $logContent = Get-Content C:\Windows\Temp\Jcadmu.log -Tail 10
+                            $logContent = Get-Content C:\Windows\Temp\jcAdmu.log -Tail 10
                         }
                         Write-Host "last lines of log:"
                         Write-Host $logContent
+
+                        # another should statement:
+                        $logContent.Contains("The following migration steps were reverted to their original state: newUserInit") | Should -Be $true
+
                         if ($logContent -match "The following migration steps were reverted to their original state: newUserInit") {
                             write-host "Start Migration Task Failed Successfully"
                             return $true
@@ -527,8 +531,10 @@ Describe 'Migration Test Scenarios' {
                 Wait-Job -Job $waitStartMigrationJob | Out-Null
                 $SMData = Receive-Job -Job $waitStartMigrationJob -Keep
                 # start migration should return $true if the job completes and fails as expected (should be true)
+                Get-Content C:\Windows\Temp\jcAdmu.log -Tail 10
                 $SMData | should -be $true
                 # the task should have been disabled during the start migration script (should be $true)
+                Get-ScheduledTask -TaskName "TestTaskFail"
                 $disabledTaskData | should -be $true
                 # the migration user should exist
                 "C:\Users\$($user.username)" | Should -Exist
