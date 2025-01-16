@@ -424,23 +424,20 @@ Function Start-Migration {
                 }
             }
 
-            # for Windows 10 devices, force refresh of start/ search app:
-            If ($systemVersion.OSName -Match "Windows 10") {
-                Write-ToLog -Message:('Windows 10 System, removing start and search reg keys to force refresh of those apps')
-                $regKeyClear = @(
-                    "SOFTWARE\Microsoft\Windows\CurrentVersion\StartLayout",
-                    "SOFTWARE\Microsoft\Windows\CurrentVersion\Start",
-                    "SOFTWARE\Microsoft\Windows\CurrentVersion\SearchSettings",
-                    "SOFTWARE\Microsoft\Windows\CurrentVersion\Search"
-                )
-
-                foreach ($key in $regKeyClear) {
-                    if (reg query "HKU\$($NewUserSID)_admu\$($key)") {
-                        write-ToLog -Message:("removing key: $key")
-                        reg delete "HKU\$($NewUserSID)_admu\$($key)" /f
-                    } else {
-                        write-ToLog -Message:("key not found $key")
-                    }
+            # Force refresh of start/ search apps:
+            Write-ToLog -Message:('Removing start and search reg keys to force reinstall of those apps on first login')
+            $regKeyClear = @(
+                "SOFTWARE\Microsoft\Windows\CurrentVersion\StartLayout",
+                "SOFTWARE\Microsoft\Windows\CurrentVersion\Start",
+                "SOFTWARE\Microsoft\Windows\CurrentVersion\SearchSettings",
+                "SOFTWARE\Microsoft\Windows\CurrentVersion\Search"
+            )
+            foreach ($key in $regKeyClear) {
+                if (reg query "HKU\$($NewUserSID)_admu\$($key)") {
+                    write-ToLog -Message:("removing key: $key")
+                    reg delete "HKU\$($NewUserSID)_admu\$($key)" /f
+                } else {
+                    write-ToLog -Message:("key not found $key")
                 }
             }
 
