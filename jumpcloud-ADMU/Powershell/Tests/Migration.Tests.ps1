@@ -49,9 +49,9 @@ BeforeAll {
         InitUser -UserName $($User.Username) -Password $($User.Password)
     }
 
-    # $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
-    # $regex = 'systemKey\":\"(\w+)\"'
-    # $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+    $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
+    $regex = 'systemKey\":\"(\w+)\"'
+    $systemKey = [regex]::Match($config, $regex).Groups[1].Value
 
     # Remove users with ADMU_ prefix
     # Remove Created Users
@@ -350,7 +350,7 @@ Describe 'Migration Test Scenarios' {
                 Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
                 write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
                 { Start-Migration -JumpCloudAPIKey $env:PESTER_APIKEY -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
-                $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
 
                 Write-Host "`n## Validating sudo status on $($GeneratedUser.Id) | Should be ($($user.BindAsAdmin)) on $systemKey"
                 $association | Should -not -BeNullOrEmpty
