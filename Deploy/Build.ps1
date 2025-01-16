@@ -25,7 +25,7 @@ if ($ModuleVersionType -eq 'manual') {
     . $PSScriptRoot\Build-Module.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 }
 # Create a new ADMU Template file in this directory for testing/ Building EXE
-New-ADMUTemplate -ExportPath "$PSScriptRoot/admuTemplate.ps1"
+New-ADMUTemplate -ExportPath "$PSScriptRoot/admuTemplate.ps1" -hidePowerShellWindow $true
 # Run Build-Exe On Windows Systems
 if ($IsWindows) {
     . $PSScriptRoot\New-ADMUExe.ps1
