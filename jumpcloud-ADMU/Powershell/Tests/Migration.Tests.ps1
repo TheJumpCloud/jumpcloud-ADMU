@@ -496,9 +496,12 @@ Describe 'Migration Test Scenarios' {
                         } Catch {
                             write-host "Migration failed as expected"
                         }
+                        # validate users was removed:
+                        $localUsers = Get-LocalUser
+                        $localUsers.Name | Should -Not -Contain "$JCUSERNAME"
                         if (Test-Path "C:\Windows\Temp\Jcadmu.log") {
                             Write-Host "log located in c drive"
-                            $logContent = Get-Content C:\Windows\Temp\Jcadmu.log
+                            $logContent = Get-Content C:\Windows\Temp\Jcadmu.log -Tail 10
                         }
                         Write-Host "last lines of log:"
                         Write-Host $logContent
