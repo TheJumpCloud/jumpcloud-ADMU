@@ -49,13 +49,13 @@ BeforeAll {
         InitUser -UserName $($User.Username) -Password $($User.Password)
     }
 
-    $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
-    $regex = 'systemKey\":\"(\w+)\"'
-    $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+    # $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
+    # $regex = 'systemKey\":\"(\w+)\"'
+    # $systemKey = [regex]::Match($config, $regex).Groups[1].Value
 
     # Remove users with ADMU_ prefix
     # Remove Created Users
-    Get-JCuser -username "ADMU_*" | Remove-JCuser -Force
+    Get-JCUser -username "ADMU_*" | Remove-JCUser -Force
 }
 Describe 'Migration Test Scenarios' {
     Enable-TestNameAsVariablePlugin
@@ -63,7 +63,7 @@ Describe 'Migration Test Scenarios' {
         Write-Host "---------------------------"
         Write-Host "Begin Test: $testName`n"
     }
-    Context 'Test FTA/PTA CSV Creation' -skip {
+    Context 'Test FTA/PTA CSV Creation' {
         It 'Creates FTA/PTA CSV files and changes file/protocol associations' {
             $Password = "Temp123!"
             $localUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -126,7 +126,7 @@ Describe 'Migration Test Scenarios' {
 
 
     # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
-    Context 'Start-Migration on local accounts (Test Functionality)' -skip {
+    Context 'Start-Migration on local accounts (Test Functionality)' {
         It "username exists for testing" {
             foreach ($user in $userTestingHash.Values) {
                 $user.username | Should -Not -BeNullOrEmpty
@@ -225,7 +225,7 @@ Describe 'Migration Test Scenarios' {
 
         }
     }
-    Context 'Start-Migration kicked off through JumpCloud agent' -skip {
+    Context 'Start-Migration kicked off through JumpCloud agent' {
         BeforeAll {
             # test connection to Org
             $Org = Get-JcSdkOrganization
@@ -322,7 +322,7 @@ Describe 'Migration Test Scenarios' {
             }
         }
     }
-    Context 'Start-Migration Successfully Binds JumpCloud User to System' -skip {
+    Context 'Start-Migration Successfully Binds JumpCloud User to System' {
         It 'user bound to system after migration' {
             $headers = @{}
             $headers.Add("x-org-id", $env:PESTER_ORGID)
@@ -369,7 +369,7 @@ Describe 'Migration Test Scenarios' {
             }
         }
     }
-    Context 'Start-Migration Fails to Bind JumpCloud User to System and throws error' -skip {
+    Context 'Start-Migration Fails to Bind JumpCloud User to System and throws error' {
         It 'user bound to system after migration' {
             Write-Host "`nBegin Test: Start-Migration Fails to Bind JumpCloud User to System and throws error"
             $Password = "Temp123!"
@@ -380,7 +380,7 @@ Describe 'Migration Test Scenarios' {
             { Start-Migration -JumpCloudAPIKey $env:PESTER_APIKEY -AutobindJCUser $true -JumpCloudUserName "$($user2)" -SelectedUserName "$ENV:COMPUTERNAME\$($user1)" -TempPassword "$($Password)" } | Should -Throw
         }
     }
-    Context 'Start-Migration Fails when LocalUsername and JumpCloudUsername are the same' -skip {
+    Context 'Start-Migration Fails when LocalUsername and JumpCloudUsername are the same' {
         It 'local and JumpCloud usernames are the same' {
             Write-Host "`nStart-Migration Fails when LocalUsername and JumpCloudUsername are the same"
             $Password = "Temp123!"
@@ -407,7 +407,7 @@ Describe 'Migration Test Scenarios' {
             foreach ($user in $JCReversionHash.Values) {
                 # Begin background job before Start-Migration
                 # define path to start migration for parallel job:
-                $pathToSM = "$PSScriptRoot\..\Public\Start-Migration.ps1"
+                $pathToSM = "$PSScriptRoot\..\..\JumpCloud.ADMU.psd1"
 
                 Write-Host "$(Get-Date -UFormat "%D %r") - Start parallel job to wait for new user directory"
                 $waitJob = Start-Job -ScriptBlock:( {
@@ -451,8 +451,6 @@ Describe 'Migration Test Scenarios' {
                         $task = Get-ScheduledTask -TaskName "TestTaskFail"
                         do {
                             $task = Get-ScheduledTask -TaskName "TestTaskFail"
-                            Start-Sleep -Seconds:(1)
-
                         }
                         Until ($task.state -eq "Disabled")
                         if ($task.state -eq "Disabled") {
@@ -484,7 +482,7 @@ Describe 'Migration Test Scenarios' {
                         $date = Get-Date -UFormat "%D %r"
                         Write-Host "$date - Starting Start migration:"
                         Write-Host "$date - path: $SMPath"
-                        . $SMPath
+                        Import-Module $SMPath -Force
                         if ($?) {
                             Write-Host "imported start migration"
                         } else {
@@ -503,12 +501,6 @@ Describe 'Migration Test Scenarios' {
                             Write-Host "log located in c drive"
                             $logContent = Get-Content C:\Windows\Temp\jcAdmu.log -Tail 10
                         }
-                        Write-Host "last lines of log:"
-                        Write-Host $logContent
-
-                        # another should statement:
-                        $logContent.Contains("The following migration steps were reverted to their original state: newUserInit") | Should -Be $true
-
                         if ($logContent -match "The following migration steps were reverted to their original state: newUserInit") {
                             write-host "Start Migration Task Failed Successfully"
                             return $true
