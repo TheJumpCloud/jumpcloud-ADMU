@@ -1,6 +1,6 @@
 ## 2.7.11
 
-Release Date: January 13, 2025
+Release Date: January 17, 2025
 
 #### RELEASE NOTES
 

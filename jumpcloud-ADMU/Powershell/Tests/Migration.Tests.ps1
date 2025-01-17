@@ -130,7 +130,7 @@ Describe 'Migration Test Scenarios' {
         It "username exists for testing" {
             foreach ($user in $userTestingHash.Values) {
                 $user.username | Should -Not -BeNullOrEmpty
-                $user.JCusername | Should -Not -BeNullOrEmpty
+                $user.JCUsername | Should -Not -BeNullOrEmpty
                 Get-LocalUser $user.username | Should -Not -BeNullOrEmpty
             }
         }
@@ -263,7 +263,7 @@ Describe 'Migration Test Scenarios' {
             foreach ($result in $results) {
                 # Delete Command Results
                 Write-Host "Found Command Results: $($result.id) removing..."
-                remove-jcsdkcommandresult -id $result.id
+                Remove-JcSdkCommandResult -id $result.id
             }
             # Clear previous commands matching the name
             $RemoteADMUCommands = Get-JcSdkCommand | Where-Object { $_.name -eq $CommandName }
@@ -287,7 +287,7 @@ Describe 'Migration Test Scenarios' {
             $results = Get-JcSdkCommandResult
             foreach ($result in $results) {
                 # Delete Command Results
-                remove-jcsdkcommandresult -id $result.id
+                Remove-JcSdkCommandResult -id $result.id
             }
             # begin tests
             foreach ($user in $JCCommandTestingHash.Values) {
@@ -332,7 +332,7 @@ Describe 'Migration Test Scenarios' {
             foreach ($user in $JCFunctionalHash.Values) {
                 Write-Host "`n## Begin Bind User Test ##"
                 Write-Host "## $($user.Username) Bound as Admin: $($user.BindAsAdmin)  ##`n"
-                $users = Get-JCSDKUser
+                $users = Get-JcSdkUser
                 if ("$($user.JCUsername)" -in $users.Username) {
                     $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
                     Write-Host "Found JumpCloud User, $($existing.Id) removing..."
@@ -547,7 +547,7 @@ Describe 'Migration Test Scenarios' {
 
 AfterAll {
     $systems = Get-JCSdkSystem
-    $CIsystems = $systems | Where-Object { $_.displayname -match "fv-az*" }
+    $CIsystems = $systems | Where-Object { $_.DisplayName -match "fv-az*" }
     foreach ($system in $CIsystems) {
         Remove-JcSdkSystem -id $system.Id
     }

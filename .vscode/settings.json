@@ -1,4 +1,5 @@
 {
+
   "spellright.language": ["en"],
   "spellright.documentTypes": [
     "markdown",
@@ -7,12 +8,25 @@
     "yaml",
     "powershell"
   ],
+  // powershell settings
   "powershell.scriptAnalysis.settingsPath": "jumpcloud-ADMU/Powershell/Tests/PSScriptAnalyzerSettings.psd1",
   "powershell.codeFormatting.preset": "OTBS",
   "powershell.scriptAnalysis.enable": true,
+  // file formatting & saving:
+  "prettier.enable": true,
+  "editor.formatOnSave": true,
   "files.trimTrailingWhitespace": true,
   "search.useIgnoreFiles": false,
+  // cSpell:
   "cSpell.words": [
     "ADMU",
+  ],
+  "cSpell.language": "en",
+  "cSpell.enabled": true,
+  "cSpell.enabledFiletypes": [
+    "latex",
+    "markdown",
+    "plaintext",
+    "powershell"
   ]
 }
