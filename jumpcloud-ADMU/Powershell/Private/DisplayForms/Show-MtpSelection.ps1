@@ -1,109 +1,127 @@
 function Show-MtpSelection {
-    [OutputType([object[]])]
     [CmdletBinding()]
     param (
         [Parameter()]
         [System.Object]
         $Orgs
     )
+
     begin {
-        $Prompt = 'Please Select A JumpCloud MTP:'
-        $Title = 'MTP Organization Selection'
-        # define a data table to store org names/ org ids
-        $datatable = New-Object system.Data.DataTable
-        #Define Columns
-        $col1 = New-Object system.Data.DataColumn "Value", ([string])
-        $col2 = New-Object system.Data.DataColumn "Text", ([string])
-        #add columns to datatable
-        $datatable.columns.add($col1)
-        $datatable.columns.add($col2)
-        # Define Buttons:
-        $okButton = [System.Windows.Forms.Button]@{
-            Location     = '290,12'
-            Size         = '60,22'
-            Text         = 'OK'
-            DialogResult = [System.Windows.Forms.DialogResult]::OK
+        # define a class for Name/ ID pairs
+        Class organization {
+            [string]$Name
+            [string]$ID
+
+            organization([string]$Name, [string]$ID) {
+                $this.Name = $Name
+                $this.ID = $ID
+            }
         }
-        $cancelButton = [System.Windows.Forms.Button]@{
-            Location     = '290,40'
-            Size         = '60,22'
-            Text         = 'Cancel'
-            DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+
+        $types = @(
+            'PresentationFramework',
+            'PresentationCore',
+            'System.Windows.Forms',
+            'System.Drawing',
+            'WindowsBase'
+        )
+        foreach ($type in $types) {
+            if (-not ([System.Management.Automation.PSTypeName]$type).Type) {
+                [void][System.Reflection.Assembly]::LoadWithPartialName($type)
+                Add-Type -AssemblyName $type
+            }
         }
-        # label for the form
-        $label = [System.Windows.Forms.Label]@{
-            AutoSize    = $true
-            Location    = '10,10'
-            Size        = '240,20'
-            MaximumSize = '250,0'
-            Text        = $Prompt
-        }
-        $dynamicLabel = [System.Windows.Forms.Label]@{
-            AutoSize    = $true
-            Location    = '10,30'
-            Size        = '240,20'
-            MaximumSize = '250,0'
-            Text        = ''
-        }
-        foreach ($org in $orgs) {
-            #Create a row
-            $name = New-Variable -Name "row_$($org._id)"
-            $name = $datarow1 = $datatable.NewRow()
-            #Enter data in the row
-            $name.Text = "$($org.DisplayName)"
-            $name.Value = "$($org._id)"
-            #Add the row to the datatable
-            $datatable.Rows.Add($name)
-        }
-        #create a combobox
-        $comboBox = [System.Windows.Forms.ComboBox]@{
-            Location      = '10,90'
-            AutoSize      = $true
-            MaximumSize   = '500,0'
-            # MaximumSize   = '335,0'
-            DropDownStyle = "DropDownList"
-        }
-        $SelectBox = [System.Windows.Forms.Form]@{
-            Text            = $Title
-            Size            = '369,159'
-            # Size            = '369,159'
-            StartPosition   = 'CenterScreen'
-            AcceptButton    = $okButton
-            CancelButton    = $cancelButton
-            FormBorderStyle = 'FixedDialog'
-            MinimizeBox     = $false
-            MaximizeBox     = $false
-        }
+
+
+        [xml]$XAML = @'
+<Window
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MTP Organization Selection" Height="220" Width="400">
+    <Grid Margin="10,10,10,10">
+        <Button x:Name="OKButton" Content="OK" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="60"/>
+        <Button x:Name="CancelButton" Content="Cancel" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,70,0" Width="56"/>
+        <ComboBox x:Name="ComboBoxOptions" HorizontalAlignment="Left" VerticalAlignment="Bottom" Width="120"/>
+        <Label Content="Please Select A JumpCloud MTP:" HorizontalAlignment="Left" VerticalAlignment="Top"/>
+        <Label x:Name="OrgName" Content="OrgName:" HorizontalAlignment="Left" Margin="0,26,0,0" VerticalAlignment="Top"/>
+
+    </Grid>
+</Window>
+
+'@
     }
     process {
-        #clear combo before we bind it
-        $combobox.Items.Clear()
 
-        #bind combobox to datatable
-        $combobox.ValueMember = "Value"
-        $combobox.DisplayMember = "Text"
-        $combobox.Datasource = $datatable
+        # init list for building instances of the organization class
+        $dataList = New-Object System.Collections.ArrayList
+        # add each org item in the data list and cast those items as organization type items
+        foreach ($org in $Orgs) {
+            $dataList.Add(
+                [organization]::new($org.DisplayName, $org._id)
+            ) | Out-Null
+        }
+        # Read XAML
+        $reader = (New-Object System.Xml.XmlNodeReader $xaml)
+        Try {
+            $Form = [Windows.Markup.XamlReader]::Load($reader)
+        } Catch {
+            Write-Error "Unable to load Windows.Markup.XamlReader. Some possible causes for this problem include: .NET Framework is missing PowerShell must be launched with PowerShell -sta, invalid XAML code was encountered.";
+        }
 
-        #add combobox to form
-        $SelectBox.Controls.Add($combobox)
+        # Find and select items from the form
+        $comboBox = $Form.FindName("ComboBoxOptions")
+        $dynamicLabel = $Form.FindName("OrgName")
+        $okButton = $Form.FindName("OKButton")
+        $cancelButton = $Form.FindName("CancelButton")
 
-        #show form
-        $SelectBox.Controls.AddRange(@($okButton, $cancelButton, $label, $dynamicLabel))
-        $SelectBox.Topmost = $true
-        $SelectBox.Add_Shown({ $comboBox.Select() })
+        # Add keyValuePairs of data to the comboBox, necessary to display a name in the comboBox when receiving data from object
+        foreach ($item in $dataList) {
+            $keyValuePair = New-Object 'System.Collections.Generic.KeyValuePair[String, String]' ("$($item.ID)", "$($item.Name)")
+            $comboBox.Items.Add($keyValuePair) | Out-Null
+        }
 
+        # Set the value of the comboBox items to the value of the keyValuePair items
+        $comboBox.DisplayMemberPath = "Value"
+
+        $combobox.Add_SelectionChanged({
+                # update the orgName label when an item is selected from the comboBox
+                $selectedItem = $comboBox.SelectedItem
+                if ($selectedItem) {
+                    $selectedId = $($SelectedItem.Key)
+                    $selectedOrgName = $($SelectedItem.Value)
+                    $dynamicLabel.Content = "OrgName: $selectedOrgName"
+                }
+            })
+
+        # init variable for returning name and orgID
+        $returnedOrg = [PSCustomObject]@{
+            DisplayName = $null
+            ID          = $null
+        }
+
+        $okButton.Add_Click({
+                $selectedItem = $comboBox.SelectedItem
+                if ($selectedItem) {
+                    $returnedOrg.DisplayName = $($SelectedItem.Value)
+                    $returnedOrg.ID = $($SelectedItem.Key)
+                    $Form.DialogResult = [System.Windows.Forms.DialogResult]::OK
+                    $Form.Close()
+                } else {
+                    $dynamicLabel.Content = "OrgName: Please select an organization"
+                }
+            })
+        $cancelButton.Add_Click({
+                $Form.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+                $Form.Close()
+
+            })
+
+        $result = $Form.ShowDialog()
     }
     end {
-        $combobox.Add_SelectedIndexChanged({
-                #output the selected value and text
-                $dynamicLabel.Text = "OrgName: $($combobox.SelectedItem['Text'])"
-                $dynamicLabel.Refresh();
-                # write-host $combobox.SelectedItem["Value"] $combobox.SelectedItem["Text"]
-            })
-        $result = $SelectBox.ShowDialog()
+
         if ($result -eq [System.Windows.Forms.DialogResult]::OK) {
-            # return id of the org we selected
-            return $combobox.SelectedItem["Value"], $combobox.SelectedItem["Text"]
+            return $returnedOrg
         } else {
             return $null
         }

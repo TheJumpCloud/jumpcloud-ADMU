@@ -1,4 +1,4 @@
-function Get-mtpOrganization {
+function Get-MtpOrganization {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
@@ -53,7 +53,8 @@ function Get-mtpOrganization {
             switch ($inputType) {
                 $true {
                     Write-ToLog -Message "Prompting for MTP Admin Selection"
-                    $orgs = show-mtpSelection -Orgs $results
+                    $orgs = Show-MtpSelection -Orgs $results
+                    $orgs = $orgs.Id, $orgs.DisplayName
                     Write-ToLog -Message "API Key Validated`nOrgName: $($orgs[1])"
                 }
                 Default {

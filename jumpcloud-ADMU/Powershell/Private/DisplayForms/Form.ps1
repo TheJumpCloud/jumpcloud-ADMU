@@ -5,7 +5,24 @@ Function Show-SelectionForm {
     #==============================================================================================
     # XAML Code - Imported from Visual Studio WPF Application
     #==============================================================================================
-    [void][System.Reflection.Assembly]::LoadWithPartialName('PresentationFramework')
+    $types = @(
+        'PresentationFramework',
+        'PresentationCore',
+        'System.Windows.Forms',
+        'System.Drawing',
+        'WindowsBase'
+    )
+    foreach ($type in $types) {
+        if (-not ([System.Management.Automation.PSTypeName]$type).Type) {
+            [void][System.Reflection.Assembly]::LoadWithPartialName($type)
+            Add-Type -AssemblyName $type
+        }
+    }
+    # [void][System.Reflection.Assembly]::LoadWithPartialName('PresentationFramework')
+    # [void][System.Reflection.Assembly]::LoadWithPartialName("System.Drawing")
+    # [void][System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms")
+    # # Add-Type -AssemblyName System.Windows.Forms
+    # Add-Type -AssemblyName PresentationFramework, PresentationCore, WindowsBase, System.Windows.Forms, System.Drawing
     [xml]$XAML = @'
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -249,11 +266,11 @@ Function Show-SelectionForm {
     # Define misc static variables
 
     $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-    Write-progress -Activity 'Jumpcloud ADMU' -Status 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..' -PercentComplete 25
-    Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Checking AzureAD Status..'
+    Write-progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..' -PercentComplete 25
+    Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..'
     if ($WmiComputerSystem.PartOfDomain) {
         $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
-        $securechannelstatus = Test-ComputerSecureChannel
+        $secureChannelStatus = Test-ComputerSecureChannel
 
         $nbtstat = nbtstat -n
         foreach ($line in $nbtStat) {
@@ -262,7 +279,7 @@ Function Show-SelectionForm {
             }
         }
 
-        if ([System.String]::IsNullOrEmpty($WmiComputerDomain[0].DnsForestName) -and $securechannelstatus -eq $false) {
+        if ([System.String]::IsNullOrEmpty($WmiComputerDomain[0].DnsForestName) -and $secureChannelStatus -eq $false) {
             $DomainName = 'Fix Secure Channel'
         } else {
             $DomainName = [string]$WmiComputerDomain.DnsForestName
@@ -271,7 +288,7 @@ Function Show-SelectionForm {
     } elseif ($WmiComputerSystem.PartOfDomain -eq $false) {
         $DomainName = 'N/A'
         $NetBiosName = 'N/A'
-        $securechannelstatus = 'N/A'
+        $secureChannelStatus = 'N/A'
     }
     if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
         $AzureADInfo = dsregcmd.exe /status
@@ -296,10 +313,10 @@ Function Show-SelectionForm {
     }
 
     $FormResults = [PSCustomObject]@{ }
-    Write-Progress -Activity 'Jumpcloud ADMU' -Status 'Loading Jumpcloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..' -PercentComplete 50
-    Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
-    Write-Progress -Activity 'Jumpcloud ADMU' -Status 'Loading Jumpcloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..' -PercentComplete 70
-    Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
+    Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..' -PercentComplete 50
+    Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
+    Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..' -PercentComplete 70
+    Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
     # Get Valid SIDs from the Registry and build user object
     $registyProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
     $profileList = @()
@@ -359,12 +376,12 @@ Function Show-SelectionForm {
         # $user.LocalProfileSize = $largeprofile
     }
 
-    Write-Progress -Activity 'Jumpcloud ADMU' -Status 'Loading Jumpcloud ADMU. Please Wait.. Building Profile Group Box Query..' -PercentComplete 85
-    Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Building Profile Group Box Query..'
+    Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Building Profile Group Box Query..' -PercentComplete 85
+    Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Building Profile Group Box Query..'
 
     $Profiles = $users | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, LastLogin, @{Name = "UserName"; EXPRESSION = { $_.Name } }
-    Write-Progress -Activity 'Jumpcloud ADMU' -Status 'Loading Jumpcloud ADMU. Please Wait.. Done!' -PercentComplete 100
-    Write-ToLog 'Loading Jumpcloud ADMU. Please Wait.. Done!'
+    Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Done!' -PercentComplete 100
+    Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Done!'
 
     #load UI Labels
 
@@ -587,7 +604,8 @@ Function Show-SelectionForm {
             } Else {
                 # Get org name/ id
                 try {
-                    $OrgSelection = Get-mtpOrganization -ApiKey $tbJumpCloudAPIKey.Password -inputType #-errorAction silentlycontinue
+                    write-host "begin Get-MTPOrganization"
+                    $OrgSelection = Get-MtpOrganization -ApiKey $tbJumpCloudAPIKey.Password -inputType #-errorAction silentlycontinue
                     $lbl_orgName.Text = "$($OrgSelection[1])"
                     $Env:selectedOrgID = "$($OrgSelection[0])"
                     $tbJumpCloudAPIKey.Background = "white"

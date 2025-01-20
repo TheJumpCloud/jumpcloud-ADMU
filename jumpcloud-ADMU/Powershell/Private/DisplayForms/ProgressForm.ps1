@@ -1,7 +1,7 @@
 function New-ProgressForm {
     # Synchash the values
     [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null
-    [System.Reflection.Assembly]::LoadWithPartialName('presentationframework') | Out-Null
+    [System.Reflection.Assembly]::LoadWithPartialName('PresentationFramework') | Out-Null
     $syncHash = [hashtable]::Synchronized(@{ })
     $newRunspace = [runspacefactory]::CreateRunspace()
     $syncHash.Runspace = $newRunspace
