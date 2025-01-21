@@ -110,7 +110,7 @@ Function Show-SelectionForm {
                 <RowDefinition Height="Auto"/>
 
             </Grid.RowDefinitions>
-            <Image Name="JCLogoImg" Source="C:\Users\kmara\Downloads\JC oceanblue tm.png" Height="23" VerticalAlignment="Top" Margin="0,10,258,0" Width="auto" HorizontalAlignment="Left"/>
+            <Image Name="JCLogoImg" Source="..." Height="23" VerticalAlignment="Top" Margin="0,10,258,0" Width="auto" HorizontalAlignment="Left"/>
 
             <!-- System Information -->
             <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" Height="186" Margin="0,47,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="295" Grid.Row="0" Grid.Column="0">
@@ -214,6 +214,7 @@ Function Show-SelectionForm {
                     <TextBlock Name="lbl_apikey" HorizontalAlignment="Left" Margin="10,164,0,0" Text="JumpCloud API Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
                     <PasswordBox Name="tbJumpCloudAPIKey" HorizontalAlignment="Left" Height="23" Margin="10,185,0,0" VerticalAlignment="Top" Width="432"  Background="#FFC6CBCF" FontWeight="Bold" IsEnabled="False" />
                     <TextBlock Name="lbl_orgNameTitle" HorizontalAlignment="Left" Margin="10,219,0,0" Text="Organization Name:" VerticalAlignment="Top" FontWeight="Normal"/>
+                    <TextBlock Name="lbl_selectOrgName" HorizontalAlignment="Right" Margin="0,164,44,0" Text="Select Different Organization" VerticalAlignment="Top" FontWeight="Normal" Visibility="Hidden" TextDecorations="Underline" Foreground="#FF000CFF"/>
                     <TextBlock Name="lbl_orgName" HorizontalAlignment="Left" Margin="124,219,0,0" Text="Not Currently Connected To A JumpCloud Organization" VerticalAlignment="Top" FontWeight="Normal"/>
                     <CheckBox Name="cb_forcereboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="10,76,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                     <CheckBox Name="cb_installjcagent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
@@ -521,6 +522,7 @@ Function Show-SelectionForm {
     $cb_autobindjcuser.Add_Unchecked( { $tbJumpCloudAPIKey.IsEnabled = $false })
     $cb_autobindjcuser.Add_Unchecked( { $img_apikey_info.Visibility = 'Hidden' })
     $cb_autobindjcuser.Add_Unchecked( { $img_apikey_valid.Visibility = 'Hidden' })
+    $cb_autobindjcuser.Add_Unchecked( { $lbl_selectOrgName.Visibility = 'Hidden' })
     $cb_autobindjcuser.Add_Unchecked( { $cb_bindAsAdmin.IsEnabled = $false })
     $cb_autobindjcuser.Add_Unchecked( { $cb_bindAsAdmin.IsChecked = $false })
     $cb_bindAsAdmin.Add_Unchecked( { $BindAsAdmin = $false })
@@ -605,9 +607,10 @@ Function Show-SelectionForm {
                 # Get org name/ id
                 try {
                     write-host "begin Get-MTPOrganization"
-                    $OrgSelection = Get-MtpOrganization -ApiKey $tbJumpCloudAPIKey.Password -inputType #-errorAction silentlycontinue
+                    $OrgSelection = Get-MtpOrganization -ApiKey $tbJumpCloudAPIKey.Password -inputType
                     $lbl_orgName.Text = "$($OrgSelection[1])"
                     $Env:selectedOrgID = "$($OrgSelection[0])"
+                    $lbl_selectOrgName.Visibility = 'Visible'
                     $tbJumpCloudAPIKey.Background = "white"
                     $tbJumpCloudAPIKey.Tooltip = $null
                     $tbJumpCloudAPIKey.FontWeight = "Normal"
@@ -617,6 +620,7 @@ Function Show-SelectionForm {
                     Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
                 } catch {
                     $bMigrateProfile.IsEnabled = $false
+                    $lbl_selectOrgName.Visibility = 'Hidden'
                     $img_apikey_valid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
                     $img_apikey_valid.ToolTip = "Please enter a valid JumpCloud API Key"
                     $OrgSelection = ""
@@ -761,6 +765,35 @@ Function Show-SelectionForm {
 
     # lbl_apikey link - Mouse button event
     $lbl_apikey.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start('https://support.jumpcloud.com/support/s/article/jumpcloud-apis1') })
+
+    # lbl_apikey link - Mouse button event
+    $lbl_selectOrgName.Add_PreviewMouseDown({
+
+            # Get-MtpOrganization -ApiKey $tbJumpCloudAPIKey.Password -inputType
+            try {
+                write-host "begin Get-MTPOrganization"
+                $OrgSelection = Get-MtpOrganization -ApiKey $tbJumpCloudAPIKey.Password -inputType
+                $lbl_orgName.Text = "$($OrgSelection[1])"
+                $Env:selectedOrgID = "$($OrgSelection[0])"
+                $lbl_selectOrgName.Visibility = 'Visible'
+                $tbJumpCloudAPIKey.Background = "white"
+                $tbJumpCloudAPIKey.Tooltip = $null
+                $tbJumpCloudAPIKey.FontWeight = "Normal"
+                $tbJumpCloudAPIKey.BorderBrush = "#FFC6CBCF"
+                $img_apikey_valid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
+                $img_apikey_valid.ToolTip = $null
+                Test-Button -tbJumpCloudUserName:($tbJumpCloudUserName) -tbJumpCloudConnectKey:($tbJumpCloudConnectKey) -tbTempPassword:($tbTempPassword) -lvProfileList:($lvProfileList) -tbJumpCloudAPIKey:($tbJumpCloudAPIKey)
+            } catch {
+                $bMigrateProfile.IsEnabled = $false
+                $lbl_selectOrgName.Visibility = 'Hidden'
+                $img_apikey_valid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
+                $img_apikey_valid.ToolTip = "Please enter a valid JumpCloud API Key"
+                $OrgSelection = ""
+                $lbl_orgName.Text = ""
+                $img_apikey_valid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
+                Write-ToLog "MTP KEY MAY BE WRONG"
+            }
+        })
 
     # move window
     $Form.Add_MouseLeftButtonDown( {
