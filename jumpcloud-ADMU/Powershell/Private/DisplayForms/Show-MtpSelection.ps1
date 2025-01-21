@@ -37,7 +37,12 @@ function Show-MtpSelection {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="MTP Organization Selection" Height="220" Width="400">
+        Title="MTP Organization Selection"
+        WindowStyle="SingleBorderWindow"
+        ResizeMode="NoResize"
+        Background="White"
+        Height="220"
+        Width="400">
     <Grid Margin="10,10,10,10">
         <Button x:Name="OKButton" Content="OK" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="60"/>
         <Button x:Name="CancelButton" Content="Cancel" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,70,0" Width="56"/>
