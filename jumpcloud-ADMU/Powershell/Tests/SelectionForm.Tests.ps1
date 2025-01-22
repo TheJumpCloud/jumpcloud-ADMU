@@ -13,17 +13,17 @@ Describe -Name "testGUITests" {
         }
         if (-Not $IsWindows) {
             # for non-windows devices just declare this as a fake function
-            Function Get-WmiObject {
-            }
+            # Function Get-WmiObject {
+            # }
         }
         # mock the wmi command
         Mock -CommandName 'Get-WmiObject' {
             $wmiReturn = @{
-                "Domain"              = "alderaan.org"
-                "Manufacturer"        = "Parallels International GmbH."
-                "Model"               = "Parallels ARM Virtual Machine"
-                "Name"                = "JOEWORKMANE24F"
-                "PrimaryOwnerName"    = "Joe Workman"
+                "Domain"              = "mockDomain.org"
+                "Manufacturer"        = "mockManufacturer"
+                "Model"               = "mockModel"
+                "Name"                = "mockSystemName"
+                "PrimaryOwnerName"    = "mockUsername"
                 "TotalPhysicalMemory" = "436880384"
             }
             return $wmiReturn
@@ -165,7 +165,7 @@ Describe -Name "testGUITests" {
                 $btn_migrateProfile.IsEnabled | Should -Be $false
             }
             It "When a user is local to the system" {
-                $testCaseInput.lvProfileList.SelectedItem.Username = "JOEWORKMANE24F\Someone"
+                $testCaseInput.lvProfileList.SelectedItem.Username = "mockSystemName\Someone"
                 # should not return true
                 Test-MigrationButton @testCaseInput | Should -Be $false
                 $btn_migrateProfile.IsEnabled | Should -Be $false
@@ -204,7 +204,7 @@ Describe -Name "testGUITests" {
                 $btn_migrateProfile.IsEnabled | Should -Be $false
             }
             It "When the username is the same as the system hostname" {
-                $testCaseInput.tb_JumpCloudUserName.Text = "JOEWORKMANE24F"
+                $testCaseInput.tb_JumpCloudUserName.Text = "mockSystemName"
                 # should not return true
                 Test-MigrationButton @testCaseInput | Should -Be $false
                 $btn_migrateProfile.IsEnabled | Should -Be $false
