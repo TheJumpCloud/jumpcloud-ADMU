@@ -5,7 +5,6 @@ Describe -Name "testGUITests" {
         $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Private/*.ps1" -Recurse)
         Foreach ($Import in $Private) {
             Try {
-                write-host "importing $($Import.Name)"
                 . $Import.FullName
             } Catch {
                 Write-Error -Message "Failed to import function $($Import.FullName): $_"
@@ -195,13 +194,18 @@ Describe -Name "testGUITests" {
                 Test-MigrationButton @testCaseInput | Should -Be $false
                 $btn_migrateProfile.IsEnabled | Should -Be $false
             }
-            It "When a local exists without a SID" {
+            It "When a local user exists without a valid SID" {
                 # This test requires a windows device to create the get the user
                 $userName = "TesterUser1234"
                 $password = "TesterPassword1234!!"
                 $newUserPassword = ConvertTo-SecureString -String "$($Password)" -AsPlainText -Force
-                New-localUser -Name "$($UserName)" -password $newUserPassword -ErrorVariable userExitCode -Description "Created By JumpCloud ADMU"
+                New-localUser -Name "$($UserName)" -password $newUserPassword -Description "Created By JumpCloud ADMU"
 
+                # validate that the user was created
+                $localUsersWithoutSIDs = Get-LocalUser
+                Write-Host "The following local users exist on the system"
+                Write-Host $localUsersWithoutSIDs.Name
+                $username | Should -BeIn $localUsersWithoutSIDs.Name
                 $testCaseInput.lvProfileList.SelectedItem.Username = $userName
 
                 # should not return true
