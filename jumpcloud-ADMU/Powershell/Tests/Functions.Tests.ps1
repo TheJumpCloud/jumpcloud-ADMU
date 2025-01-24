@@ -433,12 +433,12 @@ Describe 'Functions' {
 
         It 'Test-Localusername - exists' {
             $currentUser = $(whoami) -replace "$(hostname)\\", ("")
-            Test-Localusername -field $currentUser | Should -Be $true
+            Test-Localusername -username $currentUser | Should -Be $true
         }
 
         It 'Test-Localusername - does not exist' {
 
-            Test-Localusername -field 'blazarz' | Should -Be $false
+            Test-Localusername -username 'blazarz' | Should -Be $false
         }
     }
 

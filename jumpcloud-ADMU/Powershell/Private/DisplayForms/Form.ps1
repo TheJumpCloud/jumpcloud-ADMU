@@ -506,7 +506,7 @@ Function Show-SelectionForm {
 
     $tb_JumpCloudUserName.add_LostFocus( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If ((Test-IsNotEmpty $tb_JumpCloudUserName.Text) -or (!(Test-HasNoSpace $tb_JumpCloudUserName.Text)) -or (Test-LocalUsername $tb_JumpCloudUserName.Text) -or (($tb_JumpCloudUserName.Text).Length -gt 20)) {
+            If ((Test-IsNotEmpty $tb_JumpCloudUserName.Text) -or (!(Test-HasNoSpace $tb_JumpCloudUserName.Text)) -or (Test-LocalUsername -username $tb_JumpCloudUserName.Text) -or (($tb_JumpCloudUserName.Text).Length -gt 20)) {
                 $tb_JumpCloudUserName.Background = "#FFC6CBCF"
                 $tb_JumpCloudUserName.BorderBrush = "#FFF90000"
                 $img_localAccountValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64

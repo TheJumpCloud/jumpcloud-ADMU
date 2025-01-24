@@ -63,7 +63,7 @@ Function Test-MigrationButton {
         If (-Not (($($tb_JumpCloudUserName.Text).length) -le 20)) {
             throw "A username string must be less than or equal to 20 characters in length: $($($tb_JumpCloudUserName.Text).length)"
         }
-        if ((Test-LocalUsername $tb_JumpCloudUserName.Text)) {
+        if ((Test-LocalUsername -username $tb_JumpCloudUserName.Text)) {
             throw "The local user already exists on the system"
         }
         if ($tb_JumpCloudUserName.Text -eq $WmiComputerSystem.Name) {
