@@ -431,16 +431,21 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Test-Localusername Function' {
+    Context 'Test-LocalUsername Function' {
 
-        It 'Test-Localusername - exists' {
-            $currentUser = $(whoami) -replace "$(hostname)\\", ("")
-            Test-Localusername -username $currentUser | Should -Be $true
+        It 'Test-LocalUsername - exists' {
+            # This test requires a windows device to create the get the user
+            $userName = "TesterUser12345"
+            $password = "TesterPassword12345!!"
+            $newUserPassword = ConvertTo-SecureString -String "$($Password)" -AsPlainText -Force
+            New-localUser -Name "$($UserName)" -password $newUserPassword -Description "Created By JumpCloud ADMU"
+
+            Test-LocalUsername -username $userName | Should -Be $true
         }
 
-        It 'Test-Localusername - does not exist' {
+        It 'Test-LocalUsername - does not exist' {
 
-            Test-Localusername -username 'blazarz' | Should -Be $false
+            Test-LocalUsername -username 'blazarz' | Should -Be $false
         }
     }
 

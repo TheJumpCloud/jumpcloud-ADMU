@@ -194,6 +194,8 @@ Describe -Name "testGUITests" {
                 Test-MigrationButton @testCaseInput | Should -Be $false
                 $btn_migrateProfile.IsEnabled | Should -Be $false
             }
+        }
+        Context "JumpCloud Username Validation" {
             It "When a local user exists without a valid SID" {
                 # This test requires a windows device to create the get the user
                 $userName = "TesterUser1234"
@@ -206,14 +208,14 @@ Describe -Name "testGUITests" {
                 Write-Host "The following local users exist on the system"
                 Write-Host $localUsersWithoutSIDs.Name
                 $username | Should -BeIn $localUsersWithoutSIDs.Name
-                $testCaseInput.lvProfileList.SelectedItem.Username = $userName
+
+                # set the JumpCloud user to the new username
+                $testCaseInput.tb_JumpCloudUserName.Text = $userName
 
                 # should not return true
                 Test-MigrationButton @testCaseInput | Should -Be $false
                 $btn_migrateProfile.IsEnabled | Should -Be $false
             }
-        }
-        Context "JumpCloud Username Validation" {
             It "When a null string username is specified" {
                 $testCaseInput.tb_JumpCloudUserName.Text = ""
                 # should not return true
