@@ -313,7 +313,20 @@ Function Show-SelectionForm {
         $TenantName = 'N/A'
     }
 
-    $FormResults = [PSCustomObject]@{ }
+    # define return object:
+    $FormResults = [PSCustomObject]@{
+        InstallJCAgent      = $false
+        AutoBindJCUser      = $false
+        BindAsAdmin         = $false
+        LeaveDomain         = $false
+        ForceReboot         = $false
+        SelectedUserName    = $null
+        JumpCloudUserName   = $null
+        TempPassword        = $null
+        JumpCloudConnectKey = $null
+        JumpCloudAPIKey     = $null
+        JumpCloudOrgID      = $null
+    }
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..' -PercentComplete 50
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..' -PercentComplete 70
@@ -600,7 +613,7 @@ Function Show-SelectionForm {
         })
     $SelectedUserName = $($lvProfileList.SelectedItem.username)
 
-    # Validate Migrate Profile
+    # Validate Migrate Profile & return $formResults
     $btn_migrateProfile.Add_Click( {
             if ($tb_JumpCloudAPIKey.Password -And $tb_JumpCloudUserName.Text -And $cb_autobindJCUser.IsChecked) {
                 # If text field is default/ not 40 chars
@@ -663,17 +676,19 @@ Function Show-SelectionForm {
                 # TODO: I've broken the conversion for the username here, need to figure out why this no longer works.
                 $SelectedUserName = $($lvProfileList.SelectedItem.username)
             }
-            Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('InstallJCAgent') -Value:($cb_installJCAgent.IsChecked)
-            Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('AutobindJCUser') -Value:($cb_autobindJCUser.IsChecked)
-            Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('BindAsAdmin') -Value:($cb_bindAsAdmin.IsChecked)
-            Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('LeaveDomain') -Value:($cb_leaveDomain.IsChecked)
-            Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('ForceReboot') -Value:($cb_forceReboot.IsChecked)
-            Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('SelectedUserName') -Value:($SelectedUserName)
-            Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudUserName') -Value:($tb_JumpCloudUserName.Text)
-            Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('TempPassword') -Value:($tb_tempPassword.Text)
-            Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudConnectKey') -Value:($tb_JumpCloudConnectKey.Password)
-            Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudAPIKey') -Value:($tb_JumpCloudAPIKey.Password)
-            Add-Member -InputObject:($FormResults) -MemberType:('NoteProperty') -Name:('JumpCloudOrgID') -Value:($script:selectedOrgID)
+
+            # Set the options selected/ inputs to the $formResults object
+            $FormResults.InstallJCAgent = $cb_installJCAgent.IsChecked
+            $FormResults.AutoBindJCUser = $cb_autobindJCUser.IsChecked
+            $FormResults.BindAsAdmin = $cb_bindAsAdmin.IsChecked
+            $FormResults.LeaveDomain = $cb_leaveDomain.IsChecked
+            $FormResults.ForceReboot = $cb_forceReboot.IsChecked
+            $FormResults.SelectedUserName = $SelectedUserName
+            $FormResults.JumpCloudUserName = $tb_JumpCloudUserName.Text
+            $FormResults.TempPassword = $tb_tempPassword.Text
+            $FormResults.JumpCloudConnectKey = $tb_JumpCloudConnectKey.Password
+            $FormResults.JumpCloudAPIKey = $tb_JumpCloudAPIKey.Password
+            $FormResults.JumpCloudOrgID = $script:selectedOrgID
             # Close form
             $Form.Close()
         })
