@@ -12,6 +12,9 @@ function Get-MtpOrganization {
         $inputType
     )
     begin {
+        # initialize variable to record whether or not the API key belongs to a MPT administrator
+        $mtpAdmin = $false
+        # set headers
         $skip = 0
         $limit = 100
         $paginate = $true
@@ -49,6 +52,8 @@ function Get-MtpOrganization {
             $orgs = $results._id, $results.DisplayName
         } elseif (($results.count -gt 1)) {
             Write-ToLog -Message "Found $($results.count) orgs with the specified API Key"
+            # Set the MTP Admin variable to true
+            $mtpAdmin = $true
             # initial prompt for MTP selection
             switch ($inputType) {
                 $true {
@@ -70,6 +75,6 @@ function Get-MtpOrganization {
     }
     end {
         #returned org as an object [0]=id [1]=displayName
-        return $orgs
+        return $orgs, $mtpAdmin
     }
 }

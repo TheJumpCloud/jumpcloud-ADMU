@@ -393,9 +393,6 @@ Function Show-SelectionForm {
     $lbAzureAD_Joined.Content = $AzureADStatus
     $lbTenantName.Content = $TenantName
 
-    #function Test-MigrationButton
-    #endFunction Test-MigrationButton
-
     ## Form changes & interactions
 
     # Install JCAgent checkbox
@@ -540,7 +537,6 @@ Function Show-SelectionForm {
                     $OrgSelection, $mtpAdmin = Get-MtpOrganization -ApiKey $tb_JumpCloudAPIKey.Password -inputType
                     $lbl_orgName.Text = "$($OrgSelection[1])"
                     $script:selectedOrgID = "$($OrgSelection[0])"
-                    Write-Host "orgid found here $script:selectedOrgID"
                     if ($mtpAdmin) {
                         # only display this text label if a MTP admin entered their API key
                         $lbl_selectOrgName.Visibility = 'Visible'
@@ -585,7 +581,6 @@ Function Show-SelectionForm {
     # Change button when profile selected
     $lvProfileList.Add_SelectionChanged( {
             $SelectedUserName = $($lvProfileList.SelectedItem.username)
-            Write-Host "Selected User: $($SelectedUserName)"
             New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
             try {
@@ -621,7 +616,6 @@ Function Show-SelectionForm {
                     Write-ToLog "ConnectKey is populated, JumpCloud agent will be installed"
                 }
 
-                Write-Host "testing api $($tb_JumpCloudAPIKey.Password) | orgID $script:selectedOrgID | Username $($tb_JumpCloudUserName.Text)"
                 $testResult, $JumpCloudUserId, $JCSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $tb_JumpCloudAPIKey.Password -JumpCloudOrgID $script:selectedOrgID -Username $tb_JumpCloudUserName.Text -Prompt $true
                 if ($testResult) {
                     Write-ToLog "Matched $($tb_JumpCloudUserName.Text) with user in the JumpCloud Console"
