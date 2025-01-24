@@ -1,26 +1,23 @@
 @manual
 Feature: Progress form displays migration progress
 
-    Scenario: When migrating an account from the selection form, the progress form displays and logs migration progress
-        Created by: Joe Workman
-                Custom Preconditions:
-                    A windows system with at least one domain (local AD or entraID) user who has previously signed in
-                    Run the ADMU as a local administrator
-                Custom Steps Separated:
-                    Step 1:
-                        Select a profile to migrate, enter a local account username, click "Migrate Profile"
+    Scenario: Progress form displays migration progress
+        Given the ADMU GUI has been used to migrate some user
+        And the "Migrate Profile" button has been clicked
+        When The progress form window appears
+        Then the progress window should note the progress of migration
+        And clicking the carrot "view log" button should stream detailed log status in the window
+        And once migration is complete the "view log", "rerun" & "exit" buttons should NOT be greyed out
+        And clicking the "View Log" button should launch notepad and show the ADMU log
+        And clicking the "Rerun" button should re-open the Selection Form window (must be run from the exe for this to work)
+        And clicking the "Exit" button should close the program
 
-                        When the progress form appears, select the "View Log" carrot button
-                    Expected:
-                        The "view log", "rerun" & "exit" buttons should be greyed out during migration
 
-                        When the "view log" carrot button is selected, the log should stream in the log window during migration
+Feature Progress form displays an error when migration can not complete
 
-                        When migration completes, the "view log", "rerun" & "exit" buttons should NOT be greyed out
-
-                        Clicking "View Log" button should open the log text file and the progress window should remain open in the background
-
-                        Clicking the "Rerun" button should re-open the Selection Form window (must be run from the exe for this to work)
-
-                        Clicking the "Exit" button should close the program
-
+    Scenario: A user with a redirected documents directory will error during migration
+        Given A user with a redirected document directory has been created on a device
+        And the DMU GUI has been used to migrate some user
+        And the "Migrate Profile" button has been clicked
+        When the progress form window appears
+        Then migration progress should halt after the script identifies that the user has a redirected account, the window should should the error message and point the user to click the link for more information

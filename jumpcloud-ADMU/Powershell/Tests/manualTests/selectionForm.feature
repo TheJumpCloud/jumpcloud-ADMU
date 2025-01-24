@@ -1,205 +1,217 @@
 @manual
-Feature: Selection form allows selection of a domain user, prevents migration of a local user
+Feature: Selection form allows user migration
 
-    Scenario: When selecting using with the selection form, the "Migrate Profile" button should only allow migration of domain accounts
-        Created by: Joe Workman
-            Custom Preconditions:
-                A windows system with at least one domain (local AD or entraID) user who has previously signed in
-                Run the ADMU as a local administrator
-            Custom Steps Separated:
-                Step 1:
-                    Content:
-                        Open the ADMU selection form
+    Scenario: Allows "Migrate Profile" Button with domain profile, username and password
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And a JumpCloud username is specified
+        And a password is specified
+        Then the "Migrate Profile" button should become active and no longer be greyed-out
 
-                        Select a local user account from the username selection list
+    Scenario: Allows "Migrate Profile" Button with AutoBind, domain profile, username and password
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And the "AutoBind JCUser" checkbox is selected
+        And the "Bind As Admin" checkbox is selected
+        And a valid "APIKey" is pasted in the text field
+        And a JumpCloud username is specified
+        And a password is specified
+        Then the "Migrate Profile" button should become active and no longer be greyed-out
 
-                        Enter a "Local Account Username" of any value
-                    Expected:
-                        The "Migrate Profile" button should be greyed out
-                Step 2:
-                    Content:
-                        Open the ADMU selection form
+    Scenario: Allows "Migrate Profile" Button with Install JCAgent, domain profile, username and password
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And the "Install JCAgent" checkbox is selected
+        And a valid "ConnectKey" is pasted in the text field
+        And a JumpCloud username is specified
+        And a password is specified
+        Then the "Migrate Profile" button should become active and no longer be greyed-out
 
-                        Content Select a domain user account from the username selection list
+    Scenario: Allows "Migrate Profile" Button with Install JCAgent, AutoBind, domain profile, username and password
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And the "Install JCAgent" checkbox is selected
+        And a valid "ConnectKey" is pasted in the text field
+        And the "Install JCAgent" checkbox is selected
+        And a valid "ConnectKey" is pasted in the text field
+        And a JumpCloud username is specified
+        And a password is specified
+        Then the "Migrate Profile" button should become active and no longer be greyed-out
 
-                        Enter a "Local Account Username" of any value
-                    Expected:
-                        The "Migrate Profile" button should NOT be greyed out
+    Scenario: Allows "Migrate Profile" Button with ForceReboot, domain profile, username and password
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And the "Force Reboot" checkbox is selected
+        And a JumpCloud username is specified
+        And a password is specified
+        Then the "Migrate Profile" button should become active and no longer be greyed-out
 
-    Scenario: "Install JumpCloud Agent" checkbox
-         Created by: Joe Workman
-            Custom Preconditions:
-                A windows system with at least one domain (local AD or entraID) user who has previously signed in
-                Run the ADMU as a local administrator
-            Custom Steps Separated:
-                Step 1:
-                    Content:
-                        Open the ADMU selection form
+    Scenario: Allows "Migrate Profile" Button with LeaveDomain, domain profile, username and password
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And the "Leave Domain" checkbox is selected
+        And a JumpCloud username is specified
+        And a password is specified
+        Then the "Migrate Profile" button should become active and no longer be greyed-out
 
-                        Select the "Install JCAgent" checkbox
+Feature: Selection form disallows user migration for invalid JumpCloud Usernames
 
-                        Select a domain user account from the username selection list
+    Scenario: Disallows "Migrate Profile" Button for JumpCloud Usernames that are null
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And a JumpCloud username text "" is specified in the text box
+        And a password is specified
+        Then the "Migrate Profile" button should NOT become active and be greyed-out
 
-                        Enter a "Local Account Username" of any value
-                    Expected:
-                        The checkbox should be marked
+    Scenario: Disallows "Migrate Profile" Button for JumpCloud Usernames with spaces in the names
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And a JumpCloud username text "some user" is specified in the text box
+        And a password is specified
+        Then the "Migrate Profile" button should NOT become active and be greyed-out
 
-                        The "JumpCloud Connect Key" field should be highlighted in a red box and have a red notification mark icon on the right of the text field
+    Scenario: Disallows "Migrate Profile" Button for JumpCloud Usernames longer than 20 characters
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And a JumpCloud username text "aVeryLongUserNameIsInvalid" is specified in the text box
+        And a password is specified
+        Then the "Migrate Profile" button should NOT become active and be greyed-out
 
-                        The "Migrate Profile" button should be greyed out
-                Step 2:
-                    Content:
-                        Enter this set of 40 characters into the text field: KyXDQ5V6z4yh8PzGDx3poubwowqtWYFZiCEMKK11
-                    Expected:
-                        The character string has no spaces and is 40 characters long, a green check mark icon should appear to the right of the text box.
+    Scenario: Disallows "Migrate Profile" Button for JumpCloud Usernames that already exist on the device
+        Given a new local user has been created on the device with username "newUser" (Use `New-LocalUser` or `lusrmgr.msc` to create a new user)
+        And The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And a JumpCloud username text "newUser" is specified in the text box
+        And a password is specified
+        Then the "Migrate Profile" button should NOT become active and be greyed-out
 
-                        The "Migrate Profile" button should NOT be greyed out
-                Step 3:
-                    Content:
-                        Enter this set of 40 characters into the text field: KyXDQ5V6z4yh8PzGDx poubwowqtWYFZiCEMKK11
-                    Expected:
-                        The character string has a space and is 40 characters long, a red notification mark icon should appear to the right of the text box.
+    Scenario: Disallows "Migrate Profile" Button for JumpCloud Usernames that match the hostname
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And a JumpCloud username text "theHostname" is specified in the text box (run `hostname` to get the device hostname)
+        And a password is specified
+        Then the "Migrate Profile" button should NOT become active and be greyed-out
 
-                        The "Migrate Profile" button should be greyed out
+Feature: Selection form disallows user migration for invalid passwords
 
-    Scenario: "AutoBind JumpCloud User" checkbox
-         Created by: Joe Workman
-            Custom Preconditions:
-                A windows system with at least one domain (local AD or entraID) user who has previously signed in
-                Run the ADMU as a local administrator
-            Custom Steps Separated:
-                Step 1:
-                    Content:
-                        Open the ADMU selection form
+    Scenario: Disallows "Migrate Profile" Button for passwords with space
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And a JumpCloud valid username is specified in the text box
+        And a password "invalid pass" is specified in the text box
+        Then the "Migrate Profile" button should NOT become active and be greyed-out
 
-                        Select the "Autobind JC User" checkbox
+    Scenario: Disallows "Migrate Profile" Button for null passwords
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And a JumpCloud valid username is specified in the text box
+        And a password "" is specified in the text box
+        Then the "Migrate Profile" button should NOT become active and be greyed-out
 
-                        Content Select a domain user account from the username selection list
+Feature: Selection form disallows user migration for invalid APIKeys
 
-                        Enter a "Local Account Username" of any value
-                    Expected:
-                        The checkbox should be marked
+    Scenario: Disallows "Migrate Profile" Button for null APIKeys
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And the "AutoBind JCUser" checkbox is selected
+        And a "" is pasted in the APIKey text field
+        And a JumpCloud valid username is specified in the username text box
+        And a valid password is specified in the password text box
+        Then the "Migrate Profile" button should NOT become active and be greyed-out
 
-                        The "JumpCloud API Key" field should be highlighted in a red box and have a red notification mark icon on the right of the text field
+Feature: Selection form disallows user migration for invalid ConnectKeys
 
-                        The "Organization Name" text should display "Not Currently Connected To A JumpCloud Organization"
+    Scenario: Disallows "Migrate Profile" Button for null ConnectKeys
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And the "Install JCAgent" checkbox is selected
+        And a "" is pasted in the ConnectKey text field
+        And a JumpCloud valid username is specified in the username text box
+        And a valid password is specified in the password text box
+        Then the "Migrate Profile" button should NOT become active and be greyed-out
 
-                        The "Migrate Profile" button should be greyed out
-                Step 2:
-                    Content:
-                        Enter this set of 40 characters into the text field: KyXDQ5V6z4yh8PzGDx3poubwowqtWYFZiCEMKK11
-                    Expected:
-                        The character string has no spaces and is 40 characters long, but is not a valid API KEY, red notification mark icon should appear to the right of the text box.
+    Scenario: Disallows "Migrate Profile" Button for non-40 character ConnectKeys
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And the "Install JCAgent" checkbox is selected
+        And a "1234" is pasted in the ConnectKey text field
+        And a JumpCloud valid username is specified in the username text box
+        And a valid password is specified in the password text box
+        Then the "Migrate Profile" button should NOT become active and be greyed-out
 
-                        The "Organization Name" text should display ""
+    Scenario: Disallows "Migrate Profile" Button for ConnectKeys with spaces
+        Given The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And the "Install JCAgent" checkbox is selected
+        And a "11111111111111111111 1111111111111111111" is pasted in the ConnectKey text field
+        And a JumpCloud valid username is specified in the username text box
+        And a valid password is specified in the password text box
+        Then the "Migrate Profile" button should NOT become active and be greyed-out
 
-                        The "Migrate Profile" button should be greyed out
-                Step 3:
-                    Content:
-                        Enter a valid API Key for a non-MTP JumpCloud Organization
-                    Expected:
-                        A green check mark icon should appear to the right of the text box
+Feature: JumpCloud Username & AutoBind User Validation
 
-                        The "Organization Name" text should display the name of the JumpCloud Organization
+    Scenario: Disallows migration for usernames that are not found in the JumpCloud organization
+        Given the JumpCloud agent is NOT installed on the device
+        And The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And the "AutoBind JCUser" checkbox is selected
+        And a valid API Key is pasted in the APIKey text field
+        And a JumpCloud username that does or does not exist in the JumpCloud Organization is specified in the username text box
+        And a valid password is specified in the password text box
+        And the "Migrate Profile" button is pressed
+        Then a windows form window should appear and warn: The JumpCloud agent is not installed and to also enter your connectKey
 
-                        The "Migrate Profile" button should NOT be greyed out
+    Scenario: Disallows migration for usernames that are not found in the JumpCloud organization
+        Given the JumpCloud agent is installed on the device
+        And The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And the "AutoBind JCUser" checkbox is selected
+        And a valid API Key is pasted in the APIKey text field
+        And a JumpCloud username that does not exist in the JumpCloud Organization is specified in the username text box
+        And a valid password is specified in the password text box
+        And the "Migrate Profile" button is pressed
+        Then a windows form window should appear and note the specified username was not found in the JumpCloud Organization
 
-                        After migrating the user should be associated to the device and "taken over"
-                Step 3:
-                    Content:
-                        Enter a valid API Key for a non-MTP JumpCloud Organization
+    Scenario: Prompts warning for migration for usernames that have a localSystemUsername specified in the JumpCloud Organization
+        Given the JumpCloud agent is installed on the device
+        And The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And the "AutoBind JCUser" checkbox is selected
+        And a valid API Key is pasted in the APIKey text field
+        And a JumpCloud username that does exist in the JumpCloud Organization is specified in the username text box
+        And a valid password is specified in the password text box
+        And the "Migrate Profile" button is pressed
+        Then a windows form window should appear and note that the specified user has a local account username/ can select OK or Cancel to return to selection form
 
-                        Select the "Bind as Admin" checkbox
-                    Expected:
-                        A green check mark icon should appear to the right of the text box
-
-                        The "Organization Name" text should display the name of the JumpCloud Organization
-
-                        The "Migrate Profile" button should NOT be greyed out
-
-                        After migrating the user should be associated to the device and "taken over" and associated as an "Admin" account
-                Step 5:
-                    Content:
-                        Open the ADMU selection form
-
-                        Select the "Autobind JC User" checkbox
-
-                        Content Select a domain user account from the username selection list
-
-                        Enter a "Local Account Username" of any value
-
-                        Enter a valid Provider Administrator API Key for a MTP JumpCloud Organization
-
-                        A new window should display and prompt for a selection of an Organization name, select an Organization
-
-                        Click the "Select Different Organization" text, the window to prompt for a selection of an Organization name should display again, select a different Organization
-                    Expected:
-                        A new window should display and prompt for a selection of Organization name
-
-                        The "Organization Name" text should display the name of the JumpCloud Organization
-
-                        The "Migrate Profile" button should NOT be greyed out
-
-                        The "Select Different Organization" text should display above the API password text box
-
-                        When a different Organization is selected the "Organization Name" text should be updated
-
-                        After migrating the user should be associated to the device and "taken over"
-    Scenario: "Leave Domain" checkbox
-        Created by: Joe Workman
-            Custom Preconditions:
-                A windows system with at least one domain (local AD or entraID) user who has previously signed in
-                Run the ADMU as a local administrator
-            Custom Steps Separated:
-                Step 1:
-                    Content:
-                        Open the ADMU selection form
-
-                        Select the "Leave Domain" checkbox
-
-                        Select a domain user account from the username selection list
-
-                        Enter a "Local Account Username" of any value
-
-                        Click "Migrate Profile"
-                    Expected:
-                        When the tool completes migration, and after a system restart, the device should no longer be tied to the domain
-    Scenario: "Force Reboot" checkbox
-        Created by: Joe Workman
-            Custom Preconditions:
-                A windows system with at least one domain (local AD or entraID) user who has previously signed in
-                Run the ADMU as a local administrator
-            Custom Steps Separated:
-                Step 1:
-                    Content:
-                        Open the ADMU selection form
-
-                        Select the "Force Reboot" checkbox
-
-                        Select a domain user account from the username selection list
-
-                        Enter a "Local Account Username" of any value
-
-                        Click "Migrate Profile"
-                    Expected:
-                        When the tool completes migration, the computer should reboot automatically
-    Scenario: "Force Reboot" checkbox
-        Created by: Joe Workman
-            Custom Preconditions:
-                A windows system with at least one domain (local AD or entraID) user who has previously signed in
-                The windows system should not already have the JumpCloud agent installed
-                Run the ADMU as a local administrator
-            Custom Steps Separated:
-                Step 1:
-                    Content:
-                        Open the ADMU selection form
-
-                        Select the "Install JCAgent" checkbox
-
-                        Select a domain user account from the username selection list
-
-                        Enter a "Local Account Username" of any value
-
-                        Click "Migrate Profile"
-                    Expected:
-                        The JumpCloud agent should install before migration and the account should be migrated successfully
+    Scenario: Prompts warning for migration for usernames that have a localSystemUsername specified in the JumpCloud Organization and match a local user on the system
+        Given a local user is created on the system matching some user's localUsername field in JumpCloud
+        And the JumpCloud agent is installed on the device
+        And The selection form is opened
+        And a domain (local AD or EntraID) user has logged into the device
+        When a domain profile is selected
+        And the "AutoBind JCUser" checkbox is selected
+        And a valid API Key is pasted in the APIKey text field
+        And a JumpCloud username who has a localUsername field specified (that matches the local user created for this test) that does exist in the JumpCloud Organization is specified in the username text box
+        And a valid password is specified in the password text box
+        And the "Migrate Profile" button is pressed
+        Then a windows form window should appear and note migration can not continue when the specified user has a localUsername that matches a user that exists on the device

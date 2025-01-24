@@ -197,7 +197,7 @@ Function Show-SelectionForm {
                         <Label Content="Local Account Username" HorizontalAlignment="Left" Margin="5,5,0,0" VerticalAlignment="Top" TabIndex="2147483645" FontWeight="SemiBold" FontSize="11"/>
                         <Label Content="Local Account Password&#xD;&#xA;" HorizontalAlignment="Left" Margin="5,59,0,0" VerticalAlignment="Top" FontWeight="SemiBold" Height="27" FontSize="11"/>
                         <TextBox Name="tb_JumpCloudUserName" HorizontalAlignment="Left" Height="23" Margin="10,31,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="427"  FontWeight="SemiBold" FontSize="11" Style="{StaticResource RoundedTextBoxStyle}"/>
-                        <TextBox Name="tb_tempPassword" Style="{StaticResource RoundedTextBoxStyle}" HorizontalAlignment="Left" Height="23" Margin="10,86,0,0" TextWrapping="Wrap" Text="Temp123!Temp123!" VerticalAlignment="Top" Width="427" FontWeight="SemiBold" FontSize="11"/>
+                        <TextBox Name="tb_tempPassword" Style="{StaticResource RoundedTextBoxStyle}" HorizontalAlignment="Left" Height="23" Margin="10,86,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="427" FontWeight="SemiBold" FontSize="11"/>
                         <Image Name="img_localAccountInfo" Height="20" Margin="136,7,311,179" Width="14" Visibility="Visible" ToolTip="The value in this field should match a username in the JumpCloud console. A new local user account will be created with this username." />
 
                         <Image Name="img_localAccountValid" HorizontalAlignment="Left" Height="23" Margin="440,33,0,0" VerticalAlignment="Top" Width="14" ToolTip="Local account username can't be empty, contain spaces, already exist on the local system or match the local computer name." Visibility="Visible" />
@@ -265,7 +265,7 @@ Function Show-SelectionForm {
     $img_localAccountInfo.Source = Get-ImageFromB64 -ImageBase64 $BlueBase64
     $img_localAccountValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
     $img_localAccountPasswordInfo.Source = Get-ImageFromB64 -ImageBase64 $BlueBase64
-    $img_localAccountPasswordValid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
+    $img_localAccountPasswordValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
     # Define misc static variables
 
     $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
@@ -576,9 +576,9 @@ Function Show-SelectionForm {
         })
 
     # Validate Temp Password
-    $tb_tempPassword.add_TextChanged( {
+    $tb_tempPassword.add_LostFocus( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If ((!(Test-IsNotEmpty $tb_tempPassword.Text) -and (Test-HasNoSpace $tb_tempPassword.Text)) -eq $false) {
+            If ((Test-IsNotEmpty $tb_tempPassword.Text) -or (-NOT (Test-HasNoSpace $tb_tempPassword.Text))) {
                 $tb_tempPassword.Background = "#FFC6CBCF"
                 $tb_tempPassword.BorderBrush = "#FFF90000"
                 $img_localAccountPasswordValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
@@ -749,16 +749,17 @@ Function Show-SelectionForm {
     $Form.Add_MouseLeftButtonDown( {
             $Form.DragMove()
         })
+    # allow form to be clicked and remove focus from text fields
     Function RefreshData {
         $Test = "Testing" | Out-Gridview
     }
     $Form.Add_PreviewMouseDown({
             $grid1.Focus()
         })
+
+    # exit and close form
     $Form.Add_Closing({
-            # exit and close form
-            $FormResults = $null
-            Return $FormResults
+            return
         })
     # Put the list of profiles in the profile box
     $Profiles | ForEach-Object { $lvProfileList.Items.Add($_) | Out-Null }
@@ -768,7 +769,8 @@ Function Show-SelectionForm {
 
     $Form.ShowDialog()
 
-    If ($btn_migrateProfile.IsEnabled -eq $true) {
+    # if the migrate button is enabled and it is clicked, send formResults to Start-Migration
+    If (($btn_migrateProfile.IsEnabled -eq $true) -AND $btn_migrateProfile.Add_Click) {
         Return $FormResults
     }
 }
