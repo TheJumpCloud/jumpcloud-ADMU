@@ -96,7 +96,9 @@ Describe 'Functions' {
     Context 'Set-JCUserToSystemAssociation Function' {
         # Set-JCUserToSystemAssociation should take USERID as input validated with Test-JumpCloudUsername
         BeforeAll {
-            $OrgID, $OrgName = Get-mtpOrganization -apiKey $env:PESTER_APIKEY
+            $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
+            $OrgName = "$($OrgSelection[1])"
+            $OrgID = "$($OrgSelection[0])"
             Mock Get-WindowsDrive { return "C:" }
             $windowsDrive = Get-WindowsDrive
 
