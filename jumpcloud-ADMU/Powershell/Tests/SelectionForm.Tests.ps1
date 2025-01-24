@@ -12,8 +12,27 @@ Describe -Name "testGUITests" {
             }
         }
         if (-Not $IsWindows) {
-            # for non-windows devices just declare this as a fake function
+            # for non-windows devices just uncomment these functions
             # Function Get-WmiObject {
+            # }
+            # Function New-LocalUser {
+            #     [CmdletBinding()]
+            #     param (
+            #         [Parameter()]
+            #         [System.String]
+            #         $Name,
+            #         [Parameter()]
+            #         [System.String]
+            #         $Password,
+            #         [Parameter()]
+            #         [System.String]
+            #         $Description
+            #     )
+            #     Return [PSCustomObject]@{
+            #         Name        = $Name
+            #         Enabled     = $true
+            #         Description = $Description
+            #     }
             # }
         }
         # mock the wmi command
@@ -172,6 +191,19 @@ Describe -Name "testGUITests" {
             }
             It "When a user is an unknown account" {
                 $testCaseInput.lvProfileList.SelectedItem.Username = "UNKNOWN ACCOUNT"
+                # should not return true
+                Test-MigrationButton @testCaseInput | Should -Be $false
+                $btn_migrateProfile.IsEnabled | Should -Be $false
+            }
+            It "When a local exists without a SID" {
+                # This test requires a windows device to create the get the user
+                $userName = "TesterUser1234"
+                $password = "TesterPassword1234!!"
+                $newUserPassword = ConvertTo-SecureString -String "$($Password)" -AsPlainText -Force
+                New-localUser -Name "$($UserName)" -password $newUserPassword -ErrorVariable userExitCode -Description "Created By JumpCloud ADMU"
+
+                $testCaseInput.lvProfileList.SelectedItem.Username = $userName
+
                 # should not return true
                 Test-MigrationButton @testCaseInput | Should -Be $false
                 $btn_migrateProfile.IsEnabled | Should -Be $false
