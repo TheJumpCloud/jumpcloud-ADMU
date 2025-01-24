@@ -27,7 +27,7 @@ Function Install-JumpCloudAgent(
             #Output the errors encountered
             $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
             if ($AgentService.Status -eq 'Running') {
-                Write-ToLog 'JumpCloud Agent Succesfully Installed'
+                Write-ToLog 'JumpCloud Agent successfully installed'
                 $agentInstalled = $true
                 break
             }

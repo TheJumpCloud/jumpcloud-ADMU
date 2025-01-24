@@ -1,5 +1,5 @@
 function New-ProgressForm {
-    # Synchash the values
+    # syncHash the values
     [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null
     [System.Reflection.Assembly]::LoadWithPartialName('PresentationFramework') | Out-Null
     $syncHash = [hashtable]::Synchronized(@{ })
@@ -8,9 +8,9 @@ function New-ProgressForm {
     $syncHash.PercentComplete = $PercentComplete
     $syncHash.StatusInput = ''
     $syncHash.LogText = @()
-    $synchash.logLevel = ''
+    $syncHash.logLevel = ''
     $syncHash.base64JCLogo = Get-ImageFromB64 -ImageBase64 $JCLogoBase64
-    $synchash.closeWindow = $false
+    $syncHash.closeWindow = $false
 
     # Migration Details
     $syncHash.UsernameInput = ''
@@ -108,10 +108,10 @@ function New-ProgressForm {
                     <Label Content="ProfileSize: " HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="2" Height="25" Width="71" />
                     <Label Content="LocalPath:" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="3" Height="25" Width="63" />
                     <Label Content="NewLocalUsername:" HorizontalAlignment="Left" VerticalAlignment="Center" FontWeight="Normal" Grid.Row="4" Height="25" Width="118" />
-                    <Label Name="Username" Content="AzureAD\KenTest" FontWeight="SemiBold" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="22,0,0,0" />
+                    <Label Name="Username" Content="..." FontWeight="SemiBold" Grid.Row="1" Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="22,0,0,0" />
                     <Label Name="ProfileSize" Content="0.8GB" FontWeight="SemiBold" Grid.Row="2" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
-                    <Label Name="LocalPath" Content="C:Users\KenTest" FontWeight="SemiBold" Grid.Row="3" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
-                    <Label Name="NewLocalUsername" Content="testadmu" FontWeight="SemiBold" Grid.Row="4" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
+                    <Label Name="LocalPath" Content="..." FontWeight="SemiBold" Grid.Row="3" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
+                    <Label Name="NewLocalUsername" Content="..." FontWeight="SemiBold" Grid.Row="4" Grid.Column="1" Margin="22,0,0,0" HorizontalAlignment="Right"/>
                 </Grid>
             </GroupBox>
             <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" FontWeight="Bold" Height="94" Grid.Row="1">
@@ -137,9 +137,7 @@ function New-ProgressForm {
                     </Expander.Resources>
                     <Border BorderBrush="#E3E8E9" BorderThickness="1" CornerRadius="5" >
                         <ScrollViewer Name="ScrollLog" Foreground="Gray" HorizontalScrollBarVisibility="Disabled" VerticalAlignment="Center" Height="98" Width="650">
-                            <TextBlock Name="LogTextBlock" TextWrapping="Wrap" FontWeight="Medium" FontSize="11">Contrary to popular belief, Lorem Ipsum is not simply random text. It has roots in a piece of classical Latin literature from 45 BC, making it over 2000 years old. Richard McClintock, a Latin professor at Hampden-Sydney College in Virginia, looked up one of the more obscure Latin words, consectetur, from a Lorem Ipsum passage, and going through the cites of the word in classical literature, discovered the undoubtable source. Lorem Ipsum comes from sections 1.10.32 and 1.10.33 of "de Finibus Bonorum et Malorum" (The Extremes of Good and Evil) by Cicero, written in 45 BC. This book is a treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, "Lorem ipsum dolor sit amet..", comes from a line in section 1.10.32.
-
-The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for those interested. Sections 1.10.32 and 1.10.33 from "de Finibus Bonorum et Malorum" by Cicero are also reproduced in their exact original form, accompanied by English versions from the 1914 translation by H. Rackham.</TextBlock>
+                            <TextBlock Name="LogTextBlock" TextWrapping="Wrap" FontWeight="Medium" FontSize="11">...</TextBlock>
                         </ScrollViewer>
                     </Border>
                 </Expander>
@@ -225,7 +223,7 @@ The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for t
                     #$syncHash.Status.Foreground = "Red"
                     # Hide Progress Bar
                     $SyncHash.ProgressBar.Visibility = "Hidden"
-                    # Show Eorr Link and make clickable
+                    # Show Error Link and make clickable
                     $syncHash.ErrorBlock.Visibility = "Visible"
                     # Clickable link
                     $SyncHash.ErrorLink.add_RequestNavigate({
@@ -241,7 +239,7 @@ The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for t
                         })
 
                 }
-                if ($synchash.PercentComplete -eq 100) {
+                if ($syncHash.PercentComplete -eq 100) {
                     $SyncHash.ViewLogButton.IsEnabled = $true
                     $SyncHash.StartJCADMUButton.IsEnabled = $true
                     $SyncHash.ExitButton.IsEnabled = $true
@@ -271,7 +269,7 @@ The standard chunk of Lorem Ipsum used since the 1500s is reproduced below for t
                     $syncHash.CloseWindow = $true
                 })
 
-            $synchash.ExitButton.Add_Click({
+            $syncHash.ExitButton.Add_Click({
                     $syncHash.CloseWindow = $true
                 })
 

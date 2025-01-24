@@ -52,7 +52,7 @@ Describe -Name "testGUITests" {
         $btn_migrateProfile = @{
             IsEnabled = $false
         }
-        # default case input, username, password, jumpcloudUsername specified
+        # default case input, username, password, JumpCloudUsername specified
         $testCaseInput = @{
             tb_JumpCloudUserName   = @{Text = "steve" }
             tb_JumpCloudConnectKey = @{Password = $null }
