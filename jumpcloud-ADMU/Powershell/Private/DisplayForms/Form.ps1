@@ -98,7 +98,9 @@ Function Show-SelectionForm {
             <Setter Property="Background" Value="#41C8C3"/>
         </Style>
     </Window.Resources>
-    <Grid>
+    <Grid
+        Name="grid1"
+        Focusable="True">
         <Grid Margin="10,0,10,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" MinWidth="479"/>
@@ -196,7 +198,7 @@ Function Show-SelectionForm {
                         <Label Content="Local Account Password&#xD;&#xA;" HorizontalAlignment="Left" Margin="5,59,0,0" VerticalAlignment="Top" FontWeight="SemiBold" Height="27" FontSize="11"/>
                         <TextBox Name="tb_JumpCloudUserName" HorizontalAlignment="Left" Height="23" Margin="10,31,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="427"  FontWeight="SemiBold" FontSize="11" Style="{StaticResource RoundedTextBoxStyle}"/>
                         <TextBox Name="tb_tempPassword" Style="{StaticResource RoundedTextBoxStyle}" HorizontalAlignment="Left" Height="23" Margin="10,86,0,0" TextWrapping="Wrap" Text="Temp123!Temp123!" VerticalAlignment="Top" Width="427" FontWeight="SemiBold" FontSize="11"/>
-                        <Image Name="img_localAccountInfo" Height="20" Margin="136,7,311,179" Width="14" Visibility="Visible" ToolTip="The value in this field should match a username in the jc console. A new local user account will be created with this username." />
+                        <Image Name="img_localAccountInfo" Height="20" Margin="136,7,311,179" Width="14" Visibility="Visible" ToolTip="The value in this field should match a username in the JumpCloud console. A new local user account will be created with this username." />
 
                         <Image Name="img_localAccountValid" HorizontalAlignment="Left" Height="23" Margin="440,33,0,0" VerticalAlignment="Top" Width="14" ToolTip="Local account username can't be empty, contain spaces, already exist on the local system or match the local computer name." Visibility="Visible" />
                         <Image Name="img_localAccountPasswordInfo" Height="20" Margin="0,63,315,123" Width="14" Visibility="Visible" ToolTip="This temporary password is used on account creation. The password will be overwritten by the users jc password if autobound or manually bound in the console." HorizontalAlignment="Right"/>
@@ -502,13 +504,13 @@ Function Show-SelectionForm {
         $cb_leaveDomain.IsEnabled = $false
     }
 
-    $tb_JumpCloudUserName.add_TextChanged( {
+    $tb_JumpCloudUserName.add_LostFocus( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
             If ((Test-IsNotEmpty $tb_JumpCloudUserName.Text) -or (!(Test-HasNoSpace $tb_JumpCloudUserName.Text)) -or (Test-LocalUsername $tb_JumpCloudUserName.Text) -or (($tb_JumpCloudUserName.Text).Length -gt 20)) {
                 $tb_JumpCloudUserName.Background = "#FFC6CBCF"
                 $tb_JumpCloudUserName.BorderBrush = "#FFF90000"
                 $img_localAccountValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
-                $img_localAccountValid.ToolTip = "Local account username can't be empty, contain spaces, already exist on the local system or match the local computer name. Username must only be 20 characters long"
+                $img_localAccountValid.ToolTip = "Local account username can not:`nBe empty or contain spaces.`nAlready exist on the local system.`nMatch the local computer name.`nContain more than 20 characters."
             } Else {
                 $tb_JumpCloudUserName.Background = "white"
                 $tb_JumpCloudUserName.FontWeight = "Normal"
@@ -580,7 +582,7 @@ Function Show-SelectionForm {
                 $tb_tempPassword.Background = "#FFC6CBCF"
                 $tb_tempPassword.BorderBrush = "#FFF90000"
                 $img_localAccountPasswordValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
-                $img_localAccountPasswordValid.ToolTip = "Local Account Temp Password should not be empty or contain spaces, it should also meet local password policy req. on the system."
+                $img_localAccountPasswordValid.ToolTip = "Local Account Temp Password should:`nNot be empty or contain spaces.`n should also meet local password policy requirements on the system."
             } Else {
                 $tb_tempPassword.Background = "white"
                 $tb_tempPassword.Tooltip = $null
@@ -693,17 +695,19 @@ Function Show-SelectionForm {
             $Form.Close()
         })
 
-    $tb_JumpCloudUserName.add_GotFocus( {
-            $tb_JumpCloudUserName.Text = ""
-        })
+    # $tb_JumpCloudUserName.add_GotFocus( {
+    #         $tb_JumpCloudUserName.Text = ""
+    #     })
 
-    $tb_JumpCloudConnectKey.add_GotFocus( {
-            $tb_JumpCloudConnectKey.Password = ""
-        })
+    # $tb_JumpCloudConnectKey.add_GotFocus( {
+    #         $tb_JumpCloudConnectKey.Password = ""
+    #     })
 
-    $tb_JumpCloudAPIKey.add_GotFocus( {
-            $tb_JumpCloudAPIKey.Password = ""
-        })
+    # $tb_JumpCloudAPIKey.add_GotFocus( {
+    #         $tb_JumpCloudAPIKey.Password = ""
+    #     })
+
+
 
     # lbl_connectKey link - Mouse button event
     $lbl_connectKey.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start('https://console.jumpcloud.com/#/systems/new') })
@@ -744,6 +748,12 @@ Function Show-SelectionForm {
     # move window
     $Form.Add_MouseLeftButtonDown( {
             $Form.DragMove()
+        })
+    Function RefreshData {
+        $Test = "Testing" | Out-Gridview
+    }
+    $Form.Add_PreviewMouseDown({
+            $grid1.Focus()
         })
     $Form.Add_Closing({
             # exit and close form
