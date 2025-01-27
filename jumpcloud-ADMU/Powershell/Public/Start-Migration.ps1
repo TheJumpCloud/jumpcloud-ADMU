@@ -99,7 +99,11 @@ Function Start-Migration {
                 # Validate Org/ APIKEY & Return OrgID
                 # If not $isForm, validate the API Key and OrgID
                 if (!$isForm) {
-                    $ValidatedJumpCloudOrgID = (Get-mtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)[0]
+                    # Get the org from the API KEY
+                    $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
+                    # set the orgID and orgName
+                    $ValidatedJumpCloudOrgName = "$($OrgSelection[1])"
+                    $ValidatedJumpCloudOrgID = "$($OrgSelection[0])"
                     If (-Not $ValidatedJumpCloudOrgID) {
                         Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
                         break
@@ -107,9 +111,13 @@ Function Start-Migration {
                 }
             } elseif ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
                 # Attempt To Validate Org/ APIKEY & Return OrgID
-                # Error thrown in Get-mtpOrganization if MTPKEY
+                # Error thrown in Get-MtpOrganization if MTPKEY
                 if (!$isForm) {
-                    $ValidatedJumpCloudOrgID = (Get-mtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)[0]
+                    # Get the org from the API KEY
+                    $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
+                    # set the orgID and orgName
+                    $ValidatedJumpCloudOrgName = "$($OrgSelection[1])"
+                    $ValidatedJumpCloudOrgID = "$($OrgSelection[0])"
                     If (-Not $ValidatedJumpCloudOrgID) {
                         Throw [System.Management.Automation.ValidationMetadataException] "ORG ID Could not be validated"
                         break
