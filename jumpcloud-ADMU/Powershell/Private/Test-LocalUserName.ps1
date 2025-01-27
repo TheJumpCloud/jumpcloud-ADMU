@@ -14,16 +14,16 @@ function Test-LocalUsername {
     process {
         $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | Convert-SecurityIdentifier
         $localUsers = new-object System.Collections.ArrayList
-        foreach ($username in $users) {
-            $domain = ($username -split '\\')[0]
+        foreach ($user in $users) {
+            $domain = ($user -split '\\')[0]
             if ($domain -match $env:computername) {
-                $localUserTrim = $username -creplace '^[^\\]*\\', ''
+                $localUserTrim = $user -creplace '^[^\\]*\\', ''
                 $localUsers.Add($localUserTrim) | Out-Null
             }
         }
     }
     end {
-        if (($field -in $localUsers) -or ($field -in $nonSIDLocalUsers.Name)) {
+        if (($username -in $localUsers) -or ($username -in $nonSIDLocalUsers.Name)) {
             return $true
         } else {
             return $false
