@@ -3,13 +3,19 @@ function Test-LocalUsername {
     [OutputType([bool])]
     param (
         [System.String]
-        $username
+        $username,
+        [System.Object[]]
+        $win32UserProfiles,
+        [System.Object[]]
+        $localUserProfiles
     )
     begin {
-        # get win32 Profiles
-        $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-        # get localUsers (can contain users who have not logged in yet/ do not have a SID)
-        $nonSIDLocalUsers = Get-LocalUser
+        if (-Not ($win32UserProfiles)) {
+            throw "there are no win32 local user profiles on the device"
+        }
+        if (-Not ($localUserProfiles.Name)) {
+            throw "there are no local user profiles on the device"
+        }
     }
     process {
         $users = $win32UserProfiles | Select-Object -ExpandProperty "SID" | Convert-SecurityIdentifier

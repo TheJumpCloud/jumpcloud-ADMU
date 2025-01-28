@@ -432,6 +432,12 @@ Describe 'Functions' {
     }
 
     Context 'Test-LocalUsername Function' {
+        BeforeAll {
+            # Get Win32 Profiles to merge data with valid SIDs
+            $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+            # get localUsers (can contain users who have not logged in yet/ do not have a SID)
+            $nonSIDLocalUsers = Get-LocalUser
+        }
 
         It 'Test-LocalUsername - exists' {
             # This test requires a windows device to create the get the user
@@ -440,12 +446,12 @@ Describe 'Functions' {
             $newUserPassword = ConvertTo-SecureString -String "$($Password)" -AsPlainText -Force
             New-localUser -Name "$($UserName)" -password $newUserPassword -Description "Created By JumpCloud ADMU"
 
-            Test-LocalUsername -username $userName | Should -Be $true
+            Test-LocalUsername -username $userName -win32UserProfiles $win32UserProfiles -localUserProfiles $nonSIDLocalUsers | Should -Be $true
         }
 
         It 'Test-LocalUsername - does not exist' {
 
-            Test-LocalUsername -username 'blazarz' | Should -Be $false
+            Test-LocalUsername -username 'blazarz' -win32UserProfiles $win32UserProfiles -localUserProfiles $nonSIDLocalUsers | Should -Be $false
         }
     }
 

@@ -197,7 +197,7 @@ Function Show-SelectionForm {
                         <Label Content="Local Account Username" HorizontalAlignment="Left" Margin="5,5,0,0" VerticalAlignment="Top" TabIndex="2147483645" FontWeight="SemiBold" FontSize="11"/>
                         <Label Content="Local Account Password&#xD;&#xA;" HorizontalAlignment="Left" Margin="5,59,0,0" VerticalAlignment="Top" FontWeight="SemiBold" Height="27" FontSize="11"/>
                         <TextBox Name="tb_JumpCloudUserName" HorizontalAlignment="Left" Height="23" Margin="10,31,0,0" TextWrapping="Wrap" VerticalAlignment="Top" Width="427"  FontWeight="SemiBold" FontSize="11" Style="{StaticResource RoundedTextBoxStyle}"/>
-                        <TextBox Name="tb_tempPassword" Style="{StaticResource RoundedTextBoxStyle}" HorizontalAlignment="Left" Height="23" Margin="10,86,0,0" TextWrapping="Wrap" Text="" VerticalAlignment="Top" Width="427" FontWeight="SemiBold" FontSize="11"/>
+                        <TextBox Name="tb_tempPassword" Style="{StaticResource RoundedTextBoxStyle}" HorizontalAlignment="Left" Height="23" Margin="10,86,0,0" TextWrapping="Wrap" Text="Temp123!Temp123!" VerticalAlignment="Top" Width="427" FontWeight="SemiBold" FontSize="11"/>
                         <Image Name="img_localAccountInfo" Height="20" Margin="136,7,311,179" Width="14" Visibility="Visible" ToolTip="The value in this field should match a username in the JumpCloud console. A new local user account will be created with this username." />
 
                         <Image Name="img_localAccountValid" HorizontalAlignment="Left" Height="23" Margin="440,33,0,0" VerticalAlignment="Top" Width="14" ToolTip="Local account username can't be empty, contain spaces, already exist on the local system or match the local computer name." Visibility="Visible" />
@@ -361,6 +361,8 @@ Function Show-SelectionForm {
     }
     # Get Win32 Profiles to merge data with valid SIDs
     $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+    # get localUsers (can contain users who have not logged in yet/ do not have a SID)
+    $nonSIDLocalUsers = Get-LocalUser
     $date_format = "yyyy-MM-dd HH:mm"
     foreach ($user in $users) {
         # Get Data from Win32Profile
@@ -504,9 +506,9 @@ Function Show-SelectionForm {
         $cb_leaveDomain.IsEnabled = $false
     }
 
-    $tb_JumpCloudUserName.add_LostFocus( {
+    $tb_JumpCloudUserName.Add_TextChanged( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If ((Test-IsNotEmpty $tb_JumpCloudUserName.Text) -or (!(Test-HasNoSpace $tb_JumpCloudUserName.Text)) -or (Test-LocalUsername -username $tb_JumpCloudUserName.Text) -or (($tb_JumpCloudUserName.Text).Length -gt 20)) {
+            If ((Test-IsNotEmpty $tb_JumpCloudUserName.Text) -or (!(Test-HasNoSpace $tb_JumpCloudUserName.Text)) -or (Test-LocalUsername -username $tb_JumpCloudUserName.Text -win32UserProfiles $win32UserProfiles -localUserProfiles $nonSIDLocalUsers) -or (($tb_JumpCloudUserName.Text).Length -gt 20)) {
                 $tb_JumpCloudUserName.Background = "#FFC6CBCF"
                 $tb_JumpCloudUserName.BorderBrush = "#FFF90000"
                 $img_localAccountValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
@@ -576,7 +578,7 @@ Function Show-SelectionForm {
         })
 
     # Validate Temp Password
-    $tb_tempPassword.add_LostFocus( {
+    $tb_tempPassword.Add_TextChanged( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
             If ((Test-IsNotEmpty $tb_tempPassword.Text) -or (-NOT (Test-HasNoSpace $tb_tempPassword.Text))) {
                 $tb_tempPassword.Background = "#FFC6CBCF"

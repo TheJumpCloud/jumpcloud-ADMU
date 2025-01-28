@@ -54,20 +54,31 @@ Function Test-MigrationButton {
             [System.Object]
             $tb_JumpCloudUserName
         )
-        If ([System.string]::IsNullOrEmpty($tb_JumpCloudUserName.Text)) {
-            throw "A non-null username is required"
+        begin {
+            # Get Win32 Profiles to merge data with valid SIDs
+            $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+            # get localUsers (can contain users who have not logged in yet/ do not have a SID)
+            $nonSIDLocalUsers = Get-LocalUser
         }
-        If (-Not (Test-HasNoSpace $tb_JumpCloudUserName.Text)) {
-            throw "A username string can not contain a space ' ' character"
+        process {
+            If ([System.string]::IsNullOrEmpty($tb_JumpCloudUserName.Text)) {
+                throw "A non-null username is required"
+            }
+            If (-Not (Test-HasNoSpace $tb_JumpCloudUserName.Text)) {
+                throw "A username string can not contain a space ' ' character"
+            }
+            If (-Not (($($tb_JumpCloudUserName.Text).length) -le 20)) {
+                throw "A username string must be less than or equal to 20 characters in length: $($($tb_JumpCloudUserName.Text).length)"
+            }
+            if ((Test-LocalUsername -username $tb_JumpCloudUserName.Text -win32UserProfiles $win32UserProfiles -localUserProfiles $nonSIDLocalUsers)) {
+                throw "The local user already exists on the system"
+            }
+            if ($tb_JumpCloudUserName.Text -eq $WmiComputerSystem.Name) {
+                throw "The username string can not be the same as the system hostname"
+            }
         }
-        If (-Not (($($tb_JumpCloudUserName.Text).length) -le 20)) {
-            throw "A username string must be less than or equal to 20 characters in length: $($($tb_JumpCloudUserName.Text).length)"
-        }
-        if ((Test-LocalUsername -username $tb_JumpCloudUserName.Text)) {
-            throw "The local user already exists on the system"
-        }
-        if ($tb_JumpCloudUserName.Text -eq $WmiComputerSystem.Name) {
-            throw "The username string can not be the same as the system hostname"
+        end {
+
         }
 
     }
