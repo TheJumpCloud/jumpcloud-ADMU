@@ -23,7 +23,7 @@ function Test-LocalUsername {
         }
     }
     end {
-        if (($username -in $localUsers) -or ($username -in $nonSIDLocalUsers.Name)) {
+        if (($username -in $localUsers) -or ($username -in $localUserProfiles.Name)) {
             return $true
         } else {
             return $false
