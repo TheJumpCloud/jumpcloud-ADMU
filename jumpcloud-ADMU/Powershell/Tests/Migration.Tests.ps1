@@ -18,9 +18,20 @@ BeforeAll {
     # import build variables for test cases
     write-host "Importing Build Variables:"
     . $PSScriptRoot\BuildVariables.ps1
+    Write-Host "Running Connect-JCOnline"
+    Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
     # import functions from start migration
-    write-host "Importing Start-Migration Script:"
-    . $PSScriptRoot\..\Start-Migration.ps1
+    write-host "Importing Start-Migration Module:"
+    Import-Module "$PSScriptRoot/../../JumpCloud.ADMU.psd1" -Force
+    write-host "Importing private functions:"
+    $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Private/*.ps1" -Recurse)
+    Foreach ($Import in $Private) {
+        Try {
+            . $Import.FullName
+        } Catch {
+            Write-Error -Message "Failed to import function $($Import.FullName): $_"
+        }
+    }
     # setup tests (This creates any of the users in the build vars dictionary)
     write-host "Running SetupAgent Script:"
     . $PSScriptRoot\SetupAgent.ps1
@@ -44,7 +55,7 @@ BeforeAll {
 
     # Remove users with ADMU_ prefix
     # Remove Created Users
-    Get-JCuser -username "ADMU_*" | Remove-JCuser -Force
+    Get-JCUser -username "ADMU_*" | Remove-JCUser -Force
 }
 Describe 'Migration Test Scenarios' {
     Enable-TestNameAsVariablePlugin
@@ -115,11 +126,11 @@ Describe 'Migration Test Scenarios' {
 
 
     # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
-    Context 'Start-Migration on local accounts (Test Functionallity)' {
-        It "username extists for testing" {
+    Context 'Start-Migration on local accounts (Test Functionality)' {
+        It "username exists for testing" {
             foreach ($user in $userTestingHash.Values) {
                 $user.username | Should -Not -BeNullOrEmpty
-                $user.JCusername | Should -Not -BeNullOrEmpty
+                $user.JCUsername | Should -Not -BeNullOrEmpty
                 Get-LocalUser $user.username | Should -Not -BeNullOrEmpty
             }
         }
@@ -165,7 +176,7 @@ Describe 'Migration Test Scenarios' {
         It "Test UWP_JCADMU was downloaded & exists" {
             Test-Path "C:\Windows\uwp_jcadmu.exe" | Should -Be $true
         }
-        It "Account of a prior migration can be sucessfully migrated again and not overwrite registry backup files" {
+        It "Account of a prior migration can be successfully migrated again and not overwrite registry backup files" {
             $Password = "Temp123!"
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -187,7 +198,7 @@ Describe 'Migration Test Scenarios' {
             (Get-ChildItem "C:\Users\$user1\AppData\Local\Microsoft\Windows\" -Hidden | Where-Object { $_.Name -match "UsrClass_original" }).Count | Should -Be 2
 
         }
-        It "Start-Migration should throw if the jumpcloud user already exists & not migrate anything" {
+        It "Start-Migration should throw if the JumpCloud user already exists & not migrate anything" {
             $Password = "Temp123!"
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $user2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -229,12 +240,13 @@ Describe 'Migration Test Scenarios' {
             # variables for test
             $CommandBody = '
             try {
-                . "D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Start-Migration.ps1"
+                # . "D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Public\Start-Migration.ps1"
+                Import-Module "D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\JumpCloud.ADMU.psd1" -Force
             } catch {
                 Write-Host "no file exists"
             }
             try {
-                . "C:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\Powershell\Start-Migration.ps1"
+                Import-Module "C:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\JumpCloud.ADMU.psd1" -Force
             } catch {
                 Write-Host "no file exists"
             }
@@ -251,7 +263,7 @@ Describe 'Migration Test Scenarios' {
             foreach ($result in $results) {
                 # Delete Command Results
                 Write-Host "Found Command Results: $($result.id) removing..."
-                remove-jcsdkcommandresult -id $result.id
+                Remove-JcSdkCommandResult -id $result.id
             }
             # Clear previous commands matching the name
             $RemoteADMUCommands = Get-JcSdkCommand | Where-Object { $_.name -eq $CommandName }
@@ -275,7 +287,7 @@ Describe 'Migration Test Scenarios' {
             $results = Get-JcSdkCommandResult
             foreach ($result in $results) {
                 # Delete Command Results
-                remove-jcsdkcommandresult -id $result.id
+                Remove-JcSdkCommandResult -id $result.id
             }
             # begin tests
             foreach ($user in $JCCommandTestingHash.Values) {
@@ -320,7 +332,7 @@ Describe 'Migration Test Scenarios' {
             foreach ($user in $JCFunctionalHash.Values) {
                 Write-Host "`n## Begin Bind User Test ##"
                 Write-Host "## $($user.Username) Bound as Admin: $($user.BindAsAdmin)  ##`n"
-                $users = Get-JCSDKUser
+                $users = Get-JcSdkUser
                 if ("$($user.JCUsername)" -in $users.Username) {
                     $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
                     Write-Host "Found JumpCloud User, $($existing.Id) removing..."
@@ -338,7 +350,7 @@ Describe 'Migration Test Scenarios' {
                 Write-Host "## GeneratedUser Username: $($generatedUser.Username)`n"
                 write-host "`nRunning: Start-Migration -JumpCloudUserName $($user.JCUsername) -SelectedUserName $($user.username) -TempPassword $($user.password)`n"
                 { Start-Migration -JumpCloudAPIKey $env:PESTER_APIKEY -AutobindJCUser $true -JumpCloudUserName "$($user.JCUsername)" -SelectedUserName "$ENV:COMPUTERNAME\$($user.username)" -TempPassword "$($user.password)" -UpdateHomePath $user.UpdateHomePath -BindAsAdmin $user.BindAsAdmin } | Should -Not -Throw
-                $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
 
                 Write-Host "`n## Validating sudo status on $($GeneratedUser.Id) | Should be ($($user.BindAsAdmin)) on $systemKey"
                 $association | Should -not -BeNullOrEmpty
@@ -369,7 +381,7 @@ Describe 'Migration Test Scenarios' {
         }
     }
     Context 'Start-Migration Fails when LocalUsername and JumpCloudUsername are the same' {
-        It 'local and jumpcloud usernames are the same' {
+        It 'local and JumpCloud usernames are the same' {
             Write-Host "`nStart-Migration Fails when LocalUsername and JumpCloudUsername are the same"
             $Password = "Temp123!"
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
@@ -379,7 +391,7 @@ Describe 'Migration Test Scenarios' {
             { Start-Migration -JumpCloudAPIKey $env:PESTER_APIKEY -JumpCloudUserName "testUser" -SelectedUserName "$ENV:COMPUTERNAME\testUser" -TempPassword "$($Password)" } | Should -Throw
         }
     }
-    Context 'Start-Migration on Local Accounts Expecting Failed Results (Test Reversal Functionallity)' {
+    Context 'Start-Migration on Local Accounts Expecting Failed Results (Test Reversal Functionality)' {
         BeforeEach {
             # Remove the log from previous runs
             # Not necessary but will be used in future tests to check log results
@@ -395,7 +407,7 @@ Describe 'Migration Test Scenarios' {
             foreach ($user in $JCReversionHash.Values) {
                 # Begin background job before Start-Migration
                 # define path to start migration for parallel job:
-                $pathToSM = "$PSScriptRoot\..\Start-Migration.ps1"
+                $pathToSM = "$PSScriptRoot\..\..\JumpCloud.ADMU.psd1"
 
                 Write-Host "$(Get-Date -UFormat "%D %r") - Start parallel job to wait for new user directory"
                 $waitJob = Start-Job -ScriptBlock:( {
@@ -439,8 +451,6 @@ Describe 'Migration Test Scenarios' {
                         $task = Get-ScheduledTask -TaskName "TestTaskFail"
                         do {
                             $task = Get-ScheduledTask -TaskName "TestTaskFail"
-                            Start-Sleep -Seconds:(1)
-
                         }
                         Until ($task.state -eq "Disabled")
                         if ($task.state -eq "Disabled") {
@@ -472,7 +482,7 @@ Describe 'Migration Test Scenarios' {
                         $date = Get-Date -UFormat "%D %r"
                         Write-Host "$date - Starting Start migration:"
                         Write-Host "$date - path: $SMPath"
-                        . $SMPath
+                        Import-Module $SMPath -Force
                         if ($?) {
                             Write-Host "imported start migration"
                         } else {
@@ -480,11 +490,17 @@ Describe 'Migration Test Scenarios' {
                         }
                         Write-Host "Running Migration, $JCUSERNAME, $SELECTEDCOMPUTERNAME, $TEMPPASS"
                         try {
-                            Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)" -ErrorAction SilentlyContinue | Out-Null
+                            Start-Migration -AutobindJCUser $false -JumpCloudUserName "$($JCUSERNAME)" -SelectedUserName "$ENV:COMPUTERNAME\$($SELECTEDCOMPUTERNAME)" -TempPassword "$($TEMPPASS)" | Out-Null
                         } Catch {
                             write-host "Migration failed as expected"
                         }
-                        $logContent = Get-Content -Tail 1 C:\Windows\Temp\Jcadmu.log
+                        # validate users was removed:
+                        $localUsers = Get-LocalUser
+                        $localUsers.Name | Should -Not -Contain "$JCUSERNAME"
+                        if (Test-Path "C:\Windows\Temp\jcAdmu.log") {
+                            Write-Host "log located in c drive"
+                            $logContent = Get-Content C:\Windows\Temp\jcAdmu.log -Tail 10
+                        }
                         if ($logContent -match "The following migration steps were reverted to their original state: newUserInit") {
                             write-host "Start Migration Task Failed Successfully"
                             return $true
@@ -507,8 +523,10 @@ Describe 'Migration Test Scenarios' {
                 Wait-Job -Job $waitStartMigrationJob | Out-Null
                 $SMData = Receive-Job -Job $waitStartMigrationJob -Keep
                 # start migration should return $true if the job completes and fails as expected (should be true)
+                Get-Content C:\Windows\Temp\jcAdmu.log -Tail 10
                 $SMData | should -be $true
                 # the task should have been disabled during the start migration script (should be $true)
+                Get-ScheduledTask -TaskName "TestTaskFail"
                 $disabledTaskData | should -be $true
                 # the migration user should exist
                 "C:\Users\$($user.username)" | Should -Exist
@@ -528,8 +546,8 @@ Describe 'Migration Test Scenarios' {
 }
 
 AfterAll {
-    $systems = Get-JCsdkSystem
-    $CIsystems = $systems | Where-Object { $_.displayname -match "fv-az*" }
+    $systems = Get-JCSdkSystem
+    $CIsystems = $systems | Where-Object { $_.DisplayName -match "fv-az*" }
     foreach ($system in $CIsystems) {
         Remove-JcSdkSystem -id $system.Id
     }

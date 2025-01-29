@@ -5,9 +5,6 @@ param (
     $ModuleVersionType
 )
 $env:ModuleVersionType = $ModuleVersionType
-# Load functions
-. "$PSScriptRoot/Start-Migration.ps1"
-
 
 # Import pester module
 $PesterInstalledVersion = Get-InstalledModule -Name Pester
@@ -25,6 +22,7 @@ If ($env:CI) {
     $jobMatrixSet = @{
         0 = @{
             'filePath' = @(
+                "$PSScriptRoot/Tests/SelectionForm.Tests.ps1",
                 "$PSScriptRoot/Tests/Functions.Tests.ps1",
                 "$PSScriptRoot/Tests/Migration.Tests.ps1"
             )

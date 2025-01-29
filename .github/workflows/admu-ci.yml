@@ -57,7 +57,7 @@ jobs:
         run: |
           # validate release type variables
           $env:RELEASE_TYPE |  Should -BeIn @('major','minor','patch','manual')
-  Setup-Build-Dependancies:
+  Setup-Build-Dependencies:
     needs: ["Filter-Branch", "Check-PR-Labels", "Validate-Env-Variables"]
     runs-on: windows-latest
     timeout-minutes: 10
@@ -68,7 +68,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
-          key: PS-Dependancies
+          key: PS-Dependencies
       - name: Install dependencies
         if: steps.cacher.outputs.cache-hit != 'true'
         shell: pwsh
@@ -79,7 +79,7 @@ jobs:
               Write-Host ('[status]Installing package provider NuGet');
               Install-PackageProvider -Name:('NuGet') -Scope:('CurrentUser') -Force
           }
-          # define dependancies for this ci workflow:
+          # define dependencies for this ci workflow:
           $PSDependencies = @{
               'PowerShellGet'                         = @{Repository = 'PSGallery'; RequiredVersion = '3.0.12-beta' }
               'ps2exe'                                = @{Repository = 'PSGallery'; RequiredVersion = '1.0.13' }
@@ -106,7 +106,7 @@ jobs:
               }
           }
   Build-Module:
-    needs: ["Setup-Build-Dependancies", "Check-PR-Labels"]
+    needs: ["Setup-Build-Dependencies", "Check-PR-Labels"]
     runs-on: windows-latest
     timeout-minutes: 10
     steps:
@@ -114,7 +114,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
-          key: PS-Dependancies
+          key: PS-Dependencies
       - name: Build ADMU Module
         shell: powershell
         env:
@@ -122,18 +122,20 @@ jobs:
         run: |
           . "${{ github.workspace }}/Deploy/build.ps1" -ModuleVersionType $env:RELEASE_TYPE -ModuleName "JumpCloud.ADMU"
       - name: Upload Nuspec
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: jumpcloud-admu-build
           path: |
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec
             ${{ github.workspace }}/Jumpcloud-ADMU/Docs/*.md
-            ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe
-            ${{ github.workspace }}/Jumpcloud-ADMU/Powershell/Form.ps1
+            ${{ github.workspace }}/Jumpcloud-ADMU/en-Us/JumpCloud.ADMU-help.xml
+            ${{ github.workspace }}/Jumpcloud-ADMU/PowerShell/Private/**/*.ps1
+            ${{ github.workspace }}/Jumpcloud-ADMU/PowerShell/Public/**/*.ps1
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psd1
+            ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psm1
           retention-days: 1
   Test-Module:
-    needs: ["Setup-Build-Dependancies", "Check-PR-Labels", "Build-Module"]
+    needs: ["Setup-Build-Dependencies", "Check-PR-Labels", "Build-Module"]
     runs-on: windows-latest
     timeout-minutes: 75
     strategy:
@@ -143,13 +145,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download artifacts
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: jumpcloud-admu-build
       - uses: actions/cache@v4
         with:
           path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
-          key: PS-Dependancies
+          key: PS-Dependencies
       - name: Test PWSH Module
         shell: powershell
         env:

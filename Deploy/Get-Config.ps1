@@ -11,8 +11,8 @@ Write-Host "======= Begin Get-Config ======="
 $env:ModuleVersionType = $ModuleVersionType
 $env:MODULENAME = $ModuleName
 # Populate variables
-$ModuleFolderName = "$PSScriptroot/../JumpCloud-ADMU/"
-$DEPLOYFOLDER = "$PSScriptroot"
+$ModuleFolderName = "$PSScriptRoot/../JumpCloud-ADMU/"
+$DEPLOYFOLDER = "$PSScriptRoot"
 $RELEASETYPE = $ModuleVersionType
 $GitHubWikiUrl = 'https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/'
 $ScriptRoot = Switch ($env:DEPLOYFOLDER) {
@@ -89,7 +89,8 @@ If (!(Get-PackageProvider -Name:('NuGet') -ListAvailable -ErrorAction:('Silently
 }
 
 # Get module function names
-$Functions_Public = @(Get-ChildItem -Path "$ModuleFolderName/Powershell/Start-Migration.ps1")
+$Functions_Public = @(Get-ChildItem -Path "$ModuleFolderName/Powershell/Public/" -Recurse)
+$Functions_Private = @(Get-ChildItem -Path "$ModuleFolderName/Powershell/Private/"  -Recurse)
 
 # Import module in development
 Write-Host ('Importing module: ' + $FilePath_psd1)
