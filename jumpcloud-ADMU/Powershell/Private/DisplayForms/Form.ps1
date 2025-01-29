@@ -265,7 +265,7 @@ Function Show-SelectionForm {
     $img_localAccountInfo.Source = Get-ImageFromB64 -ImageBase64 $BlueBase64
     $img_localAccountValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
     $img_localAccountPasswordInfo.Source = Get-ImageFromB64 -ImageBase64 $BlueBase64
-    $img_localAccountPasswordValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
+    $img_localAccountPasswordValid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
     # Define misc static variables
 
     $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
