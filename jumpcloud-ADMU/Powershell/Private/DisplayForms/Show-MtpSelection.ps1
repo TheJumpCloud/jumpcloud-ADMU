@@ -41,7 +41,7 @@ function Show-MtpSelection {
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White"
-        Height="220"
+        Height="180"
         Width="400">
     <Grid Margin="10,10,10,10">
         <Button x:Name="OKButton" Content="OK" HorizontalAlignment="Right" VerticalAlignment="Bottom" Width="60"/>
