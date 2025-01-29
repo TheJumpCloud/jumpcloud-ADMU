@@ -125,6 +125,20 @@ Function Test-MigrationButton {
         If ([System.string]::IsNullOrEmpty($tb_JumpCloudAPIKey.Password)) {
             throw "A non-null apiKey string is required"
         }
+        If (-Not ([System.string]::IsNullOrEmpty($tb_JumpCloudAPIKey.Password))) {
+            $skip = 0
+            $limit = 100
+            $Headers = @{
+                'Content-Type' = 'application/json';
+                'Accept'       = 'application/json';
+                'x-api-key'    = "$($tb_JumpCloudAPIKey.Password)";
+            }
+            $baseUrl = "https://console.jumpcloud.com/api/organizations"
+            $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+            if (($Request.StatusCode -ne 200)) {
+                throw "A valid apiKey is required"
+            }
+        }
     }
 
     function Test-OrgID {

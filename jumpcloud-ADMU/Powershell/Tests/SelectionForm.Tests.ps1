@@ -12,27 +12,27 @@ Describe -Name "testGUITests" {
         }
         if (-Not $IsWindows) {
             # for non-windows devices just uncomment these functions
-            # Function Get-WmiObject {
-            # }
-            # Function New-LocalUser {
-            #     [CmdletBinding()]
-            #     param (
-            #         [Parameter()]
-            #         [System.String]
-            #         $Name,
-            #         [Parameter()]
-            #         [System.String]
-            #         $Password,
-            #         [Parameter()]
-            #         [System.String]
-            #         $Description
-            #     )
-            #     Return [PSCustomObject]@{
-            #         Name        = $Name
-            #         Enabled     = $true
-            #         Description = $Description
-            #     }
-            # }
+            Function Get-WmiObject {
+            }
+            Function New-LocalUser {
+                [CmdletBinding()]
+                param (
+                    [Parameter()]
+                    [System.String]
+                    $Name,
+                    [Parameter()]
+                    [System.String]
+                    $Password,
+                    [Parameter()]
+                    [System.String]
+                    $Description
+                )
+                Return [PSCustomObject]@{
+                    Name        = $Name
+                    Enabled     = $true
+                    Description = $Description
+                }
+            }
         }
         # mock the wmi command
         Mock -CommandName 'Get-WmiObject' {
@@ -82,30 +82,6 @@ Describe -Name "testGUITests" {
                 $btn_migrateProfile.IsEnabled | Should -Be $true
             }
         }
-        Context "API Key Validation" {
-            It "When a 'valid' API key is specified" {
-                # add input for connect Key
-                $testCaseInput.tb_JumpCloudAPIKey.Password = "1111111111111111111111111111111111111111"
-                # checkbox for install JCAgent
-                $testCaseInput.cb_autobindJCUser.IsChecked = $true
-                # should return true
-                Test-MigrationButton @testCaseInput | Should -Be $true
-                $btn_migrateProfile.IsEnabled | Should -Be $true
-            }
-            It "When a 'valid' API key & 'orgID' are specified" {
-                # add the selectedOrgID string to the test input
-                $testCaseInput.Add(
-                    'selectedOrgID', "111111111111111111111111"
-                )
-                # add input for connect Key
-                $testCaseInput.tb_JumpCloudAPIKey.Password = "1111111111111111111111111111111111111111"
-                # checkbox for install JCAgent
-                $testCaseInput.cb_autobindJCUser.IsChecked = $true
-                # should return true
-                Test-MigrationButton @testCaseInput | Should -Be $true
-                $btn_migrateProfile.IsEnabled | Should -Be $true
-            }
-        }
     }
     Context 'The selection form should NOT allow you to migrate' {
         Context "Connect Key Validation" {
@@ -147,6 +123,28 @@ Describe -Name "testGUITests" {
                 Test-MigrationButton @testCaseInput | Should -Be $false
                 $btn_migrateProfile.IsEnabled | Should -Be $false
             }
+            It "When a an invalid API key is specified" {
+                # add input for connect Key
+                $testCaseInput.tb_JumpCloudAPIKey.Password = "1111111111111111111111111111111111111111"
+                # checkbox for install JCAgent
+                $testCaseInput.cb_autobindJCUser.IsChecked = $true
+                # should return true
+                Test-MigrationButton @testCaseInput | Should -Be $false
+                $btn_migrateProfile.IsEnabled | Should -Be $false
+            }
+            It "When a 'invalid' API key & 'orgID' are specified" {
+                # add the selectedOrgID string to the test input
+                $testCaseInput.Add(
+                    'selectedOrgID', "111111111111111111111111"
+                )
+                # add input for connect Key
+                $testCaseInput.tb_JumpCloudAPIKey.Password = "1111111111111111111111111111111111111111"
+                # checkbox for install JCAgent
+                $testCaseInput.cb_autobindJCUser.IsChecked = $true
+                # should return true
+                Test-MigrationButton @testCaseInput | Should -Be $false
+                $btn_migrateProfile.IsEnabled | Should -Be $false
+            }
             It "When a 'valid' API key and an 'invalid' orgID are specified" {
                 # add the selectedOrgID string to the test input
                 $testCaseInput.Add(
@@ -159,6 +157,15 @@ Describe -Name "testGUITests" {
                 # should not return true
                 Test-MigrationButton @testCaseInput | Should -Be $false
                 $btn_migrateProfile.IsEnabled | Should -Be $false
+            }
+            It "When a real API key and is specified" {
+                # add input for connect Key
+                $testCaseInput.tb_JumpCloudAPIKey.Password = $env:PESTER_APIKEY
+                # checkbox for install JCAgent
+                $testCaseInput.cb_autobindJCUser.IsChecked = $true
+                # should not return true
+                Test-MigrationButton @testCaseInput | Should -Be $true
+                $btn_migrateProfile.IsEnabled | Should -Be $true
             }
         }
         Context "Temp Pass Validation" {

@@ -36,8 +36,8 @@ Feature: Selection form allows user migration
         When a domain profile is selected
         And the "Install JCAgent" checkbox is selected
         And a valid "ConnectKey" is pasted in the text field
-        And the "Install JCAgent" checkbox is selected
-        And a valid "ConnectKey" is pasted in the text field
+        And the "AutoBind JCUser" checkbox is selected
+        And a valid "APIKey" is pasted in the text field
         And a JumpCloud username is specified
         And a password is specified
         Then the "Migrate Profile" button should become active and no longer be greyed-out
