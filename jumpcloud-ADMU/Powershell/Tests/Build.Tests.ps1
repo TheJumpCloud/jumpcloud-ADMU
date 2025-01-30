@@ -25,6 +25,17 @@ Describe "Module Validation Tests" {
                 Write-Error -Message "Failed to import function $($Import.FullName): $_"
             }
         }
+        # Get PSD1 Version:
+        if ($env:ModuleVersionType -eq "manual") {
+
+            $psd1Content = Get-Content -Path "$PSScriptRoot\..\..\JumpCloud.ADMU.psd1"
+            $psd1Regex = "ModuleVersion[\s\S]+(([0-9]+)\.([0-9]+)\.([0-9]+))"
+            $psd1VersionMatch = Select-String -InputObject:($psd1Content) -Pattern:($psd1Regex)
+            $psd1Version = [version]$psd1VersionMatch.Matches.Groups[1].value
+            write-host "psd1version $psd1Version"
+        }
+
+
 
     }
 
@@ -35,13 +46,13 @@ Describe "Module Validation Tests" {
             $progressFormCmd = Get-Command New-ProgressForm
             $progressFormVersion = $progressFormCmd.Definition | Select-String -Pattern:($VersionRegex)
             $branchProgressFormVersion = [version]$progressFormVersion.Matches.value
-            $masterProgressForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/ProgressForm.ps1 -useBasicParsing).ToString()
+            $masterProgressForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/ProgressForm.ps1 -useBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterProgressForm) -Pattern:($VersionRegex)
             $masterProgressFormVersion = [version]$masterVersion.Matches.value
             if ($env:ModuleVersionType -eq "manual") {
                 # Manual Versioning
                 # Given version should be greater than master
-                $branchProgressFormVersion | Should -BeGreaterThan $masterProgressFormVersion
+                $branchProgressFormVersion | Should -be $psd1Version
             } else {
                 $branchProgressFormVersion | Should -BeGreaterThan $masterProgressFormVersion
                 $branchProgressFormVersion.$($env:ModuleVersionType) | Should -Be ($masterProgressFormVersion.$($env:ModuleVersionType) + 1)
@@ -53,13 +64,13 @@ Describe "Module Validation Tests" {
             $formCmd = Get-Command Show-SelectionForm
             $formVersion = $formCmd.Definition | Select-String -Pattern:($VersionRegex)
             $branchFormVersion = [version]$formVersion.Matches.value
-            $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1 -useBasicParsing).ToString()
+            $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/Form.ps1 -useBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterForm) -Pattern:($VersionRegex)
             $masterFormVersion = [version]$masterVersion.Matches.value
             if ($env:ModuleVersionType -eq "manual") {
                 # Manual Versioning
                 # Given version should be greater than master
-                $branchFormVersion | Should -BeGreaterThan $masterFormVersion
+                $branchFormVersion | Should -be $psd1Version
             } else {
                 $branchFormVersion | Should -BeGreaterThan $masterFormVersion
                 $branchFormVersion.$($env:ModuleVersionType) | Should -Be ($masterFormVersion.$($env:ModuleVersionType) + 1)
@@ -72,28 +83,34 @@ Describe "Module Validation Tests" {
             $startMigrationCmd = Get-Command Start-Migration
             $admuVersion = $startMigrationCmd.Definition | Select-String -Pattern:($VersionRegex)
             $branchStartMigrationVersion = [version]$admuVersion.Matches.value
-            $masterStartMigration = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Start-Migration.ps1 -useBasicParsing).ToString()
+            $masterStartMigration = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Public/Start-Migration.ps1 -useBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterStartMigration) -Pattern:($VersionRegex)
             $masterStartMigrationVersion = [version]$masterVersion.Matches.value
             if ($env:ModuleVersionType -eq "manual") {
-                $branchStartMigrationVersion | Should -BeGreaterThan $masterStartMigrationVersion
+                $branchStartMigrationVersion | Should -be $psd1Version
             } else {
                 $branchStartMigrationVersion | Should -BeGreaterThan $masterStartMigrationVersion
                 $branchStartMigrationVersion.$($env:ModuleVersionType) | Should -Be ($masterStartMigrationVersion.$($env:ModuleVersionType) + 1)
             }
         }
 
-        It 'gui_jcadmu.exe version' -skip {
+        It 'gui_jcadmu.exe/ uwp_jcadmu.exe versions' {
             $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )([0-9]+)\.([0-9]+)\.([0-9]+)'
-            $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1 -useBasicParsing).ToString()
+            $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/Form.ps1 -useBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterForm) -Pattern:($VersionRegex)
             $masterFormVersion = [version]$masterVersion.Matches.value
-            $exeVersion = [version](Get-Item ("$PSScriptRoot\..\..\exe\gui_jcadmu.exe")).VersionInfo.FileVersion
+            $gui_exePathFromArtifact = "$PSScriptRoot\..\..\..\Exe\gui_jcadmu.exe"
+            $uwp_exePathFromArtifact = "$PSScriptRoot\..\..\..\Exe\uwp_jcadmu.exe"
+            $gui_exeVersion = [version](Get-Item ("$gui_exePathFromArtifact")).VersionInfo.FileVersion
+            $wup_exeVersion = [version](Get-Item ("$uwp_exePathFromArtifact")).VersionInfo.FileVersion
             if ($env:ModuleVersionType -eq "manual") {
-                $exeVersion | Should -BeGreaterThan $masterFormVersion
+                $gui_exeVersion | Should -be $psd1Version
+                $wup_exeVersion | Should -be $psd1Version
             } else {
-                $exeVersion | Should -BeGreaterThan $masterFormVersion
-                $exeVersion.$($env:ModuleVersionType) | Should -Be ($masterFormVersion.$($env:ModuleVersionType) + 1)
+                $gui_exeVersion | Should -BeGreaterThan $masterFormVersion
+                $gui_exeVersion.$($env:ModuleVersionType) | Should -Be ($masterFormVersion.$($env:ModuleVersionType) + 1)
+                $wup_exeVersion | Should -BeGreaterThan $masterFormVersion
+                $wup_exeVersion.$($env:ModuleVersionType) | Should -Be ($masterFormVersion.$($env:ModuleVersionType) + 1)
             }
         }
     }
@@ -113,7 +130,7 @@ Describe "Module Validation Tests" {
             Write-Host "Module Changelog Version: $ModuleChangelogVersion"
             $latestVersion = [version]$latestModule.version
             if ($env:ModuleVersionType -eq "manual") {
-                $ModuleChangelogVersion | Should -BeGreaterThan $latestVersion
+                $ModuleChangelogVersion | Should -be $psd1Version
             } else {
                 ([version]$ModuleChangelogVersion).$($env:ModuleVersionType) | Should -Be ($latestVersion.$($env:ModuleVersionType) + 1)
             }
@@ -131,7 +148,7 @@ Describe "Module Validation Tests" {
             $Docs = Get-ChildItem -Path $FolderPath_Docs -Filter "*.md"
             Write-Host $Docs
             foreach ($item in $Docs) {
-                Write-Host "testing ::::: $($item)"
+                Write-Host "Validating documentation for doc file: $($item)"
                 $diff = git diff -- $item.fullname
                 if ($diff) {
                     write-warning "diff found in file: $($item.fullname) when we expected none to exist; have you run build.ps1 and committed the resulting changes?"

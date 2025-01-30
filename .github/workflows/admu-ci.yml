@@ -133,6 +133,7 @@ jobs:
             ${{ github.workspace }}/Jumpcloud-ADMU/PowerShell/Public/**/*.ps1
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psd1
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psm1
+            ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe
           retention-days: 1
   Test-Module:
     needs: ["Setup-Build-Dependencies", "Check-PR-Labels", "Build-Module"]
@@ -148,6 +149,8 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: jumpcloud-admu-build
+      - name: Display structure of downloaded files
+        run: ls -R
       - uses: actions/cache@v4
         with:
           path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
