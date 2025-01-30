@@ -10,30 +10,30 @@ Describe -Name "testGUITests" {
                 Write-Error -Message "Failed to import function $($Import.FullName): $_"
             }
         }
-        if (-Not $IsWindows) {
-            # for non-windows devices just uncomment these functions
-            Function Get-WmiObject {
-            }
-            Function New-LocalUser {
-                [CmdletBinding()]
-                param (
-                    [Parameter()]
-                    [System.String]
-                    $Name,
-                    [Parameter()]
-                    [System.String]
-                    $Password,
-                    [Parameter()]
-                    [System.String]
-                    $Description
-                )
-                Return [PSCustomObject]@{
-                    Name        = $Name
-                    Enabled     = $true
-                    Description = $Description
-                }
-            }
-        }
+        # if (-Not $IsWindows) {
+        #     # for non-windows devices just uncomment these functions
+        #     Function Get-WmiObject {
+        #     }
+        #     Function New-LocalUser {
+        #         [CmdletBinding()]
+        #         param (
+        #             [Parameter()]
+        #             [System.String]
+        #             $Name,
+        #             [Parameter()]
+        #             [System.String]
+        #             $Password,
+        #             [Parameter()]
+        #             [System.String]
+        #             $Description
+        #         )
+        #         Return [PSCustomObject]@{
+        #             Name        = $Name
+        #             Enabled     = $true
+        #             Description = $Description
+        #         }
+        #     }
+        # }
         # mock the wmi command
         Mock -CommandName 'Get-WmiObject' {
             $wmiReturn = @{
