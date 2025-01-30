@@ -27,7 +27,8 @@ if ($ModuleVersionType -eq 'manual') {
 # Create a new ADMU Template file in this directory for testing/ Building EXE (default hide debug pwsh window)
 New-ADMUTemplate -ExportPath "$PSScriptRoot/admuTemplate.ps1" -hidePowerShellWindow $true
 # Run Build-Exe On Windows Systems
-if ($IsWindows) {
+$psVersion = $PSVersionTable
+if ($($PSversionTable.Platform) -eq "Win32NT") {
     . $PSScriptRoot\New-ADMUExe.ps1
 }
 # Run Build-HelpFiles
