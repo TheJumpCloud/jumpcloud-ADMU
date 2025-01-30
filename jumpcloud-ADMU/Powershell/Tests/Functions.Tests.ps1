@@ -4,14 +4,21 @@ BeforeAll {
         . $PSScriptRoot\..\..\..\Deploy\TestSetup.ps1 -TestOrgConnectKey $env:PESTER_CONNECTKEY
     }
     Write-Host "Script Location: $PSScriptRoot"
-    Write-Host "Dot-Sourcing Start-Migration Script"
-    . $PSScriptRoot\..\Start-Migration.ps1
-    Write-Host "Dot-Sourcing Test Functions"
+    # setting test variables
     . $PSScriptRoot\SetupAgent.ps1
     Write-Host "Running Connect-JCOnline"
     Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
     Function Get-WindowsDrive {
         return 'drive'
+    }
+    # Import Private Functions:
+    $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Private/*.ps1" -Recurse)
+    Foreach ($Import in $Private) {
+        Try {
+            . $Import.FullName
+        } Catch {
+            Write-Error -Message "Failed to import function $($Import.FullName): $_"
+        }
     }
 }
 Describe 'Functions' {
@@ -89,7 +96,9 @@ Describe 'Functions' {
     Context 'Set-JCUserToSystemAssociation Function' {
         # Set-JCUserToSystemAssociation should take USERID as input validated with Test-JumpCloudUsername
         BeforeAll {
-            $OrgID, $OrgName = Get-mtpOrganization -apiKey $env:PESTER_APIKEY
+            $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
+            $OrgName = "$($OrgSelection[1])"
+            $OrgID = "$($OrgSelection[0])"
             Mock Get-WindowsDrive { return "C:" }
             $windowsDrive = Get-WindowsDrive
 
@@ -103,7 +112,7 @@ Describe 'Functions' {
             $Password = "Temp123!"
             $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # If User Exists, remove from the org
-            $users = Get-JCSDKUser
+            $users = Get-JCSdkUser
             if ("$($user.JCUsername)" -in $users.Username) {
                 $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
                 Write-Host "Found JumpCloud User, $($existing.Id) removing..."
@@ -162,25 +171,6 @@ Describe 'Functions' {
         }
     }
 
-    Context 'DenyInteractiveLogonRight Function' -Skip {
-        #SeDenyInteractiveLogonRight not present in circleci instance
-        It 'User exists on system' {
-            # $objUser = New-Object System.Security.Principal.NTAccount("circleci")
-            # $strSID = $objUser.Translate([System.Security.Principal.SecurityIdentifier])
-            # DenyInteractiveLogonRight -SID $strSID.Value
-            # $secpolFile = "C:\Windows\temp\ur_orig.inf"
-            # if (Test-Path $secpolFile)
-            # {
-            #     Remove-Item $secpolFile -Force
-            # }
-            # secedit /export /areas USER_RIGHTS /cfg C:\Windows\temp\ur_orig.inf
-            # $secpol = (Get-Content $secpolFile)
-            # $regvaluestring = $secpol | Where-Object { $_ -like "*SeDenyInteractiveLogonRight*" }
-            # $regvaluestring.Contains($strSID.Value) | Should -Be $true
-        }
-
-    }
-
     Context 'Register-NativeMethod Function' -Skip {
         # Register a C# Method to PWSH context we effectively test this with Migration tests
     }
@@ -198,7 +188,7 @@ Describe 'Functions' {
         }
 
         It 'User does not exist on system and throws exception' {
-            { New-LocalUserProfile -username:('userdoesntexist') -ErrorAction Stop } | Should -Throw
+            { New-LocalUserProfile -username:('UserDoesNotExist') -ErrorAction Stop } | Should -Throw
         }
     }
 
@@ -238,11 +228,11 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Get-SID Function' {
-        It 'Tests that Get-SID returns a valid regex matched SID for the current user' {
+    Context 'Get-SecurityIdentifier Function' {
+        It 'Tests that Get-SecurityIdentifier returns a valid regex matched SID for the current user' {
             # SID of current user should match SID regex pattern
             $currentUser = $(whoami) -replace "$(hostname)\\", ("")
-            $currentSID = Get-SID -User:($currentUser)
+            $currentSID = Get-SecurityIdentifier -User:($currentUser)
             $currentSID | Should -Match "^S-\d-\d+-(\d+-){1,14}\d+$"
         }
     }
@@ -250,7 +240,7 @@ Describe 'Functions' {
     Context 'Set-UserRegistryLoadState Function' -Skip {
         # Unload and load user registry - we are testing this in Migration tests
         It 'Load ' {
-            # $circlecisid = (Get-SID -User:'circleci')
+            # $circlecisid = (Get-SecurityIdentifier -User:'circleci')
             # Set-UserRegistryLoadState -op Load -ProfilePath 'C:\Users\circleci\' -UserSid $circlecisid
             # $path = 'HKU:\' $circlecisid_'_a
             # Test-Path -Path 'HKU:\$($circlecisid)'
@@ -441,29 +431,28 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Test-Localusername Function' {
+    Context 'Test-LocalUsername Function' {
+        It 'Test-LocalUsername - exists' {
+            # This test requires a windows device to create the get the user
+            $userName = "TesterUser12345"
+            $password = "TesterPassword12345!!"
+            $newUserPassword = ConvertTo-SecureString -String "$($Password)" -AsPlainText -Force
+            New-localUser -Name "$($UserName)" -password $newUserPassword -Description "Created By JumpCloud ADMU"
 
-        It 'Test-Localusername - exists' {
-            $currentUser = $(whoami) -replace "$(hostname)\\", ("")
-            Test-Localusername -field $currentUser | Should -Be $true
+            # Get Win32 Profiles to merge data with valid SIDs
+            $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+            # get localUsers (can contain users who have not logged in yet/ do not have a SID)
+            $nonSIDLocalUsers = Get-LocalUser
+            Test-LocalUsername -username $userName -win32UserProfiles $win32UserProfiles -localUserProfiles $nonSIDLocalUsers | Should -Be $true
         }
 
-        It 'Test-Localusername - does not exist' {
+        It 'Test-LocalUsername - does not exist' {
 
-            Test-Localusername -field 'blazarz' | Should -Be $false
-        }
-    }
-
-    Context 'Test-Domainusername Function' {
-        # Requires domainjoined system
-        It 'Test-Domainusername - exists' -skip {
-
-            Test-Domainusername -field 'bob.lazar' | Should -Be $true
-        }
-
-        It 'Test-Domainusername - does not exist' {
-
-            Test-Domainusername -field 'bob.lazarz' | Should -Be $false
+            # Get Win32 Profiles to merge data with valid SIDs
+            $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+            # get localUsers (can contain users who have not logged in yet/ do not have a SID)
+            $nonSIDLocalUsers = Get-LocalUser
+            Test-LocalUsername -username 'blazarz' -win32UserProfiles $win32UserProfiles -localUserProfiles $nonSIDLocalUsers | Should -Be $false
         }
     }
 
@@ -490,22 +479,15 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Get-NetBiosName Function' {
-        # Requires domainjoined system
-        It 'Get-NetBiosName - JCADB2' -Skip {
-            Get-NetBiosName | Should -Be 'JCADB2'
-        }
-    }
-
-    Context 'Convert-SID Function' {
+    Context 'Convert-SecurityIdentifier Function' {
         BeforeAll {
             $newUserPassword = ConvertTo-SecureString -String 'Temp123!' -AsPlainText -Force
             New-localUser -Name 'sidTest' -password $newUserPassword -Description "Created By JumpCloud ADMU tests"
             New-LocalUserProfile -username:('sidTest')
         }
-        It 'Convert-SID - circleci SID' {
+        It 'Convert-SecurityIdentifier - circleci SID' {
             $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\sidTest' | Select-Object SID).SID
-            (Convert-SID -Sid $circlecisid) | Should -match 'sidTest'
+            (Convert-SecurityIdentifier -Sid $circlecisid) | Should -match 'sidTest'
         }
     }
 
@@ -735,14 +717,14 @@ Describe 'Functions' {
             # Change the value of the folder Desktop to a different value
             $folderPath = "HKEY_USERS:\$($userSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
             Set-ItemProperty -Path $folderpath -Name Desktop -Value "\\server\share\desktop"
-            {Test-UserFolderRedirect -UserSid $userSid} | Should -Throw
+            { Test-UserFolderRedirect -UserSid $userSid } | Should -Throw
             # Change the value of the folder Desktop back to the default value
             Set-ItemProperty -Path $folderpath -Name Desktop -Value "%USERPROFILE%\Desktop"
 
         }
         # Test for Invalid SID or Invalid User Shell Folder
         It 'Test-UserFolderRedirect - Invalid SID or Invalid User Shell Folder' {
-            {Test-UserFolderRedirect -UserSid "Invalid-3361044348-30300820-1001"} | Should -Throw
+            { Test-UserFolderRedirect -UserSid "Invalid-3361044348-30300820-1001" } | Should -Throw
         }
     }
 }
