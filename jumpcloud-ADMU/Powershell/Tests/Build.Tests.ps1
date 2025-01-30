@@ -94,17 +94,21 @@ Describe "Module Validation Tests" {
             }
         }
 
-        It 'gui_jcadmu.exe version' -skip {
+        It 'gui_jcadmu.exe/ uwp_jcadmu.exe versions' {
             $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )([0-9]+)\.([0-9]+)\.([0-9]+)'
             $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/Form.ps1 -useBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterForm) -Pattern:($VersionRegex)
             $masterFormVersion = [version]$masterVersion.Matches.value
-            $exeVersion = [version](Get-Item ("$PSScriptRoot\..\..\exe\gui_jcadmu.exe")).VersionInfo.FileVersion
+            $gui_exeVersion = [version](Get-Item ("$PSScriptRoot\..\..\exe\gui_jcadmu.exe")).VersionInfo.FileVersion
+            $wup_exeVersion = [version](Get-Item ("$PSScriptRoot\..\..\exe\uwp_jcadmu.exe")).VersionInfo.FileVersion
             if ($env:ModuleVersionType -eq "manual") {
-                $exeVersion | Should -be $psd1Version
+                $gui_exeVersion | Should -be $psd1Version
+                $wup_exeVersion | Should -be $psd1Version
             } else {
-                $exeVersion | Should -BeGreaterThan $masterFormVersion
-                $exeVersion.$($env:ModuleVersionType) | Should -Be ($masterFormVersion.$($env:ModuleVersionType) + 1)
+                $gui_exeVersion | Should -BeGreaterThan $masterFormVersion
+                $gui_exeVersion.$($env:ModuleVersionType) | Should -Be ($masterFormVersion.$($env:ModuleVersionType) + 1)
+                $wup_exeVersion | Should -BeGreaterThan $masterFormVersion
+                $wup_exeVersion.$($env:ModuleVersionType) | Should -Be ($masterFormVersion.$($env:ModuleVersionType) + 1)
             }
         }
     }
