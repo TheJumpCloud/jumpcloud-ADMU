@@ -25,6 +25,17 @@ Describe "Module Validation Tests" {
                 Write-Error -Message "Failed to import function $($Import.FullName): $_"
             }
         }
+        # Get PSD1 Version:
+        if ($env:ModuleVersionType -eq "manual") {
+
+            $psd1Content = Get-Content -Path "$PSScriptRoot\..\..\JumpCloud.ADMU.psd1"
+            $psd1Regex = "ModuleVersion[\s\S]+(([0-9]+)\.([0-9]+)\.([0-9]+))"
+            $psd1VersionMatch = Select-String -InputObject:($psd1Content) -Pattern:($psd1Regex)
+            $psd1Version = [version]$psd1VersionMatch.Matches.Groups[1].value
+            write-host "psd1version $psd1Version"
+        }
+
+
 
     }
 
@@ -41,7 +52,7 @@ Describe "Module Validation Tests" {
             if ($env:ModuleVersionType -eq "manual") {
                 # Manual Versioning
                 # Given version should be greater than master
-                $branchProgressFormVersion | Should -BeGreaterThan $masterProgressFormVersion
+                $branchProgressFormVersion | Should -be $psd1Version
             } else {
                 $branchProgressFormVersion | Should -BeGreaterThan $masterProgressFormVersion
                 $branchProgressFormVersion.$($env:ModuleVersionType) | Should -Be ($masterProgressFormVersion.$($env:ModuleVersionType) + 1)
@@ -59,7 +70,7 @@ Describe "Module Validation Tests" {
             if ($env:ModuleVersionType -eq "manual") {
                 # Manual Versioning
                 # Given version should be greater than master
-                $branchFormVersion | Should -BeGreaterThan $masterFormVersion
+                $branchFormVersion | Should -be $psd1Version
             } else {
                 $branchFormVersion | Should -BeGreaterThan $masterFormVersion
                 $branchFormVersion.$($env:ModuleVersionType) | Should -Be ($masterFormVersion.$($env:ModuleVersionType) + 1)
@@ -76,7 +87,7 @@ Describe "Module Validation Tests" {
             $masterVersion = Select-String -InputObject:($masterStartMigration) -Pattern:($VersionRegex)
             $masterStartMigrationVersion = [version]$masterVersion.Matches.value
             if ($env:ModuleVersionType -eq "manual") {
-                $branchStartMigrationVersion | Should -BeGreaterThan $masterStartMigrationVersion
+                $branchStartMigrationVersion | Should -be $psd1Version
             } else {
                 $branchStartMigrationVersion | Should -BeGreaterThan $masterStartMigrationVersion
                 $branchStartMigrationVersion.$($env:ModuleVersionType) | Should -Be ($masterStartMigrationVersion.$($env:ModuleVersionType) + 1)
@@ -90,7 +101,7 @@ Describe "Module Validation Tests" {
             $masterFormVersion = [version]$masterVersion.Matches.value
             $exeVersion = [version](Get-Item ("$PSScriptRoot\..\..\exe\gui_jcadmu.exe")).VersionInfo.FileVersion
             if ($env:ModuleVersionType -eq "manual") {
-                $exeVersion | Should -BeGreaterThan $masterFormVersion
+                $exeVersion | Should -be $psd1Version
             } else {
                 $exeVersion | Should -BeGreaterThan $masterFormVersion
                 $exeVersion.$($env:ModuleVersionType) | Should -Be ($masterFormVersion.$($env:ModuleVersionType) + 1)
@@ -113,7 +124,7 @@ Describe "Module Validation Tests" {
             Write-Host "Module Changelog Version: $ModuleChangelogVersion"
             $latestVersion = [version]$latestModule.version
             if ($env:ModuleVersionType -eq "manual") {
-                $ModuleChangelogVersion | Should -BeGreaterThan $latestVersion
+                $ModuleChangelogVersion | Should -be $psd1Version
             } else {
                 ([version]$ModuleChangelogVersion).$($env:ModuleVersionType) | Should -Be ($latestVersion.$($env:ModuleVersionType) + 1)
             }
