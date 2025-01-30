@@ -99,8 +99,15 @@ Describe "Module Validation Tests" {
             $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/Form.ps1 -useBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterForm) -Pattern:($VersionRegex)
             $masterFormVersion = [version]$masterVersion.Matches.value
-            $gui_exeVersion = [version](Get-Item ("$PSScriptRoot\..\..\exe\gui_jcadmu.exe")).VersionInfo.FileVersion
-            $wup_exeVersion = [version](Get-Item ("$PSScriptRoot\..\..\exe\uwp_jcadmu.exe")).VersionInfo.FileVersion
+            if ($CI) {
+                $gui_exePathFromArtifact = "$GITHUB_WORKSPACE\jumpcloud-admu-build\Exe\gui_jcadmu.exe"
+                $uwp_exePathFromArtifact = "$GITHUB_WORKSPACE\jumpcloud-admu-build\Exe\uwp_jcadmu.exe"
+            } else {
+                $gui_exePathFromArtifact = "$PSScriptRoot\..\..\exe\gui_jcadmu.exe"
+                $uwp_exePathFromArtifact = "$PSScriptRoot\..\..\exe\uwp_jcadmu.exe"
+            }
+            $gui_exeVersion = [version](Get-Item ("$gui_exePathFromArtifact")).VersionInfo.FileVersion
+            $wup_exeVersion = [version](Get-Item ("$uwp_exePathFromArtifact")).VersionInfo.FileVersion
             if ($env:ModuleVersionType -eq "manual") {
                 $gui_exeVersion | Should -be $psd1Version
                 $wup_exeVersion | Should -be $psd1Version
