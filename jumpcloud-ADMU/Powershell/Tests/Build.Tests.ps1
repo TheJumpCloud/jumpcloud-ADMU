@@ -35,7 +35,7 @@ Describe "Module Validation Tests" {
             $progressFormCmd = Get-Command New-ProgressForm
             $progressFormVersion = $progressFormCmd.Definition | Select-String -Pattern:($VersionRegex)
             $branchProgressFormVersion = [version]$progressFormVersion.Matches.value
-            $masterProgressForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/ProgressForm.ps1 -useBasicParsing).ToString()
+            $masterProgressForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/ProgressForm.ps1 -useBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterProgressForm) -Pattern:($VersionRegex)
             $masterProgressFormVersion = [version]$masterVersion.Matches.value
             if ($env:ModuleVersionType -eq "manual") {
@@ -53,7 +53,7 @@ Describe "Module Validation Tests" {
             $formCmd = Get-Command Show-SelectionForm
             $formVersion = $formCmd.Definition | Select-String -Pattern:($VersionRegex)
             $branchFormVersion = [version]$formVersion.Matches.value
-            $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1 -useBasicParsing).ToString()
+            $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/Form.ps1 -useBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterForm) -Pattern:($VersionRegex)
             $masterFormVersion = [version]$masterVersion.Matches.value
             if ($env:ModuleVersionType -eq "manual") {
@@ -72,7 +72,7 @@ Describe "Module Validation Tests" {
             $startMigrationCmd = Get-Command Start-Migration
             $admuVersion = $startMigrationCmd.Definition | Select-String -Pattern:($VersionRegex)
             $branchStartMigrationVersion = [version]$admuVersion.Matches.value
-            $masterStartMigration = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Start-Migration.ps1 -useBasicParsing).ToString()
+            $masterStartMigration = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Public/Start-Migration.ps1 -useBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterStartMigration) -Pattern:($VersionRegex)
             $masterStartMigrationVersion = [version]$masterVersion.Matches.value
             if ($env:ModuleVersionType -eq "manual") {
@@ -85,7 +85,7 @@ Describe "Module Validation Tests" {
 
         It 'gui_jcadmu.exe version' -skip {
             $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )([0-9]+)\.([0-9]+)\.([0-9]+)'
-            $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Form.ps1 -useBasicParsing).ToString()
+            $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/Form.ps1 -useBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterForm) -Pattern:($VersionRegex)
             $masterFormVersion = [version]$masterVersion.Matches.value
             $exeVersion = [version](Get-Item ("$PSScriptRoot\..\..\exe\gui_jcadmu.exe")).VersionInfo.FileVersion
@@ -131,7 +131,7 @@ Describe "Module Validation Tests" {
             $Docs = Get-ChildItem -Path $FolderPath_Docs -Filter "*.md"
             Write-Host $Docs
             foreach ($item in $Docs) {
-                Write-Host "testing ::::: $($item)"
+                Write-Host "Validating documentation for doc file: $($item)"
                 $diff = git diff -- $item.fullname
                 if ($diff) {
                     write-warning "diff found in file: $($item.fullname) when we expected none to exist; have you run build.ps1 and committed the resulting changes?"
