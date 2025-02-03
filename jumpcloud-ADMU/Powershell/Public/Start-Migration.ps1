@@ -27,7 +27,6 @@ Function Start-Migration {
         $windowsDrive = Get-WindowsDrive
         $jcAdmuTempPath = "$windowsDrive\Windows\Temp\JCADMU\"
         $jcAdmuLogFile = "$windowsDrive\Windows\Temp\jcAdmu.log"
-        $netBiosName = Get-NetBiosName
 
         # JumpCloud Agent Installation Variables
         $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
@@ -926,38 +925,13 @@ Function Start-Migration {
             }
             $path = $newUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
             If (!(test-path $path)) {
-                New-Item -ItemType Directory -Force -Path $path
+                New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
-            $appxList = @()
 
-            Write-ToProgress -ProgressBar $Progressbar -Status "CheckADStatus" -form $isForm
-            # Get Azure AD Status
-            $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
 
-            if ($AzureADStatus -eq 'YES' -or $netBiosName -match 'AzureAD') {
-                # Find Appx User Apps by Username
-                try {
-                    $appxList = Get-AppXpackage -user (Convert-SecurityIdentifier $SelectedUserSID) | Select-Object InstallLocation
-                } catch {
-                    Write-ToLog -Message "Could not determine AppXPackages for selected user, this is okay. Rebuilding UWP Apps from AllUsers list"
-                }
-            } else {
-                try {
-                    $appxList = Get-AppXpackage -user (Convert-SecurityIdentifier $SelectedUserSID) | Select-Object InstallLocation
-                } catch {
-                    Write-ToLog -Message "Could not determine AppXPackages for selected user, this is okay. Rebuilding UWP Apps from AllUsers list"
-                }
-            }
-            if ($appxList.Count -eq 0) {
-                # Get Common Apps in edge case:
-                try {
-                    $appxList = Get-AppXpackage -AllUsers | Select-Object InstallLocation
-                } catch {
-                    # if the primary trust relationship fails (needed for local conversion)
-                    $appxList = Get-AppXpackage | Select-Object InstallLocation
-                }
-            }
-            $appxList | Export-CSV ($newUserProfileImagePath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
+            $appxList = Get-AppxListByUser -SID $SelectedUserSID
+            Set-AppxManifestFile -appxList $appxList -profileImagePath $newUserProfileImagePath
+
             # TODO: Test and return non terminating error here if failure
             # $admuTracker.uwpAppXPackages = $true
 
