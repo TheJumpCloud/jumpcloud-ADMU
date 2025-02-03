@@ -5,6 +5,7 @@ Release Date: January 28, 2025
 #### RELEASE NOTES
 
 ```
+Test CI
 This release addresses some code quality issues and a bug-fix for certain Windows 11 systems where migrated users could lost access to use Windows search post-migration.
 ```
 
