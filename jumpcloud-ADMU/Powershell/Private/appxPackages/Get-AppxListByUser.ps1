@@ -8,6 +8,11 @@ Function Get-AppxListByUser {
     begin {
         # if the trust relationship is established attempt to get the appxList
         $secureChannelStatus = Test-ComputerSecureChannel
+        # validate the SID on the system
+        $validSid = Test-SecurityIdentifier -SID $SID
+        if (-Not $validSid ) {
+            throw "the SID $SID could not be found on the system"
+        }
 
     }
     process {
