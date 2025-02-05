@@ -76,7 +76,15 @@ Function Build-PesterTestFile {
                 New-Item -ItemType File -Force -Path $functionTestFullPath
                 $testFileContent = @"
 Describe "$($function.BaseName) Tests" {
-
+    BeforeAll {
+        # import the function
+        try {
+            `$functionPath = (`$PSCommandPath.Replace('.Tests.ps1', '.ps1')) -replace '\/Tests\/|\\Tests\\', '/'
+            . `$functionPath
+        } catch {
+            Write-Error "Could not import `$functionPath"
+        }
+    }
 }
 "@
                 # write the file
