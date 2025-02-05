@@ -775,12 +775,14 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     # FTA count
     $ftaCount = $ftaList.Count
     $ftaSuccessCounter = 0
+    $UWPForm.Text = "Registering File Type Associations"
+
     foreach ($item in $ftaList) {
         $i += 1
         $percent = [Math]::Round([Math]::Ceiling(($i / $ftaList.count) * 100))
-        $textLabel.Text = "Registering File Type Associations: $percent%";
+        $UWPForm.Percent = $percent
         # Update the textLabel
-        $textLabel.Refresh();
+        # $textLabel.Refresh();
         # Count the number of items in the list
 
         if ($item.programId) {
@@ -802,12 +804,13 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     # Register the protocol associations using the Set-PTA function
     $ptaCount = $ptaList.Count
     $ptaSuccessCounter = 0
+    $UWPForm.Text = "Registering Protocol Type Associations"
+
     foreach ($item in $ptaList) {
         $i += 1
         $percent = [Math]::Round([Math]::Ceiling(($i / $ptaList.count) * 100))
-        $textLabel.Text = "Registering File Protocol Associations: $percent%";
+        $UWPForm.Percent = $percent
         # Update the textLabel
-        $textLabel.Refresh();
 
         Write-ToLog -Message ("Registering PTA Extension: $($item.extension) ProgramID: $($item.programId)")
         try {
@@ -828,7 +831,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
 
     Write-ToLog -Message ('########### End UWP App ###########')
 
-    $form.Close()
 } else {
     exit
 }
