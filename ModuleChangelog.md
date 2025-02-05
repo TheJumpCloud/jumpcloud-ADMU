@@ -1,3 +1,18 @@
+## 2.7.12
+
+Release Date: February 10, 2025
+
+#### RELEASE NOTES
+
+```
+Fix appx bug
+```
+
+
+#### BUG FIXES:
+
+Fix appx bug
+
 ## 2.7.11
 
 Release Date: January 28, 2025
