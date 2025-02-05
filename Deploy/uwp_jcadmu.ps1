@@ -727,18 +727,25 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
         try {
             $appxList = Import-CSV "$homepath\AppData\Local\JumpCloudADMU\appx_manifest.csv"
             # Create the log file.  The `-Force` parameter ensures overwriting.
-            $logFile = "$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
-            # "Starting Appx Package Registration" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-            #             "There are $($appxList.count) apps to be registered" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-            for ($i = 0; $i -lt $appxList.count; $i++) {
+            $logFile = "$HOME\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
+            "Starting Appx Package Registration" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+            $appxCount = $appxList.Count
+            "There are $($appxCount) apps to be registered" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+
+            #success Counter
+            $appxSuccessCounter = 0
+            foreach ($item in $appxList) {
                 try {
-                    Add-AppxPackage -DisableDevelopmentMode -Register "$($appxList[$i].InstallLocation)\AppxManifest.xml" -ForceApplicationShutdown
-                    "Successfully registered $($appxList[$i].InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+
+                    Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml"
+                    "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                    $appxSuccessCounter++
                 } catch {
                     "Error registering $($appxList[$i].InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                 }
             }
-            # "Appx Package Registration Complete" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+            "Appx Package Registration Complete" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+            Write-ToLog -Message ("Appx Package Registration Complete.  $appxSuccessCounter/$appxCount apps registered successfully.")
         } catch {
             "A critical error occurred: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
         }
@@ -764,33 +771,37 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     $j | Wait-Job
     Write-Host "Job complete..."
 
-    # Register the file type associations using the Set-FTA function
-    Write-ToLog -Message ("Begin FTA File Registration")
-    $i = 0
+    #Register the file type associations using the Set-FTA function
+    # FTA count
+    $ftaCount = $ftaList.Count
+    $ftaSuccessCounter = 0
     foreach ($item in $ftaList) {
         $i += 1
         $percent = [Math]::Round([Math]::Ceiling(($i / $ftaList.count) * 100))
         $textLabel.Text = "Registering File Type Associations: $percent%";
         # Update the textLabel
         $textLabel.Refresh();
+        # Count the number of items in the list
+
         if ($item.programId) {
             Write-ToLog -Message ("Registering FTA Extension: $($item.extension) ProgramID: $($item.programId)")
             # Output to the log file
             try {
                 $ftaOutput += Set-FTA -Extension $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
                 Write-ToLog -Message ("Success")
+                $ftaSuccessCounter++
             } catch {
                 Write-ToLog -Message ("Failure")
                 Write-ToLog -Message ($ProcessError)
             }
         }
     }
-
     $ftaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\fta_manifestLog.txt"
+    Write-ToLog -Message ("FTA Registration Complete.  $ftaSuccessCounter/$ftaCount file type associations registered successfully.")
 
     # Register the protocol associations using the Set-PTA function
-    Write-ToLog -Message ("Begin PTA File Registration")
-    $i = 0
+    $ptaCount = $ptaList.Count
+    $ptaSuccessCounter = 0
     foreach ($item in $ptaList) {
         $i += 1
         $percent = [Math]::Round([Math]::Ceiling(($i / $ptaList.count) * 100))
@@ -802,12 +813,18 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
         try {
             $ptaOutput += Set-PTA -Protocol $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
             Write-ToLog -Message ("Success")
+            $ptaSuccessCounter++
         } catch {
             Write-ToLog -Message ("Failure")
             Write-ToLog -Message ($ProcessError)
         }
     }
     $ptaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\pta_manifestLog.txt"
+    Write-ToLog -Message ("PTA Registration Complete.  $ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
+    # Log the pta/appx/fta registration completion
+    Write-ToLog -Message ("$appxSuccessCounter/$appxCount apps registered successfully.")
+    Write-ToLog -Message ("$ftaSuccessCounter/$ftaCount file type associations registered successfully.")
+    Write-ToLog -Message ("$ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
 
     Write-ToLog -Message ('########### End UWP App ###########')
 
