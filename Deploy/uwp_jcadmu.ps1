@@ -608,7 +608,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     $pictureBox.SizeMode = [System.Windows.Forms.PictureBoxSizeMode]::Zoom
     $pictureBox.Image = $img;
 
-    # initilaze the form
+    # initialize the form
     $form.controls.Add($textLabel)
     $form.controls.add($pictureBox)
     $form.Add_Shown( { $form.Activate() } )
@@ -618,11 +618,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     $ftamanifest = ($HOME + '\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv')
     $ptaManifest = ($HOME + '\AppData\Local\JumpCloudADMU\protocolTypeAssociations.csv')
 
-    try {
-        $appxList = Import-CSV $appxmanifest
-    } catch {
-        $appxList = $null
-    }
     try {
         $ftaList = Import-CSV $ftamanifest
     } catch {
@@ -642,25 +637,39 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     # Create a foreach loop for each list and do a percent even if it is < 100
     $allListsCount = $appxList.Count + $ftaList.Count + $ptaList.Count
 
-    $i = 0
-    foreach ($item in $appxList) {
-        $i += 1
-        $percent = [Math]::Round([Math]::Ceiling(($i / $allListsCount) * 100))
-        $textLabel.Text = "Completing Account Migration $percent%";
-        # Update the textLabel
-        $textLabel.Refresh();
-        Write-ToLog -Message ("Registering AppX Application: $($item.InstallLocation)")
-        try {
-            $output += Add-AppxPackage -DisableDevelopmentMode -Register -ErrorAction Stop -ErrorVariable ProcessError "$($item.InstallLocation)\AppxManifest.xml" -Verbose *>&1
-            Write-ToLog -Message ("Success")
-        } catch {
-            Write-ToLog -Message ("Failure")
-            Write-ToLog -Message ($ProcessError)
-        }
-        $output | Out-File "$HOME\AppData\Local\JumpCloudADMU\appx_manifestLog.txt"
-    }
+    Write-Host "There are $($appxList.count) apps to be registered"
+    Start-Sleep 1
+    $logFile = "$HOME\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
+    $homepath = $HOME
+    # Remove existing log file to ensure a fresh start.
+    if (Test-Path $logFile) { Remove-Item $logFile -Force }
 
-    # Register the file type associations using the Set-FTA function
+    $j = Start-Job -ScriptBlock {
+        $appxList = Import-CSV $appxmanifest
+        param($homepath)
+        try {
+            # Create the log file.  The `-Force` parameter ensures overwriting.
+            $logFile = "$HOME\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
+            "Starting Appx Package Registration" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+            "There are $($appxList.count) apps to be registered" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+            foreach ($item in $appxList) {
+                try {
+                    Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml"
+                    "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                } catch {
+                    "Error registering $($item.InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                }
+            }
+            "Appx Package Registration Complete" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+        } catch {
+            "A critical error occurred: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+        }
+    } -ArgumentList $homepath
+    Write-Host "Job started.  wait for job..."
+    $j | Wait-Job
+    Write-Host "Job complete..."
+
+    Register the file type associations using the Set-FTA function
     foreach ($item in $ftaList) {
         $i += 1
         $percent = [Math]::Round([Math]::Ceiling(($i / $allListsCount) * 100))
