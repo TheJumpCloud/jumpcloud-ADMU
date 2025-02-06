@@ -7,7 +7,7 @@ Describe -Name "UWP Tests" {
         # Helper Functions path
         $helperFunctionsPath = "$($PSScriptRoot)/helperFunctions/Import-AllFunctions.ps1"
         . $helperFunctionsPath
-        $uwpPath = "$($PSScriptRoot)\..\..\..\Deploy\uwp_jcadmu.ps1"
+        $uwpPath = "$($PSScriptRoot)/../../../Deploy/uwp_jcadmu.ps1"
     }
     Context -Name "UWP should run and do the things" {
         BeforeEach {
