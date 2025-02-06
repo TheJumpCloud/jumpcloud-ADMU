@@ -124,49 +124,6 @@ Describe 'Migration Test Scenarios' {
 
             $ftaValue.programId | Should -Be "wordpad"
             $ptaValue.programId | Should -Be "notepad"
-
-            # Run UWP App on the system user that was migrated
-
-            # Create a job to run the UWP app to the migrated user
-
-            $job = Start-Job -scriptblock:({
-                    # parameters
-                    [CmdletBinding()]
-                    param (
-                        [Parameter()]
-                        [string]
-                        $uwpPath
-                    )
-                    Set-Location -Path (Get-Item -Path $uwpPath).Parent.Parent.Parent.FullName
-                    $path = Get-Location
-
-                    Write-Host "Path is $path"
-                    . $path/Deploy/uwp_jcadmu.ps1
-
-                    # Check if the appx, fta, and pta files exist
-                    #$appxPath = "C:\Windows\$localUser\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
-                    $ftaPath = "C:\Windows\$localUser\AppData\Local\JumpCloudADMU\fta_manifestLog.txt"
-                    $ptaPath = "C:\Windows\$localUser\AppData\Local\JumpCloudADMU\pta_manifestLog.txt"
-                    $logPath = "C:\Windows\$localUser\AppData\Local\JumpCloudADMU\log.txt"
-
-                    # Check if data exists
-                    #$appxCsv = Get-Content $appxPath
-                    $ftaCsv = Get-Content $ftaPath
-                    $ptaCsv = Get-Content $ptaPath
-                    $log = Get-Content $logPath
-
-                    # Log should have "FTA Registration Complete.  144/188 file type associations registered successfully."
-                    #$log | Should -Contain "Appx Package Registration Complete."
-                    $log | Should -Contain "FTA Registration Complete" # TODO: Should we test by the number of success? FTA is hit or miss with getting 100% success since some file types are not registered by default or Windows blocks them
-                    $log | Should -Contain "PTA Registration Complete"
-
-                    #Test-Path $appxPath | Should -Be $true
-                    Test-Path $ftaPath | Should -Be $true
-                    Test-Path $ptaPath | Should -Be $true
-
-
-
-                }) -ArgumentList:($rootPath)  -credential:($credentials)
         }
     }
 

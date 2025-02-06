@@ -36,6 +36,7 @@ If ($env:CI) {
         2 = @{
             'filePath' = @(
                 "$PSScriptRoot/Tests/SetLastLoggedOnUserTest.Tests.ps1"
+                "$PSScriptRoot/Tests/uwpTests.Tests.ps1"
             )
         }
         3 = @{

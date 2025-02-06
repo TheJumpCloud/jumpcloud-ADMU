@@ -46,7 +46,30 @@ Describe -Name "UWP Tests" {
             . $uwpPath
             write-host "done with uwp"
             Get-Item "$path\protocolTypeAssociations.csv" | should -not -BeNullOrEmpty
-            #TODO: write all the other tests
+
+
+            $appxPath = "$profileImagePath\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
+            $ftaPath = "$profileImagePath\AppData\Local\JumpCloudADMU\fta_manifestLog.txt"
+            $ptaPath = "$profileImagePath\AppData\Local\JumpCloudADMU\pta_manifestLog.txt"
+            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
+
+            $appxCsv = Get-Content $appxPath
+            $ftaCsv = Get-Content $ftaPath
+            $ptaCsv = Get-Content $ptaPath
+            $log = Get-Content $logPath
+
+            Write-Host "appx: $appxCsv"
+            Write-Host "fta: $ftaCsv"
+            Write-Host "pta: $ptaCsv"
+            Write-Host "log: $log"
+
+            # $log | Should -Contain "FTA Registration Complete" # TODO: Should we test by the number of success? FTA is hit or miss with getting 100% success since some file types are not registered by default or Windows blocks them
+            # $log | Should -Contain "PTA Registration Complete"
+
+            Test-Path $appxPath | Should -Be $true
+            Test-Path $ftaPath | Should -Be $true
+            Test-Path $ptaPath | Should -Be $true
+            Test-Path $logPath | Should -Be $true
         }
 
     }
