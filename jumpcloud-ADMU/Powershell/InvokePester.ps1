@@ -45,7 +45,7 @@ if ($env:CI) {
                 <# Action that will repeat until the condition is met #>
                 $bucketIndex = $i * $itemsPerBucket
                 # write-host "`$tags[$($bucketIndex + $k)] ="$tags[($bucketIndex + $k)]
-                $PesterTestsPaths[$bucketIndex + $k]
+                $PesterTestsPaths[$bucketIndex + $k].FullName
             }
             # add to ciIndex Array
             $CIindex += , ($CIIndexList)
