@@ -5,9 +5,9 @@ Describe -Name "UWP Tests" {
         Write-Host "Root Module Path: $($Global:rootModule)"
         Write-Host "Current Test Path: $PSScriptRoot"
         # Helper Functions path
-        $helperFunctionsPath = Join-Path $($Global:rootModule) "/jumpcloud-ADMU/Powershell/Tests/helperFunctions/Import-AllFunctions.ps1"
+        $helperFunctionsPath = "$($PSScriptRoot)/helperFunctions/Import-AllFunctions.ps1"
         . $helperFunctionsPath
-        $uwpPath = Join-Path $($Global:rootModule) "/Deploy/uwp_jcadmu.ps1"
+        $uwpPath = "$($PSScriptRoot)\..\..\..\Deploy\uwp_jcadmu.ps1"
     }
     Context -Name "UWP should run and do the things" {
         BeforeEach {
