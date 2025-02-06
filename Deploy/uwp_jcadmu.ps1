@@ -726,6 +726,36 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
 
     $j = Start-Job -ScriptBlock {
         param($homepath)
+
+        Function Write-ToLog {
+            [CmdletBinding()]
+            Param
+            (
+                [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
+                , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$($HOME)\AppData\Local\JumpCloudADMU\log.txt"
+            )
+            Begin {
+                $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                # If attempting to write to a log file in a folder/path that doesn't exist create the file including the path.
+                If (!(Test-Path $Path)) {
+                    Write-Verbose "Creating $Path."
+                    New-Item $Path -Force -ItemType File
+                }
+                # check that the log file is not too large:
+                $currentLog = get-item $path
+                if ($currentLog.Length -ge 5000000) {
+                    # if log is larger than 5MB, rename the log to log.old.txt and create a new log file
+                    copy-item -path $path -destination "$path.old" -force
+                    New-Item $Path -Force -ItemType File
+                }
+
+            }
+            end {
+                # Write log entry to $Path
+                "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
+            }
+        }
+
         try {
             $appxList = Import-CSV "$homepath\AppData\Local\JumpCloudADMU\appx_manifest.csv"
             # Create the log file.  The `-Force` parameter ensures overwriting.
@@ -738,7 +768,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
             $appxSuccessCounter = 0
             foreach ($item in $appxList) {
                 try {
-
                     Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml"
                     "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                     $appxSuccessCounter++
@@ -747,10 +776,10 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                 }
             }
             "Appx Package Registration Complete" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-            Write-ToLog -Message ("Appx Package Registration Complete.  $appxSuccessCounter/$appxCount apps registered successfully.")
         } catch {
             "A critical error occurred: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
         }
+        Write-ToLog -Message ("Appx Package Registration Complete.  $appxSuccessCounter/$appxCount apps registered successfully.")
     } -ArgumentList $homepath
 
     # Monitor progress
@@ -824,6 +853,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
         }
     }
     $ptaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\pta_manifestLog.txt"
+
     Write-ToLog -Message ("PTA Registration Complete.  $ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
     # Log the pta/appx/fta registration completion
     Write-ToLog -Message ("$appxSuccessCounter/$appxCount apps registered successfully.")

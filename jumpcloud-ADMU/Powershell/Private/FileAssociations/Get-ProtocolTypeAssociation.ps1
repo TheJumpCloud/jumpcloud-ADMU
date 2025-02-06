@@ -38,7 +38,7 @@ function Get-ProtocolTypeAssociation {
         $pathSuffix = "\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
 
         if ($UseAdmuPath) {
-            $fullPath = "$basePath\_admu$pathSuffix"
+            $fullPath = "$($basePath)_admu$($pathSuffix)"
         } else {
             $fullPath = "$basePath$pathSuffix"
         }
@@ -51,7 +51,7 @@ function Get-ProtocolTypeAssociation {
                 $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
                 if ($progId) {
                     $manifestList.Add([PSCustomObject]@{
-                            extension = $key.PSChildName
+                            extension = $_.PSChildName
                             programId = $progId
                         }) | Out-Null # Suppress output from Add()
                 }

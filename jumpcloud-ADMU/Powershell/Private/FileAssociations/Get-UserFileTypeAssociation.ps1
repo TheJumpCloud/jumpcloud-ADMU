@@ -41,7 +41,7 @@ function Get-UserFileTypeAssociation {
         $pathSuffix = "\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
 
         if ($UseAdmuPath) {
-            $fullPath = "$basePath\_admu$pathSuffix"
+            $fullPath = "$($basePath)_admu$($pathSuffix)"
         } else {
             $fullPath = "$basePath$pathSuffix"
         }
