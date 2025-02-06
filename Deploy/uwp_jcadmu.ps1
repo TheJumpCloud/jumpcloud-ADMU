@@ -517,7 +517,7 @@ Function Write-ToLog {
     Param
     (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
-        , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$logPath"
+        , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$($HOME)\AppData\Local\JumpCloudADMU\log.txt"
     )
     Begin {
         $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -690,7 +690,7 @@ if ("HKEY_CURRENT_USER" -notin (Get-PSDrive | Select-Object Name).Name) {
         throw $_  # Throw the exception to stop execution.
     }
 }
-$logPath = ($HOME + '\AppData\Local\JumpCloudADMU\log.txt')
+
 $ADMUKEY = "HKEY_CURRENT_USER:\SOFTWARE\JCADMU"
 if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     Write-ToLog "Initializing UWP FORM....."
