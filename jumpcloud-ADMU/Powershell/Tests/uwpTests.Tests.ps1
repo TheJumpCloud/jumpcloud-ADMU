@@ -48,19 +48,14 @@ Describe -Name "UWP Tests" {
             }
         }
         It -Name "Tests that the files are there" {
+
+            Get-Item "$path\fileTypeAssociations.csv" | should -not -BeNullOrEmpty
+            Get-Item "$path\protocolTypeAssociations.csv" | should -not -BeNullOrEmpty
+            Get-Item "$path\appx_manifest.csv" | should -not -BeNullOrEmpty
+
             write-host "begin uwp"
             . $uwpPath
             write-host "done with uwp"
-            Get-Item "$path\protocolTypeAssociations.csv" | should -not -BeNullOrEmpty
-
-            # CSVs should not be empty
-            $appxCsv = Import-Csv -Path "$path\appx_manifest.csv"
-            $fileTypeAssociations = Import-Csv -Path "$path\fileTypeAssociations.csv"
-            $protocolTypeAssociations = Import-Csv -Path "$path\protocolTypeAssociations.csv"
-
-            $appxCsv | should -Not -BeNullOrEmpty
-            $fileTypeAssociations | should -Not -BeNullOrEmpty
-            $protocolTypeAssociations | should -Not -BeNullOrEmpty
 
             $appxPath = "$profileImagePath\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
             $ftaPath = "$profileImagePath\AppData\Local\JumpCloudADMU\fta_manifestLog.txt"
