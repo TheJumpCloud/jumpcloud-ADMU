@@ -17,43 +17,50 @@ if (-not (Test-Path $PesterResultsFileXmldir)) {
     new-item -path $PesterResultsFileXmldir -ItemType Directory
 }
 
-# Define CI Matrix Job Set:
-If ($env:CI) {
-    $jobMatrixSet = @{
-        0 = @{
-            'filePath' = @(
-                "$PSScriptRoot/Tests/SelectionForm.Tests.ps1",
-                "$PSScriptRoot/Tests/Functions.Tests.ps1",
-                "$PSScriptRoot/Tests/Migration.Tests.ps1"
-            )
+# Get all the pester test files:
+$PesterTestsPaths = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse | Where-Object size -GT 0 | Sort-Object -Property Name
+Write-Host "[Status] $($PesterTestsPaths.count) tests found"
+
+
+if ($env:CI) {
+    If ($env:job_group) {
+        # split tests by job group:
+        $PesterTestsPaths = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse | Where-Object size -GT 0 | Sort-Object -Property Name
+        Write-Host "[Status] $($PesterTestsPaths.count) tests found"
+        $CIindex = @()
+        $numItems = $($PesterTestsPaths.count)
+        $numBuckets = 3
+        $itemsPerBucket = [math]::Floor(($numItems / $numBuckets))
+        $remainder = ($numItems % $numBuckets)
+        $extra = 0
+        for ($i = 0; $i -lt $numBuckets; $i++) {
+            <# Action that will repeat until the condition is met #>
+            if ($i -eq ($numBuckets - 1)) {
+                $extra = $remainder
+            }
+            $indexList = ($itemsPerBucket + $extra)
+            # Write-Host "Container $i contains $indexList items:"
+            $CIIndexList = @()
+            $CIIndexList += for ($k = 0; $k -lt $indexList; $k++) {
+                <# Action that will repeat until the condition is met #>
+                $bucketIndex = $i * $itemsPerBucket
+                # write-host "`$tags[$($bucketIndex + $k)] ="$tags[($bucketIndex + $k)]
+                $PesterTestsPaths[$bucketIndex + $k]
+            }
+            # add to ciIndex Array
+            $CIindex += , ($CIIndexList)
         }
-        1 = @{
-            'filePath' = @(
-                "$PSScriptRoot/Tests/PSScriptAnalyzer.Tests.ps1",
-                "$PSScriptRoot/Tests/Build.Tests.ps1"
-            )
-        }
-        2 = @{
-            'filePath' = @(
-                "$PSScriptRoot/Tests/uwpTests.Tests.ps1"
-                "$PSScriptRoot/Tests/SetLastLoggedOnUserTest.Tests.ps1"
-            )
-        }
-        3 = @{
-            'filePath' = @(
-                "$PSScriptRoot/Tests/ScheduledTaskTest.Tests.ps1"
-            )
-        }
+
+        $PesterRunPath = $CIindex[[int]$($env:job_group)]
+        Write-Host "[status] The following $($($CIindex[[int]$($env:job_group)]).count) tests will be run:"
+        $($CIindex[[int]$($env:job_group)]) | ForEach-Object { Write-Host "$_" }
     }
-    write-host "running CI job group: $env:job_group"
-    $configRunPath = $jobMatrixSet[[int]$($env:job_group)].filePath
-    Write-Host "testing paths: $configRunPath"
 } else {
-    $configRunPath = "$PSScriptRoot/Tests/"
+    $PesterRunPath = "$PSScriptRoot/Tests/"
 }
 # break
 $configuration = New-PesterConfiguration
-$configuration.Run.Path = $configRunPath
+$configuration.Run.Path = $PesterRunPath
 $configuration.Should.ErrorAction = 'Continue'
 $configuration.CodeCoverage.Enabled = $true
 $configuration.testresult.Enabled = $true
