@@ -690,14 +690,13 @@ if ("HKEY_CURRENT_USER" -notin (Get-PSDrive | Select-Object Name).Name) {
         throw $_  # Throw the exception to stop execution.
     }
 }
-
+$logPath = ($HOME + '\AppData\Local\JumpCloudADMU\log.txt')
 $ADMUKEY = "HKEY_CURRENT_USER:\SOFTWARE\JCADMU"
 if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     Write-ToLog "Initializing UWP FORM....."
     # Initialize the form
     $UWPForm = New-UWPForm
     # init log
-    $logPath = ($HOME + '\AppData\Local\JumpCloudADMU\log.txt')
     Write-ToLog -Message ('########### Begin UWP App ###########')
     # set files:
     $appxmanifest = ($HOME + '\AppData\Local\JumpCloudADMU\appx_manifest.csv')
