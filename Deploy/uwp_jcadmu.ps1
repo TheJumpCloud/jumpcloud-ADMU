@@ -517,7 +517,7 @@ Function Write-ToLog {
     Param
     (
         [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
-        , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$logPath"
+        , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$($HOME)\AppData\Local\JumpCloudADMU\log.txt"
     )
     Begin {
         $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -680,24 +680,14 @@ function New-UWPForm {
     return $syncHash
 }
 
-if ("HKEY_CURRENT_USER" -notin (Get-PSDrive | Select-Object Name).Name) {
-    Write-ToLog "Checking if HKEY_CURRENT_USER is already mapped. It should be." # HKCU is almost always mapped.
-    try {
-        New-PSDrive -Name:("HKEY_CURRENT_USER") -PSProvider:("Registry") -Root:("HKEY_CURRENT_USER") | Out-Null
-        Write-ToLog "HKEY_CURRENT_USER (re)mapped successfully."
-    } catch {
-        Write-ToLog "Error (re)mapping HKEY_CURRENT_USER: $_" -Error
-        throw $_  # Throw the exception to stop execution.
-    }
-}
 
-$ADMUKEY = "HKEY_CURRENT_USER:\SOFTWARE\JCADMU"
+
+$ADMUKEY = "HKCU:\SOFTWARE\JCADMU"
 if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     Write-ToLog "Initializing UWP FORM....."
     # Initialize the form
     $UWPForm = New-UWPForm
     # init log
-    $logPath = ($HOME + '\AppData\Local\JumpCloudADMU\log.txt')
     Write-ToLog -Message ('########### Begin UWP App ###########')
     # set files:
     $appxmanifest = ($HOME + '\AppData\Local\JumpCloudADMU\appx_manifest.csv')
@@ -823,7 +813,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
         $percent = [Math]::Round([Math]::Ceiling(($i / $ptaList.count) * 100))
         $UWPForm.Percent = $percent
         # Update the textLabel
-
         Write-ToLog -Message ("Registering PTA Extension: $($item.extension) ProgramID: $($item.programId)")
         try {
             $ptaOutput += Set-PTA -Protocol $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
