@@ -18,14 +18,14 @@ if (-not (Test-Path $PesterResultsFileXmldir)) {
 }
 
 # Get all the pester test files:
-$PesterTestsPaths = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse | Where-Object size -GT 0 | Sort-Object -Property Name
+$PesterTestsPaths = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse
 Write-Host "[Status] $($PesterTestsPaths.count) tests found"
 
 
 if ($env:CI) {
     If ($env:job_group) {
         # split tests by job group:
-        $PesterTestsPaths = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse | Where-Object size -GT 0 | Sort-Object -Property Name
+        $PesterTestsPaths = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse
         Write-Host "[Status] $($PesterTestsPaths.count) tests found"
         $CIindex = @()
         $numItems = $($PesterTestsPaths.count)
