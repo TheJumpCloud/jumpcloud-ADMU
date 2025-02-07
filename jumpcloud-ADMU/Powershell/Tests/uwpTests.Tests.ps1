@@ -23,6 +23,10 @@ Describe -Name "UWP Tests" {
                 New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
 
+            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
+                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
+            }
             # set the file type associations
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
             write-host "fta count: $($fileTypeAssociations.count)"
@@ -58,20 +62,19 @@ Describe -Name "UWP Tests" {
             $ptaPath = "$profileImagePath\AppData\Local\JumpCloudADMU\pta_manifestLog.txt"
             $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
 
-            $appxLog = Get-Content $appxPath
-            $ftaLog = Get-Content $ftaPath
-            $ptaLog = Get-Content $ptaPath
-            $mainLog = Get-Content $logPath
+            $appxLog = Get-Content $appxPath -Raw
+            $ftaLog = Get-Content $ftaPath -Raw
+            $ptaLog = Get-Content $ptaPath -Raw
+            $mainLog = Get-Content $logPath -Raw
 
-            Write-Host "appx: $appxLog"
-            Write-Host "fta: $ftaLog"
-            Write-Host "pta: $ptaLog"
-            Write-Host "log: $mainLog"
+            # Write-Host "appx: $appxLog"
+            # Write-Host "fta: $ftaLog"
+            # Write-Host "pta: $ptaLog"
+            # Write-Host "log: $mainLog"
 
-
-            $mainLog -like "*Appx Package Registration Complete.*" | Should -Be $true
-            $mainLog -like "*FTA Registration Complete.*" | Should -Be $true
-            $mainLog -like "*PTA Registration Complete.*" | Should -Be $true
+            $mainLog | Should -Match "FTA Registration Complete"
+            $mainLog | Should -Match "Appx Package Registration Complete"
+            $mainLog | Should -Match "PTA Registration Complete"
 
             # Logs should not be null or empty
             $appxLog | Should -Not -BeNullOrEmpty
