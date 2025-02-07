@@ -122,5 +122,3 @@ Describe "$($function.BaseName) Acceptance Tests" {
 
     }
 }
-
-Build-PesterTestFile -TestType All -Force
