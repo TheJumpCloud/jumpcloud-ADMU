@@ -68,9 +68,10 @@ Describe -Name "UWP Tests" {
             Write-Host "pta: $ptaLog"
             Write-Host "log: $mainLog"
 
-            $mainLog | Should -match "Appx Package Registration Complete."
-            $mainLog | Should -match "FTA Registration Complete."
-            $mainLog | Should -match "PTA Registration Complete."
+
+            $mainLog | Should -match "Appx Package Registration Complete\."
+            $mainLog | Should -match "FTA Registration Complete\."
+            $mainLog | Should -match "PTA Registration Complete\."
 
             # Logs should not be null or empty
             $appxLog | Should -Not -BeNullOrEmpty
