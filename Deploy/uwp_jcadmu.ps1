@@ -573,6 +573,19 @@ function DecodeBase64Image {
     $ObjBitmapImage
 }
 
+$types = @(
+    'PresentationFramework',
+    'PresentationCore',
+    'System.Windows.Forms',
+    'System.Drawing',
+    'WindowsBase'
+)
+foreach ($type in $types) {
+    if (-not ([System.Management.Automation.PSTypeName]$type).Type) {
+        [void][System.Reflection.Assembly]::LoadWithPartialName($type)
+        Add-Type -AssemblyName $type
+    }
+}
 function New-UWPForm {
     # Synchash the values
     [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms') | Out-Null
