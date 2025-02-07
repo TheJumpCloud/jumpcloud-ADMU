@@ -1,7 +1,7 @@
 Function Get-AppxListByUser {
     [CmdletBinding()]
     param (
-        [Parameter()]
+        [Parameter(Mandatory = $true, HelpMessage = "Supply a user security identifier to identify Microsoft AppX packages by")]
         [System.String]
         $SID
     )
