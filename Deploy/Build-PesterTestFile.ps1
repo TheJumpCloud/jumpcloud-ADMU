@@ -3,7 +3,14 @@ Function Build-PesterTestFile {
     param (
         [Parameter()]
         [System.String]
-        $ProjectRoot = "$PSScriptRoot/../JumpCloud-ADMU" # Corrected path
+        $ProjectRoot = "$PSScriptRoot/../JumpCloud-ADMU",
+        [Parameter()]
+        [ValidateSet("Unit", "Acceptance", "All")]
+        [string]
+        $TestType = "All", # Default to generate both types of tests
+        [Parameter()]
+        [switch]
+        $Force # Force overwrite of existing test files
     )
     begin {
         $testsDirectory = Join-Path $ProjectRoot "PowerShell/Tests"
@@ -28,19 +35,19 @@ Function Build-PesterTestFile {
             if (!(Test-Path $testDir)) { New-Item -ItemType Directory -Force -Path $testDir }
 
             # Generate Unit Test File
-            $unitTestName = ($function.BaseName) + ".Unit.Tests.ps1"
-            $unitTestPath = Join-Path $testDir $unitTestName
-            if (!(Test-Path $unitTestPath)) {
+            if ($TestType -in "Unit", "All") {
+                $unitTestName = ($function.BaseName) + ".Unit.Tests.ps1"
+                $unitTestPath = Join-Path $testDir $unitTestName
 
-                # Find functions to mock
-                $functionContent = Get-Content $function.FullName -Raw
-                $calledFunctions = [regex]::Matches($functionContent, "(?<=[\s\.])([a-zA-Z-]+\-[a-zA-Z-]+)") | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
-                # filter functions not defined in
-                $customFunctions = $calledFunctions | Where-Object { ($_ -notin $defaultFunctions.Name) -AND ( $_ -ne $function.BaseName ) }
+                if ($Force -or !(Test-Path $unitTestPath)) {
+                    # Check for -Force or if file doesn't exist
+                    $functionContent = Get-Content $function.FullName -Raw
+                    $calledFunctions = [regex]::Matches($functionContent, "(?<=[\s\.])([a-zA-Z-]+\-[a-zA-Z-]+)") | ForEach-Object { $_.Groups.Value } | Sort-Object -Unique
+                    $customFunctions = $calledFunctions | Where-Object { ($_ -notin $defaultFunctions.Name) -AND ( $_ -ne $function.BaseName ) }
 
-                $mockFunctions = ""
-                foreach ($calledFunction in $customFunctions) {
-                    $mockFunctions += @"
+                    $mockFunctions = ""
+                    foreach ($calledFunction in $customFunctions) {
+                        $mockFunctions += @"
     function $calledFunction {
         [CmdletBinding()]
         param()
@@ -50,10 +57,9 @@ Function Build-PesterTestFile {
         }
     }
 "@
-                }
+                    }
 
-
-                $unitTestContent = @"
+                    $unitTestContent = @"
 Describe "$($function.BaseName) Unit Tests" {
     BeforeAll {
         # import the function
@@ -62,21 +68,25 @@ Describe "$($function.BaseName) Unit Tests" {
         $mockFunctions
     }
 
-    It "Should ..." {
+    It "Should..." {
         # Add unit test logic and assertions
     }
 
     # Add more unit tests as needed
 }
 "@
-                $unitTestContent | Out-File -FilePath $unitTestPath -Force
+                    $unitTestContent | Out-File -FilePath $unitTestPath -Force
+                }
             }
 
-            # Generate Acceptance Test File (no changes here)
-            $acceptanceTestName = ($function.BaseName) + ".Acceptance.Tests.ps1"
-            $acceptanceTestPath = Join-Path $testDir $acceptanceTestName
-            if (!(Test-Path $acceptanceTestPath)) {
-                $acceptanceTestContent = @"
+            # Generate Acceptance Test File
+            if ($TestType -in "Acceptance", "All") {
+                $acceptanceTestName = ($function.BaseName) + ".Acceptance.Tests.ps1"
+                $acceptanceTestPath = Join-Path $testDir $acceptanceTestName
+
+                if ($Force -or !(Test-Path $acceptanceTestPath)) {
+                    # Check for -Force or if file doesn't exist
+                    $acceptanceTestContent = @"
 Describe "$($function.BaseName) Acceptance Tests" {
     BeforeAll {
         # import all functions
@@ -94,16 +104,17 @@ Describe "$($function.BaseName) Acceptance Tests" {
             # Move one directory up.
             `$currentPath = Split-Path `$currentPath -Parent
         }
-        . "`$helpFunctionDir"
+      . "`$helpFunctionDir"
     }
-    It "Should ..." {
+    It "Should..." {
         # Add acceptance test logic and assertions (against a real system)
     }
 
     # Add more acceptance tests as needed
 }
 "@
-                $acceptanceTestContent | Out-File -FilePath $acceptanceTestPath -Force
+                    $acceptanceTestContent | Out-File -FilePath $acceptanceTestPath -Force
+                }
             }
         }
     }
@@ -112,6 +123,4 @@ Describe "$($function.BaseName) Acceptance Tests" {
     }
 }
 
-
-
-Build-PesterTestFile
+Build-PesterTestFile -TestType All -Force
