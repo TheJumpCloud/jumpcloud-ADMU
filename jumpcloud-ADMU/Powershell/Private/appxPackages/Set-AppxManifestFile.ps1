@@ -32,6 +32,6 @@ Function Set-AppxManifestFile {
         }
     }
     end {
-        Write-Host "appXManifest written: $($fileDetails.LastWriteTime), size: $($fileSize)kb"
+        Write-ToLog "appXManifest written: $($fileDetails.LastWriteTime), size: $($fileSize)kb"
     }
 }
