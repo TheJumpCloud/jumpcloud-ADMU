@@ -43,7 +43,7 @@ function Get-UserFileTypeAssociation {
         if ($UseAdmuPath) {
             $fullPath = "$($basePath)_admu$($pathSuffix)"
         } else {
-            $fullPath = "$basePath$pathSuffix"
+            $fullPath = "$($basePath)$($pathSuffix)"
         }
     }
     process {
