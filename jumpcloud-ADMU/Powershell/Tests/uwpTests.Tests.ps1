@@ -22,11 +22,7 @@ Describe -Name "UWP Tests" {
             If (!(test-path $path)) {
                 New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
-            # load the HKEY_USERS drive if it'snot already loaded
-            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
-                Write-Host "Mounting HKEY_USERS to check USER UWP keys"
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
-            }
+
             # set the file type associations
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
             write-host "fta count: $($fileTypeAssociations.count)"
@@ -72,9 +68,9 @@ Describe -Name "UWP Tests" {
             Write-Host "pta: $ptaLog"
             Write-Host "log: $mainLog"
 
-            $mainLog | Should -Contain "Appx Package Registration Complete"
-            $mainLog | Should -Contain "FTA Registration Complete"
-            $mainLog | Should -Contain "PTA Registration Complete"
+            $mainLog | Should -match "Appx Package Registration Complete."
+            $mainLog | Should -match "FTA Registration Complete."
+            $mainLog | Should -match "PTA Registration Complete."
 
             # Logs should not be null or empty
             $appxLog | Should -Not -BeNullOrEmpty
