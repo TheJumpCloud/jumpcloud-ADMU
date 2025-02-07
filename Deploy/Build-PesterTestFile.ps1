@@ -3,92 +3,106 @@ Function Build-PesterTestFile {
     param (
         [Parameter()]
         [System.String]
-        $ProjectRoot = "$PSScriptRoot/../jumpcloud-ADMU"
+        $ProjectRoot = "$PSScriptRoot/../JumpCloud-ADMU" # Corrected path
     )
     begin {
-        # Create the Tests directory if it doesn't exist
-        $testsDirectory = Join-Path "$ProjectRoot" "/Powershell/Tests"
+        $testsDirectory = Join-Path $ProjectRoot "PowerShell/Tests"
         if (!(Test-Path $testsDirectory)) {
             New-Item -ItemType Directory -Force -Path $testsDirectory
         }
-        # Create the Public Tests directory if it doesn't exist
-        $publicTestsDirectory = Join-Path "$ProjectRoot" "/Powershell/Tests/Public"
-        if (!(Test-Path $publicTestsDirectory)) {
-            New-Item -ItemType Directory -Force -Path $publicTestsDirectory
-        }
-        # Create the Private Tests directory if it doesn't exist
-        $privateTestsDirectory = Join-Path "$ProjectRoot" "/Powershell/Tests/Private"
-        if (!(Test-Path $privateTestsDirectory)) {
-            New-Item -ItemType Directory -Force -Path $privateTestsDirectory
-        }
-        # get all functions
-        $functionsDir = "$ProjectRoot/Powershell/"
-        $functions = New-Object System.Collections.ArrayList
-        $publicFunctions = Get-ChildItem -Path "$functionsDir/Public" -Recurse -Filter "*.ps1"
-        $privateFunctions = Get-ChildItem -Path "$functionsDir/Private" -Recurse -Filter "*.ps1"
-        $privateFunctions | ForEach-Object { $functions.Add($_) | Out-Null }
-        $publicFunctions | ForEach-Object { $functions.Add($_) | Out-Null }
-        # $functions =
+        $publicPath = Join-Path $ProjectRoot "/PowerShell/Public" -Resolve
+        $privatePath = Join-Path $ProjectRoot "/PowerShell/Private" -Resolve
 
+        $functions = Get-ChildItem -Path $publicPath, $privatePath -Recurse -Filter "*.ps1"
+
+        # loaded functions =
+        $defaultFunctions = Get-Command -Module Microsoft.PowerShell.Utility
     }
     process {
-        $directories = @("Public", "Private")
-
         foreach ($function in $functions) {
-            # where did the function come from public or private
-            $functionType = switch ($function.FullName) {
-                { $_ -match "Powershell/Public" } {
-                    "Public"
-                }
-                { $_ -match "Powershell/Private" } {
-                    "Private"
-                }
-            }
+            $functionType = if ($function.FullName -match "PowerShell/Public") { "Public" } else { "Private" }
+            $relativePath = $function.FullName -replace "^.*PowerShell/(Public|Private)/", ""
+            $relativePath = Split-Path -Path $relativePath -Parent
 
-            # recurse back to get full file path:
-            $filePath = $function.FullName
-            $parentString = ""
-            do {
-                # get the parent of the filePath
-                $parent = (Get-Item (Split-Path -Path $filePath -Parent)).name
-                $parentString += "/$parent"
-            }
-            until (($parent = "Public") -or ($parent = "Private"))
-            $testName = $($function.Name) -replace ('.ps1', '.Tests.ps1')
+            $testDir = Join-Path $testsDirectory $functionType $relativePath
+            if (!(Test-Path $testDir)) { New-Item -ItemType Directory -Force -Path $testDir }
 
-            # create the public/ private tests dirs
-            $functionTestDirPath = Join-Path $testsDirectory $functionType
-            if (!(Test-Path $functionTestDirPath)) {
-                New-Item -ItemType Directory -Force -Path $functionTestDirPath
-            }
-            # if there's a subfolder create that
-            if (($parentString -ne "Public") -or ($parentString -ne "Private")) {
-                $functionTestSubPath = Join-Path $functionTestDirPath $parentString
-                if (!(Test-Path $functionTestSubPath)) {
-                    New-Item -ItemType Directory -Force -Path $functionTestSubPath
-                }
-            } else {
-                $functionTestSubPath = $functionTestDirPath
-            }
-            # create the test file
-            $functionTestFullPath = Join-Path $functionTestSubPath $testName
-            if (!(Test-Path $functionTestFullPath)) {
-                New-Item -ItemType File -Force -Path $functionTestFullPath
-                $testFileContent = @"
-Describe "$($function.BaseName) Tests" {
-    BeforeAll {
-        # import the function
-        try {
-            `$functionPath = (`$PSCommandPath.Replace('.Tests.ps1', '.ps1')) -replace '\/Tests\/|\\Tests\\', '/'
-            . `$functionPath
-        } catch {
-            Write-Error "Could not import `$functionPath"
+            # Generate Unit Test File
+            $unitTestName = ($function.BaseName) + ".Unit.Tests.ps1"
+            $unitTestPath = Join-Path $testDir $unitTestName
+            if (!(Test-Path $unitTestPath)) {
+
+                # Find functions to mock
+                $functionContent = Get-Content $function.FullName -Raw
+                $calledFunctions = [regex]::Matches($functionContent, "(?<=[\s\.])([a-zA-Z-]+\-[a-zA-Z-]+)") | ForEach-Object { $_.Groups[1].Value } | Sort-Object -Unique
+                # filter functions not defined in
+                $customFunctions = $calledFunctions | Where-Object { ($_ -notin $defaultFunctions.Name) -AND ( $_ -ne $function.BaseName ) }
+
+                $mockFunctions = ""
+                foreach ($calledFunction in $customFunctions) {
+                    $mockFunctions += @"
+    function $calledFunction {
+        [CmdletBinding()]
+        param()
+        process {
+            # Mock implementation for $calledFunction
+            Write-Host "Mocked $calledFunction" # Replace with appropriate mock behavior
         }
     }
+"@
+                }
+
+
+                $unitTestContent = @"
+Describe "$($function.BaseName) Unit Tests" {
+    BeforeAll {
+        `$functionPath = (`$PSCommandPath.Replace('.Tests.ps1', '.ps1')) -replace '\/Tests\/|\\Tests\\', '/'
+        . `$functionPath
+        $mockFunctions
+    }
+
+    It "Should ..." {
+        # Add unit test logic and assertions
+    }
+
+    # Add more unit tests as needed
 }
 "@
-                # write the file
-                $testFileContent | Out-File -FilePath $functionTestFullPath -Force
+                $unitTestContent | Out-File -FilePath $unitTestPath -Force
+            }
+
+            # Generate Acceptance Test File (no changes here)
+            $acceptanceTestName = ($function.BaseName) + ".Acceptance.Tests.ps1"
+            $acceptanceTestPath = Join-Path $testDir $acceptanceTestName
+            if (!(Test-Path $acceptanceTestPath)) {
+                $acceptanceTestContent = @"
+Describe "$($function.BaseName) Acceptance Tests" {
+    BeforeAll {
+        # import all functions
+        `$currentPath = `$PSScriptRoot # Start from the current script's directory.
+        `$TargetDirectory = "helperFunctions"
+        `$FileName = "Import-AllFunctions.ps1"
+        while (`$currentPath -ne `$null) {
+            `$filePath = Join-Path -Path `$currentPath `$TargetDirectory `$FileName
+            if (Test-Path `$filePath) {
+                # File found! Return the full path.
+                `$helpFunctionDir = $filePath
+                break
+            }
+
+            # Move one directory up.
+            `$currentPath = Split-Path `$currentPath -Parent
+        }
+        . "`$helpFunctionDir"
+    }
+    It "Should ..." {
+        # Add acceptance test logic and assertions (against a real system)
+    }
+
+    # Add more acceptance tests as needed
+}
+"@
+                $acceptanceTestContent | Out-File -FilePath $acceptanceTestPath -Force
             }
         }
     }
@@ -96,6 +110,7 @@ Describe "$($function.BaseName) Tests" {
 
     }
 }
+
 
 
 Build-PesterTestFile
