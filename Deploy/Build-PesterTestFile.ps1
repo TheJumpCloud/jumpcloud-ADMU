@@ -56,7 +56,8 @@ Function Build-PesterTestFile {
                 $unitTestContent = @"
 Describe "$($function.BaseName) Unit Tests" {
     BeforeAll {
-        `$functionPath = (`$PSCommandPath.Replace('.Tests.ps1', '.ps1')) -replace '\/Tests\/|\\Tests\\', '/'
+        # import the function
+        `$functionPath = (`$PSCommandPath.Replace('.Unit.Tests.ps1', '.ps1')) -replace '\/Tests\/|\\Tests\\', '/'
         . `$functionPath
         $mockFunctions
     }
@@ -86,7 +87,7 @@ Describe "$($function.BaseName) Acceptance Tests" {
             `$filePath = Join-Path -Path `$currentPath `$TargetDirectory `$FileName
             if (Test-Path `$filePath) {
                 # File found! Return the full path.
-                `$helpFunctionDir = $filePath
+                `$helpFunctionDir = `$filePath
                 break
             }
 
