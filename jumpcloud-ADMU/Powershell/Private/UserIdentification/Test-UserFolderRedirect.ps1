@@ -3,7 +3,11 @@ function Test-UserFolderRedirect {
     param (
         [Parameter(Mandatory = $true)]
         [System.String]
-        $UserSid
+        $UserSid,
+        [Parameter(HelpMessage = 'Use the _admu path (true) or the regular path (false). Defaults to true.')]
+        [System.Boolean]
+        $UseAdmuPath = $true
+
     )
     begin {
         if ("HKEY_USERS" -notin (Get-PSDrive | select-object name).Name) {
@@ -12,12 +16,18 @@ function Test-UserFolderRedirect {
         }
         $UserFolders = @( "Desktop", "Documents", "Downloads", "Favorites", "Music", "Pictures", "Videos" )
         # Support doc for personal folders: https://support.microsoft.com/en-us/topic/operation-to-change-a-personal-folder-location-fails-in-windows-ffb95139-6dbb-821d-27ec-62c9aaccd720
-        $regFoldersPath = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+        $basePath = "HKEY_USERS:\$($UserSid)"
+        $pathSuffix = "\Software\Microsoft\Windows\CurrentVersion\Explorer\User Shell Folders"
+        if ($UseAdmuPath) {
+            $fullPath = "$($basePath)_admu$($pathSuffix)"
+        } else {
+            $fullPath = "$($basePath)$($pathSuffix)"
+        }
         Write-ToLog -Message:("Checking User Shell Folders for USERSID: $($UserSid)")
     }
     process {
 
-        if (Test-Path -Path $regFoldersPath) {
+        if (Test-Path -Path $fullPath) {
             $redirectedDirectory = $false
             # Save all the boolean to a hash table
             foreach ($userFolder in $UserFolders) {
@@ -45,7 +55,7 @@ function Test-UserFolderRedirect {
                     }
                 }
                 # Get the registry value for the user folder
-                $folderRegKeyValue = (Get-Item -path $regFoldersPath ).GetValue($folderRegKey , '', 'DoNotExpandEnvironmentNames')
+                $folderRegKeyValue = (Get-Item -path $fullPath ).GetValue($folderRegKey , '', 'DoNotExpandEnvironmentNames')
                 $defaultRegFolder = "%USERPROFILE%\$userFolder"
                 # If the registry value does not match the default path, set redirectedDirectory to true and log the error
                 if ($folderRegKeyValue -ne $defaultRegFolder) {
