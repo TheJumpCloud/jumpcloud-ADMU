@@ -5,7 +5,7 @@ Describe "Test-UserFolderRedirect Acceptance Tests" {
         $TargetDirectory = "helperFunctions"
         $FileName = "Import-AllFunctions.ps1"
         while ($currentPath -ne $null) {
-            $filePath = Join-Path -Path $currentPath $TargetDirectory $FileName
+            $filePath = Join-Path -Path $currentPath $TargetDirectory
             if (Test-Path $filePath) {
                 # File found! Return the full path.
                 $helpFunctionDir = $filePath
@@ -15,11 +15,10 @@ Describe "Test-UserFolderRedirect Acceptance Tests" {
             # Move one directory up.
             $currentPath = Split-Path $currentPath -Parent
         }
-        . "$helpFunctionDir"
+        . "$helpFunctionDir\$fileName"
 
         # import the helper functions:
-        $helperDirectory = Split-Path $helpFunctionDir -Parent
-        . "$helperDirectory\initialize-TestUser.ps1"
+        . "$helpFunctionDir\initialize-TestUser.ps1"
     }
     It "Should return a users redirection status, given a valid SID" {
         # Add acceptance test logic and assertions (against a real system)

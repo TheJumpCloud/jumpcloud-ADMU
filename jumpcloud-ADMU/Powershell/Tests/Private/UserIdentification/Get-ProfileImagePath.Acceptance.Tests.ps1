@@ -5,7 +5,7 @@ Describe "Get-ProfileImagePath Acceptance Tests" {
         $TargetDirectory = "helperFunctions"
         $FileName = "Import-AllFunctions.ps1"
         while ($currentPath -ne $null) {
-            $filePath = Join-Path -Path $currentPath $TargetDirectory $FileName
+            $filePath = Join-Path -Path $currentPath $TargetDirectory
             if (Test-Path $filePath) {
                 # File found! Return the full path.
                 $helpFunctionDir = $filePath
@@ -15,7 +15,7 @@ Describe "Get-ProfileImagePath Acceptance Tests" {
             # Move one directory up.
             $currentPath = Split-Path $currentPath -Parent
         }
-        . "$helpFunctionDir"
+        . "$helpFunctionDir\$fileName"
     }
     It "Should return a valid profile image path given a user's SID" {
         $currentUserSID = (Get-LocalUser -Name $env:USERNAME | Select-Object SID).SID

@@ -5,7 +5,7 @@ Describe "New-LocalUserProfile Acceptance Tests" {
         $TargetDirectory = "helperFunctions"
         $FileName = "Import-AllFunctions.ps1"
         while ($currentPath -ne $null) {
-            $filePath = Join-Path -Path $currentPath $TargetDirectory $FileName
+            $filePath = Join-Path -Path $currentPath $TargetDirectory
             if (Test-Path $filePath) {
                 # File found! Return the full path.
                 $helpFunctionDir = $filePath
@@ -15,7 +15,7 @@ Describe "New-LocalUserProfile Acceptance Tests" {
             # Move one directory up.
             $currentPath = Split-Path $currentPath -Parent
         }
-        . "$helpFunctionDir"
+        . "$helpFunctionDir\$fileName"
     }
     It "Should create a new profile and create the profile image path in registry" {
         # create a new local user
