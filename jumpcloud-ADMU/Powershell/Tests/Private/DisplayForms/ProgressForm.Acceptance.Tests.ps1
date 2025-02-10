@@ -22,5 +22,10 @@ Describe "ProgressForm Acceptance Tests" {
         { New-ProgressForm } | Should -Not -Throw
     }
 
+    It "should update the progress form script" {
+        $npf = New-ProgressForm
+        { Update-ProgressForm -progressBar $npf -PercentComplete 10 -Status "status" -logLevel "level" -username "user" -profileSize "10" -localPath "C:\Users\Someone" -newLocalUsername "someoneElse" } | Should -Not -Throw
+    }
+
     # Add more acceptance tests as needed
 }
