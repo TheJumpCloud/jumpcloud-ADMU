@@ -1,4 +1,10 @@
 Function Show-SelectionForm {
+    [CmdletBinding()]
+    param (
+        [Parameter(HelpMessage = "Parameter for testing, default behavior is to not hide and show the contents of the xaml form")]
+        [switch]
+        $hideForm = $false
+    )
 
     # Set source here. Take note in the XAML as to where the variable name was taken.
 
@@ -774,7 +780,9 @@ Function Show-SelectionForm {
     # Shows the form & allow move
     #===========================================================================
 
-    $Form.ShowDialog()
+    if (-Not $hideForm) {
+        $Form.ShowDialog()
+    }
 
     # if the migrate button is enabled and it is clicked, send formResults to Start-Migration
     If (($btn_migrateProfile.IsEnabled -eq $true) -AND $btn_migrateProfile.Add_Click) {
