@@ -59,7 +59,7 @@ function Test-UserFolderRedirect {
                 $defaultRegFolder = "%USERPROFILE%\$userFolder"
                 # If the registry value does not match the default path, set redirectedDirectory to true and log the error
                 if ($folderRegKeyValue -ne $defaultRegFolder) {
-                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue) does not match default path  - $($defaultRegFolder)") -Level Error
+                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue) does not match default path  - $($defaultRegFolder)") -Level warn
                     $redirectedDirectory = $true
                 } else {
                     Write-ToLog -Message:("User Shell Folder: $($userFolder) is default")
@@ -67,7 +67,7 @@ function Test-UserFolderRedirect {
             }
         } else {
             # If the registry path does not exist, set redirectedDirectory to true and log the error
-            Write-ToLog -Message:("User Shell registry folders not found in registry") -Level Error
+            Write-ToLog -Message:("User Shell registry folders not found in registry") -Level warn
             $redirectedDirectory = $true
         }
     }
