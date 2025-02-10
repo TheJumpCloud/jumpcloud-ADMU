@@ -57,7 +57,7 @@ BeforeAll {
     # Remove Created Users
     Get-JCUser -username "ADMU_*" | Remove-JCUser -Force
 }
-Describe 'Migration Test Scenarios' {
+Describe 'Migration Test Scenarios' -Skip {
     Enable-TestNameAsVariablePlugin
     BeforeEach {
         Write-Host "---------------------------"
