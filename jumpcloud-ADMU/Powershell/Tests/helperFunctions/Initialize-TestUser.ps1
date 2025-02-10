@@ -18,15 +18,15 @@ Function Initialize-TestUser {
         $newUserPassword = ConvertTo-SecureString -String "$($Password)" -AsPlainText -Force
         New-localUser -Name "$($UserName)" -password $newUserPassword -ErrorVariable userExitCode -Description "Created By JumpCloud ADMU"
         if ($userExitCode) {
-            Write-Log -Message:("$userExitCode")
-            Write-Log -Message:("The user: $($UserName) could not be created, exiting")
+            Write-ToLog -Message:("$userExitCode")
+            Write-ToLog -Message:("The user: $($UserName) could not be created, exiting")
             exit 1
         }
         # Initialize the Profile
         New-LocalUserProfile -username "$($UserName)" -ErrorVariable profileInit
         if ($profileInit) {
-            Write-Log -Message:("$profileInit")
-            Write-Log -Message:("The user: $($UserName) could not be initialized, exiting")
+            Write-ToLog -Message:("$profileInit")
+            Write-ToLog -Message:("The user: $($UserName) could not be initialized, exiting")
             exit 1
         }
     }
