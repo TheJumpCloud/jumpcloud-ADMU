@@ -1,39 +1,22 @@
-Describe -Name "testGUITests" {
-
+Describe "Test-MigrationButton Acceptance Tests" {
     BeforeAll {
-        # Import Private Functions:
-        $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Private/*.ps1" -Recurse)
-        Foreach ($Import in $Private) {
-            Try {
-                . $Import.FullName
-            } Catch {
-                Write-Error -Message "Failed to import function $($Import.FullName): $_"
+        # import all functions
+        $currentPath = $PSScriptRoot # Start from the current script's directory.
+        $TargetDirectory = "helperFunctions"
+        $FileName = "Import-AllFunctions.ps1"
+        while ($currentPath -ne $null) {
+            $filePath = Join-Path -Path $currentPath $TargetDirectory
+            if (Test-Path $filePath) {
+                # File found! Return the full path.
+                $helpFunctionDir = $filePath
+                break
             }
+
+            # Move one directory up.
+            $currentPath = Split-Path $currentPath -Parent
         }
-        # if (-Not $IsWindows) {
-        #     # for non-windows devices just uncomment these functions
-        #     Function Get-WmiObject {
-        #     }
-        #     Function New-LocalUser {
-        #         [CmdletBinding()]
-        #         param (
-        #             [Parameter()]
-        #             [System.String]
-        #             $Name,
-        #             [Parameter()]
-        #             [System.String]
-        #             $Password,
-        #             [Parameter()]
-        #             [System.String]
-        #             $Description
-        #         )
-        #         Return [PSCustomObject]@{
-        #             Name        = $Name
-        #             Enabled     = $true
-        #             Description = $Description
-        #         }
-        #     }
-        # }
+        . "$helpFunctionDir\$fileName"
+
         # mock the wmi command
         Mock -CommandName 'Get-WmiObject' {
             $wmiReturn = @{
@@ -256,6 +239,6 @@ Describe -Name "testGUITests" {
             }
         }
     }
+
+    # Add more acceptance tests as needed
 }
-
-
