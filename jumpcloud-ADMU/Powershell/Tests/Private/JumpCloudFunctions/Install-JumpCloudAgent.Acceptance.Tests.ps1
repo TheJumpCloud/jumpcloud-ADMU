@@ -30,7 +30,7 @@ Describe "Install-JumpCloudAgent Acceptance Tests" -Tag "Acceptance", "InstallJC
         Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($CONNECT_KEY) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
 
         # the agent should be downloaded
-        Test-path 'C:\Windows\Temp\JCADMU\jcagent-msi-signed.msi' | Should -Be $true
+        Test-path $AGENT_INSTALLER_PATH | Should -Be $true
         # the service should be running
         Get-Service -Name "jumpcloud-agent" | Should -Not -Be $null
     }
