@@ -1,4 +1,4 @@
-Describe "ProgressForm Acceptance Tests" -Tag "Acceptance" {
+Describe "Test-RegistryValueMatch Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
@@ -17,14 +17,8 @@ Describe "ProgressForm Acceptance Tests" -Tag "Acceptance" {
         }
         . "$helpFunctionDir\$fileName"
     }
-    It "Should load the form without throwing" {
+    It "Should..." {
         # Add acceptance test logic and assertions (against a real system)
-        { New-ProgressForm } | Should -Not -Throw
-    }
-
-    It "should update the progress form script" {
-        $npf = New-ProgressForm
-        { Update-ProgressForm -progressBar $npf -PercentComplete 10 -Status "status" -logLevel "level" -username "user" -profileSize "10" -localPath "C:\Users\Someone" -newLocalUsername "someoneElse" } | Should -Not -Throw
     }
 
     # Add more acceptance tests as needed

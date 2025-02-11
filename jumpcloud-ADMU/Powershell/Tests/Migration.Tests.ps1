@@ -162,8 +162,6 @@ Describe 'Migration Test Scenarios' -Skip {
                 $match = Select-String -Path:($log) -Pattern:($regex)
                 # Get the date appended to the backup registry files:
                 $dateMatch = $match.Matches.Groups[1].Value
-                # For testing write out the date
-                # Write-Host "SEARCHING FOR : $dateMatch in $UserHome"
                 # User Home Directory Should Exist
                 Test-Path "$UserHome" | Should -Be $true
                 # Backup Registry & Registry Files Should Exist

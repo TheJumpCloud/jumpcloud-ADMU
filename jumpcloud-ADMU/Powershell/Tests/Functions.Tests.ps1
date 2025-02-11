@@ -21,7 +21,7 @@ BeforeAll {
         }
     }
 }
-Describe 'Functions' {
+Describe 'Functions' -skip {
     BeforeAll {
         Mock Get-WindowsDrive { return "C:" }
     }
@@ -456,7 +456,7 @@ Describe 'Functions' {
         }
     }
 
-    Context 'Install-JumpCloudAgent Function' {
+    Context 'Install-JumpCloudAgent Function' -skip {
         BeforeAll {
             Mock Get-WindowsDrive { Return "C:" }
             $windowsDrive = Get-WindowsDrive

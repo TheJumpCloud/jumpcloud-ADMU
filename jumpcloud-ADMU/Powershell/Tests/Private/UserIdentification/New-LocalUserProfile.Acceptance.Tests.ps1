@@ -1,4 +1,4 @@
-Describe "New-LocalUserProfile Acceptance Tests" {
+Describe "New-LocalUserProfile Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.

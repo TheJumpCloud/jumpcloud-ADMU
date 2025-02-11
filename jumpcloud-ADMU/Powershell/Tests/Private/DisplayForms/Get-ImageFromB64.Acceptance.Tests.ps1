@@ -1,4 +1,4 @@
-Describe "Get-ImageFromB64 Acceptance Tests" {
+Describe "Get-ImageFromB64 Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.

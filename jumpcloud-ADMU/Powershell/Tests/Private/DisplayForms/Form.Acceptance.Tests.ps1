@@ -1,4 +1,4 @@
-Describe "Form Acceptance Tests" {
+Describe "Form Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.

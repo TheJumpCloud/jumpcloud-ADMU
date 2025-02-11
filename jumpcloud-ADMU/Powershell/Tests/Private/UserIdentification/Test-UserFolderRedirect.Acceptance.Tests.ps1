@@ -1,4 +1,4 @@
-Describe "Test-UserFolderRedirect Acceptance Tests" {
+Describe "Test-UserFolderRedirect Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.

@@ -1,4 +1,4 @@
-Describe "Show-MtpSelection Acceptance Tests" {
+Describe "Show-MtpSelection Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.

@@ -168,6 +168,13 @@ Describe "Start-Migration Acceptance Tests" {
                 { Start-Migration @testCaseInput } | Should -Not -Throw
             }
         }
+        Context "Tests that require the JumpCloud Agent" -Tag "JCAgent" {
+            BeforeAll {
+                # install the JumpCloud Agent if it's not installed
+
+            }
+
+        }
         AfterEach {
             # Depending on the user in the UserTestingHash, the home path will differ
             if ($testCaseInput.UpdateHomePath) {
@@ -205,7 +212,7 @@ Describe "Start-Migration Acceptance Tests" {
             Remove-LocalUserProfile -username $userToMigrateTo
         }
     }
-    It "Should..." -Tag "Agent Required" {
+    It "Should..." -Tag "JCAgent" {
         # Add acceptance test logic and assertions (against a real system)
     }
 

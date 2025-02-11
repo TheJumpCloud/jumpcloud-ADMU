@@ -1,4 +1,4 @@
-Describe "Remove-ItemIfExist Acceptance Tests" {
+Describe "Remove-ItemIfExist Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.

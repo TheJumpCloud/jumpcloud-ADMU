@@ -1,7 +1,6 @@
-Describe "Module Validation Tests" {
+Describe "Module Validation Tests" -Tag "Module Validation" {
     BeforeAll {
-        Write-Host "Script Location: $PSScriptRoot"
-        # translate $ModuleVersionType for [version] string matching module
+
         if ($env:ModuleVersionType -eq "patch") {
             $env:ModuleVersionType = "build"
         }
