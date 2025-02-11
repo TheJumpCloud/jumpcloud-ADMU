@@ -4,6 +4,7 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
         $currentPath = $PSScriptRoot # Start from the current script's directory.
         $TargetDirectory = "helperFunctions"
         $FileName = "Import-AllFunctions.ps1"
+        Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
         while ($currentPath -ne $null) {
             $filePath = Join-Path -Path $currentPath $TargetDirectory
             if (Test-Path $filePath) {
@@ -98,6 +99,14 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
         $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
         $bind = Set-JCUserToSystemAssociation -JcApiKey '1234122341234234123412341234123412341234' -JcOrgId $OrgID -JcUserID $GeneratedUser.Id
         $bind | Should -Be $false
+    }
+
+    It 'Agent not installed' -skip {
+        #TODO: Is this test necessary, it breaks the migration tests
+        if ((Test-Path -Path "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf") -eq $True) {
+            Remove-Item "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
+        }
+        { Set-JCUserToSystemAssociation -JcApiKey $env:PESTER_APIKEY -JcUserID $GeneratedUser.Id -ErrorAction Stop } | Should -Throw
     }
 
     # Add more acceptance tests as needed

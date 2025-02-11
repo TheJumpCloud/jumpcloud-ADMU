@@ -30,14 +30,15 @@ Describe -Name "UWP Tests" {
             # set the file type associations
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
             write-host "fta count: $($fileTypeAssociations.count)"
+            $fileTypeAssociations | Should -Not -BeNullOrEmpty
             # select first 5
             $fileTypeAssociations | Select-Object -First 5 | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
             # set the file type protocols
             $protocolTypeAssociations = Get-ProtocolTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
             write-host "pta count: $($protocolTypeAssociations.count)"
+            $protocolTypeAssociations | Should -Not -BeNullOrEmpty
             # select first 5
             $protocolTypeAssociations | Select-Object -First 5 | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
-
             # if the user has not been migrated we need to create the registry key for this user
             $ADMUKEY = "HKEY_USERS:\$($currentUserSID)\SOFTWARE\JCADMU"
             if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {

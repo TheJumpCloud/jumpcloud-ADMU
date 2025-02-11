@@ -17,8 +17,10 @@ Describe "New-RegKey Acceptance Tests" -Tag "Acceptance" {
         }
         . "$helpFunctionDir\$fileName"
     }
-    It "Should..." {
-        # Add acceptance test logic and assertions (against a real system)
+    # Test that we can create new keys
+    It 'Key is created' {
+        New-RegKey -keyPath 'SYSTEM\1' -registryRoot LocalMachine
+        test-path 'HKLM:\SYSTEM\1' | Should -Be $true
     }
 
     # Add more acceptance tests as needed
