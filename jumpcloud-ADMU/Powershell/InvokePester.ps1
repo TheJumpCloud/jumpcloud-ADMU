@@ -36,7 +36,7 @@ $PesterTests = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse | 
     Get-PesterTag -Path $_.FullName # Assuming Get-PesterTag returns a string or array of strings
 }
 
-$uniqueTags = $PesterTests.Tags | Select-Object -Unique
+$uniqueTags = ($PesterTests.Tags | Select-Object -Unique ) -Replace ([regex]'``|"' , '')
 
 Write-Host "[Status] $($PesterTests.Count) Test Files Found"
 Write-Host "[Status] $($uniqueTags.Count) Unique Tags Found"
@@ -46,7 +46,7 @@ if ($env:CI) {
     if ($env:job_group) {
 
         # Separate "installJC" tag
-        $installJCTags = $uniqueTags | Where-Object { $_ -match "InstallJC" }
+        $installJCTags = $uniqueTags | Where-Object { $_ -match "installjc" }
         $remainingTags = $uniqueTags | Where-Object { $_ -notmatch "installjc" }
 
         # Split remaining tags into two groups
@@ -68,15 +68,15 @@ if ($env:CI) {
 
         switch ($env:job_group) {
             "0" {
-                $IncludeTags = "jcagent"
+                $IncludeTags = "installjc"
             }
             "1" {
                 $IncludeTags = $group1
-                $ExcludeTagList = "jcagent"
+                $ExcludeTagList = "installjc"
             }
             "2" {
                 $IncludeTags = $group2
-                $ExcludeTagList = "jcagent"
+                $ExcludeTagList = "installjc"
             }
         }
     }

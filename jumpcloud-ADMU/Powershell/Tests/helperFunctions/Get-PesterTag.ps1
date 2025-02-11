@@ -45,7 +45,7 @@ Function Get-PesterTag {
         $all = for ($j = 0; $j -lt $tags.count; $j++) {
             for ($i = 0; $i -lt $tags[$j].Parent.CommandElements.count; $i++) {
                 if ($tags[$j].parent.CommandElements[$i].ParameterName -eq 'tag') {
-                    $tags[$j].parent.CommandElements[$i + 1].extent.text.split(",").trim().ToLower()
+                    ($tags[$j].parent.CommandElements[$i + 1].extent.text.split(",").trim().ToLower()) -Replace ([regex]'``|"' , '')
                 }
             }
         }
