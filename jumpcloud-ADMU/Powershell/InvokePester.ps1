@@ -2,7 +2,14 @@
 param (
     [Parameter()]
     [System.string]
-    $ModuleVersionType
+    $ModuleVersionType,
+    [Parameter(ParameterSetName = 'SingleOrgTests', Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 2)]
+    [System.String[]]
+    $ExcludeTagList,
+    [Parameter(ParameterSetName = 'SingleOrgTests', Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 3)]
+    [System.String[]]
+    $IncludeTagList
+
 )
 $env:ModuleVersionType = $ModuleVersionType
 
@@ -11,15 +18,37 @@ $PesterInstalledVersion = Get-InstalledModule -Name Pester
 Import-Module -Name Pester -RequiredVersion $PesterInstalledVersion.Version
 Write-host "Running Pester Tests using Pester Version: $($PesterInstalledVersion.Version)"
 # Run Pester tests
-$PesterResultsFileXmldir = "$PSScriptRoot/../test_results/"
-# $PesterResultsFileXml = $PesterResultsFileXmldir + "results.xml"
-if (-not (Test-Path $PesterResultsFileXmldir)) {
-    new-item -path $PesterResultsFileXmldir -ItemType Directory
+$PesterResultsFileXmlDir = "$PSScriptRoot/../test_results/"
+# $PesterResultsFileXml = $PesterResultsFileXmlDir + "results.xml"
+if (-not (Test-Path $PesterResultsFileXmlDir)) {
+    new-item -path $PesterResultsFileXmlDir -ItemType Directory
 }
+
+# Import the module functions + helper functions
+.  (Join-Path "$PSScriptRoot" "\Tests\helperFunctions\Import-AllFunctions.ps1")
+# import the helper functions:
+. (Join-Path "$PSScriptRoot" "\Tests\helperFunctions\initialize-TestUser.ps1")
+# Import the Pester Tag function:
+. (Join-Path "$PSScriptRoot" "\Tests\helperFunctions\Get-PesterTag.ps1")
 
 # Get all the pester test files:
 $PesterTestsPaths = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse
+$tags = New-Object System.Collections.ArrayList
+foreach ($pesterFile in $PesterTestsPaths) {
+    $tag = Get-PesterTag $pesterFile
+    if ($tag) {
+        $tags.Add($tag)
+    }
+}
+$uniqueTags = $tags.Tags | Select-Object -Unique
+
 Write-Host "[Status] $($PesterTestsPaths.count) tests found"
+# Filters on tags
+$IncludeTags = If ($IncludeTagList) {
+    $IncludeTagList
+} Else {
+    $uniqueTags | Where-Object { $_ -notin $IncludeTagList } | Select-Object -Unique
+}
 
 
 if ($env:CI) {
@@ -63,14 +92,16 @@ $configuration = New-PesterConfiguration
 $configuration.Run.Path = $PesterRunPath
 $configuration.Should.ErrorAction = 'Continue'
 $configuration.CodeCoverage.Enabled = $true
-$configuration.testresult.Enabled = $true
-$configuration.testresult.OutputFormat = 'JUnitXml'
-$configuration.CodeCoverage.OutputPath = ($PesterResultsFileXmldir + 'coverage.xml')
-$configuration.testresult.OutputPath = ($PesterResultsFileXmldir + 'results.xml')
+$configuration.testResult.Enabled = $true
+$configuration.testResult.OutputFormat = 'JUnitXml'
+$configuration.Filter.Tag = $IncludeTags
+$configuration.Filter.ExcludeTag = $ExcludeTagList
+$configuration.CodeCoverage.OutputPath = ($PesterResultsFileXmlDir + 'coverage.xml')
+$configuration.testResult.OutputPath = ($PesterResultsFileXmlDir + 'results.xml')
 
 Invoke-Pester -configuration $configuration
 
-$PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmldir)")).FullName | Where-Object { $_ -match "results.xml" }
+$PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmlDir)")).FullName | Where-Object { $_ -match "results.xml" }
 If (Test-Path -Path:($PesterTestResultPath)) {
     [xml]$PesterResults = Get-Content -Path:($PesterTestResultPath)
     If ($PesterResults.ChildNodes.failures -gt 0) {
