@@ -17,8 +17,53 @@ Describe "Write-ToLog Acceptance Tests" -Tag "Acceptance" {
         }
         . "$helpFunctionDir\$fileName"
     }
-    It "Should..." {
-        # Add acceptance test logic and assertions (against a real system)
+    It 'Write-ToLog - ' {
+        if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
+            remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+        }
+        Write-ToLog -Message:('Log is created - test.') -Level:('Info')
+        $log = 'C:\windows\Temp\jcAdmu.log'
+        $log | Should -exist
+    }
+
+    It 'Write-ToLog - Log is created' {
+        if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
+            remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+        }
+        Write-ToLog -Message:('Log is created - test.') -Level:('Info')
+        $log = 'C:\windows\Temp\jcAdmu.log'
+        $log | Should -exist
+    }
+
+    It 'Write-ToLog - ERROR: Log entry exists' {
+        if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
+            remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+        }
+        # Write-ToLog -Message:('Test Error Log Entry.') -Level:('Error') -ErrorAction
+        #$Log = Get-Content 'c:\windows\temp\jcAdmu.log'
+        #$Log.Contains('ERROR: Test Error Log Entry.') | Should -Be $true
+        #    if ($error.Count -eq 1) {
+        #    $error.Clear()
+        #    }
+    }
+
+    It 'Write-ToLog - WARNING: Log entry exists' {
+        if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
+            remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+        }
+        Write-ToLog -Message:('Test Warning Log Entry.') -Level:('Warn')
+        $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
+        $Log.Contains('WARNING: Test Warning Log Entry.') | Should -Be $true
+    }
+
+    It 'Write-ToLog - INFO: Log entry exists' {
+        if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
+            remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+        }
+        Write-ToLog -Message:('Test Info Log Entry.') -Level:('Info')
+        $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
+        $Log.Contains('INFO: Test Info Log Entry.') | Should -Be $true
+        remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
     }
 
     # Add more acceptance tests as needed

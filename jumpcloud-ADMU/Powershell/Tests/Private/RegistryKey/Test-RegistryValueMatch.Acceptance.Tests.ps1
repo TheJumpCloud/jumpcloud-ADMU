@@ -1,4 +1,4 @@
-Describe "Test-RegistryValueMatch Acceptance Tests" -Tag "Acceptance" {
+Describe "Test-RegistryValueMatch Acceptance Tests" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
@@ -17,8 +17,13 @@ Describe "Test-RegistryValueMatch Acceptance Tests" -Tag "Acceptance" {
         }
         . "$helpFunctionDir\$fileName"
     }
-    It "Should..." {
-        # Add acceptance test logic and assertions (against a real system)
+    # Test that the Test-RegistryValueMatch function returns valid results from the registry
+    It 'Value matches' {
+        Test-RegistryValueMatch -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -Value 'Public' -stringmatch 'Public' | Should -Be $true
+    }
+
+    It 'Value does not match' {
+        Test-RegistryValueMatch -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -Value 'Public' -stringmatch 'Private' | Should -Be $false
     }
 
     # Add more acceptance tests as needed

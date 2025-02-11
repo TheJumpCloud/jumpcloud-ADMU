@@ -17,8 +17,9 @@ Describe "Set-ValueToKey Acceptance Tests" -Tag "Acceptance" {
         }
         . "$helpFunctionDir\$fileName"
     }
-    It "Should..." {
-        # Add acceptance test logic and assertions (against a real system)
+    It "Should Set-ValueToKey" {
+        Set-ValueToKey -registryRoot LocalMachine -keyPath 'SYSTEM\Software' -name '1' -value '1' -regValueKind DWord
+        Get-ItemPropertyValue -Path 'HKLM:\SYSTEM\Software\' -Name '1' | Should -Be '1'
     }
 
     # Add more acceptance tests as needed
