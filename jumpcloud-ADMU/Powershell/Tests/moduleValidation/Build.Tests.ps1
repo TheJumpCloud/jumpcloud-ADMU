@@ -1,6 +1,6 @@
 Describe "Module Validation Tests" -Tag "Module Validation" {
     BeforeAll {
-
+        $env:ModuleVersionType = "Patch"
         if ($env:ModuleVersionType -eq "patch") {
             $env:ModuleVersionType = "build"
         }
@@ -23,9 +23,9 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
         }
         . "$helpFunctionDir\$fileName"
         # Get PSD1 Version:
+        $psd1Path = Join-Path "$PSScriptRoot" "\..\..\..\JumpCloud.ADMU.psd1"
         if ($env:ModuleVersionType -eq "manual") {
-
-            $psd1Content = Get-Content -Path "$PSScriptRoot\..\..\JumpCloud.ADMU.psd1"
+            $psd1Content = Get-Content -Path $psd1Path
             $psd1Regex = "ModuleVersion[\s\S]+(([0-9]+)\.([0-9]+)\.([0-9]+))"
             $psd1VersionMatch = Select-String -InputObject:($psd1Content) -Pattern:($psd1Regex)
             $psd1Version = [version]$psd1VersionMatch.Matches.Groups[1].value
@@ -131,7 +131,46 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
 
         }
         It 'Module Changelog should not contain placeholder values' {
-            $ModuleChangelogContent | Should -not -Match "{{Fill in the"
+            $ModuleChangelogContent | Should -not -Match "{ { Fill in the"
+        }
+        It 'Module Changelog Version should be todays date' {
+            $ModulePath = ((Get-Item -Path "$psd1Path").Directory).Parent
+            $moduleChangelogContent = Get-Content ("$ModulePath/ModuleChangelog.md") -TotalCount 3
+
+            # latest from changelog
+            $stringMatch = Select-String -InputObject $moduleChangelogContent -Pattern "## ([0-9]+.[0-9]+.[0-9]+)"
+            $latestChangelogVersion = $stringMatch.matches.groups[1].value
+            $stringMatch = Select-String -InputObject $moduleChangelogContent -Pattern "Release Date: (.*)"
+            $latestReleaseDate = $stringMatch.matches.groups[1].value.trim(" ")
+            switch ($env:ModuleVersionType) {
+                'major' {
+                    $versionString = "$($(([version]$latestModule.Version).Major) + 1).0.0"
+                    Write-Host "[Module Validation Tests] Development Version Major Changelog Version: $($latestChangelogVersion) Should be $versionString"
+                    ([Version]$latestChangelogVersion).Major | Should -Be (([version]$latestModule.Version).Major + 1)
+                    ([Version]$latestChangelogVersion) | Should -BeGreaterThan (([version]$latestModule.Version))
+                }
+                'minor' {
+                    $versionString = "$($(([version]$latestModule.Version).Major)).$(([version]$latestModule.Version).minor + 1).0"
+                    Write-Host "[Module Validation Tests] Development Version Minor Changelog Version: $($latestChangelogVersion) Should be $versionString"
+                    ([Version]$latestChangelogVersion).Minor | Should -Be (([version]$latestModule.Version).Minor + 1)
+                    ([Version]$latestChangelogVersion) | Should -BeGreaterThan (([version]$latestModule.Version))
+                }
+                'patch' {
+                    $versionString = "$($(([version]$latestModule.Version).Major)).$(([version]$latestModule.Version).minor).$(([version]$latestModule.Version).Build + 1)"
+                    Write-Host "[Module Validation Tests] Development Version Build Changelog Version: $($latestChangelogVersion) Should be $versionString"
+                    ([Version]$latestChangelogVersion).Build | Should -Be (([version]$latestModule.Version).Build + 1)
+                    ([Version]$latestChangelogVersion) | Should -BeGreaterThan (([version]$latestModule.Version))
+                }
+                'manual' {
+                    Write-Host "[Module Validation Tests] Development Version Changelog Version: $($latestChangelogVersion) is going to be manually released to PowerShell Gallery"
+                    ([Version]$latestChangelogVersion) | Should -BeGreaterThan (([version]$latestModule.Version))
+                }
+            }
+            $todayDate = Get-Date -UFormat "%B %d, %Y"
+            if ($todayDate | Select-String -Pattern "0\d,") {
+                $todayDate = "$(Get-Date -UFormat %B) $($(Get-Date -Uformat %d) -replace '0', ''), $(Get-Date -UFormat %Y)"
+            }
+            $latestReleaseDate | Should -Be $todayDate
         }
     }
 
