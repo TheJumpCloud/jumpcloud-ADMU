@@ -6,24 +6,22 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
         }
         # Get Latest Module Version
         $latestModule = Find-Module -Name JumpCloud.ADMU
-        # Import Private Functions:
-        $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Private/*.ps1" -Recurse)
-        Foreach ($Import in $Private) {
-            Try {
-                . $Import.FullName
-            } Catch {
-                Write-Error -Message "Failed to import function $($Import.FullName): $_"
+        # import all functions
+        $currentPath = $PSScriptRoot # Start from the current script's directory.
+        $TargetDirectory = "helperFunctions"
+        $FileName = "Import-AllFunctions.ps1"
+        while ($currentPath -ne $null) {
+            $filePath = Join-Path -Path $currentPath $TargetDirectory
+            if (Test-Path $filePath) {
+                # File found! Return the full path.
+                $helpFunctionDir = $filePath
+                break
             }
+
+            # Move one directory up.
+            $currentPath = Split-Path $currentPath -Parent
         }
-        # Import Public Functions:
-        $Private = @( Get-ChildItem -Path "$PSScriptRoot/../Public/*.ps1" -Recurse)
-        Foreach ($Import in $Private) {
-            Try {
-                . $Import.FullName
-            } Catch {
-                Write-Error -Message "Failed to import function $($Import.FullName): $_"
-            }
-        }
+        . "$helpFunctionDir\$fileName"
         # Get PSD1 Version:
         if ($env:ModuleVersionType -eq "manual") {
 
@@ -33,9 +31,6 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
             $psd1Version = [version]$psd1VersionMatch.Matches.Groups[1].value
             write-host "psd1version $psd1Version"
         }
-
-
-
     }
 
     Context 'Check Versioning & Signature' {
@@ -117,7 +112,7 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
     Context 'Module Changelog Validation' {
         BeforeAll {
             # Get ModuleChangelog.md Version:
-            $FilePath_ModuleChangelog = "$PSScriptRoot\..\..\..\ModuleChangelog.md"
+            $FilePath_ModuleChangelog = "$PSScriptRoot\..\..\..\..\ModuleChangelog.md"
             $ModuleChangelogContent = Get-Content -Path:($FilePath_ModuleChangelog)
 
         }
@@ -143,7 +138,7 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
     Context 'Module Help Files' {
         It 'Validates no new changes should be committed after running Build.ps1' {
             # Get Docs Directory:
-            $FolderPath_Docs = "$PSScriptRoot\..\..\Docs\"
+            $FolderPath_Docs = "$PSScriptRoot\..\..\..\Docs\"
             $Docs = Get-ChildItem -Path $FolderPath_Docs -Filter "*.md"
             Write-Host $Docs
             foreach ($item in $Docs) {

@@ -80,6 +80,12 @@ if ($env:CI) {
             }
         }
     }
+} else {
+    $IncludeTags = If ($IncludeTagList) {
+        $IncludeTagList
+    } Else {
+        $uniqueTags | Where-Object { $_ -notin $ExcludeTags } | Select-Object -Unique
+    }
 }
 
 # All the tests are located in /Tests/*
