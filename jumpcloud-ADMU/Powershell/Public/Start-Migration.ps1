@@ -928,18 +928,16 @@ Function Start-Migration {
                 New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
 
-
             $appxList = Get-AppxListByUser -SID $SelectedUserSID
             Set-AppxManifestFile -appxList $appxList -profileImagePath $newUserProfileImagePath
 
             # TODO: Test and return non terminating error here if failure
             # $admuTracker.uwpAppXPackages = $true
 
-
             # Download the appx register exe
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
             Invoke-WebRequest -Uri 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -OutFile 'C:\windows\uwp_jcadmu.exe' -UseBasicParsing
-            Start-Sleep -Seconds 5
+            Start-Sleep -Seconds 1
             try {
                 Get-Item -Path "$windowsDrive\Windows\uwp_jcadmu.exe" -ErrorAction Stop | Out-Null
             } catch {
@@ -951,8 +949,6 @@ Function Start-Migration {
             }
             Write-ToProgress -ProgressBar $Progressbar -Status "ConversionComplete" -form $isForm
             Write-ToLog -Message:('Profile Conversion Completed') -Level Verbose
-
-
 
             #region Add To Local Users Group
             Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUsername -erroraction silentlycontinue
