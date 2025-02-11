@@ -1,4 +1,4 @@
-Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance" {
+Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "InstallJC" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
@@ -17,13 +17,27 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance" {
         }
         . "$helpFunctionDir\$fileName"
 
+        # for these tests, the jumpCloud agent needs to be installed:
+        $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
+        If (-Not $AgentService) {
+            # set install variables
+            $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
+            $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
+            $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
+            $AGENT_INSTALLER_PATH = "C:\Windows\Temp\jcagent-msi-signed.msi"
+            $AGENT_BINARY_NAME = "jumpcloud-agent.exe"
+            $CONNECT_KEY = $env:PESTER_CONNECTKEY
+
+            # now go install the agent
+            Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($CONNECT_KEY) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
+        }
+
+        # get the org details
         $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
         $OrgName = "$($OrgSelection[1])"
         $OrgID = "$($OrgSelection[0])"
-        Mock Get-WindowsDrive { return "C:" }
-        $windowsDrive = Get-WindowsDrive
-
-        $config = get-content "$WindowsDrive\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
+        # get the system key
+        $config = get-content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
         $regex = 'systemKey\":\"(\w+)\"'
         $systemKey = [regex]::Match($config, $regex).Groups[1].Value
     }
@@ -81,6 +95,7 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance" {
         $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
         $bind = Set-JCUserToSystemAssociation -JcApiKey '1234122341234234123412341234123412341234' -JcOrgId $OrgID -JcUserID $GeneratedUser.Id
         $bind | Should -Be $false
+        <<<<<<< HEAD
     }
 
     It 'Agent not installed' -skip {
@@ -89,6 +104,8 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance" {
             Remove-Item "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
         }
         { Set-JCUserToSystemAssociation -JcApiKey $env:PESTER_APIKEY -JcUserID $GeneratedUser.Id -ErrorAction Stop } | Should -Throw
+        =======
+        >>>>>>> 869a77182ef78eab6356b3ec6db7e37af29250d7
     }
 
     # Add more acceptance tests as needed

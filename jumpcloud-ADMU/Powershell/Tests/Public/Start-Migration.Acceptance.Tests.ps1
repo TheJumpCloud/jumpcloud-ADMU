@@ -20,7 +20,7 @@ Describe "Start-Migration Acceptance Tests" {
         # import the init user function:
         . "$helpFunctionDir\Initialize-TestUser.ps1"
     }
-    Context "Migration Scenarios" {
+    Context "Migration Scenarios" -Tag "Migration Parameters" {
         BeforeEach {
             # sample password
             $tempPassword = "Temp123!"
@@ -168,13 +168,6 @@ Describe "Start-Migration Acceptance Tests" {
                 { Start-Migration @testCaseInput } | Should -Not -Throw
             }
         }
-        Context "Tests that require the JumpCloud Agent" -Tag "JCAgent" {
-            BeforeAll {
-                # install the JumpCloud Agent if it's not installed
-
-            }
-
-        }
         AfterEach {
             # Depending on the user in the UserTestingHash, the home path will differ
             if ($testCaseInput.UpdateHomePath) {
@@ -212,8 +205,93 @@ Describe "Start-Migration Acceptance Tests" {
             Remove-LocalUserProfile -username $userToMigrateTo
         }
     }
-    It "Should..." -Tag "JCAgent" {
-        # Add acceptance test logic and assertions (against a real system)
+    Context "JumpCloud Agent Required Migrations" -Tag "InstallJC" {
+        BeforeAll {
+            # for these tests, the jumpCloud agent needs to be installed:
+            $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
+            If (-Not $AgentService) {
+                # set install variables
+                $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
+                $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
+                $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
+                $AGENT_INSTALLER_PATH = "C:\Windows\Temp\jcagent-msi-signed.msi"
+                $AGENT_BINARY_NAME = "jumpcloud-agent.exe"
+                $CONNECT_KEY = $env:PESTER_CONNECTKEY
+
+                # now go install the agent
+                Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($CONNECT_KEY) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
+            }
+
+            # get the org details
+            $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
+            $OrgName = "$($OrgSelection[1])"
+            $OrgID = "$($OrgSelection[0])"
+            # get the system key
+            $config = get-content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
+            $regex = 'systemKey\":\"(\w+)\"'
+            $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+        }
+        BeforeEach {
+            # sample password
+            $tempPassword = "Temp123!"
+            # username to migrate
+            $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # username to migrate to
+            $userToMigrateTo = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+
+            # Initialize-TestUser
+            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            # define test case input
+            $testCaseInput = @{
+                JumpCloudUserName       = $null
+                SelectedUserName        = $null
+                TempPassword            = $null
+                LeaveDomain             = $false
+                ForceReboot             = $false
+                UpdateHomePath          = $false
+                InstallJCAgent          = $false
+                AutobindJCUser          = $false
+                BindAsAdmin             = $false
+                SetDefaultWindowsUser   = $true
+                AdminDebug              = $false
+                # JumpCloudConnectKey     = $null
+                JumpCloudAPIKey         = $env:PESTER_APIKEY
+                JumpCloudOrgID          = $env:PESTER_ORGID
+                ValidateUserShellFolder = $true
+            }
+            # remove the log
+            $logPath = "C:\Windows\Temp\jcadmu.log"
+            if (Test-Path -Path $logPath) {
+                Remove-Item $logPath
+                New-Item $logPath -Force -ItemType File
+            }
+        }
+        It "With the agent already installed, migration should associate a JumpCloud user to the device when the 'autobindJCUser' parameter is used" {
+            # Add acceptance test logic and assertions (against a real system)
+            # test if the user exists already
+            $users = Get-JcSdkUser
+            if ("$($userToMigrateTo)" -in $users.Username) {
+                $existing = $users | Where-Object { $_.username -eq "$($userToMigrateTo)" }
+                Write-Host "Found JumpCloud User, $($existing.Id) removing..."
+                Remove-JcSdkUser -Id $existing.Id
+            }
+            # create the user
+            $GeneratedUser = New-JcSdkUser -Email:("$($userToMigrateTo)@jumpcloudadmu.com") -Username:("$($userToMigrateTo)") -Password:("$($user.password)")
+
+            # set the $testCaseInput
+            $testCaseInput.JumpCloudUserName = $userToMigrateTo
+            $testCaseInput.SelectedUserName = $userToMigrateFrom
+            $testCaseInput.TempPassword = $tempPassword
+            $testCaseInput.AutobindJCUser = $true
+            # Migrate the initialized user to the second username
+            { Start-Migration @testCaseInput } | Should -Not -Throw
+
+            # get the system association:
+            $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+            # the system should be associated to the user
+            $association | Should -not -BeNullOrEmpty
+        }
+
     }
 
     # Add more acceptance tests as needed
