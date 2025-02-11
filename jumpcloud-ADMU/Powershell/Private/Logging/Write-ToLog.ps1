@@ -47,9 +47,7 @@ Function Write-ToLog {
         # If attempting to write to a log file in a folder/path that doesn't exist create the file including the path.
         If (!(Test-Path $Path)) {
             Write-Verbose "Creating $Path."
-            New-Item $Path -Force -ItemType File
-        } Else {
-            # Nothing to see here yet.
+            New-Item $Path -Force -ItemType File | Out-Null
         }
         # Format Date for our Log File
         $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"

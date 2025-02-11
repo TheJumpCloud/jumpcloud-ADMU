@@ -85,7 +85,7 @@ if ($env:CI) {
         $($CIindex[[int]$($env:job_group)]) | ForEach-Object { Write-Host "$_" }
     }
 } else {
-    $PesterRunPath = "$PSScriptRoot/Tests/"
+    $PesterRunPath = "$PSScriptRoot/Tests/*"
 }
 # break
 $configuration = New-PesterConfiguration
@@ -94,10 +94,11 @@ $configuration.Should.ErrorAction = 'Continue'
 $configuration.CodeCoverage.Enabled = $true
 $configuration.testResult.Enabled = $true
 $configuration.testResult.OutputFormat = 'JUnitXml'
-# $configuration.Filter.Tag = $IncludeTags
-# $configuration.Filter.ExcludeTag = $ExcludeTagList
+$configuration.Filter.Tag = $IncludeTags
+$configuration.Filter.ExcludeTag = $ExcludeTagList
 $configuration.CodeCoverage.OutputPath = ($PesterResultsFileXmlDir + 'coverage.xml')
 $configuration.testResult.OutputPath = ($PesterResultsFileXmlDir + 'results.xml')
+Write-Host ("[RUN COMMAND] Invoke-Pester -Path:('$PesterRunPath') -TagFilter:('$($IncludeTags -join "','")') -ExcludeTagFilter:('$($ExcludeTagList -join "','")') -PassThru") -BackgroundColor:('Black') -ForegroundColor:('Magenta')
 
 Invoke-Pester -configuration $configuration
 
