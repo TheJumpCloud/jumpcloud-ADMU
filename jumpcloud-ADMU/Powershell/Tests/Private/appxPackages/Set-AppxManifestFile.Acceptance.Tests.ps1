@@ -19,6 +19,9 @@ Describe "Set-AppxManifestFile Acceptance Tests" {
     }
     Context "Successful conditions" {
         It "writes the appx_Manifest.csv in the specified location" {
+            # mock the secure channel returning false
+            Mock Test-ComputerSecureChannel { return $true }
+
             $currentUserSID = (Get-LocalUser -Name $env:USERNAME | Select-Object SID).SID
             write-host "SID $currentUserSID"
             $appxList = Get-AppxListByUser -SID $currentUserSID

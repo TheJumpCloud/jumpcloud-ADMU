@@ -19,6 +19,8 @@ Describe "Get-AppxListByUser Acceptance Tests" {
     }
     Context "Successful conditions" {
         It "Valid SID, Secure Channel Established" {
+            # mock the secure channel returning true
+            Mock Test-ComputerSecureChannel { return $true }
             $currentUserSID = (Get-LocalUser -Name $env:USERNAME | Select-Object SID).SID
             write-host "SID $currentUserSID"
             $appxList = Get-AppxListByUser -SID $currentUserSID
