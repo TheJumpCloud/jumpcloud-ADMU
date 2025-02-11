@@ -279,7 +279,11 @@ Function Show-SelectionForm {
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..'
     if ($WmiComputerSystem.PartOfDomain) {
         $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
-        $secureChannelStatus = Test-ComputerSecureChannel
+        try {
+            $secureChannelStatus = Test-ComputerSecureChannel
+        } catch {
+            $secureChannelStatus = $false
+        }
 
         $nbtstat = nbtstat -n
         foreach ($line in $nbtStat) {
