@@ -1,4 +1,4 @@
-Describe "Convert-UserName Acceptance Tests" {
+Describe "Convert-UserName Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
