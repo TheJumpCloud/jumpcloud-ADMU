@@ -20,6 +20,7 @@ Describe "Get-MtpOrganization Acceptance Tests" {
     It "Return an organization with a valid API Key" {
         # Add acceptance test logic and assertions (against a real system)
         $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
+        Write-Host "org selection: $OrgSelection"
         $OrgName = "$($OrgSelection[1])"
         $OrgID = "$($OrgSelection[0])"
 
