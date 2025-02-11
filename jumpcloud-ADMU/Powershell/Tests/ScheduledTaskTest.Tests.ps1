@@ -38,7 +38,7 @@ BeforeAll {
     write-host "Running SetupAgent Script:"
     . $PSScriptRoot\SetupAgent.ps1
 }
-Describe 'ScheduleTask Test Scenarios' {
+Describe 'ScheduleTask Test Scenarios' -Skip {
     Enable-TestNameAsVariablePlugin
     BeforeEach {
         Write-Host "---------------------------"

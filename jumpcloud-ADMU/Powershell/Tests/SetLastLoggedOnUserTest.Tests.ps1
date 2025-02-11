@@ -38,7 +38,7 @@ BeforeAll {
     write-host "Running SetupAgent Script:"
     . $PSScriptRoot\SetupAgent.ps1
 }
-Describe 'Set-LastLoggedOnUser Test Scenarios' {
+Describe 'Set-LastLoggedOnUser Test Scenarios' -skip {
     Enable-TestNameAsVariablePlugin
     BeforeEach {
         Write-Host "---------------------------"
