@@ -95,7 +95,6 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
         $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
         $bind = Set-JCUserToSystemAssociation -JcApiKey '1234122341234234123412341234123412341234' -JcOrgId $OrgID -JcUserID $GeneratedUser.Id
         $bind | Should -Be $false
-        <<<<<<< HEAD
     }
 
     It 'Agent not installed' -skip {
@@ -104,8 +103,6 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
             Remove-Item "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
         }
         { Set-JCUserToSystemAssociation -JcApiKey $env:PESTER_APIKEY -JcUserID $GeneratedUser.Id -ErrorAction Stop } | Should -Throw
-        =======
-        >>>>>>> 869a77182ef78eab6356b3ec6db7e37af29250d7
     }
 
     # Add more acceptance tests as needed
