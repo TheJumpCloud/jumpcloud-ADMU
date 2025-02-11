@@ -60,7 +60,7 @@ Function Build-PesterTestFile {
                     }
 
                     $unitTestContent = @"
-Describe "$($function.BaseName) Unit Tests" {
+Describe "$($function.BaseName) Unit Tests" -Tag "Unit" {
     BeforeAll {
         # import the function
         `$functionPath = (`$PSCommandPath.Replace('.Unit.Tests.ps1', '.ps1')) -replace '\/Tests\/|\\Tests\\', '/'
@@ -87,7 +87,7 @@ Describe "$($function.BaseName) Unit Tests" {
                 if ($Force -or !(Test-Path $acceptanceTestPath)) {
                     # Check for -Force or if file doesn't exist
                     $acceptanceTestContent = @"
-Describe "$($function.BaseName) Acceptance Tests" {
+Describe "$($function.BaseName) Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         `$currentPath = `$PSScriptRoot # Start from the current script's directory.
