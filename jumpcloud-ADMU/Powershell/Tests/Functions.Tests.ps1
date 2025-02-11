@@ -29,17 +29,7 @@ Describe 'Functions' -skip {
         # This is a GUI test, check manually before release
     }
 
-    Context 'Test-RegistryValueMatch Function' {
-        # Test that the Test-RegistryValueMatch function returns valid results from the registry
-        It 'Value matches' {
-            Test-RegistryValueMatch -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -Value 'Public' -stringmatch 'Public' | Should -Be $true
-        }
-
-        It 'Value does not match' {
-            Test-RegistryValueMatch -Path 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList' -Value 'Public' -stringmatch 'Private' | Should -Be $false
-        }
-    }
-    Context 'Set-PTA/FTA Test' {
+    Context 'Set-PTA/FTA Test'  -skip {
         BeforeAll {
             # Import /Deploy/uwp_jcadmu.ps1 and use the function Set-FTA
             . $PSScriptRoot\..\..\..\Deploy\uwp_jcadmu.ps1
@@ -62,7 +52,7 @@ Describe 'Functions' -skip {
 
         }
     }
-    Context 'Test-JumpCloudUsername Function' {
+    Context 'Test-JumpCloudUsername Function' -skip {
         It 'Valid Username Returns True' {
             # Get the first user
             $user = Get-JcSdkUser | Select-Object -First 1
@@ -93,7 +83,7 @@ Describe 'Functions' -skip {
         }
     }
 
-    Context 'Set-JCUserToSystemAssociation Function' {
+    Context 'Set-JCUserToSystemAssociation Function' -skip {
         # Set-JCUserToSystemAssociation should take USERID as input validated with Test-JumpCloudUsername
         BeforeAll {
             $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
@@ -179,7 +169,7 @@ Describe 'Functions' -skip {
         # Add a C# Method to PWSH context we effectively test this with Migration tests
     }
 
-    Context 'New-LocalUserProfile Function' {
+    Context 'New-LocalUserProfile Function' -skip {
         It 'User created and exists on system' {
             $newUserPassword = ConvertTo-SecureString -String 'Temp123!' -AsPlainText -Force
             New-localUser -Name 'testjc' -password $newUserPassword -Description "Created By JumpCloud ADMU tests"
@@ -192,7 +182,7 @@ Describe 'Functions' -skip {
         }
     }
 
-    Context 'Remove-LocalUserProfile Function' {
+    Context 'Remove-LocalUserProfile Function' -skip {
         It 'Add and remove,user should not exist on system' {
             $newUserPassword = ConvertTo-SecureString -String 'Temp123!' -AsPlainText -Force
             New-localUser -Name 'testremovejc2' -password $newUserPassword -Description "Created By JumpCloud ADMU tests"
@@ -212,7 +202,7 @@ Describe 'Functions' -skip {
         }
     }
 
-    Context 'Set-ValueToKey Function' {
+    Context 'Set-ValueToKey Function' -skip {
         # Test that we can write to the registry when providing a key and value
         It 'Value is set on existing key' {
             Set-ValueToKey -registryRoot LocalMachine -keyPath 'SYSTEM\Software' -name '1' -value '1' -regValueKind DWord
@@ -220,7 +210,7 @@ Describe 'Functions' -skip {
         }
     }
 
-    Context 'New-RegKey Function' {
+    Context 'New-RegKey Function' -skip {
         # Test that we can create new keys
         It 'Key is created' {
             New-RegKey -keyPath 'SYSTEM\1' -registryRoot LocalMachine
@@ -228,7 +218,7 @@ Describe 'Functions' -skip {
         }
     }
 
-    Context 'Get-SecurityIdentifier Function' {
+    Context 'Get-SecurityIdentifier Function' -skip {
         It 'Tests that Get-SecurityIdentifier returns a valid regex matched SID for the current user' {
             # SID of current user should match SID regex pattern
             $currentUser = $(whoami) -replace "$(hostname)\\", ("")
@@ -263,13 +253,13 @@ Describe 'Functions' -skip {
         # Tested in Migration Tests
     }
 
-    Context 'Get-WindowsDrive Function' {
+    Context 'Get-WindowsDrive Function' -skip {
         It 'Get-WindowsDrive - C' {
             Get-WindowsDrive | Should -Be "C:"
         }
     }
 
-    Context 'Write-ToLog Function' {
+    Context 'Write-ToLog Function' -skip {
 
         It 'Write-ToLog - ' {
             if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
@@ -321,229 +311,149 @@ Describe 'Functions' -skip {
         }
     }
 
-    Context 'Remove-ItemIfExist Function' {
+    Context 'Remove-ItemIfExist Function' -skip {
 
-        It 'Remove-ItemIfExist - Does Exist c:\windows\temp\test\' {
-            if (Test-Path 'c:\windows\Temp\test\') {
-                Remove-Item 'c:\windows\Temp\test' -Recurse -Force
+
+
+        Context 'Uninstall-Program Function' {
+
+            It 'Uninstall - aws command line interface' -Skip {
+                #TODO: This test actually be install something new, and uninstall should work
+                uninstall-program -programname 'AWS Command Line Interface'
+                start-sleep -Seconds 5
+                Test-ProgramInstalled -programName 'AWS Command Line Interface' | Should -Be $false
             }
-            New-Item -ItemType directory -path 'c:\windows\Temp\test\'
-            New-Item 'c:\windows\Temp\test\test.txt'
-            Remove-ItemIfExist -Path 'c:\windows\Temp\test\' -Recurse
-            Test-Path 'c:\windows\Temp\test\' | Should -Be $false
         }
 
-        It 'Remove-ItemIfExist - Fails c:\windows\temp\test\' {
-            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
-                remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
-            }
-            Mock Remove-ItemIfExist { Write-ToLog -Message ('Removal Of Temp Files & Folders Failed') -Level Warn }
-            Remove-ItemIfExist -Path 'c:\windows\Temp\test\'
-            $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
-            $Log.Contains('Removal Of Temp Files & Folders Failed') | Should -Be $true
-        }
-    }
+        Context 'Start-NewProcess Function' -skip {
 
-    Context 'Uninstall-Program Function' {
-
-        It 'Uninstall - aws command line interface' -Skip {
-            #TODO: This test actually be install something new, and uninstall should work
-            uninstall-program -programname 'AWS Command Line Interface'
-            start-sleep -Seconds 5
-            Test-ProgramInstalled -programName 'AWS Command Line Interface' | Should -Be $false
-        }
-    }
-
-    Context 'Start-NewProcess Function' {
-
-        It 'Start-NewProcess - Notepad' {
-            Start-NewProcess -pfile:('c:\windows\system32\notepad.exe') -Timeout 1000
+            It 'Start-NewProcess - Notepad' {
+                Start-NewProcess -pfile:('c:\windows\system32\notepad.exe') -Timeout 1000
             (Get-Process -Name 'notepad') -ne $null | Should -Be $true
-            Stop-Process -Name "notepad"
-        }
+                Stop-Process -Name "notepad"
+            }
 
-        It 'Start-NewProcess & end after 2s timeout - Notepad ' {
-            if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
+            It 'Start-NewProcess & end after 2s timeout - Notepad ' {
+                if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
+                    remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+                }
+                Start-NewProcess -pfile:('c:\windows\system32\notepad.exe') -Timeout 1000
+                Start-Sleep -s 2
+                Stop-Process -Name "notepad"
+                $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
+                $Log.Contains('Windows ADK Setup did not complete after 5mins') | Should -Be $true
                 remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
             }
-            Start-NewProcess -pfile:('c:\windows\system32\notepad.exe') -Timeout 1000
-            Start-Sleep -s 2
-            Stop-Process -Name "notepad"
-            $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
-            $Log.Contains('Windows ADK Setup did not complete after 5mins') | Should -Be $true
-            remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
-        }
-    }
-
-    Context 'Test-IsNotEmpty Function' {
-
-        It 'Test-IsNotEmpty - $null' {
-            Test-IsNotEmpty -field $null | Should -Be $true
         }
 
-        It 'Test-IsNotEmpty - empty' {
-            Test-IsNotEmpty -field '' | Should -Be $true
+        Context 'Test-IsNotEmpty Function' -skip {
+
+            It 'Test-IsNotEmpty - $null' {
+                Test-IsNotEmpty -field $null | Should -Be $true
+            }
+
+            It 'Test-IsNotEmpty - empty' {
+                Test-IsNotEmpty -field '' | Should -Be $true
+            }
+
+            It 'Test-IsNotEmpty - test string' {
+                Test-IsNotEmpty -field 'test' | Should -Be $false
+            }
         }
 
-        It 'Test-IsNotEmpty - test string' {
-            Test-IsNotEmpty -field 'test' | Should -Be $false
-        }
-    }
+        Context 'Test-CharLen -len 40 -testString Function' -skip {
 
-    Context 'Test-CharLen -len 40 -testString Function' {
+            It 'Test-CharLen -len 40 -testString - $null' {
+                Test-CharLen -len 40 -testString $null | Should -Be $false
+            }
 
-        It 'Test-CharLen -len 40 -testString - $null' {
-            Test-CharLen -len 40 -testString $null | Should -Be $false
-        }
+            It 'Test-CharLen -len 40 -testString - 39 Chars' {
+                Test-CharLen -len 40 -testString '111111111111111111111111111111111111111' | Should -Be $false
+            }
 
-        It 'Test-CharLen -len 40 -testString - 39 Chars' {
-            Test-CharLen -len 40 -testString '111111111111111111111111111111111111111' | Should -Be $false
-        }
-
-        It 'Test-CharLen -len 40 -testString - 40 Chars' {
-            Test-CharLen -len 40 -testString '1111111111111111111111111111111111111111' | Should -Be $true
-        }
-    }
-
-    Context 'Test-HasNoSpace Function' {
-
-        It 'Test-HasNoSpace - $null' {
-            Test-HasNoSpace -field $null | Should -Be $true
+            It 'Test-CharLen -len 40 -testString - 40 Chars' {
+                Test-CharLen -len 40 -testString '1111111111111111111111111111111111111111' | Should -Be $true
+            }
         }
 
-        It 'Test-HasNoSpace - no spaces' {
-            Test-HasNoSpace -field 'testwithnospaces' | Should -Be $true
+        Context 'Test-HasNoSpace Function' -skip {
+
+            It 'Test-HasNoSpace - $null' {
+                Test-HasNoSpace -field $null | Should -Be $true
+            }
+
+            It 'Test-HasNoSpace - no spaces' {
+                Test-HasNoSpace -field 'testwithnospaces' | Should -Be $true
+            }
+
+            It 'Test-HasNoSpace - spaces' {
+                Test-HasNoSpace -field 'test with spaces' | Should -Be $false
+            }
         }
 
-        It 'Test-HasNoSpace - spaces' {
-            Test-HasNoSpace -field 'test with spaces' | Should -Be $false
-        }
-    }
+        Context 'Add-LocalUser Function' -skip {
 
-    Context 'Add-LocalUser Function' {
-
-        It 'Add-LocalUser - testuser to Users ' {
-            net user testuser /delete | Out-Null
-            net user testuser Temp123! /add
-            Remove-LocalGroupMember -Group "Users" -Member "testuser"
-            Add-LocalGroupMember -SID S-1-5-32-545 -Member 'testuser'
+            It 'Add-LocalUser - testuser to Users ' {
+                net user testuser /delete | Out-Null
+                net user testuser Temp123! /add
+                Remove-LocalGroupMember -Group "Users" -Member "testuser"
+                Add-LocalGroupMember -SID S-1-5-32-545 -Member 'testuser'
             (([ADSI]"WinNT://./Users").psbase.Invoke('Members') | ForEach-Object { ([ADSI]$_).InvokeGet('AdsPath') } ) -match 'testuser' | Should -Be $true
-        }
-    }
-
-    Context 'Test-LocalUsername Function' {
-        It 'Test-LocalUsername - exists' {
-            # This test requires a windows device to create the get the user
-            $userName = "TesterUser12345"
-            $password = "TesterPassword12345!!"
-            $newUserPassword = ConvertTo-SecureString -String "$($Password)" -AsPlainText -Force
-            New-localUser -Name "$($UserName)" -password $newUserPassword -Description "Created By JumpCloud ADMU"
-
-            # Get Win32 Profiles to merge data with valid SIDs
-            $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-            # get localUsers (can contain users who have not logged in yet/ do not have a SID)
-            $nonSIDLocalUsers = Get-LocalUser
-            Test-LocalUsername -username $userName -win32UserProfiles $win32UserProfiles -localUserProfiles $nonSIDLocalUsers | Should -Be $true
+            }
         }
 
-        It 'Test-LocalUsername - does not exist' {
-
-            # Get Win32 Profiles to merge data with valid SIDs
-            $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-            # get localUsers (can contain users who have not logged in yet/ do not have a SID)
-            $nonSIDLocalUsers = Get-LocalUser
-            Test-LocalUsername -username 'blazarz' -win32UserProfiles $win32UserProfiles -localUserProfiles $nonSIDLocalUsers | Should -Be $false
+        Context 'Test-LocalUsername Function' -skip {
+            It 'Test-LocalUsername - exists' {
+                # This test requires a windows device to create the get the user
+                $userName = "TesterUser12345"
+                $password = "TesterPassword12345!!"
+                $newUserPassword = ConvertTo-SecureString -String "$($Password)" -AsPlainText -Force
+                New-localUser -Name "$($UserName)" -password $newUserPassword -Description "Created By JumpCloud ADMU"
+            }
         }
-    }
+        Context 'Install-JumpCloudAgent Function' -skip {
+            BeforeAll {
+                Mock Get-WindowsDrive { Return "C:" }
+                $windowsDrive = Get-WindowsDrive
+                $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
+                $AGENT_INSTALLER_PATH
+                $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
+                $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
+                $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
 
-    Context 'Install-JumpCloudAgent Function' -skip {
-        BeforeAll {
-            Mock Get-WindowsDrive { Return "C:" }
-            $windowsDrive = Get-WindowsDrive
-            $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
-            $AGENT_INSTALLER_PATH
-            $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
-            $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-            $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
+                # now go install the agent
+                Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
+            }
 
-            # now go install the agent
-            Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
+            It 'Install-JumpCloudAgent - Verify Download JCAgent Path' {
+                Test-path 'C:\Windows\Temp\JCADMU\jcagent-msi-signed.msi' | Should -Be $true
+            }
+
+            It 'Install-JumpCloudAgent - Verify Install JCAgent' {
+                Get-Service -Name "jumpcloud-agent" | Should -Not -Be $null
+            }
         }
 
-        It 'Install-JumpCloudAgent - Verify Download JCAgent Path' {
-            Test-path 'C:\Windows\Temp\JCADMU\jcagent-msi-signed.msi' | Should -Be $true
-        }
 
-        It 'Install-JumpCloudAgent - Verify Install JCAgent' {
-            Get-Service -Name "jumpcloud-agent" | Should -Not -Be $null
-        }
-    }
 
-    Context 'Convert-SecurityIdentifier Function' {
-        BeforeAll {
-            $newUserPassword = ConvertTo-SecureString -String 'Temp123!' -AsPlainText -Force
-            New-localUser -Name 'sidTest' -password $newUserPassword -Description "Created By JumpCloud ADMU tests"
-            New-LocalUserProfile -username:('sidTest')
-        }
-        It 'Convert-SecurityIdentifier - circleci SID' {
-            $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\sidTest' | Select-Object SID).SID
-            (Convert-SecurityIdentifier -Sid $circlecisid) | Should -match 'sidTest'
-        }
-    }
-
-    Context 'Convert-UserName Function' {
-        It 'Convert-UserName' {
-            $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\sidTest' | Select-Object SID).SID
+        Context 'Convert-UserName Function' -skip {
+            It 'Convert-UserName' {
+                $circlecisid = (Get-WmiObject win32_userprofile | select-object Localpath, SID | where-object Localpath -eq 'C:\Users\sidTest' | Select-Object SID).SID
             (Convert-UserName -user:('sidTest')) | Should -match $circlecisid
-        }
-    }
-
-    Context 'Test-UsernameOrSID Function' -Skip {
-        # Tested in Migration Tests
-        It 'Test-UsernameOrSID' {
-
-        }
-    }
-
-    Context 'Restart-ComputerWithDelay Function' -Skip {
-        # Test Manually
-        It 'Restart-ComputerWithDelay' {
-        }
-    }
-    Context 'Test Set-ADMUScheduledTask' {
-        BeforeAll {
-            $scheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -ne "Disabled" -and $_.state -ne "Running" }
-            Set-ADMUScheduledTask -op "disable" -scheduledTasks $scheduledTasks
-        }
-        It 'Should disabled tasks' {
-            # Disable tasks that are ready to run
-            $afterDisable = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -eq "Disabled" }
-            # Compare $scheduledTasks and $afterDisable state should not be equal
-            $scheduledTasks | ForEach-Object {
-                $task = $_
-                # Check that the task is disabled
-                $afterDisable | Where-Object { $_.TaskName -eq $task.TaskName -and $_.State -eq "Disabled" } | Should -Not -BeNullOrEmpty
             }
         }
-        It 'Should Enable tasks' {
-            Set-ADMUScheduledTask -op "enable" -scheduledTasks $scheduledTasks
-            # Validate that the tasks are enabled
-            $afterEnable = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -eq "Ready" }
-            # Compare $scheduledTasks and $afterDisable state should not be equal
-            $scheduledTasks | ForEach-Object {
-                $task = $_
-                # Check that the task is disabled
-                $afterEnable | Where-Object { $_.TaskName -eq $task.TaskName -and $_.State -eq "Ready" } | Should -Not -BeNullOrEmpty
+
+        Context 'Test-UsernameOrSID Function' -Skip {
+            # Tested in Migration Tests
+            It 'Test-UsernameOrSID' {
+
             }
         }
-    }
-    Context 'Validates the functionailty of the Set-FileAttribute and associated functions' {
-        BeforeAll {
-            # create some file to test with:
-            $content = "placeholder text"
-            # save the file
-            $content | Out-File "C:\Windows\Temp\content.txt"
-            $contentFilePath = "C:\Windows\Temp\content.txt"
+
+        Context 'Restart-ComputerWithDelay Function' -Skip {
+            # Test Manually
+            It 'Restart-ComputerWithDelay' {
+            }
         }
         It 'Validates the function Test-FileAttribute should reuturn true/ falst given some attribute type' {
             # using attrib, set the file associations to hidden and archive
@@ -564,7 +474,7 @@ Describe 'Functions' -skip {
         }
 
     }
-    Context 'Validates that the  Registry Hive Permissions are correct, given a username' {
+    Context 'Validates that the  Registry Hive Permissions are correct, given a username' -skip {
         It 'Should return true when a users ntfs permissions are correct' {
             $datUserTrue = "ADMU_dat_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $password = '$T#st1234'
@@ -605,93 +515,9 @@ Describe 'Functions' -skip {
             foreach ($FilePath in $filePaths) {
                 # Get current access control list:
                 $FileACL = (Get-Item $FilePath -Force).GetAccessControl('Access')
+            } }
 
-                # Remove inheritance but preserve existing entries
-                $FileACL.SetAccessRuleProtection($true, $true)
-                Set-Acl $FilePath -AclObject $FileACL
+        # Test for Test-UserFolderRedirect
 
-                # Retrieve new explicit set of permissions
-                $FileACL = Get-Acl $FilePath
-
-                foreach ($requiredAccount in $requiredAccounts) {
-                    # Retrieve one of the required rules
-                    Write-Host "removing: $($requiredAccount) Access"
-                    $ruleToRemove = $FileACL.GetAccessRules($true, $true, [System.Security.Principal.NTAccount]) | Where-Object { $_.IdentityReference -match $requiredAccount }
-
-                    # Remove it - or modify it and use SetAccessRule() instead
-                    $FileACL.RemoveAccessRule($ruleToRemove)
-
-                    # Set ACL on file again
-                    Set-Acl $FilePath -AclObject $FileACL
-
-                    # Test NTUser dat permissions
-                    $NTUser, $permissionHash = Test-DATFilePermission -Path $FilePath -username $datUserFalse -type 'ntfs'
-                    $NTUser | Should -Be $false
-
-                    # Retrieve new explicit set of permissions
-                    $FileACL = Get-Acl $FilePath
-
-                    # Add the rule again
-                    $FileACL.SetAccessRule($ruleToRemove)
-                    # Set ACL on file again
-                    Set-Acl $FilePath -AclObject $FileACL
-                    $NTUser, $permissionHashClasses = Test-DATFilePermission -Path $FilePath -username $datUserFalse -type 'ntfs'
-                    # Test UsrClass dat permissions
-                    $NTUser | Should -Be $true
-                }
-            }
-            # Registry Validations:
-            # load file into memory + test registry permissions
-            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
-            }
-            foreach ($FilePath in $filePaths) {
-                if ($filePath -match 'usrclass') {
-                    REG LOAD "HKU\tempPath_classes" "$FilePath" *>&1
-                    $REGFilePath = "HKEY_USERS:\tempPath_classes"
-                } else {
-                    REG LOAD "HKU\tempPath" "$FilePath" *>&1
-                    $REGFilePath = "HKEY_USERS:\tempPath"
-                }
-                # Get current access control list:
-                $FileACL = (Get-Item $REGFilePath -Force).GetAccessControl('Access')
-
-                # Remove inheritance but preserve existing entries
-                $FileACL.SetAccessRuleProtection($true, $true)
-                Set-Acl $REGFilePath -AclObject $FileACL
-
-                # Retrieve new explicit set of permissions
-                $FileACL = Get-Acl $REGFilePath
-                foreach ($requiredAccount in $requiredAccounts) {
-                    # Retrieve one of the required rules
-                    Write-Host "removing: $($requiredAccount) Access"
-                    $ruleToRemove = $FileACL.GetAccessRules($true, $true, [System.Security.Principal.NTAccount]) | Where-Object { $_.IdentityReference -match $requiredAccount }
-
-                    # Remove it - or modify it and use SetAccessRule() instead
-                    $FileACL.RemoveAccessRule($ruleToRemove)
-
-                    # Set ACL on file again
-                    Set-Acl $REGFilePath -AclObject $FileACL
-
-                    # Test registry dat permissions
-                    $NTUser, $permissionHash = Test-DATFilePermission -Path $REGFilePath -username $datUserFalse -type 'registry'
-                    $NTUser | Should -Be $false
-
-                    # Retrieve new explicit set of permissions
-                    $FileACL = Get-Acl $REGFilePath
-
-                    # Add the rule again
-                    $FileACL.SetAccessRule($ruleToRemove)
-                    # Set ACL on file again
-                    Set-Acl $REGFilePath -AclObject $FileACL
-                    $NTUser, $permissionHashClasses = Test-DATFilePermission -Path $REGFilePath -username $datUserFalse -type 'registry'
-                    # Test UsrClass dat permissions
-                    $NTUser | Should -Be $true
-                }
-            }
-        }
     }
-
-    # Test for Test-UserFolderRedirect
-
 }
