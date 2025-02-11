@@ -15,7 +15,7 @@ Foreach ($Import in $Private) {
     }
 }
 # Import Public Functions:
-$Private = @( Get-ChildItem -Path "$Global:rootModule/jumpcloud-ADMU/Powershell/Private/*.ps1" -Recurse)
+$Private = @( Get-ChildItem -Path "$Global:rootModule/jumpcloud-ADMU/Powershell/Public/*.ps1" -Recurse)
 Foreach ($Import in $Private) {
     Try {
         Write-Output "Importing Public Function: $($Import.BaseName) "
