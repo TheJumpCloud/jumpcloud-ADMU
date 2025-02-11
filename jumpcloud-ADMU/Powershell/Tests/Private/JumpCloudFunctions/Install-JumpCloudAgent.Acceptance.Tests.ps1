@@ -23,6 +23,7 @@ Describe "Install-JumpCloudAgent Acceptance Tests" -Tag @("Acceptance", "Install
         $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
         $AGENT_INSTALLER_PATH = "C:\Windows\Temp\JCADMU\jcagent-msi-signed.msi"
+        $AGENT_BINARY_NAME = "jumpcloud-agent.exe"
 
         # now go install the agent
         Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($env:PESTER_CONNECTKEY) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
