@@ -82,6 +82,23 @@ Describe -Name "UWP Tests" {
             $ptaLog | Should -Not -BeNullOrEmpty
             $mainLog | Should -Not -BeNullOrEmpty
         }
+        It "Tests Set-FTA/Set-PTA" {
+            . $uwpPath
+            $protocol = "http"
+            $fileType = ".txt"
+
+            Set-FTA "wordpad" $fileType
+            Set-PTA -ProgId "notepad" -Protocol $protocol
+
+            $fta = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice"
+            $pta = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
+            # Write out the contents of the FTA and PTA
+            Write-Host "FTA: $($fta)"
+            Write-Host "PTA: $($pta)"
+            # Check if programId is wordpad
+            $fta.ProgId | Should -Contain "wordpad"
+            $pta.ProgId | Should -Contain "notepad"
+        }
 
     }
 }
