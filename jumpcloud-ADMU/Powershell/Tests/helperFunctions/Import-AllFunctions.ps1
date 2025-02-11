@@ -8,7 +8,7 @@ $Global:rootModule = $currentTestPath -replace $regexPattern, "\jumpcloud-ADMU"
 $Private = @( Get-ChildItem -Path "$Global:rootModule/jumpcloud-ADMU/Powershell/Private/*.ps1" -Recurse)
 Foreach ($Import in $Private) {
     Try {
-        Write-Output "Importing Private Function: $($Import.BaseName) "
+        # Write-Output "Importing Private Function: $($Import.BaseName) "
         . $Import.FullName
     } Catch {
         Write-Error -Message "Failed to import function $($Import.FullName): $_"
@@ -18,7 +18,7 @@ Foreach ($Import in $Private) {
 $Private = @( Get-ChildItem -Path "$Global:rootModule/jumpcloud-ADMU/Powershell/Public/*.ps1" -Recurse)
 Foreach ($Import in $Private) {
     Try {
-        Write-Output "Importing Public Function: $($Import.BaseName) "
+        # Write-Output "Importing Public Function: $($Import.BaseName) "
         . $Import.FullName
     } Catch {
         Write-Error -Message "Failed to import function $($Import.FullName): $_"
