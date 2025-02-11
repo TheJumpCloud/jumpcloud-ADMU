@@ -109,6 +109,25 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
         }
     }
 
+    Context "Module PSD1 Validation" {
+        It 'The date on the current version of the Module Manifest file should be todays date' {
+            # get content from current path
+            $moduleContent = Get-Content -Path ("$psd1Path")
+            # update module manifest
+            Update-ModuleManifest -Path:($psd1Path)
+            $stringMatch = Select-String -InputObject $moduleContent -Pattern "# Generated on: ([\d]+\/[\d]+\/[\d]+)"
+            $PSD1_date = $stringMatch.matches.groups[1].value
+            ([datetime]$PSD1_date) | Should -Be ([datetime]( Get-Date -Format "M/d/yyyy" ))
+        }
+    }
+
+    Context "admuTemplate Validation" {
+        It "admuTemplate should have been generated" {
+            $admuTemplatePath = Join-Path $Global:rootModule "Deploy\admuTemplate.ps1"
+            $admuTemplatePath | Should -Exist
+        }
+    }
+
     Context 'Module Changelog Validation' {
         BeforeAll {
             # Get ModuleChangelog.md Version:
