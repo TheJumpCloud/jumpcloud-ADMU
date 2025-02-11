@@ -94,8 +94,8 @@ $configuration.Should.ErrorAction = 'Continue'
 $configuration.CodeCoverage.Enabled = $true
 $configuration.testResult.Enabled = $true
 $configuration.testResult.OutputFormat = 'JUnitXml'
-$configuration.Filter.Tag = $IncludeTags
-$configuration.Filter.ExcludeTag = $ExcludeTagList
+# $configuration.Filter.Tag = $IncludeTags
+# $configuration.Filter.ExcludeTag = $ExcludeTagList
 $configuration.CodeCoverage.OutputPath = ($PesterResultsFileXmlDir + 'coverage.xml')
 $configuration.testResult.OutputPath = ($PesterResultsFileXmlDir + 'results.xml')
 
