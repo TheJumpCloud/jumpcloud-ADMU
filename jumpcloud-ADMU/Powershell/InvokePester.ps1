@@ -35,7 +35,7 @@ if (-not (Test-Path $PesterResultsFileXmlDir)) {
 $PesterTestsPaths = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse
 $tags = New-Object System.Collections.ArrayList
 foreach ($pesterFile in $PesterTestsPaths) {
-    $tag = Get-PesterTag $pesterFile
+    $tag = Get-PesterTag -path $pesterFile.FullName
     if ($tag) {
         $tags.Add($tag)  | Out-Null
     }
