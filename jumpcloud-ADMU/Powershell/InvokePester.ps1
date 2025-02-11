@@ -8,7 +8,7 @@ param (
     $ExcludeTagList,
     [Parameter(Mandatory = $false)]
     [System.String[]]
-    $IncludeTagList = "*"
+    $IncludeTagList = "*" # Default to include all tags
 
 )
 $env:ModuleVersionType = $ModuleVersionType
@@ -31,63 +31,61 @@ if (-not (Test-Path $PesterResultsFileXmlDir)) {
 # Import the Pester Tag function:
 . (Join-Path "$PSScriptRoot" "\Tests\helperFunctions\Get-PesterTag.ps1")
 
-# Get all the pester test files:
-$PesterTestsPaths = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse
-$tags = New-Object System.Collections.ArrayList
-foreach ($pesterFile in $PesterTestsPaths) {
-    $tag = Get-PesterTag -path $pesterFile.FullName
-    if ($tag) {
-        $tags.Add($tag)  | Out-Null
-    }
-}
-$uniqueTags = $tags.Tags | Select-Object -Unique
-
-Write-Host "[Status] $($PesterTestsPaths.count) tests found"
-# Filters on tags
-$IncludeTags = If ($IncludeTagList) {
-    $IncludeTagList
-} Else {
-    $uniqueTags | Where-Object { $_ -notin $IncludeTagList } | Select-Object -Unique
+# Get all the pester test files and their tags
+$PesterTests = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse | ForEach-Object {
+    Get-PesterTag -Path $_.FullName # Assuming Get-PesterTag returns a string or array of strings
 }
 
+$uniqueTags = $PesterTests.Tags | Select-Object -Unique
 
+Write-Host "[Status] $($PesterTests.Count) Test Files Found"
+Write-Host "[Status] $($uniqueTags.Count) Unique Tags Found"
+
+# CI logic
 if ($env:CI) {
-    If ($env:job_group) {
-        # split tests by job group:
-        $PesterTestsPaths = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse
-        Write-Host "[Status] $($PesterTestsPaths.count) tests found"
-        $CIindex = @()
-        $numItems = $($PesterTestsPaths.count)
-        $numBuckets = 3
-        $itemsPerBucket = [math]::Floor(($numItems / $numBuckets))
-        $remainder = ($numItems % $numBuckets)
-        $extra = 0
-        for ($i = 0; $i -lt $numBuckets; $i++) {
-            <# Action that will repeat until the condition is met #>
-            if ($i -eq ($numBuckets - 1)) {
-                $extra = $remainder
+    if ($env:job_group) {
+
+        # Separate "installJC" tag
+        $installJCTags = $uniqueTags | Where-Object { $_ -match "InstallJC" }
+        $remainingTags = $uniqueTags | Where-Object { $_ -notmatch "installjc" }
+
+        # Split remaining tags into two groups
+        $numRemainingTags = $remainingTags.Count
+        $tagsPerGroup = [Math]::Floor($numRemainingTags / 2)
+        $remainder = $numRemainingTags % 2
+
+        $group1 = @()
+        $group2 = @()
+
+        for ($i = 0; $i -lt $numRemainingTags; $i++) {
+            if ($i -lt $tagsPerGroup + $remainder) {
+                # Distribute remainder to first group
+                $group1 += $remainingTags[$i]
+            } else {
+                $group2 += $remainingTags[$i]
             }
-            $indexList = ($itemsPerBucket + $extra)
-            # Write-Host "Container $i contains $indexList items:"
-            $CIIndexList = @()
-            $CIIndexList += for ($k = 0; $k -lt $indexList; $k++) {
-                <# Action that will repeat until the condition is met #>
-                $bucketIndex = $i * $itemsPerBucket
-                # write-host "`$tags[$($bucketIndex + $k)] ="$tags[($bucketIndex + $k)]
-                $PesterTestsPaths[$bucketIndex + $k].FullName
-            }
-            # add to ciIndex Array
-            $CIindex += , ($CIIndexList)
         }
 
-        $PesterRunPath = $CIindex[[int]$($env:job_group)]
-        Write-Host "[status] The following $($($CIindex[[int]$($env:job_group)]).count) tests will be run:"
-        $($CIindex[[int]$($env:job_group)]) | ForEach-Object { Write-Host "$_" }
+        switch ($env:job_group) {
+            "0" {
+                $IncludeTags = "jcagent"
+            }
+            "1" {
+                $IncludeTags = $group1
+                $ExcludeTagList = "jcagent"
+            }
+            "2" {
+                $IncludeTags = $group2
+                $ExcludeTagList = "jcagent"
+            }
+        }
     }
-} else {
-    $PesterRunPath = "$PSScriptRoot/Tests/*"
 }
-# break
+
+# All the tests are located in /Tests/*
+$PesterRunPath = "$PSScriptRoot/Tests/*"
+
+# Set Pester Configuration
 $configuration = New-PesterConfiguration
 $configuration.Run.Path = $PesterRunPath
 $configuration.Should.ErrorAction = 'Continue'
