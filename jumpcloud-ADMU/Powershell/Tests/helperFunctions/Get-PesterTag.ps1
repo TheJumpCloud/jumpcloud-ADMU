@@ -50,7 +50,7 @@ Function Get-PesterTag {
             }
         }
         if ($all) {
-            Write-Warning "tags found in $Path"
+            # Write-Warning "tags found in $Path"
             $returnTags = [PsCustomObject]@{
                 PSTypename = "pesterTag"
                 Path       = $Path

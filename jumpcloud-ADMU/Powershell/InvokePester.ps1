@@ -3,12 +3,12 @@ param (
     [Parameter()]
     [System.string]
     $ModuleVersionType,
-    [Parameter(ParameterSetName = 'SingleOrgTests', Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 2)]
+    [Parameter(Mandatory = $false)]
     [System.String[]]
     $ExcludeTagList,
-    [Parameter(ParameterSetName = 'SingleOrgTests', Mandatory = $false, ValueFromPipelineByPropertyName = $true, Position = 3)]
+    [Parameter(Mandatory = $false)]
     [System.String[]]
-    $IncludeTagList
+    $IncludeTagList = "*"
 
 )
 $env:ModuleVersionType = $ModuleVersionType
@@ -37,7 +37,7 @@ $tags = New-Object System.Collections.ArrayList
 foreach ($pesterFile in $PesterTestsPaths) {
     $tag = Get-PesterTag $pesterFile
     if ($tag) {
-        $tags.Add($tag)
+        $tags.Add($tag)  | Out-Null
     }
 }
 $uniqueTags = $tags.Tags | Select-Object -Unique
