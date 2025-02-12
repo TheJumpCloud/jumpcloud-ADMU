@@ -4,7 +4,6 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
         $currentPath = $PSScriptRoot # Start from the current script's directory.
         $TargetDirectory = "helperFunctions"
         $FileName = "Import-AllFunctions.ps1"
-        Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
         while ($currentPath -ne $null) {
             $filePath = Join-Path -Path $currentPath $TargetDirectory
             if (Test-Path $filePath) {
@@ -33,8 +32,7 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
             Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($CONNECT_KEY) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
         }
 
-        # Auth to the JumpCloud Module
-        Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $Env:PESTER_ORGID
+        Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
 
         # get the org details
         $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
@@ -99,6 +97,7 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
         $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
         $bind = Set-JCUserToSystemAssociation -JcApiKey '1234122341234234123412341234123412341234' -JcOrgId $OrgID -JcUserID $GeneratedUser.Id
         $bind | Should -Be $false
+        Remove-JcSdkUser -Id $GeneratedUser.Id
     }
 
     It 'Agent not installed' -skip {

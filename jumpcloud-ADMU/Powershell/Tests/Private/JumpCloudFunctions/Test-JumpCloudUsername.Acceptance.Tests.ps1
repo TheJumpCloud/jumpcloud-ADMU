@@ -4,7 +4,6 @@ Describe "Test-JumpCloudUsername Acceptance Tests" -Tag "Acceptance" {
         $currentPath = $PSScriptRoot # Start from the current script's directory.
         $TargetDirectory = "helperFunctions"
         $FileName = "Import-AllFunctions.ps1"
-        Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
         while ($currentPath -ne $null) {
             $filePath = Join-Path -Path $currentPath $TargetDirectory
             if (Test-Path $filePath) {
@@ -17,6 +16,9 @@ Describe "Test-JumpCloudUsername Acceptance Tests" -Tag "Acceptance" {
             $currentPath = Split-Path $currentPath -Parent
         }
         . "$helpFunctionDir\$fileName"
+
+        Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
+
     }
     It 'Valid Username Returns True' {
         # Get the first user
