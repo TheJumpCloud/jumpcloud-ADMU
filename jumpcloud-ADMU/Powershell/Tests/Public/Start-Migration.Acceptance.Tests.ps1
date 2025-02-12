@@ -246,7 +246,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
             }
 
             # Auth to the JumpCloud Module
-            Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $Env:PESTER_ORGID
+            Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
 
             # get the org details
             $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
