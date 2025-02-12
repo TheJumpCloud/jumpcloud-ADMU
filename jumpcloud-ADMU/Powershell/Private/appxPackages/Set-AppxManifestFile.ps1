@@ -20,7 +20,8 @@ Function Set-AppxManifestFile {
         }
 
         if ($appxList) {
-            $appxList | Export-Csv -Path $file -Force
+            $nonNullAppxList = ($appxList | Where-Object { $null -ne $_.InstallLocation })
+            $nonNullAppxList | Export-Csv -Path $file -Force
         }
 
         # Get file data

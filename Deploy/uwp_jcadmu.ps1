@@ -602,11 +602,11 @@ function New-UWPForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Full Screen App"
+        Title="ADMU UWP"
         Height="Auto"
         Width="Auto"
-        WindowState="Normal"
-        WindowStyle="SingleBorderWindow"
+        WindowState="Maximized"
+        WindowStyle="None"
         Topmost="True">
     <Grid>
         <Grid.RowDefinitions>
@@ -781,11 +781,11 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
             $appxSuccessCounter = 0
             foreach ($item in $appxList) {
                 try {
-                    Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml"
+                    Add-AppxPackage -DisableDevelopmentMode -Register -ForceApplicationShutdown "$($item.InstallLocation)\AppxManifest.xml"
                     "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                     $appxSuccessCounter++
                 } catch {
-                    "Error registering $($appxList[$i].InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                    "Error registering $($item.InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                 }
             }
             "Appx Package Registration Complete" | Out-File -FilePath $logFile -Encoding UTF8 -Append
