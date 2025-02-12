@@ -65,7 +65,7 @@ if ($env:CI) {
                 $group2 += $remainingTags[$i]
             }
         }
-
+        Write-Host "Group 1 Tags: $group1"
         switch ($env:job_group) {
             "0" {
                 $IncludeTags = "installjc"
