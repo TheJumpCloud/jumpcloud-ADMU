@@ -34,6 +34,10 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
 
         Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
 
+        # mock windows Drive in CI to reflect install location
+        if ($env:CI) {
+            Mock Get-WindowsDrive { return "C:" }
+        }
         # get the org details
         $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
         $OrgName = "$($OrgSelection[1])"

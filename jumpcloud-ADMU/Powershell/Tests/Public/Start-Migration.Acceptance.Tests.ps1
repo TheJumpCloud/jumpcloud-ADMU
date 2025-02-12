@@ -1,4 +1,4 @@
-Describe "Start-Migration Acceptance Tests" {
+Describe "Start-Migration Tests" -Tag "Migration Parameters" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
@@ -20,7 +20,7 @@ Describe "Start-Migration Acceptance Tests" {
         # import the init user function:
         . "$helpFunctionDir\Initialize-TestUser.ps1"
     }
-    Context "Migration Scenarios" -Tag "Migration Parameters" {
+    Context "Migration Scenarios" {
         BeforeEach {
             # sample password
             $tempPassword = "Temp123!"
@@ -205,7 +205,30 @@ Describe "Start-Migration Acceptance Tests" {
             Remove-LocalUserProfile -username $userToMigrateTo
         }
     }
-    Context "JumpCloud Agent Required Migrations" -Tag "InstallJC" {
+}
+Describe "Start-Migration Tests" -Tag "InstallJC" {
+    BeforeAll {
+        # import all functions
+        $currentPath = $PSScriptRoot # Start from the current script's directory.
+        $TargetDirectory = "helperFunctions"
+        $FileName = "Import-AllFunctions.ps1"
+        while ($currentPath -ne $null) {
+            $filePath = Join-Path -Path $currentPath $TargetDirectory
+            if (Test-Path $filePath) {
+                # File found! Return the full path.
+                $helpFunctionDir = $filePath
+                break
+            }
+
+            # Move one directory up.
+            $currentPath = Split-Path $currentPath -Parent
+        }
+        . "$helpFunctionDir\$fileName"
+
+        # import the init user function:
+        . "$helpFunctionDir\Initialize-TestUser.ps1"
+    }
+    Context "JumpCloud Agent Required Migrations" {
         BeforeAll {
             # for these tests, the jumpCloud agent needs to be installed:
             $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
