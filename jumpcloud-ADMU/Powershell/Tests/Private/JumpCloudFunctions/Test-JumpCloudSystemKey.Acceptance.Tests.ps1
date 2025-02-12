@@ -1,5 +1,6 @@
 Describe "Test-JumpCloudSystemKey Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
+        Write-Host "#####Starting Test-JumpCloudSystemKey Acceptance Tests"
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
         $TargetDirectory = "helperFunctions"
@@ -24,7 +25,7 @@ Describe "Test-JumpCloudSystemKey Acceptance Tests" -Tag "Acceptance" {
     }
     It "Should return true when the the jcagent.conf file exists and has a system key" {
         # Add acceptance test logic and assertions (against a real system)
-
+        Write-Host "#####Testing for jcagent.conf file"
         Test-JumpCloudSystemKey -WindowsDrive Get-WindowsDrive  | Should -Be $true
     }
     It "Should return false when the the jcagent.conf does not exist" {
