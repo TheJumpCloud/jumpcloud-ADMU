@@ -65,7 +65,6 @@ if ($env:CI) {
                 $group2 += $remainingTags[$i]
             }
         }
-        Write-Host "Group 1 Tags: $group1"
         switch ($env:job_group) {
             "0" {
                 $IncludeTags = "installjc"
@@ -104,6 +103,7 @@ $configuration.CodeCoverage.OutputPath = ($PesterResultsFileXmlDir + 'coverage.x
 $configuration.testResult.OutputPath = ($PesterResultsFileXmlDir + 'results.xml')
 Write-Host ("[RUN COMMAND] Invoke-Pester -Path:('$PesterRunPath') -TagFilter:('$($IncludeTags -join "','")') -ExcludeTagFilter:('$($ExcludeTagList -join "','")') -PassThru") -BackgroundColor:('Black') -ForegroundColor:('Magenta')
 
+Write-Host "-------------------------- $Configuration"
 Invoke-Pester -configuration $configuration
 
 $PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmlDir)")).FullName | Where-Object { $_ -match "results.xml" }
