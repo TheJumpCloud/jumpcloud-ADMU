@@ -102,9 +102,8 @@ $configuration.Filter.ExcludeTag = $ExcludeTagList
 $configuration.CodeCoverage.OutputPath = ($PesterResultsFileXmlDir + 'coverage.xml')
 $configuration.testResult.OutputPath = ($PesterResultsFileXmlDir + 'results.xml')
 Write-Host ("[RUN COMMAND] Invoke-Pester -Path:('$PesterRunPath') -TagFilter:('$($IncludeTags -join "','")') -ExcludeTagFilter:('$($ExcludeTagList -join "','")') -PassThru") -BackgroundColor:('Black') -ForegroundColor:('Magenta')
-# Write output the content of the configuration object
-$configuration | Format-List | Out-String | Write-Host -BackgroundColor:('Black') -ForegroundColor:('Cyan')
 
+Write-Host "-------------------------- $Configuration"
 Invoke-Pester -configuration $configuration
 
 $PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmlDir)")).FullName | Where-Object { $_ -match "results.xml" }

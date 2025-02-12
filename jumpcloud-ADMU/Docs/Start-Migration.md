@@ -18,12 +18,12 @@ Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPass
  [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
  [-AutobindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-SetDefaultWindowsUser <Boolean>]
  [-AdminDebug <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>]
- [-ValidateUserShellFolder <Boolean>] [<CommonParameters>]
+ [-ValidateUserShellFolder <Boolean>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
 ### form
 ```
-Start-Migration [-inputObject <Object>] [<CommonParameters>]
+Start-Migration [-inputObject <Object>] [-ProgressAction <ActionPreference>] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -315,6 +315,21 @@ After migration, the user may encounter a shared folder error and will need to p
 Type: System.Boolean
 Parameter Sets: cmd
 Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -ProgressAction
+{{ Fill ProgressAction Description }}
+
+```yaml
+Type: System.Management.Automation.ActionPreference
+Parameter Sets: (All)
+Aliases: proga
 
 Required: False
 Position: Named
