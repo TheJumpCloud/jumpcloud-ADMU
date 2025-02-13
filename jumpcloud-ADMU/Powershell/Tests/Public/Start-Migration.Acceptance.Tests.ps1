@@ -1,5 +1,5 @@
 Describe "Start-Migration Tests" -Tag "Migration Parameters" {
-    BeforeAll {
+    BeforeAll "Import Functions" {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
         $TargetDirectory = "helperFunctions"
@@ -21,7 +21,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
         . "$helpFunctionDir\Initialize-TestUser.ps1"
     }
     Context "Migration Scenarios" {
-        BeforeEach {
+        BeforeEach "Test Setup" {
             # sample password
             $tempPassword = "Temp123!"
             # username to migrate
@@ -33,9 +33,9 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
             Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
             # define test case input
             $testCaseInput = @{
-                JumpCloudUserName       = $null
-                SelectedUserName        = $null
-                TempPassword            = $null
+                JumpCloudUserName       = $userToMigrateTo
+                SelectedUserName        = $userToMigrateFrom
+                TempPassword            = $tempPassword
                 LeaveDomain             = $false
                 ForceReboot             = $false
                 UpdateHomePath          = $false
@@ -66,9 +66,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 Register-ScheduledTask "TestTask" -InputObject $task
 
                 # set the $testCaseInput
-                $testCaseInput.JumpCloudUserName = $userToMigrateTo
-                $testCaseInput.SelectedUserName = $userToMigrateFrom
-                $testCaseInput.TempPassword = $tempPassword
+
                 # Migrate the initialized user to the second username
                 { Start-Migration @testCaseInput } | Should -Not -Throw
 
@@ -102,9 +100,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
         Context "Set Logged In User" {
             It "Start-Migration should successfully SET last logged on windows user to migrated user" {
                 # set the $testCaseInput
-                $testCaseInput.JumpCloudUserName = $userToMigrateTo
-                $testCaseInput.SelectedUserName = $userToMigrateFrom
-                $testCaseInput.TempPassword = $tempPassword
+
                 # test that the default username is set
                 $testCaseInput.SetDefaultWindowsUser = $true
                 { Start-Migration @testCaseInput | Out-Null } | Should -Not -Throw
@@ -122,9 +118,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
             }
             It "Start-Migration should NOT SET last logged on windows user to the migrated user if -SetDefaultWindowsUser is false" {
                 # set the $testCaseInput
-                $testCaseInput.JumpCloudUserName = $userToMigrateTo
-                $testCaseInput.SelectedUserName = $userToMigrateFrom
-                $testCaseInput.TempPassword = $tempPassword
+
                 # test that the default username is NOT set
                 $testCaseInput.SetDefaultWindowsUser = $false
 
@@ -146,9 +140,6 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
         Context "Update Home Path" {
             It "Start-Migration should not update a user's home path by default" {
                 # set the $testCaseInput
-                $testCaseInput.JumpCloudUserName = $userToMigrateTo
-                $testCaseInput.SelectedUserName = $userToMigrateFrom
-                $testCaseInput.TempPassword = $tempPassword
                 # do not update the home path
                 $testCaseInput.UpdateHomePath = $false
 
@@ -158,9 +149,6 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
             }
             It "Start-Migration should update a user's home path if the variable is set" {
                 # set the $testCaseInput
-                $testCaseInput.JumpCloudUserName = $userToMigrateTo
-                $testCaseInput.SelectedUserName = $userToMigrateFrom
-                $testCaseInput.TempPassword = $tempPassword
                 # do not update the home path
                 $testCaseInput.UpdateHomePath = $true
 
@@ -168,7 +156,14 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 { Start-Migration @testCaseInput } | Should -Not -Throw
             }
         }
-        AfterEach {
+        Context "General Failure Conditions" {
+            It "Fails when the JumpCloudUsername and Selected username are the same" {
+                # set the $testCaseInput
+                $testCaseInput.JumpCloudUserName = "$ENV:COMPUTERNAME\userToMigrateFrom"
+                { Start-Migration @testCaseInput } | Should -Throw
+            }
+        }
+        AfterEach "Test Cleanup" {
             # Depending on the user in the UserTestingHash, the home path will differ
             if ($testCaseInput.UpdateHomePath) {
                 $UserHome = "C:\Users\$($userToMigrateTo)"
@@ -192,13 +187,16 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
             # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
             $FTAPath = "$($UserHome)\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv"
             $PTAPath = "$($UserHome)\AppData\Local\JumpCloudADMU\protocolTypeAssociations.csv"
+            $appxPath = "$($UserHome)\AppData\Local\JumpCloudADMU\appx_manifest.csv"
             # Check if data exists
             $ftaCsv = Import-Csv $FTAPath
             $ptaCsv = Import-Csv $PTAPath
+            $appxCsv = Import-Csv $appxPath
 
             # Check if csv exists
             Test-Path $FTAPath | Should -Be $true
             Test-Path $PTAPath | Should -Be $true
+            Test-Path $appxPath | Should -Be $true
 
             # remove the users:
             Remove-LocalUserProfile -username $userToMigrateFrom
@@ -207,7 +205,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
     }
 }
 Describe "Start-Migration Tests" -Tag "InstallJC" {
-    BeforeAll {
+    BeforeAll "Import Functions" {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
         $TargetDirectory = "helperFunctions"
@@ -229,7 +227,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
         . "$helpFunctionDir\Initialize-TestUser.ps1"
     }
     Context "JumpCloud Agent Required Migrations" {
-        BeforeAll {
+        BeforeAll "Validate the JumpCloud Agent is installed" {
             # for these tests, the jumpCloud agent needs to be installed:
             $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
             If (-Not $AgentService) {
@@ -257,7 +255,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
             $regex = 'systemKey\":\"(\w+)\"'
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
         }
-        BeforeEach {
+        BeforeEach "Test Setup" {
             # sample password
             $tempPassword = "Temp123!"
             # username to migrate
@@ -292,32 +290,74 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                 New-Item $logPath -Force -ItemType File
             }
         }
-        It "With the agent already installed, migration should associate a JumpCloud user to the device when the 'autobindJCUser' parameter is used" {
-            # Add acceptance test logic and assertions (against a real system)
-            # test if the user exists already
-            $users = Get-JcSdkUser
-            if ("$($userToMigrateTo)" -in $users.Username) {
-                $existing = $users | Where-Object { $_.username -eq "$($userToMigrateTo)" }
-                Write-Host "Found JumpCloud User, $($existing.Id) removing..."
-                Remove-JcSdkUser -Id $existing.Id
+        Context "With the JumpCloud Agent already installed" {
+            Context "Successful Migration" {
+                BeforeEach "Remove the JumpCloud user/ Generate the user if they exist" {
+                    # test if the user exists already
+                    $users = Get-JcSdkUser
+                    if ("$($userToMigrateTo)" -in $users.Username) {
+                        $existing = $users | Where-Object { $_.username -eq "$($userToMigrateTo)" }
+                        Write-Host "Found JumpCloud User, $($existing.Id) removing..."
+                        Remove-JcSdkUser -Id $existing.Id
+                    }
+                    # create the user
+                    $GeneratedUser = New-JcSdkUser -Email:("$($userToMigrateTo)@jumpcloudadmu.com") -Username:("$($userToMigrateTo)") -Password:("$($user.password)")
+                }
+                It "Associates a JumpCloud user using 'AutoBindJCUser'" {
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutobindJCUser = $true
+                    # Migrate the initialized user to the second username
+                    { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                    # get the system association:
+                    $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                    # the system should be associated to the user
+                    $association | Should -not -BeNullOrEmpty
+                    # the association should NOT be sudo enabled
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $false
+
+                }
+                It "Associates a JumpCloud user as 'admin' using 'AutoBindJCUser'" {
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutobindJCUser = $true
+                    # for this test, associate the user as an Admin
+                    $testCaseInput.BindAsAdmin = $true
+                    # Migrate the initialized user to the second username
+                    { Start-Migration @testCaseInput } | Should -Not -Throw
+                    # get the system association:
+                    $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                    # the system should be associated to the user
+                    $association | Should -not -BeNullOrEmpty
+                    # the association should be sudo enabled
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
+                }
+                AfterEach {
+                    Remove-JcSdkUser -Id $GeneratedUser.Id
+                }
             }
-            # create the user
-            $GeneratedUser = New-JcSdkUser -Email:("$($userToMigrateTo)@jumpcloudadmu.com") -Username:("$($userToMigrateTo)") -Password:("$($user.password)")
+            Context "Fail to Migrate" {
+                It "Should Throw when a 'JumpCloud User' does not exist" {
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutobindJCUser = $true
+                    # Migrate the initialized user to the second username
+                    { Start-Migration @testCaseInput } | Should -Throw
 
-            # set the $testCaseInput
-            $testCaseInput.JumpCloudUserName = $userToMigrateTo
-            $testCaseInput.SelectedUserName = $userToMigrateFrom
-            $testCaseInput.TempPassword = $tempPassword
-            $testCaseInput.AutobindJCUser = $true
-            # Migrate the initialized user to the second username
-            { Start-Migration @testCaseInput } | Should -Not -Throw
-
-            # get the system association:
-            $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
-            # the system should be associated to the user
-            $association | Should -not -BeNullOrEmpty
+                    # get the system association:
+                    $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                    # the system should NOT be associated to the user
+                    $association | Should -BeNullOrEmpty
+                }
+            }
         }
-
     }
 
     # Add more acceptance tests as needed
