@@ -1,5 +1,6 @@
 Describe "Start-Migration Tests" -Tag "Migration Parameters" {
-    BeforeAll "Import Functions" {
+    # Import Functions
+    BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
         $TargetDirectory = "helperFunctions"
@@ -21,7 +22,8 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
         . "$helpFunctionDir\Initialize-TestUser.ps1"
     }
     Context "Migration Scenarios" {
-        BeforeEach "Test Setup" {
+        # Test Setup
+        BeforeEach {
             # sample password
             $tempPassword = "Temp123!"
             # username to migrate
@@ -163,7 +165,8 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 { Start-Migration @testCaseInput } | Should -Throw
             }
         }
-        AfterEach "Test Cleanup" {
+        # Test Cleanup
+        AfterEach {
             # Depending on the user in the UserTestingHash, the home path will differ
             if ($testCaseInput.UpdateHomePath) {
                 $UserHome = "C:\Users\$($userToMigrateTo)"
@@ -205,7 +208,8 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
     }
 }
 Describe "Start-Migration Tests" -Tag "InstallJC" {
-    BeforeAll "Import Functions" {
+    # Import Functions
+    BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
         $TargetDirectory = "helperFunctions"
@@ -227,7 +231,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
         . "$helpFunctionDir\Initialize-TestUser.ps1"
     }
     Context "JumpCloud Agent Required Migrations" {
-        BeforeAll "Validate the JumpCloud Agent is installed" {
+        # Validate the JumpCloud Agent is installed
+        BeforeAll {
             # for these tests, the jumpCloud agent needs to be installed:
             $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
             If (-Not $AgentService) {
@@ -255,7 +260,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
             $regex = 'systemKey\":\"(\w+)\"'
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
         }
-        BeforeEach "Test Setup" {
+        # Test Setup
+        BeforeEach {
             # sample password
             $tempPassword = "Temp123!"
             # username to migrate
@@ -292,7 +298,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
         }
         Context "With the JumpCloud Agent already installed" {
             Context "Successful Migration" {
-                BeforeEach "Remove the JumpCloud user/ Generate the user if they exist" {
+                # Remove the JumpCloud user/ Generate the user if they exist
+                BeforeEach {
                     # test if the user exists already
                     $users = Get-JcSdkUser
                     if ("$($userToMigrateTo)" -in $users.Username) {
@@ -337,6 +344,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # the association should be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
                 }
+                # remove the users
                 AfterEach {
                     Remove-JcSdkUser -Id $GeneratedUser.Id
                 }
