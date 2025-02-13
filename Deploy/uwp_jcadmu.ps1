@@ -684,6 +684,14 @@ function New-UWPForm {
     $psCommand.Runspace = $newRunspace
     $data = $psCommand.BeginInvoke()
 
+    # If synchash is closed, close the runspace
+    if ($SyncHash.Percent -eq 100) {
+        $syncHash.Window.Close()
+        [System.Windows.Forms.Application]::Exit()
+        $syncHash.Runspace.Close()
+        $syncHash.Runspace.Dispose()
+    }
+
     Register-ObjectEvent -InputObject $SyncHash.Runspace -EventName 'AvailabilityChanged' -Action {
         if ($Sender.RunspaceAvailability -eq "Available") {
             $Sender.CloseAsync()
@@ -694,6 +702,15 @@ function New-UWPForm {
 }
 
 
+# Hide the powershell console window
+$hwnd = (Get-Process -Id $pid).MainWindowHandle
+$signature = @"
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindow(int hWnd, int nCmdShow);
+"@
+
+$signature = Add-Type -MemberDefinition $signature -Name Win32ShowWindow -Namespace Win32Functions -PassThru
+$signature::ShowWindow($hwnd, 0) # 0 = SW_HIDE
 
 $ADMUKEY = "HKCU:\SOFTWARE\JCADMU"
 if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
@@ -703,17 +720,17 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     # init log
     Write-ToLog -Message ('########### Begin UWP App ###########')
     # set files:
-    $appxmanifest = ($HOME + '\AppData\Local\JumpCloudADMU\appx_manifest.csv')
-    $ftamanifest = ($HOME + '\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv')
+    $appxManifest = ($HOME + '\AppData\Local\JumpCloudADMU\appx_manifest.csv')
+    $ftaManifest = ($HOME + '\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv')
     $ptaManifest = ($HOME + '\AppData\Local\JumpCloudADMU\protocolTypeAssociations.csv')
     # import CSVs
     try {
-        $ftaList = Import-CSV $appxmanifest
+        $appxList = Import-CSV $appxManifest
     } catch {
         $appxList = $null
     }
     try {
-        $ftaList = Import-CSV $ftamanifest
+        $ftaList = Import-CSV $ftaManifest
     } catch {
         $ftaList = $null
     }
@@ -728,7 +745,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     $ptaOutput = @()
 
     Write-ToLog -Message ("Begin Appx File Registration")
-    $appxList = Import-CSV "$HOME\AppData\Local\JumpCloudADMU\appx_manifest.csv"
     Write-ToLog -Message ("There are $($appxList.count) apps to be registered")
     $logFile = "$HOME\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
     $homepath = $HOME
@@ -737,6 +753,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
         Remove-Item $logFile -Force
     }
 
+    # TODO: IF appx is null do not start
     $j = Start-Job -ScriptBlock {
         param($homepath)
 
@@ -777,6 +794,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
             $appxCount = $appxList.Count
             "There are $($appxCount) apps to be registered" | Out-File -FilePath $logFile -Encoding UTF8 -Append
 
+
             #success Counter
             $appxSuccessCounter = 0
             foreach ($item in $appxList) {
@@ -795,35 +813,69 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
         Write-ToLog -Message ("Appx Package Registration Complete.  $appxSuccessCounter/$appxCount apps registered successfully.")
     } -ArgumentList $homepath
 
+    $appxCount = $appxList.Count
+    $ftaCount = $ftaList.Count
+    $ptaCount = $ptaList.Count
+    Write-ToLog -Message ("There are $($appxCount) apps to be registered")
+    Write-ToLog -Message ("There are $($ftaCount) file type associations to be registered")
+    Write-ToLog -Message ("There are $($ptaCount) protocol type associations to be registered")
     # Monitor progress
     $UWPForm.Text = "Registering Default Windows Apps"
+    # While the job is running, update the progress bar else exit the job
+    $UWPForm.Percent = 0
+    $allListsCount = $appxCount + $ftaCount + $ptaCount
+    $i = 0
+
     while ($j.State -ne 'Completed') {
         if (Test-Path "$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") {
             $lines = [System.IO.File]::ReadAllLines("$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt")
-            $UWPForm.Percent = [Math]::Round([Math]::Ceiling(($($lines.count) / $($appxList.count)) * 100))
-        } else {
-            $UWPForm.Percent = $percent
+            # If $lines.count is greater than or equal to appxCount
+            if ($lines.count -le $appxCount) {
+                $i = $lines.count
+                $percent = [Math]::Round([Math]::Ceiling(($i / $allListsCount) * 100))
+                $UWPForm.Percent = $percent
+            }
+
+            # Acquire the lock before reading the shared variable
+            # $textLabel.Text = "Registering Default Windows Apps: $percent%";
+            Start-Sleep -Seconds 1
         }
-        # Acquire the lock before reading the shared variable
-        # $textLabel.Text = "Registering Default Windows Apps: $percent%";
-        Start-Sleep -Seconds 1
     }
+
+
 
     # Get the final result (if needed)
     Receive-Job -Job $j
     Write-Host "Job started.  wait for job..."
     $j | Wait-Job
-    Write-Host "Job complete..."
+
+
+    # If the job is completed, close the form
+    if ($j.State -eq 'Completed') {
+        # Close the job
+        $j | Remove-Job
+    }
+
+
+    Write-ToLog -Message ("There are $($allListsCount) items to be registered")
+    # $i = 0
+    # foreach ($item in $appxList) {
+    #     $i += 1
+    #     $percent = [Math]::Round([Math]::Ceiling(($i / $allListsCount) * 100))
+    #     $UWPForm.Percent = $percent
+    # }
+
 
     #Register the file type associations using the Set-FTA function
     # FTA count
-    $ftaCount = $ftaList.Count
+    $i = $appxCount
     $ftaSuccessCounter = 0
     $UWPForm.Text = "Registering File Type Associations"
 
+    # TODO: IF NULL
     foreach ($item in $ftaList) {
         $i += 1
-        $percent = [Math]::Round([Math]::Ceiling(($i / $ftaList.count) * 100))
+        $percent = [Math]::Round([Math]::Ceiling(($i / $allListsCount) * 100))
         $UWPForm.Percent = $percent
         # Update the textLabel
         # $textLabel.Refresh();
@@ -846,13 +898,14 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     Write-ToLog -Message ("FTA Registration Complete.  $ftaSuccessCounter/$ftaCount file type associations registered successfully.")
 
     # Register the protocol associations using the Set-PTA function
-    $ptaCount = $ptaList.Count
+
     $ptaSuccessCounter = 0
     $UWPForm.Text = "Registering Protocol Type Associations"
 
+    # TODO: IF NULL
     foreach ($item in $ptaList) {
         $i += 1
-        $percent = [Math]::Round([Math]::Ceiling(($i / $ptaList.count) * 100))
+        $percent = [Math]::Round([Math]::Ceiling(($i / $allListsCount) * 100))
         $UWPForm.Percent = $percent
         # Update the textLabel
         Write-ToLog -Message ("Registering PTA Extension: $($item.extension) ProgramID: $($item.programId)")
@@ -869,7 +922,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
 
     Write-ToLog -Message ("PTA Registration Complete.  $ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
     # Log the pta/appx/fta registration completion
-    Write-ToLog -Message ("$appxSuccessCounter/$appxCount apps registered successfully.")
     Write-ToLog -Message ("$ftaSuccessCounter/$ftaCount file type associations registered successfully.")
     Write-ToLog -Message ("$ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
 
