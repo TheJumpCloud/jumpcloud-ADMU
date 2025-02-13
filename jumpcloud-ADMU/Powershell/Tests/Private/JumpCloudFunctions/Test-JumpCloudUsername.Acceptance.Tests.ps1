@@ -1,5 +1,6 @@
 Describe "Test-JumpCloudUsername Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
+        Write-Host "#####Starting Test-JumpCloudUsername Acceptance Tests"
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
         $TargetDirectory = "helperFunctions"
