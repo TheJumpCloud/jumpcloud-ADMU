@@ -16,6 +16,8 @@ Describe "Install-JumpCloudAgent Acceptance Tests" -Tag "Acceptance", "InstallJC
             $currentPath = Split-Path $currentPath -Parent
         }
         . "$helpFunctionDir\$fileName"
+
+        Write-Host "Starting Install-JumpCloudAgent Acceptance Tests"
     }
     It "Install and start the JumpCloud Agent" {
         # set install variables
@@ -26,6 +28,7 @@ Describe "Install-JumpCloudAgent Acceptance Tests" -Tag "Acceptance", "InstallJC
         $AGENT_BINARY_NAME = "jumpcloud-agent.exe"
         $CONNECT_KEY = $env:PESTER_CONNECTKEY
 
+        Write-Host "#######Installing JumpCloud Agent"
         # now go install the agent
         Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($CONNECT_KEY) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
 
@@ -33,7 +36,15 @@ Describe "Install-JumpCloudAgent Acceptance Tests" -Tag "Acceptance", "InstallJC
         Test-path $AGENT_INSTALLER_PATH | Should -Be $true
         # the service should be running
         Get-Service -Name "jumpcloud-agent" | Should -Not -Be $null
+        Test-JumpCloudSystemKey -WindowsDrive Get-WindowsDrive -force  | Should -Be $true
     }
+    # It "Should return true when the the jcagent.conf file exists and has a system key" {
+    #     # Add acceptance test logic and assertions (against a real system)
+    #     Write-Host "#####Testing for jcagent.conf file"
+    #     $test = Get-WindowsDrive
+    #     Write-Host "#####Testing for jcagent.conf file on $test"
+    #     Test-JumpCloudSystemKey -WindowsDrive Get-WindowsDrive -force  | Should -Be $true
+    # }
 
     # Add more acceptance tests as needed
 }
