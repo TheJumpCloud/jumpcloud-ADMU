@@ -23,14 +23,6 @@ Describe "Test-JumpCloudSystemKey Acceptance Tests" -Tag "Acceptance" {
             Mock Get-WindowsDrive { return "C:" }
         }
     }
-    ### Moved to Install-JumpCloudAgent Acceptance Tests
-    # It "Should return true when the the jcagent.conf file exists and has a system key" {
-    #     # Add acceptance test logic and assertions (against a real system)
-    #     Write-Host "#####Testing for jcagent.conf file"
-    #     $test = Get-WindowsDrive
-    #     Write-Host "#####Testing for jcagent.conf file on $test"
-    #     Test-JumpCloudSystemKey -WindowsDrive Get-WindowsDrive -force  | Should -Be $true
-    # }
     It "Should return false when the the jcagent.conf does not exist" {
         # Add acceptance test logic and assertions (against a real system)
         Test-JumpCloudSystemKey -WindowsDrive "D:" -force | Should -Be $false

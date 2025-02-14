@@ -24,6 +24,7 @@ Describe "Install-JumpCloudAgent Acceptance Tests" -Tag "Acceptance", "InstallJC
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
+        Write-Host "AGENT_CONF_PATH: $AGENT_CONF_PATH"
         $AGENT_INSTALLER_PATH = "C:\Windows\Temp\jcagent-msi-signed.msi"
         $AGENT_BINARY_NAME = "jumpcloud-agent.exe"
         $CONNECT_KEY = $env:PESTER_CONNECTKEY
@@ -36,7 +37,7 @@ Describe "Install-JumpCloudAgent Acceptance Tests" -Tag "Acceptance", "InstallJC
         Test-path $AGENT_INSTALLER_PATH | Should -Be $true
         # the service should be running
         Get-Service -Name "jumpcloud-agent" | Should -Not -Be $null
-        Test-JumpCloudSystemKey -WindowsDrive Get-WindowsDrive -force  | Should -Be $true
+        Test-JumpCloudSystemKey -WindowsDrive "D:" -force  | Should -Be $true
     }
     # It "Should return true when the the jcagent.conf file exists and has a system key" {
     #     # Add acceptance test logic and assertions (against a real system)
