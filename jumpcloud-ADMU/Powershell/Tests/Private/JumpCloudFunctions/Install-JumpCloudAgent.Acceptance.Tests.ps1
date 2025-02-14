@@ -35,9 +35,11 @@ Describe "Install-JumpCloudAgent Acceptance Tests" -Tag "Acceptance", "InstallJC
 
         # the agent should be downloaded
         Test-path $AGENT_INSTALLER_PATH | Should -Be $true
+        $WindowsDrive = Get-WindowsDrive
+        Write-Host "Windows Drive: $WindowsDrive"
         # the service should be running
         Get-Service -Name "jumpcloud-agent" | Should -Not -Be $null
-        Test-JumpCloudSystemKey -WindowsDrive "D:" -force  | Should -Be $true
+        Test-JumpCloudSystemKey -WindowsDrive "C:" -force  | Should -Be $true
     }
     # It "Should return true when the the jcagent.conf file exists and has a system key" {
     #     # Add acceptance test logic and assertions (against a real system)
