@@ -16,13 +16,14 @@ Describe "Test-DATFilePermission Acceptance Tests" -Tag "Acceptance" {
             $currentPath = Split-Path $currentPath -Parent
         }
         . "$helpFunctionDir\$fileName"
+        . "$helpFunctionDir\initialize-TestUser.ps1"
     }
 
     Context 'Validates that the  Registry Hive Permissions are correct, given a username' {
         It 'Should return true when a users ntfs permissions are correct' {
             $datUserTrue = "ADMU_dat_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $password = '$T#st1234'
-            InitUser -UserName $datUserTrue -Password $Password
+            Initialize-TestUser -UserName $datUserTrue -Password $Password
 
             # Test NTFS NTUser dat permissions
             $NTUser, $permissionHash = Test-DATFilePermission -Path "C:\Users\$datUserTrue\NTUSER.DAT" -username $datUserTrue -type 'ntfs'
@@ -52,7 +53,7 @@ Describe "Test-DATFilePermission Acceptance Tests" -Tag "Acceptance" {
         It 'Should return false when a users ntfs permissions are correct' {
             $datUserFalse = "ADMU_dat_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $password = '$T#st1234'
-            InitUser -UserName $datUserFalse -Password $Password
+            Initialize-TestUser -UserName $datUserFalse -Password $Password
             $filePaths = @("C:\Users\$datUserFalse\AppData\Local\Microsoft\Windows\UsrClass.dat", "C:\Users\$datUserFalse\NTUSER.DAT")
             $requiredAccounts = @("SYSTEM", "$datUserFalse")
             # NTFS Validations:
