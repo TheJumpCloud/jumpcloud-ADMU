@@ -206,7 +206,9 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
 
             # remove the users:
             Remove-LocalUserProfile -username $userToMigrateFrom
-            Remove-LocalUserProfile -username $userToMigrateTo
+            if (-Not $testFailureExpected) {
+                Remove-LocalUserProfile -username $userToMigrateTo
+            }
         }
     }
 }
