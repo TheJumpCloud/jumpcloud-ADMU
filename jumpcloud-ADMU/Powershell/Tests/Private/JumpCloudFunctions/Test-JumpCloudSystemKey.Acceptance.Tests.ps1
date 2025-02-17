@@ -16,8 +16,6 @@ Describe "Test-JumpCloudSystemKey Acceptance Tests" -Tag "Acceptance" {
             $currentPath = Split-Path $currentPath -Parent
         }
         . "$helpFunctionDir\$fileName"
-        Write-Host "#####Importing helper functions from $helpFunctionDir\$fileName"
-
         # mock windows Drive in CI to reflect install location
         if ($env:CI) {
             Mock Get-WindowsDrive { return "C:" }
