@@ -598,6 +598,20 @@ function New-UWPForm {
     $syncHash.base64JCLogo = DecodeBase64Image -ImageBase64 $newJCLogoBase64
     $synchash.closeWindow = $false
 
+    # optionally run this app in windowed view by switching the variable below to: $false
+    $buildFullScreen = $true
+    switch ($buildFullScreen) {
+        $true {
+            Write-Verbose "Running UWP in fullscreen"
+            $windowState = "Maximized"
+            $windowStyle = "None"
+        }
+        $false {
+            Write-Verbose "not running in fullscreen"
+            $windowState = "Normal"
+            $windowStyle = "SingleBorderWindow"
+        }
+    }
     $syncHash.XAML = @"
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -605,8 +619,8 @@ function New-UWPForm {
         Title="ADMU UWP"
         Height="Auto"
         Width="Auto"
-        WindowState="Maximized"
-        WindowStyle="None"
+        WindowState="$windowState"
+        WindowStyle="$windowStyle"
         Topmost="True">
     <Grid>
         <Grid.RowDefinitions>
@@ -828,7 +842,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
 
     while ($j.State -ne 'Completed') {
         if (Test-Path "$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") {
-            $lines = [System.IO.File]::ReadAllLines("$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt")
+            $lines = Get-Content -Path:("$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") -Raw
             # If $lines.count is greater than or equal to appxCount
             if ($lines.count -le $appxCount) {
                 $i = $lines.count
@@ -846,7 +860,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
 
     # Get the final result (if needed)
     Receive-Job -Job $j
-    Write-Host "Job started.  wait for job..."
+    Write-Verbose "Job started.  wait for job..."
     $j | Wait-Job
 
 

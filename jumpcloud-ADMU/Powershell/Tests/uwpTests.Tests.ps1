@@ -9,11 +9,12 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
         . $helperFunctionsPath
         $uwpPath = "$($PSScriptRoot)/../../../Deploy/uwp_jcadmu.ps1"
     }
-    Context -Name "UWP should run and do the things" {
+    Context -Name "UWP Application runs and processes appx/ fta & pta files" {
         BeforeEach {
             $currentUserSID = (Get-LocalUser -Name $env:USERNAME | Select-Object SID).SID
             write-host "userSID: $currentUserSID"
             $appxList = Get-AppxPackage | Select-Object -First 5 | Select-Object InstallLocation
+            # $appxList = Get-AppxListByUser -SID $currentUserSID
             $profileImagePath = $HOME
             Set-AppxManifestFile -profileImagePath $profileImagePath -appxList $appxList
 
@@ -48,7 +49,7 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
                 $key.Close()
             }
         }
-        It -Name "Tests that the files are there" {
+        It -Name "Tests that the individual logs are generated post uwp run" {
 
             Get-Item "$path\fileTypeAssociations.csv" | should -not -BeNullOrEmpty
             Get-Item "$path\protocolTypeAssociations.csv" | should -not -BeNullOrEmpty
