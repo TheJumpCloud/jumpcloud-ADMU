@@ -163,6 +163,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 # set the $testCaseInput
                 $testCaseInput.JumpCloudUserName = "$ENV:COMPUTERNAME\userToMigrateFrom"
                 { Start-Migration @testCaseInput } | Should -Throw
+                $testFailureExpected = $true
             }
         }
         # Test Cleanup
@@ -173,37 +174,35 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
             } else {
                 $UserHome = "C:\Users\$($userToMigrateFrom)"
             }
-            # Read the log and get date data
-            $regex = [regex]"ntuser_original_([0-9]+-[0-9]+-[0-9]+-[0-9]+[0-9]+[0-9]+)"
-            $match = Select-String -Path:($logPath) -Pattern:($regex)
-            # Get the date appended to the backup registry files:
-            if ($match.Matches.Groups) {
+            if (-Not $testFailureExpected) {
+                # Read the log and get date data
+                $regex = [regex]"ntuser_original_([0-9]+-[0-9]+-[0-9]+-[0-9]+[0-9]+[0-9]+)"
+                $match = Select-String -Path:($logPath) -Pattern:($regex)
+                # Get the date appended to the backup registry files:
                 $dateMatch = $match.Matches.Groups[1].Value
-            }
-            # User Home Directory Should Exist
-            Test-Path "$UserHome" | Should -Be $true
-            # Backup Registry & Registry Files Should Exist
-            # Timestamp from log should exist on registry backup files
-            if ($match.Matches.Groups) {
+                # User Home Directory Should Exist
+                Test-Path "$UserHome" | Should -Be $true
+                # Backup Registry & Registry Files Should Exist
+                # Timestamp from log should exist on registry backup files
                 Test-Path "$UserHome/NTUSER_original_$dateMatch.DAT" | Should -Be $true
+                Test-Path "$UserHome/NTUSER.DAT" | Should -Be $true
+                Test-Path "$UserHome/AppData/Local/Microsoft/Windows/UsrClass.DAT" | Should -Be $true
+                Test-Path "$UserHome/AppData/Local/Microsoft/Windows/UsrClass_original_$dateMatch.DAT" | Should -Be $true
+
+                # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
+                $FTAPath = "$($UserHome)\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv"
+                $PTAPath = "$($UserHome)\AppData\Local\JumpCloudADMU\protocolTypeAssociations.csv"
+                $appxPath = "$($UserHome)\AppData\Local\JumpCloudADMU\appx_manifest.csv"
+                # Check if data exists
+                $ftaCsv = Import-Csv $FTAPath
+                $ptaCsv = Import-Csv $PTAPath
+                $appxCsv = Import-Csv $appxPath
+
+                # Check if csv exists
+                Test-Path $FTAPath | Should -Be $true
+                Test-Path $PTAPath | Should -Be $true
+                Test-Path $appxPath | Should -Be $true
             }
-            Test-Path "$UserHome/NTUSER.DAT" | Should -Be $true
-            Test-Path "$UserHome/AppData/Local/Microsoft/Windows/UsrClass.DAT" | Should -Be $true
-            Test-Path "$UserHome/AppData/Local/Microsoft/Windows/UsrClass_original_$dateMatch.DAT" | Should -Be $true
-
-            # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
-            $FTAPath = "$($UserHome)\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv"
-            $PTAPath = "$($UserHome)\AppData\Local\JumpCloudADMU\protocolTypeAssociations.csv"
-            $appxPath = "$($UserHome)\AppData\Local\JumpCloudADMU\appx_manifest.csv"
-            # Check if data exists
-            $ftaCsv = Import-Csv $FTAPath
-            $ptaCsv = Import-Csv $PTAPath
-            $appxCsv = Import-Csv $appxPath
-
-            # Check if csv exists
-            Test-Path $FTAPath | Should -Be $true
-            Test-Path $PTAPath | Should -Be $true
-            Test-Path $appxPath | Should -Be $true
 
             # remove the users:
             Remove-LocalUserProfile -username $userToMigrateFrom
