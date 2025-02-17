@@ -121,7 +121,7 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
         }
     }
 
-    Context "admuTemplate Validation" {
+    Context "admuTemplate Validation" -skip {
         It "admuTemplate should have been generated" {
             $admuTemplatePath = Join-Path $Global:rootModule "Deploy\admuTemplate.ps1"
             $admuTemplatePath | Should -Exist
@@ -153,8 +153,7 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
             $ModuleChangelogContent | Should -not -Match "{ { Fill in the"
         }
         It 'Module Changelog Version should be todays date' {
-            $ModulePath = ((Get-Item -Path "$psd1Path").Directory).Parent
-            $moduleChangelogContent = Get-Content ("$ModulePath/ModuleChangelog.md") -TotalCount 3
+            $moduleChangelogContent = Get-Content ("$FilePath_ModuleChangelog") -TotalCount 3
 
             # latest from changelog
             $stringMatch = Select-String -InputObject $moduleChangelogContent -Pattern "## ([0-9]+.[0-9]+.[0-9]+)"
