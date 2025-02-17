@@ -1,4 +1,4 @@
-Describe -Name "UWP Tests" {
+Describe -Name "UWP Tests" -Tag "Acceptance" {
     BeforeAll {
 
         # Output the root module path
