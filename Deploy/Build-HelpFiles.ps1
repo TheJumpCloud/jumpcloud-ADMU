@@ -12,6 +12,59 @@ If (-not $ADMUGetConfig) {
     . $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 }
 ###########################################################################
+# functions for removing params in markdown
+# modified from source: https://github.com/PowerShell/platyPS/issues/595#issuecomment-1820971702
+function Remove-CommonParameterFromMarkdown {
+    <#
+        .SYNOPSIS
+            Remove a PlatyPS generated parameter block.
+
+        .DESCRIPTION
+            Removes parameter block for the provided parameter name from the markdown file provided.
+
+    #>
+    param(
+        [Parameter(Mandatory)]
+        [string[]]
+        $Path,
+
+        [Parameter(Mandatory = $false)]
+        [string[]]
+        $ParameterName = @('ProgressAction')
+    )
+    $ErrorActionPreference = 'Stop'
+    $Docs = Get-ChildItem -Path $Path -Recurse
+    foreach ($p in $Docs) {
+        Write-Host "[status]Removing ProgressAction from $p"
+        $content = (Get-Content -Path $p -Raw).TrimEnd()
+        $updateFile = $false
+        foreach ($param in $ParameterName) {
+            if (-not ($Param.StartsWith('-'))) {
+                $param = "-$($param)"
+            }
+            # Remove the parameter block
+            $pattern = "(?m)^### $param\r?\n[\S\s]*?(?=#{2,3}?)"
+            $newContent = $content -replace $pattern, ''
+            # Remove the parameter from the syntax block
+            $pattern = " \[$param\s?.*?]"
+            $newContent = $newContent -replace $pattern, ''
+            if ($null -ne (Compare-Object -ReferenceObject $content -DifferenceObject $newContent)) {
+                Write-Verbose "Added $param to $p"
+                # Update file content
+                $content = $newContent
+                $updateFile = $true
+            }
+        }
+        # Save file if content has changed
+        if ($updateFile) {
+            $newContent | Out-File -Encoding utf8 -FilePath $p
+            Write-Verbose "Updated file: $p"
+        }
+    }
+    return
+}
+###########################################################################
+
 Write-Host ('[status]Importing current module: ' + $ModuleName)
 Import-Module ($FilePath_psd1) -Force
 # Install module onto system
@@ -33,6 +86,7 @@ $Functions_Public | ForEach-Object {
         # Write-Host ('Creating: ' + $FunctionName + '.md')
         New-MarkdownHelp  -Command:($FunctionName) -OutputFolder:($FolderPath_Docs) -Force -ExcludeDontShow -OnlineVersionUrl:($GitHubWikiUrl + $FunctionName) -UseFullTypeName
     }
+    Remove-CommonParameterFromMarkdown -Path:($FilePath_Md)
 }
 # Create new ExternalHelp file.
 Write-Host ('[status]Creating new external help file')

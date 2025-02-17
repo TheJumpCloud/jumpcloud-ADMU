@@ -161,7 +161,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
         Context "General Failure Conditions" {
             It "Fails when the JumpCloudUsername and Selected username are the same" {
                 # set the $testCaseInput
-                $testCaseInput.JumpCloudUserName = "$ENV:COMPUTERNAME\userToMigrateFrom"
+                $testCaseInput.JumpCloudUserName = "$ENV:COMPUTERNAME\$userToMigrateFrom"
                 { Start-Migration @testCaseInput } | Should -Throw
                 $testFailureExpected = $true
             }
