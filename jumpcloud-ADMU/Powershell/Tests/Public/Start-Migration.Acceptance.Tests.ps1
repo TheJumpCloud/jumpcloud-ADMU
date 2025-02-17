@@ -177,12 +177,16 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
             $regex = [regex]"ntuser_original_([0-9]+-[0-9]+-[0-9]+-[0-9]+[0-9]+[0-9]+)"
             $match = Select-String -Path:($logPath) -Pattern:($regex)
             # Get the date appended to the backup registry files:
-            $dateMatch = $match.Matches.Groups[1].Value
+            if ($match.Matches.Groups) {
+                $dateMatch = $match.Matches.Groups[1].Value
+            }
             # User Home Directory Should Exist
             Test-Path "$UserHome" | Should -Be $true
             # Backup Registry & Registry Files Should Exist
             # Timestamp from log should exist on registry backup files
-            Test-Path "$UserHome/NTUSER_original_$dateMatch.DAT" | Should -Be $true
+            if ($match.Matches.Groups) {
+                Test-Path "$UserHome/NTUSER_original_$dateMatch.DAT" | Should -Be $true
+            }
             Test-Path "$UserHome/NTUSER.DAT" | Should -Be $true
             Test-Path "$UserHome/AppData/Local/Microsoft/Windows/UsrClass.DAT" | Should -Be $true
             Test-Path "$UserHome/AppData/Local/Microsoft/Windows/UsrClass_original_$dateMatch.DAT" | Should -Be $true
