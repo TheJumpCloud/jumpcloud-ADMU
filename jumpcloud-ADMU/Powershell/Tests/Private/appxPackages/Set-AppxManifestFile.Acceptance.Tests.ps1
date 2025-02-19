@@ -43,5 +43,11 @@ Describe "Set-AppxManifestFile Acceptance Tests" -Tag "Acceptance" {
     }
 
     Context "Error handling" {
+        # Pass in a null value for appxList
+        It "throws an error when appxList is null" {
+            $nullAppxList = $null
+            $profileImagePath = $HOME
+            { Set-AppxManifestFile -appxList $nullAppxList -profileImagePath $HOME } | Should -Throw
+        }
     }
 }

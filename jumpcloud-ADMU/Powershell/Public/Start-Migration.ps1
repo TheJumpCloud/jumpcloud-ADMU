@@ -929,7 +929,12 @@ Function Start-Migration {
             }
 
             $appxList = Get-AppxListByUser -SID $SelectedUserSID
-            Set-AppxManifestFile -appxList $appxList -profileImagePath $newUserProfileImagePath
+            if ($appxList) {
+                Set-AppxManifestFile -appxList $appxList -profileImagePath $newUserProfileImagePath
+            } else {
+                Write-ToLog -Message:('No Appx Packages found for user: ' + $SelectedUserName + ' Appx packages will not be restored.') -Level Warn
+            }
+
 
             # TODO: Test and return non terminating error here if failure
             # $admuTracker.uwpAppXPackages = $true

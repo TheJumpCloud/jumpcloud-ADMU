@@ -668,10 +668,8 @@ function New-UWPForm {
 
             $updateForm = {
                 # Update Progress TextBlock
-                if ($synchash.EndUWP) {
+                if ($syncHash.EndUWP -eq $true) {
                     $SyncHash.ProgressTextBlock.Text = "Account Migration Complete"
-                    $SyncHash.Window.Close()
-                    [System.Windows.Forms.Application]::Exit()
                     Break
                 } else {
                     $SyncHash.ProgressTextBlock.Text = "$($SyncHash.Text): $($SyncHash.Percent)%"
@@ -700,7 +698,7 @@ function New-UWPForm {
     $data = $psCommand.BeginInvoke()
 
     # If synchash is closed, close the runspace
-    if ($SyncHash.Percent -eq 100) {
+    if ($syncHash.EndUWP -eq $true) {
         $syncHash.Window.Close()
         [System.Windows.Forms.Application]::Exit()
         $syncHash.Runspace.Close()
@@ -848,11 +846,10 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                                 "Error registering $($item.InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                             }
                         }
-                        "Appx Package Registration Complete" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                        "Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                     } catch {
                         "A critical error occurred: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                     }
-                    Write-ToLog -Message ("Appx Package Registration Complete.  $appxSuccessCounter/$appxCount apps registered successfully.")
                 } -ArgumentList $homepath
 
                 # Monitor progress
@@ -957,7 +954,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
 
     Write-ToLog -Message ('########### End UWP App ###########')
     $UWPForm.EndUWP = $true
-
 } else {
     Write-ToLog -Message ("The registry key $ADMUKEY does not exist.  The UWP app will not run.")
     exit

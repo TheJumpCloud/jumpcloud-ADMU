@@ -84,6 +84,79 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             $ptaLog | Should -Not -BeNullOrEmpty
             $mainLog | Should -Not -BeNullOrEmpty
         }
+        It "Tests Appx Migrate even either PTA CSV is empty/null" {
+
+            # Remove PTA csv $path\protocolTypeAssociations.csv
+            Remove-Item "$path\protocolTypeAssociations.csv" -Force
+
+            # Call the function
+            . $uwpPath
+
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "Appx Package Registration Complete"
+        }
+        It "Tests PTA Migrate even either FTA CSV is empty/null" {
+
+            # Remove PTA csv $path\protocolTypeAssociations.csv
+            Remove-Item "$path\fileTypeAssociations.csv" -Force
+
+            # Call the function
+            . $uwpPath
+
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "PTA Registration Complete"
+        }
+        It "Tests FTA Migrate even either appx CSV is empty/null" {
+
+            # Remove PTA csv $path\protocolTypeAssociations.csv
+            Remove-Item "$path\appx_manifest.csv" -Force
+
+            # Call the function
+            . $uwpPath
+
+            $mainLog = Get-Content $logPath -Raw
+            $mainLog | Should -Match "FTA Registration Complete"
+        }
+        It "Tests Appx Migrate when both FTA and PTA CSV is empty/null" {
+
+            Remove-Item "$path\protocolTypeAssociations.csv" -Force
+            Remove-Item "$path\fileTypeAssociations.csv" -Force
+
+            # Call the function
+            . $uwpPath
+
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "Appx Package Registration Complete"
+        }
+        It "Tests PTA Migrate when both appx and FTA CSV is empty/null" {
+
+            Remove-Item "$path\appx_manifest.csv" -Force
+            Remove-Item "$path\fileTypeAssociations.csv" -Force
+
+            # Call the function
+            . $uwpPath
+
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "PTA Registration Complete"
+        }
+
+        It "Tests FTA Migrate when both appx and PTA CSV is empty/null" {
+
+            Remove-Item "$path\appx_manifest.csv" -Force
+            Remove-Item "$path\protocolTypeAssociations.csv" -Force
+
+            # Call the function
+            . $uwpPath
+
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "FTA Registration Complete"
+        }
+
         It "Tests Set-FTA/Set-PTA" {
             . $uwpPath
             $protocol = "http"
