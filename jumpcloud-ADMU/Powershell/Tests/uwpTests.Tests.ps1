@@ -91,9 +91,8 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Call the function
             . $uwpPath
-
+            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
             $mainLog = Get-Content $logPath -Raw
-
             $mainLog | Should -Match "Appx Package Registration Complete"
         }
         It "Tests PTA Migrate even either FTA CSV is empty/null" {
@@ -103,9 +102,8 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Call the function
             . $uwpPath
-
+            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
             $mainLog = Get-Content $logPath -Raw
-
             $mainLog | Should -Match "PTA Registration Complete"
         }
         It "Tests FTA Migrate even either appx CSV is empty/null" {
@@ -115,7 +113,7 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Call the function
             . $uwpPath
-
+            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
             $mainLog = Get-Content $logPath -Raw
             $mainLog | Should -Match "FTA Registration Complete"
         }
@@ -126,9 +124,8 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Call the function
             . $uwpPath
-
+            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
             $mainLog = Get-Content $logPath -Raw
-
             $mainLog | Should -Match "Appx Package Registration Complete"
         }
         It "Tests PTA Migrate when both appx and FTA CSV is empty/null" {
@@ -138,9 +135,8 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Call the function
             . $uwpPath
-
+            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
             $mainLog = Get-Content $logPath -Raw
-
             $mainLog | Should -Match "PTA Registration Complete"
         }
 
@@ -151,9 +147,8 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Call the function
             . $uwpPath
-
+            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
             $mainLog = Get-Content $logPath -Raw
-
             $mainLog | Should -Match "FTA Registration Complete"
         }
 
