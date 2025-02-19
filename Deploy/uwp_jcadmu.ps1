@@ -597,6 +597,7 @@ function New-UWPForm {
     $synchash.Text = 'Completing Account Migration'
     $syncHash.base64JCLogo = DecodeBase64Image -ImageBase64 $newJCLogoBase64
     $synchash.closeWindow = $false
+    $syncHash.EndUWP = $false
 
     # optionally run this app in windowed view by switching the variable below to: $false
     $buildFullScreen = $true
@@ -667,7 +668,7 @@ function New-UWPForm {
 
             $updateForm = {
                 # Update Progress TextBlock
-                if ($synchash.Percent -eq 100) {
+                if ($synchash.EndUWP) {
                     $SyncHash.ProgressTextBlock.Text = "Account Migration Complete"
                     $SyncHash.Window.Close()
                     [System.Windows.Forms.Application]::Exit()
@@ -740,206 +741,222 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     # import CSVs
     try {
         $appxList = Import-CSV $appxManifest
+        $appxCount = $appxList.Count
     } catch {
         $appxList = $null
+        $appxCount = 0
     }
     try {
         $ftaList = Import-CSV $ftaManifest
+        $ftaCount = $ftaList.Count
     } catch {
         $ftaList = $null
+        $ftaCount = 0
     }
     try {
         $ptaList = Import-CSV $ptaManifest
+        $ptaCount = $ptaList.Count
     } catch {
         $ptaList = $null
+        $ptaCount = 0
     }
 
+    Write-ToLog -Message ("There are $($appxCount) appx to be registered")
+    Write-ToLog -Message ("There are $($ftaCount) file type associations to be registered")
+    Write-ToLog -Message ("There are $($ptaCount) protocol type associations to be registered")
     $output = @()
     $ftaOutput = @()
     $ptaOutput = @()
-
-    Write-ToLog -Message ("Begin Appx File Registration")
-    Write-ToLog -Message ("There are $($appxList.count) apps to be registered")
-    $logFile = "$HOME\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
-    $homepath = $HOME
-    # Remove existing log file to ensure a fresh start.
-    if (Test-Path $logFile) {
-        Remove-Item $logFile -Force
+    # Create a list of all 3 CSVs to be registered
+    $list = @()
+    if ($appxList) {
+        $list += "appx"
+    }
+    if ($ftaList) {
+        $list += "fta"
+    }
+    if ($ptaList) {
+        $list += "pta"
     }
 
-    # TODO: IF appx is null do not start
-    $j = Start-Job -ScriptBlock {
-        param($homepath)
-
-        Function Write-ToLog {
-            [CmdletBinding()]
-            Param
-            (
-                [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
-                , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$($HOME)\AppData\Local\JumpCloudADMU\log.txt"
-            )
-            Begin {
-                $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                # If attempting to write to a log file in a folder/path that doesn't exist create the file including the path.
-                If (!(Test-Path $Path)) {
-                    Write-Verbose "Creating $Path."
-                    New-Item $Path -Force -ItemType File
-                }
-                # check that the log file is not too large:
-                $currentLog = get-item $path
-                if ($currentLog.Length -ge 5000000) {
-                    # if log is larger than 5MB, rename the log to log.old.txt and create a new log file
-                    copy-item -path $path -destination "$path.old" -force
-                    New-Item $Path -Force -ItemType File
-                }
-
-            }
-            end {
-                # Write log entry to $Path
-                "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
-            }
-        }
-
-        try {
-            $appxList = Import-CSV "$homepath\AppData\Local\JumpCloudADMU\appx_manifest.csv"
-            # Create the log file.  The `-Force` parameter ensures overwriting.
-            $logFile = "$HOME\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
-            "Starting Appx Package Registration" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-            $appxCount = $appxList.Count
-            "There are $($appxCount) apps to be registered" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-
-
-            #success Counter
-            $appxSuccessCounter = 0
-            foreach ($item in $appxList) {
-                try {
-                    Add-AppxPackage -DisableDevelopmentMode -Register -ForceApplicationShutdown "$($item.InstallLocation)\AppxManifest.xml"
-                    "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                    $appxSuccessCounter++
-                } catch {
-                    "Error registering $($item.InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                }
-            }
-            "Appx Package Registration Complete" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-        } catch {
-            "A critical error occurred: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-        }
-        Write-ToLog -Message ("Appx Package Registration Complete.  $appxSuccessCounter/$appxCount apps registered successfully.")
-    } -ArgumentList $homepath
-
-    $appxCount = $appxList.Count
-    $ftaCount = $ftaList.Count
-    $ptaCount = $ptaList.Count
-    Write-ToLog -Message ("There are $($appxCount) apps to be registered")
-    Write-ToLog -Message ("There are $($ftaCount) file type associations to be registered")
-    Write-ToLog -Message ("There are $($ptaCount) protocol type associations to be registered")
-    # Monitor progress
-    $UWPForm.Text = "Registering Default Windows Apps"
-    # While the job is running, update the progress bar else exit the job
-    $UWPForm.Percent = 0
     $allListsCount = $appxCount + $ftaCount + $ptaCount
-    $i = 0
+    $curAllListCount = 0
+    # Foreach list to register
+    foreach ($item in $list) {
+        # Switch to the correct type of registration
+        Write-ToLog "### Registering $item ###"
+        switch ($item) {
+            "appx" {
+                Write-ToLog -Message ("Begin Appx File Registration")
+                $logFile = "$HOME\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
+                $homepath = $HOME
+                # Remove existing log file to ensure a fresh start.
+                if (Test-Path $logFile) {
+                    Remove-Item $logFile -Force
+                }
 
-    while ($j.State -ne 'Completed') {
-        if (Test-Path "$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") {
-            $lines = Get-Content -Path:("$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") -Raw
-            # If $lines.count is greater than or equal to appxCount
-            if ($lines.count -le $appxCount) {
-                $i = $lines.count
-                $percent = [Math]::Round([Math]::Ceiling(($i / $allListsCount) * 100))
-                $UWPForm.Percent = $percent
+                # TODO: IF appx is null do not start
+                $j = Start-Job -ScriptBlock {
+                    param($homepath)
+
+                    Function Write-ToLog {
+                        [CmdletBinding()]
+                        Param
+                        (
+                            [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
+                            , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$($HOME)\AppData\Local\JumpCloudADMU\log.txt"
+                        )
+                        Begin {
+                            $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                            # If attempting to write to a log file in a folder/path that doesn't exist create the file including the path.
+                            If (!(Test-Path $Path)) {
+                                Write-Verbose "Creating $Path."
+                                New-Item $Path -Force -ItemType File
+                            }
+                            # check that the log file is not too large:
+                            $currentLog = get-item $path
+                            if ($currentLog.Length -ge 5000000) {
+                                # if log is larger than 5MB, rename the log to log.old.txt and create a new log file
+                                copy-item -path $path -destination "$path.old" -force
+                                New-Item $Path -Force -ItemType File
+                            }
+
+                        }
+                        end {
+                            # Write log entry to $Path
+                            "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
+                        }
+                    }
+
+                    try {
+                        $appxList = Import-CSV "$homepath\AppData\Local\JumpCloudADMU\appx_manifest.csv"
+                        # Create the log file.  The `-Force` parameter ensures overwriting.
+                        $logFile = "$HOME\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
+                        "Starting Appx Package Registration" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                        $appxCount = $appxList.Count
+                        "There are $($appxCount) appx to be registered" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+
+
+                        #success Counter
+                        $appxSuccessCounter = 0
+                        foreach ($item in $appxList) {
+                            try {
+                                Add-AppxPackage -DisableDevelopmentMode -Register -ForceApplicationShutdown "$($item.InstallLocation)\AppxManifest.xml"
+                                "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                                $appxSuccessCounter++
+                            } catch {
+                                "Error registering $($item.InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                            }
+                        }
+                        "Appx Package Registration Complete" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                    } catch {
+                        "A critical error occurred: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                    }
+                    Write-ToLog -Message ("Appx Package Registration Complete.  $appxSuccessCounter/$appxCount apps registered successfully.")
+                } -ArgumentList $homepath
+
+                # Monitor progress
+                $UWPForm.Text = "Registering Default Windows Apps"
+                # While the job is running, update the progress bar else exit the job
+                $UWPForm.Percent = 0
+
+                Write-ToLog -Message ("There are $($allListsCount) items to be registered")
+                $timeoutSeconds = 120  # Set the maximum wait time in seconds for the APPX job
+                $startTime = Get-Date
+
+                while ($j.State -ne "Completed" -and $j.State -ne "Failed" -and ((Get-Date).Subtract($startTime).TotalSeconds) -lt $timeoutSeconds) {
+                    if (Test-Path "$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") {
+                        $lines = Get-Content -Path:("$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") -Raw
+                        # Count the number of lines in the log file
+                        $lines = $lines -split "`r`n" | Where-Object { $_ -ne "" }
+                        # If $lines.count is greater than or equal to appxCount
+                        if ($lines.count -le $appxCount) {
+                            $curAllListCount = $lines.count
+                            $percent = [Math]::Round([Math]::Ceiling(($curAllListCount / $allListsCount) * 100))
+                            $UWPForm.Percent = $percent
+                        }
+                    }
+                    Start-Sleep -Seconds 1
+                }
+
+                # Get the final result (if needed)
+                Receive-Job -Job $j
+
+                # Check the job state after the timeout
+                if ($j.State -eq "Completed") {
+                    Write-ToLog "AppX job completed successfully."
+                    Stop-Job $j
+                    Remove-Job $j
+                } elseif ($j.State -eq "Failed") {
+                    Write-ToLog "AppX job  failed."
+                    Stop-Job $j
+                    Remove-Job $j
+                } else {
+                    Write-ToLog "AppX job timed out after $($timeoutSeconds) seconds."
+                    Stop-Job $j
+                    Remove-Job $j
+                }
+                $curAllListCount = $appxCount
             }
+            "fta" {
+                Write-ToLog -Message ("Begin FTA Registration")
+                $ftaSuccessCounter = 0
+                $UWPForm.Text = "Registering File Type Associations"
 
-            # Acquire the lock before reading the shared variable
-            # $textLabel.Text = "Registering Default Windows Apps: $percent%";
-            Start-Sleep -Seconds 1
-        }
-    }
+                foreach ($item in $ftaList) {
+                    $curAllListCount += 1
+                    $percent = [Math]::Round([Math]::Ceiling(($curAllListCount / $allListsCount) * 100))
+                    $UWPForm.Percent = $percent
+
+                    if ($item.programId) {
+                        Write-ToLog -Message ("Registering FTA Extension: $($item.extension) ProgramID: $($item.programId)")
+                        # Output to the log file
+                        try {
+                            $ftaOutput += Set-FTA -Extension $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
+                            Write-ToLog -Message ("Success")
+                            $ftaSuccessCounter++
+                        } catch {
+                            Write-ToLog -Message ("Failure")
+                            Write-ToLog -Message ($ProcessError)
+                        }
+                    }
+                }
+                $ftaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\fta_manifestLog.txt"
+                Write-ToLog -Message ("FTA Registration Complete.  $ftaSuccessCounter/$ftaCount file type associations registered successfully.")
+            }
+            "pta" {
+                $ptaSuccessCounter = 0
+                $UWPForm.Text = "Registering Protocol Type Associations"
+
+                foreach ($item in $ptaList) {
+                    $curAllListCount += 1
+                    $percent = [Math]::Round([Math]::Ceiling(($curAllListCount / $allListsCount) * 100))
+                    $UWPForm.Percent = $percent
+                    # Update the textLabel
+                    Write-ToLog -Message ("Registering PTA Extension: $($item.extension) ProgramID: $($item.programId)")
+                    try {
+                        $ptaOutput += Set-PTA -Protocol $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
+                        Write-ToLog -Message ("Success")
+                        $ptaSuccessCounter++
+                    } catch {
+                        Write-ToLog -Message ("Failure")
+                        Write-ToLog -Message ($ProcessError)
+                    }
+                }
+                $ptaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\pta_manifestLog.txt"
+
+                Write-ToLog -Message ("PTA Registration Complete.  $ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
 
 
-
-    # Get the final result (if needed)
-    Receive-Job -Job $j
-    Write-Verbose "Job started.  wait for job..."
-    $j | Wait-Job
-
-
-    # If the job is completed, close the form
-    if ($j.State -eq 'Completed') {
-        # Close the job
-        $j | Remove-Job
-    }
-
-
-    Write-ToLog -Message ("There are $($allListsCount) items to be registered")
-    # $i = 0
-    # foreach ($item in $appxList) {
-    #     $i += 1
-    #     $percent = [Math]::Round([Math]::Ceiling(($i / $allListsCount) * 100))
-    #     $UWPForm.Percent = $percent
-    # }
-
-
-    #Register the file type associations using the Set-FTA function
-    # FTA count
-    $i = $appxCount
-    $ftaSuccessCounter = 0
-    $UWPForm.Text = "Registering File Type Associations"
-
-    # TODO: IF NULL
-    foreach ($item in $ftaList) {
-        $i += 1
-        $percent = [Math]::Round([Math]::Ceiling(($i / $allListsCount) * 100))
-        $UWPForm.Percent = $percent
-        # Update the textLabel
-        # $textLabel.Refresh();
-        # Count the number of items in the list
-
-        if ($item.programId) {
-            Write-ToLog -Message ("Registering FTA Extension: $($item.extension) ProgramID: $($item.programId)")
-            # Output to the log file
-            try {
-                $ftaOutput += Set-FTA -Extension $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
-                Write-ToLog -Message ("Success")
-                $ftaSuccessCounter++
-            } catch {
-                Write-ToLog -Message ("Failure")
-                Write-ToLog -Message ($ProcessError)
             }
         }
     }
-    $ftaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\fta_manifestLog.txt"
-    Write-ToLog -Message ("FTA Registration Complete.  $ftaSuccessCounter/$ftaCount file type associations registered successfully.")
-
-    # Register the protocol associations using the Set-PTA function
-
-    $ptaSuccessCounter = 0
-    $UWPForm.Text = "Registering Protocol Type Associations"
-
-    # TODO: IF NULL
-    foreach ($item in $ptaList) {
-        $i += 1
-        $percent = [Math]::Round([Math]::Ceiling(($i / $allListsCount) * 100))
-        $UWPForm.Percent = $percent
-        # Update the textLabel
-        Write-ToLog -Message ("Registering PTA Extension: $($item.extension) ProgramID: $($item.programId)")
-        try {
-            $ptaOutput += Set-PTA -Protocol $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
-            Write-ToLog -Message ("Success")
-            $ptaSuccessCounter++
-        } catch {
-            Write-ToLog -Message ("Failure")
-            Write-ToLog -Message ($ProcessError)
-        }
-    }
-    $ptaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\pta_manifestLog.txt"
-
-    Write-ToLog -Message ("PTA Registration Complete.  $ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
     # Log the pta/appx/fta registration completion
     Write-ToLog -Message ("$ftaSuccessCounter/$ftaCount file type associations registered successfully.")
     Write-ToLog -Message ("$ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
 
     Write-ToLog -Message ('########### End UWP App ###########')
+    $UWPForm.EndUWP = $true
 
 } else {
     Write-ToLog -Message ("The registry key $ADMUKEY does not exist.  The UWP app will not run.")
