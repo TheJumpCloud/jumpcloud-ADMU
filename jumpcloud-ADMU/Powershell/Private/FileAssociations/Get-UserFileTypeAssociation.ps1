@@ -24,27 +24,46 @@
 
 # Get user file type associations/FTA
 function Get-UserFileTypeAssociation {
+    [OutputType([System.Collections.ArrayList])]
+
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, HelpMessage = 'The SID of the user to capture file type associations')]
         [System.String]
-        $UserSid
+        $UserSid,
+        [Parameter(HelpMessage = 'Use the _admu path (true) or the regular path (false). Defaults to true.')]
+        [System.Boolean]
+        $UseAdmuPath = $true
     )
-    $manifestList = @()
-    # Test path for file type associations
-    $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
-    if (Test-Path $pathRoot) {
-        $exts = Get-ChildItem $pathRoot*
-        foreach ($ext in $exts) {
-            $indivExtension = $ext.PSChildName
-            $progId = (Get-ItemProperty "$($pathRoot)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
-            $manifestList += [PSCustomObject]@{
-                extension = $indivExtension
-                programId = $progId
+    begin {
+        $manifestList = [System.Collections.ArrayList]::new()
+        $basePath = "HKEY_USERS:\$($UserSid)"
+        $pathSuffix = "\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
+
+        if ($UseAdmuPath) {
+            $fullPath = "$($basePath)_admu$($pathSuffix)"
+        } else {
+            $fullPath = "$($basePath)$($pathSuffix)"
+        }
+    }
+    process {
+
+        # Test path for file type associations
+        if (Test-Path $fullPath) {
+            $exts = Get-ChildItem $fullPath*
+            foreach ($ext in $exts) {
+                $indivExtension = $ext.PSChildName
+                $progId = (Get-ItemProperty "$($fullPath)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
+                $manifestList.Add([PSCustomObject]@{
+                        extension = $indivExtension
+                        programId = $progId
+                    }) | Out-Null # Suppress output from Add()
             }
         }
     }
-    return $manifestList
+    end {
+        return $manifestList
+    }
 }
 
 ##### END MIT License #####
