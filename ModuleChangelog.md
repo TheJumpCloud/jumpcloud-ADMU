@@ -1,6 +1,20 @@
+## 2.7.12
+
+Release Date: February 20, 2025
+
+#### RELEASE NOTES
+
+```
+This release addresses an issue with Registering Default Windows Platform apps on first login.
+```
+
+#### BUG FIXES:
+
+The UWP application is now updated to use XAML presentation framework, a job for re-registering the APPX files is now kicked off through the UWP app as a separate process. This resolves the issue where the `Add-AppxPackage` function would fail to register apps.
+
 ## 2.7.11
 
-Release Date: January 28, 2025
+Release Date: January 31, 2025
 
 #### RELEASE NOTES
 

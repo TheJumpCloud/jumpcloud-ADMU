@@ -3,7 +3,10 @@ function Show-MtpSelection {
     param (
         [Parameter()]
         [System.Object]
-        $Orgs
+        $Orgs,
+        [Parameter(HelpMessage = "Parameter for testing, default behavior is to not hide and show the contents of the xaml form")]
+        [switch]
+        $hideForm = $false
     )
 
     begin {
@@ -120,8 +123,9 @@ function Show-MtpSelection {
                 $Form.Close()
 
             })
-
-        $result = $Form.ShowDialog()
+        if (-not $hideForm) {
+            $result = $Form.ShowDialog()
+        }
     }
     end {
 

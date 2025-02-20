@@ -9,7 +9,7 @@
     "powershell"
   ],
   // powershell settings
-  "powershell.scriptAnalysis.settingsPath": "jumpcloud-ADMU/Powershell/Tests/PSScriptAnalyzerSettings.psd1",
+  "powershell.scriptAnalysis.settingsPath": "jumpcloud-ADMU/Powershell/Tests/moduleValidation/PSScriptAnalyzerSettings.psd1",
   "powershell.codeFormatting.preset": "OTBS",
   "powershell.scriptAnalysis.enable": true,
   // file formatting & saving:
