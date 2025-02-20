@@ -847,6 +847,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                             }
                         }
                         "Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                        Write-ToLog -Message ("Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully")
                     } catch {
                         "A critical error occurred: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                     }
