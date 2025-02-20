@@ -89,6 +89,9 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             # Remove PTA csv $path\protocolTypeAssociations.csv
             Remove-Item "$path\protocolTypeAssociations.csv" -Force
 
+            Test-Path -Path "$path\protocolTypeAssociations.csv" | should -Be $false
+            Get-Item "$path\appx_manifest.csv" | should -Not -BeNullOrEmpty
+
             # Call the function
             . $uwpPath
             $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
@@ -99,6 +102,9 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Remove PTA csv $path\protocolTypeAssociations.csv
             Remove-Item "$path\fileTypeAssociations.csv" -Force
+
+            Test-Path -Path "$path\fileTypeAssociations.csv" | should -Be $false
+            Get-Item "$path\protocolTypeAssociations.csv" | should -Not -BeNullOrEmpty
 
             # Call the function
             . $uwpPath
@@ -111,6 +117,9 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             # Remove PTA csv $path\protocolTypeAssociations.csv
             Remove-Item "$path\appx_manifest.csv" -Force
 
+            Test-Path -Path "$path\appx_manifest.csv" | should -Be $false
+            Get-Item "$path\fileTypeAssociations.csv" | should -Not -BeNullOrEmpty
+
             # Call the function
             . $uwpPath
             $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
@@ -122,16 +131,28 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             Remove-Item "$path\protocolTypeAssociations.csv" -Force
             Remove-Item "$path\fileTypeAssociations.csv" -Force
 
+            Test-Path -Path "$path\protocolTypeAssociations.csv" | should -Be $false
+            Test-Path -Path "$path\fileTypeAssociations.csv" | should -Be $false
+            Get-Item "$path\appx_manifest.csv" | should -Not -BeNullOrEmpty
+
+            # Both paths should be null or empty
+
             # Call the function
             . $uwpPath
             $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
             $mainLog = Get-Content $logPath -Raw
+            Write-Host "pta: $mainLog"
+
             $mainLog | Should -Match "Appx Package Registration Complete"
         }
         It "Tests PTA Migrate when both appx and FTA CSV is empty/null" {
 
             Remove-Item "$path\appx_manifest.csv" -Force
             Remove-Item "$path\fileTypeAssociations.csv" -Force
+
+            Test-Path -Path "$path\appx_manifest.csv" | should -Be $false
+            Test-Path -Path "$path\fileTypeAssociations.csv" | should -Be $false
+            Get-Item "$path\protocolTypeAssociations.csv" | should -Not -BeNullOrEmpty
 
             # Call the function
             . $uwpPath
@@ -144,6 +165,9 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             Remove-Item "$path\appx_manifest.csv" -Force
             Remove-Item "$path\protocolTypeAssociations.csv" -Force
+            Test-Path -Path "$path\appx_manifest.csv" | should -Be $false
+            Test-Path -Path "$path\protocolTypeAssociations.csv" | should -Be $false
+            Get-Item "$path\fileTypeAssociations.csv" | should -not -BeNullOrEmpty
 
             # Call the function
             . $uwpPath
