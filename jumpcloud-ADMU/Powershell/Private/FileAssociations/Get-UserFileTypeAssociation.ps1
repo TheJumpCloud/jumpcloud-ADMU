@@ -54,16 +54,17 @@ function Get-UserFileTypeAssociation {
             foreach ($ext in $exts) {
                 $indivExtension = $ext.PSChildName
                 $progId = (Get-ItemProperty "$($fullPath)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
-                $manifestList.Add([PSCustomObject]@{
-                        extension = $indivExtension
-                        programId = $progId
-                    }) | Out-Null # Suppress output from Add()
+                if ( ( -NOT [System.String]::IsNullOrEmpty($indivExtension) ) -AND ( -NOT [System.String]::IsNullOrEmpty($progId) ) ) {
+                    $manifestList.Add([PSCustomObject]@{
+                            extension = $indivExtension
+                            programId = $progId
+                        }) | Out-Null
+                }
             }
         }
+        end {
+            return $manifestList
+        }
     }
-    end {
-        return $manifestList
-    }
-}
 
-##### END MIT License #####
+    ##### END MIT License #####

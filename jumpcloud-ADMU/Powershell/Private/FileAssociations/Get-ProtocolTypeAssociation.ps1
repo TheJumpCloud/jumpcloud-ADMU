@@ -49,11 +49,12 @@ function Get-ProtocolTypeAssociation {
             Get-ChildItem $fullPath* |
             ForEach-Object {
                 $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
-                if ($progId) {
+                $extension = $_.PSChildName
+                if ( ( -NOT [System.String]::IsNullOrEmpty($extension) ) -AND ( -NOT [System.String]::IsNullOrEmpty($progId) ) ) {
                     $manifestList.Add([PSCustomObject]@{
-                            extension = $_.PSChildName
+                            extension = $extension
                             programId = $progId
-                        }) | Out-Null # Suppress output from Add()
+                        }) | Out-Null
                 }
             }
         }

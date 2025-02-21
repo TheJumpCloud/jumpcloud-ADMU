@@ -906,18 +906,17 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                     $percent = [Math]::Round([Math]::Ceiling(($curAllListCount / $allListsCount) * 100))
                     $UWPForm.Percent = $percent
 
-                    if ($item.programId) {
-                        Write-ToLog -Message ("Registering FTA Extension: $($item.extension) ProgramID: $($item.programId)")
-                        # Output to the log file
-                        try {
-                            $ftaOutput += Set-FTA -Extension $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
-                            Write-ToLog -Message ("Success")
-                            $ftaSuccessCounter++
-                        } catch {
-                            Write-ToLog -Message ("Failure")
-                            Write-ToLog -Message ($ProcessError)
-                        }
+                    Write-ToLog -Message ("Registering FTA Extension: $($item.extension) ProgramID: $($item.programId)")
+                    # Output to the log file
+                    try {
+                        $ftaOutput += Set-FTA -Extension $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
+                        Write-ToLog -Message ("Success")
+                        $ftaSuccessCounter++
+                    } catch {
+                        Write-ToLog -Message ("Failure")
+                        Write-ToLog -Message ($ProcessError)
                     }
+
                 }
                 $ftaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\fta_manifestLog.txt"
                 Write-ToLog -Message ("FTA Registration Complete.  $ftaSuccessCounter/$ftaCount file type associations registered successfully.")
