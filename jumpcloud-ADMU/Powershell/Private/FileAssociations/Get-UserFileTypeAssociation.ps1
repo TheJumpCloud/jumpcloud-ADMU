@@ -66,5 +66,6 @@ function Get-UserFileTypeAssociation {
             return $manifestList
         }
     }
+}
 
-    ##### END MIT License #####
+##### END MIT License #####
