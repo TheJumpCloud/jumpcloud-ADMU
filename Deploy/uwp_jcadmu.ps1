@@ -838,13 +838,15 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                         #success Counter
                         $appxSuccessCounter = 0
                         foreach ($item in $appxList) {
-                            try {
-                                Add-AppxPackage -DisableDevelopmentMode -Register -ForceApplicationShutdown "$($item.InstallLocation)\AppxManifest.xml"
-                                "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                                $appxSuccessCounter++
-                            } catch {
+                            Write-Host "$($item.installLocation)"
+
+                            Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml" -ErrorAction SilentlyContinue -ErrorVariable packageFailed
+                            if ($packageFailed) {
                                 "Error registering $($item.InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                            } else {
+                                "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                             }
+                                $appxSuccessCounter++
                         }
                         "Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                         Write-ToLog -Message ("Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully")
@@ -862,7 +864,8 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                 $timeoutSeconds = 120  # Set the maximum wait time in seconds for the APPX job
                 $startTime = Get-Date
 
-                while ($j.State -ne "Completed" -and $j.State -ne "Failed" -and ((Get-Date).Subtract($startTime).TotalSeconds) -lt $timeoutSeconds) {
+                while (($j.State -ne "Completed") -and ($j.State -ne "Failed") -and (((Get-Date).Subtract($startTime).TotalSeconds) -lt $timeoutSeconds)) {
+                    Write-Host ((Get-Date).Subtract($startTime).TotalSeconds)
                     if (Test-Path "$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") {
                         $lines = Get-Content -Path:("$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") -Raw
                         # Count the number of lines in the log file
