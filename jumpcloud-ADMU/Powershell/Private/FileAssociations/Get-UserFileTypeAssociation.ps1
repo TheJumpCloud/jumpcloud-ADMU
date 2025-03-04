@@ -38,7 +38,7 @@ function Get-UserFileTypeAssociation {
     begin {
         $manifestList = [System.Collections.ArrayList]::new()
         $basePath = "HKEY_USERS:\$($UserSid)"
-        $pathSuffix = "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
+        $pathSuffix = "\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
 
         if ($UseAdmuPath) {
             $fullPath = "$($basePath)_admu$($pathSuffix)"
@@ -62,9 +62,9 @@ function Get-UserFileTypeAssociation {
                 }
             }
         }
-        end {
-            return $manifestList
-        }
+    }
+    end {
+        return $manifestList
     }
 }
 
