@@ -600,7 +600,7 @@ function New-UWPForm {
     $syncHash.EndUWP = $false
 
     # optionally run this app in windowed view by switching the variable below to: $false
-    $buildFullScreen = $true
+    $buildFullScreen = $false
     switch ($buildFullScreen) {
         $true {
             Write-Verbose "Running UWP in fullscreen"
@@ -838,15 +838,13 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                         #success Counter
                         $appxSuccessCounter = 0
                         foreach ($item in $appxList) {
-                            Write-Host "$($item.installLocation)"
-
                             Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml" -ErrorAction SilentlyContinue -ErrorVariable packageFailed
                             if ($packageFailed) {
                                 "Error registering $($item.InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                             } else {
                                 "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                             }
-                                $appxSuccessCounter++
+                            $appxSuccessCounter++
                         }
                         "Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                         Write-ToLog -Message ("Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully")
@@ -865,7 +863,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                 $startTime = Get-Date
 
                 while (($j.State -ne "Completed") -and ($j.State -ne "Failed") -and (((Get-Date).Subtract($startTime).TotalSeconds) -lt $timeoutSeconds)) {
-                    Write-Host ((Get-Date).Subtract($startTime).TotalSeconds)
                     if (Test-Path "$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") {
                         $lines = Get-Content -Path:("$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") -Raw
                         # Count the number of lines in the log file
@@ -879,7 +876,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                     }
                     Start-Sleep -Seconds 1
                 }
-
                 # Get the final result (if needed)
                 Receive-Job -Job $j
 
