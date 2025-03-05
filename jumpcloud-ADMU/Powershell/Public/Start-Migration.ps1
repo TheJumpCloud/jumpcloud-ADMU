@@ -549,15 +549,14 @@ Function Start-Migration {
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
             }
             Write-ToProgress -ProgressBar $Progressbar -Status "CopyDefaultProtocols" -form $isForm
-
+            # Get the file type associations while the user registry is loaded
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $SelectedUserSid
             Write-ToLog -Message:('Found ' + $fileTypeAssociations.count + ' File Type Associations')
             $fileTypeAssociations | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
-
+            # Get the protocol type associations while the user registry is loaded
             $protocolTypeAssociations = Get-ProtocolTypeAssociation -UserSid $SelectedUserSid
             Write-ToLog -Message:('Found ' + $protocolTypeAssociations.count + ' Protocol Type Associations')
             $protocolTypeAssociations | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
-
 
             $regQuery = REG QUERY HKU *>&1
             # Unload "Selected" and "NewUser"
