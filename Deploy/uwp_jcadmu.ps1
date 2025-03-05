@@ -885,7 +885,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                     Stop-Job $j
                     Remove-Job $j
                 } elseif ($j.State -eq "Failed") {
-                    Write-ToLog "AppX job  failed."
+                    Write-ToLog "AppX job failed."
                     Stop-Job $j
                     Remove-Job $j
                 } else {

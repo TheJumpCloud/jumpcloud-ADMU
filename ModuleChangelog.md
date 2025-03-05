@@ -1,11 +1,11 @@
-## 2.7.12
+## 2.7.13
 
-Release Date: February 20, 2025
+Release Date: March 05, 2025
 
 #### RELEASE NOTES
 
 ```
-This release addresses an issue with Registering Default Windows Platform apps on first login.
+This release addresses an issue with Registering Default Windows Platform apps on first login. And resolves several issues with registering the file type associations on first login.
 ```
 
 #### BUG FIXES:
