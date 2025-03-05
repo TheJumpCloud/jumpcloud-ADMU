@@ -600,7 +600,7 @@ function New-UWPForm {
     $syncHash.EndUWP = $false
 
     # optionally run this app in windowed view by switching the variable below to: $false
-    $buildFullScreen = $false
+    $buildFullScreen = $true
     switch ($buildFullScreen) {
         $true {
             Write-Verbose "Running UWP in fullscreen"
