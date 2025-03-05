@@ -36,7 +36,9 @@ function Get-UserFileTypeAssociation {
         $UseAdmuPath = $true
     )
     begin {
+        # define a list
         $manifestList = [System.Collections.ArrayList]::new()
+        # dynamically create the path to search
         $basePath = "HKEY_USERS:\$($UserSid)"
         $pathSuffix = "\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
 
@@ -44,6 +46,10 @@ function Get-UserFileTypeAssociation {
             $fullPath = "$($basePath)_admu$($pathSuffix)"
         } else {
             $fullPath = "$($basePath)$($pathSuffix)"
+        }
+        # Validate file permissions on registry item
+        if ("HKEY_USERS" -notin (Get-PSDrive | Select-Object name).Name) {
+            New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
         }
     }
     process {
