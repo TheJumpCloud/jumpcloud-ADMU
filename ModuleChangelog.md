@@ -1,4 +1,4 @@
-## 2.7.12.1
+## 2.7.13
 
 Release Date: January 28, 2025
 

@@ -35,7 +35,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.7.12.1'
+        $admuVersion = '2.7.13'
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
 
