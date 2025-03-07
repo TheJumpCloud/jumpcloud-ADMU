@@ -2,7 +2,14 @@
 param (
     [Parameter()]
     [System.string]
-    $ModuleVersionType
+    $ModuleVersionType,
+    [Parameter(Mandatory = $false)]
+    [System.String[]]
+    $ExcludeTagList,
+    [Parameter(Mandatory = $false)]
+    [System.String[]]
+    $IncludeTagList = "*" # Default to include all tags
+
 )
 $env:ModuleVersionType = $ModuleVersionType
 
@@ -11,58 +18,95 @@ $PesterInstalledVersion = Get-InstalledModule -Name Pester
 Import-Module -Name Pester -RequiredVersion $PesterInstalledVersion.Version
 Write-host "Running Pester Tests using Pester Version: $($PesterInstalledVersion.Version)"
 # Run Pester tests
-$PesterResultsFileXmldir = "$PSScriptRoot/../test_results/"
-# $PesterResultsFileXml = $PesterResultsFileXmldir + "results.xml"
-if (-not (Test-Path $PesterResultsFileXmldir)) {
-    new-item -path $PesterResultsFileXmldir -ItemType Directory
+$PesterResultsFileXmlDir = "$PSScriptRoot/../test_results/"
+# $PesterResultsFileXml = $PesterResultsFileXmlDir + "results.xml"
+if (-not (Test-Path $PesterResultsFileXmlDir)) {
+    new-item -path $PesterResultsFileXmlDir -ItemType Directory
 }
 
-# Define CI Matrix Job Set:
-If ($env:CI) {
-    $jobMatrixSet = @{
-        0 = @{
-            'filePath' = @(
-                "$PSScriptRoot/Tests/SelectionForm.Tests.ps1",
-                "$PSScriptRoot/Tests/Functions.Tests.ps1",
-                "$PSScriptRoot/Tests/Migration.Tests.ps1"
-            )
+# Import the module functions + helper functions
+.  (Join-Path "$PSScriptRoot" "\Tests\helperFunctions\Import-AllFunctions.ps1")
+# import the helper functions:
+. (Join-Path "$PSScriptRoot" "\Tests\helperFunctions\initialize-TestUser.ps1")
+# Import the Pester Tag function:
+. (Join-Path "$PSScriptRoot" "\Tests\helperFunctions\Get-PesterTag.ps1")
+
+# Get all the pester test files and their tags
+$PesterTests = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse | ForEach-Object {
+    Get-PesterTag -Path $_.FullName # Assuming Get-PesterTag returns a string or array of strings
+}
+
+$uniqueTags = ($PesterTests.Tags | Select-Object -Unique ) -Replace ([regex]'``|"' , '')
+
+Write-Host "[Status] $($PesterTests.Count) Test Files Found"
+Write-Host "[Status] $($uniqueTags.Count) Unique Tags Found"
+
+# CI logic
+if ($env:CI) {
+    if ($env:job_group) {
+
+        # Separate "installJC" tag
+        $installJCTags = $uniqueTags | Where-Object { $_ -match "installjc" }
+        $remainingTags = $uniqueTags | Where-Object { $_ -notmatch "installjc" }
+
+        # Split remaining tags into two groups
+        $numRemainingTags = $remainingTags.Count
+        $tagsPerGroup = [Math]::Floor($numRemainingTags / 2)
+        $remainder = $numRemainingTags % 2
+
+        $group1 = @()
+        $group2 = @()
+
+        for ($i = 0; $i -lt $numRemainingTags; $i++) {
+            if ($i -lt $tagsPerGroup + $remainder) {
+                # Distribute remainder to first group
+                $group1 += $remainingTags[$i]
+            } else {
+                $group2 += $remainingTags[$i]
+            }
         }
-        1 = @{
-            'filePath' = @(
-                "$PSScriptRoot/Tests/PSScriptAnalyzer.Tests.ps1",
-                "$PSScriptRoot/Tests/Build.Tests.ps1"
-            )
-        }
-        2 = @{
-            'filePath' = @(
-                "$PSScriptRoot/Tests/SetLastLoggedOnUserTest.Tests.ps1"
-            )
-        }
-        3 = @{
-            'filePath' = @(
-                "$PSScriptRoot/Tests/ScheduledTaskTest.Tests.ps1"
-            )
+
+        switch ($env:job_group) {
+            "0" {
+                $IncludeTags = "installjc"
+            }
+            "1" {
+                $IncludeTags = $group1
+                $ExcludeTagList = "installjc"
+            }
+            "2" {
+                $IncludeTags = $group2
+                $ExcludeTagList = "installjc"
+            }
         }
     }
-    write-host "running CI job group: $env:job_group"
-    $configRunPath = $jobMatrixSet[[int]$($env:job_group)].filePath
-    Write-Host "testing paths: $configRunPath"
 } else {
-    $configRunPath = "$PSScriptRoot/Tests/"
+    $IncludeTags = If ($IncludeTagList) {
+        $IncludeTagList
+    } Else {
+        $uniqueTags | Where-Object { $_ -notin $ExcludeTags } | Select-Object -Unique
+    }
 }
-# break
+
+# All the tests are located in /Tests/*
+$PesterRunPath = "$PSScriptRoot/Tests/*"
+
+# Set Pester Configuration
 $configuration = New-PesterConfiguration
-$configuration.Run.Path = $configRunPath
+$configuration.Run.Path = $PesterRunPath
 $configuration.Should.ErrorAction = 'Continue'
 $configuration.CodeCoverage.Enabled = $true
-$configuration.testresult.Enabled = $true
-$configuration.testresult.OutputFormat = 'JUnitXml'
-$configuration.CodeCoverage.OutputPath = ($PesterResultsFileXmldir + 'coverage.xml')
-$configuration.testresult.OutputPath = ($PesterResultsFileXmldir + 'results.xml')
+$configuration.testResult.Enabled = $true
+$configuration.testResult.OutputFormat = 'JUnitXml'
+$configuration.Filter.Tag = $IncludeTags
+$configuration.Filter.ExcludeTag = $ExcludeTagList
+$configuration.CodeCoverage.OutputPath = ($PesterResultsFileXmlDir + 'coverage.xml')
+$configuration.testResult.OutputPath = ($PesterResultsFileXmlDir + 'results.xml')
+Write-Host ("[RUN COMMAND] Invoke-Pester -Path:('$PesterRunPath') -TagFilter:('$($IncludeTags -join "','")') -ExcludeTagFilter:('$($ExcludeTagList -join "','")') -PassThru") -BackgroundColor:('Black') -ForegroundColor:('Magenta')
 
 Invoke-Pester -configuration $configuration
 
-$PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmldir)")).FullName | Where-Object { $_ -match "results.xml" }
+$PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmlDir)")).FullName | Where-Object { $_ -match "results.xml" }
 If (Test-Path -Path:($PesterTestResultPath)) {
     [xml]$PesterResults = Get-Content -Path:($PesterTestResultPath)
     If ($PesterResults.ChildNodes.failures -gt 0) {

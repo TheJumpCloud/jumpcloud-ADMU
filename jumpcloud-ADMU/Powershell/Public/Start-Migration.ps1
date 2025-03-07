@@ -27,7 +27,6 @@ Function Start-Migration {
         $windowsDrive = Get-WindowsDrive
         $jcAdmuTempPath = "$windowsDrive\Windows\Temp\JCADMU\"
         $jcAdmuLogFile = "$windowsDrive\Windows\Temp\jcAdmu.log"
-        $netBiosName = Get-NetBiosName
 
         # JumpCloud Agent Installation Variables
         $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
@@ -35,7 +34,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.7.13'
+        $admuVersion = '2.7.12'
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
 
@@ -926,46 +925,24 @@ Function Start-Migration {
             }
             $path = $newUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
             If (!(test-path $path)) {
-                New-Item -ItemType Directory -Force -Path $path
+                New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
-            $appxList = @()
 
-            Write-ToProgress -ProgressBar $Progressbar -Status "CheckADStatus" -form $isForm
-            # Get Azure AD Status
-            $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
-
-            if ($AzureADStatus -eq 'YES' -or $netBiosName -match 'AzureAD') {
-                # Find Appx User Apps by Username
-                try {
-                    $appxList = Get-AppXpackage -user (Convert-SecurityIdentifier $SelectedUserSID) | Select-Object InstallLocation
-                } catch {
-                    Write-ToLog -Message "Could not determine AppXPackages for selected user, this is okay. Rebuilding UWP Apps from AllUsers list"
-                }
+            $appxList = Get-AppxListByUser -SID $SelectedUserSID
+            if ($appxList) {
+                Set-AppxManifestFile -appxList $appxList -profileImagePath $newUserProfileImagePath
             } else {
-                try {
-                    $appxList = Get-AppXpackage -user (Convert-SecurityIdentifier $SelectedUserSID) | Select-Object InstallLocation
-                } catch {
-                    Write-ToLog -Message "Could not determine AppXPackages for selected user, this is okay. Rebuilding UWP Apps from AllUsers list"
-                }
+                Write-ToLog -Message:('No Appx Packages found for user: ' + $SelectedUserName + ' Appx packages will not be restored.') -Level Warn
             }
-            if ($appxList.Count -eq 0) {
-                # Get Common Apps in edge case:
-                try {
-                    $appxList = Get-AppXpackage -AllUsers | Select-Object InstallLocation
-                } catch {
-                    # if the primary trust relationship fails (needed for local conversion)
-                    $appxList = Get-AppXpackage | Select-Object InstallLocation
-                }
-            }
-            $appxList | Export-CSV ($newUserProfileImagePath + '\AppData\Local\JumpCloudADMU\appx_manifest.csv') -Force
+
+
             # TODO: Test and return non terminating error here if failure
             # $admuTracker.uwpAppXPackages = $true
-
 
             # Download the appx register exe
             [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
             Invoke-WebRequest -Uri 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -OutFile 'C:\windows\uwp_jcadmu.exe' -UseBasicParsing
-            Start-Sleep -Seconds 5
+            Start-Sleep -Seconds 1
             try {
                 Get-Item -Path "$windowsDrive\Windows\uwp_jcadmu.exe" -ErrorAction Stop | Out-Null
             } catch {
@@ -977,8 +954,6 @@ Function Start-Migration {
             }
             Write-ToProgress -ProgressBar $Progressbar -Status "ConversionComplete" -form $isForm
             Write-ToLog -Message:('Profile Conversion Completed') -Level Verbose
-
-
 
             #region Add To Local Users Group
             Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUsername -erroraction silentlycontinue

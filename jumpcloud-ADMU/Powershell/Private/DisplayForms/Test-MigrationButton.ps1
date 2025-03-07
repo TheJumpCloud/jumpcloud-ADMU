@@ -180,7 +180,7 @@ Function Test-MigrationButton {
         $migrateProfile = $true
     } catch {
         # debug with write-host, this should return the various throw statements in the helper functions
-        write-host "could not enable migrate button: $_"
+        Write-Verbose "could not enable migrate button: $_"
         # disable the button
         $btn_migrateProfile.IsEnabled = $false
         $migrateProfile = $false

@@ -21,28 +21,45 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 function Get-ProtocolTypeAssociation {
+    [OutputType([System.Collections.ArrayList])]
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true, HelpMessage = 'The SID of the user to capture file type associations')]
         [System.String]
-        $UserSid
+        $UserSid,
+        [Parameter(HelpMessage = 'Use the _admu path (true) or the regular path (false). Defaults to true.')]
+        [System.Boolean]
+        $UseAdmuPath = $true
+
     )
-    $manifestList = @()
+    begin {
+        $manifestList = [System.Collections.ArrayList]::new()
+        $basePath = "HKEY_USERS:\$($UserSid)"
+        $pathSuffix = "\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
 
-    $pathRoot = "HKEY_USERS:\$($UserSid)_admu\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
-    if (Test-Path $pathRoot) {
-        Get-ChildItem $pathRoot* |
-        ForEach-Object {
+        if ($UseAdmuPath) {
+            $fullPath = "$($basePath)_admu$($pathSuffix)"
+        } else {
+            $fullPath = "$($basePath)$($pathSuffix)"
+        }
+    }
+    process {
 
-            $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
-            if ($progId) {
-                $manifestList += [PSCustomObject]@{
-                    extension = $_.PSChildName
-                    programId = $progId
+        if (Test-Path $fullPath) {
+            Get-ChildItem $fullPath* |
+            ForEach-Object {
+                $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
+                if ($progId) {
+                    $manifestList.Add([PSCustomObject]@{
+                            extension = $_.PSChildName
+                            programId = $progId
+                        }) | Out-Null # Suppress output from Add()
                 }
             }
         }
     }
-    return $manifestList
+    end {
+        return $manifestList
+    }
 }
 ##### END MIT License #####

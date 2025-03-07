@@ -6,3 +6,4 @@ JumpCloud.ADMU.nuspec
 **/.nupkg
 Deploy/ADMU.ps1
 Deploy/admuTemplate.ps1
+*.exe

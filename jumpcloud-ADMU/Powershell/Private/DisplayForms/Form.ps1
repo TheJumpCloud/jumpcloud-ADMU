@@ -1,4 +1,10 @@
 Function Show-SelectionForm {
+    [CmdletBinding()]
+    param (
+        [Parameter(HelpMessage = "Parameter for testing, default behavior is to not hide and show the contents of the xaml form")]
+        [switch]
+        $hideForm = $false
+    )
 
     # Set source here. Take note in the XAML as to where the variable name was taken.
 
@@ -27,7 +33,7 @@ Function Show-SelectionForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.7.13"
+        Title="JumpCloud ADMU 2.7.12"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -273,7 +279,11 @@ Function Show-SelectionForm {
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..'
     if ($WmiComputerSystem.PartOfDomain) {
         $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
-        $secureChannelStatus = Test-ComputerSecureChannel
+        try {
+            $secureChannelStatus = Test-ComputerSecureChannel
+        } catch {
+            $secureChannelStatus = $false
+        }
 
         $nbtstat = nbtstat -n
         foreach ($line in $nbtStat) {
@@ -774,7 +784,9 @@ Function Show-SelectionForm {
     # Shows the form & allow move
     #===========================================================================
 
-    $Form.ShowDialog()
+    if (-Not $hideForm) {
+        $Form.ShowDialog()
+    }
 
     # if the migrate button is enabled and it is clicked, send formResults to Start-Migration
     If (($btn_migrateProfile.IsEnabled -eq $true) -AND $btn_migrateProfile.Add_Click) {

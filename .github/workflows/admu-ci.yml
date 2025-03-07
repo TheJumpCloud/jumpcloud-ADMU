@@ -142,13 +142,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        job_group: [0, 1, 2, 3]
+        job_group: [0, 1, 2]
     steps:
       - uses: actions/checkout@v4
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: jumpcloud-admu-build-${{ github.sha }}
+          name: jumpcloud-admu-build
+          path: jumpcloud-ADMU
       - name: Display structure of downloaded files
         run: ls -R
       - uses: actions/cache@v4
