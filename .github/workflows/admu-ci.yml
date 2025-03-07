@@ -124,7 +124,7 @@ jobs:
       - name: Upload Nuspec
         uses: actions/upload-artifact@v4
         with:
-          name: jumpcloud-admu-build-${{ github.sha }}
+          name: jumpcloud-admu-build
           path: |
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.nuspec
             ${{ github.workspace }}/Jumpcloud-ADMU/Docs/*.md
