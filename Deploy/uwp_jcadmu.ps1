@@ -950,6 +950,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     $UWPForm.EndUWP = $true
     exit
 } else {
-    Write-ToLog -Message ("The registry key $ADMUKEY does not exist.  The UWP app will not run.")
+    Write-ToLog -Message ("The registry key $ADMUKEY does not exist. The UWP app will not run.")
     exit
 }
