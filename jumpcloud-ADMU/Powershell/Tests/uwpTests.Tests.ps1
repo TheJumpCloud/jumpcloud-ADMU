@@ -193,6 +193,78 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             $fta.ProgId | Should -Contain "wordpad"
             $pta.ProgId | Should -Contain "notepad"
         }
+        It -Name "Tests when all CSV files are empty" {
+            # Create empty CSV files
+            New-Item -ItemType File -Path "$path\fileTypeAssociations.csv" -Force | Out-Null
+            New-Item -ItemType File -Path "$path\protocolTypeAssociations.csv" -Force | Out-Null
+            New-Item -ItemType File -Path "$path\appx_manifest.csv" -Force | Out-Null
+
+            . $uwpPath
+
+            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "FTA Registration Complete"
+            $mainLog | Should -Match "Appx Package Registration Complete"
+            $mainLog | Should -Match "PTA Registration Complete"
+        }
+
+        It -Name "Tests when the registry key does not exist" {
+            # Remove the registry key if it exists
+            Remove-Item -Path $ADMUKEY -Force -ErrorAction SilentlyContinue
+
+            . $uwpPath
+
+            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "The registry key $ADMUKEY does not exist. The UWP app will not run."
+        }
+
+        It -Name "Tests when the AppX registration fails" {
+            # Simulate AppX registration failure by providing invalid data
+            $appxList = @(
+                [PSCustomObject]@{ InstallLocation = "InvalidPath" }
+            )
+            Set-AppxManifestFile -profileImagePath $profileImagePath -appxList $appxList
+
+            . $uwpPath
+
+            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "AppX job failed."
+        }
+
+        It -Name "Tests when the FTA registration fails" {
+            # Simulate FTA registration failure by providing invalid data
+            $fileTypeAssociations = @(
+                [PSCustomObject]@{ extension = ".invalid"; programId = "InvalidProgram" }
+            )
+            $fileTypeAssociations | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
+
+            . $uwpPath
+
+            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "Failure"
+        }
+
+        It -Name "Tests when the PTA registration fails" {
+            # Simulate PTA registration failure by providing invalid data
+            $protocolTypeAssociations = @(
+                [PSCustomObject]@{ protocol = "invalid"; programId = "InvalidProgram" }
+            )
+            $protocolTypeAssociations | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
+
+            . $uwpPath
+
+            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "Failure"
+        }
 
     }
 }
