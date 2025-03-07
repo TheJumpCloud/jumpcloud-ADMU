@@ -596,7 +596,6 @@ function New-UWPForm {
     $synchash.Percent = '0'
     $synchash.Text = 'Completing Account Migration'
     $syncHash.base64JCLogo = DecodeBase64Image -ImageBase64 $newJCLogoBase64
-    $synchash.closeWindow = $false
     $syncHash.EndUWP = $false
 
     # optionally run this app in windowed view by switching the variable below to: $false
@@ -670,7 +669,11 @@ function New-UWPForm {
                 # Update Progress TextBlock
                 if ($syncHash.EndUWP -eq $true) {
                     $SyncHash.ProgressTextBlock.Text = "Account Migration Complete"
-                    Break
+                    Start-Sleep 1
+                    $syncHash.Window.Close()
+                    [System.Windows.Forms.Application]::Exit()
+                    $syncHash.Runspace.Close()
+                    $syncHash.Runspace.Dispose()
                 } else {
                     $SyncHash.ProgressTextBlock.Text = "$($SyncHash.Text): $($SyncHash.Percent)%"
                 }
@@ -696,14 +699,6 @@ function New-UWPForm {
     # Invoke PS Command
     $psCommand.Runspace = $newRunspace
     $data = $psCommand.BeginInvoke()
-
-    # If synchash is closed, close the runspace
-    if ($syncHash.EndUWP -eq $true) {
-        $syncHash.Window.Close()
-        [System.Windows.Forms.Application]::Exit()
-        $syncHash.Runspace.Close()
-        $syncHash.Runspace.Dispose()
-    }
 
     Register-ObjectEvent -InputObject $SyncHash.Runspace -EventName 'AvailabilityChanged' -Action {
         if ($Sender.RunspaceAvailability -eq "Available") {
@@ -953,6 +948,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
 
     Write-ToLog -Message ('########### End UWP App ###########')
     $UWPForm.EndUWP = $true
+    exit
 } else {
     Write-ToLog -Message ("The registry key $ADMUKEY does not exist.  The UWP app will not run.")
     exit
