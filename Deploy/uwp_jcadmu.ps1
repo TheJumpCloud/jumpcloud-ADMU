@@ -647,6 +647,14 @@ function New-UWPForm {
         </StackPanel>
 
         </Grid>
+        <TextBlock Name="ElapsedTimeTextBlock"
+            Grid.Row="0"
+            Grid.Column="2"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Margin="10"
+            FontSize="12"
+            Foreground="Gray" />
     </Grid>
 </Window>
 "@
@@ -665,32 +673,35 @@ function New-UWPForm {
             # JC Image
             $SyncHash.JCLogoImg.Source = $syncHash.base64JCLogo
 
-            $updateForm = {
-                # Update Progress TextBlock
-                if ($syncHash.EndUWP -eq $true) {
-                    $SyncHash.ProgressTextBlock.Text = "Account Migration Complete"
-                    Start-Sleep 1
-                    $syncHash.Window.Close()
-                    [System.Windows.Forms.Application]::Exit()
-                    $syncHash.Runspace.Close()
-                    $syncHash.Runspace.Dispose()
-                } else {
-                    $SyncHash.ProgressTextBlock.Text = "$($SyncHash.Text): $($SyncHash.Percent)%"
-                }
-            }
             # Hide cursor
             # $syncHash.Window.Cursor = [System.Windows.Input.Cursors]::None
             # Time to update the form
+            $startTime = [DateTime]::Now
             $syncHash.Window.Add_SourceInitialized( {
                     $timer = new-object System.Windows.Threading.DispatcherTimer
                     $timer.Interval = [TimeSpan]"0:0:0.01"
                     $timer.Add_Tick( $updateForm )
                     $timer.Start()
                     if (!$timer.IsEnabled ) {
-                        $clock.Close()
+                        $timer.Stop()
                         Write-Error "Timer didn't start"
                     }
                 } )
+
+            $updateForm = {
+                # Update Progress TextBlock
+                if ($syncHash.EndUWP -eq $true) {
+                    $SyncHash.ProgressTextBlock.Text = "Account Migration Complete"
+                    # stop the timer
+                    $timer.Stop()
+                    return
+                } else {
+                    $SyncHash.ProgressTextBlock.Text = "$($SyncHash.Text): $($SyncHash.Percent)%"
+                    $elapsedTime = [DateTime]::Now - $startTime
+                    $etString = $elapsedTime.ToString("hh\:mm\:ss")
+                    $SyncHash.ElapsedTimeTextBlock.Text = "Elapsed Time: $etString"
+                }
+            }
 
             $syncHash.Window.Show() | Out-Null
             $appContext = [System.Windows.Forms.ApplicationContext]::new()
@@ -948,6 +959,9 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
 
     Write-ToLog -Message ('########### End UWP App ###########')
     $UWPForm.EndUWP = $true
+    # Exit the runspace
+    $UWPForm.Runspace.Close()
+    $UWPForm.Runspace.Dispose()
     exit
 } else {
     Write-ToLog -Message ("The registry key $ADMUKEY does not exist. The UWP app will not run.")
