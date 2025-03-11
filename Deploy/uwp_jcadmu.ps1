@@ -658,7 +658,6 @@ function New-UWPForm {
     </Grid>
 </Window>
 "@
-
     # Create a runspace to run the form in
     $newRunspace.ApartmentState = "STA"
     $newRunspace.ThreadOptions = "ReuseThread"
@@ -699,7 +698,6 @@ function New-UWPForm {
                     $SyncHash.ElapsedTimeTextBlock.Text = "Elapsed Time: $etString"
                 }
             }
-
             $syncHash.Window.Show() | Out-Null
             $appContext = [System.Windows.Forms.ApplicationContext]::new()
             [void][System.Windows.Forms.Application]::Run($appContext)
