@@ -658,7 +658,6 @@ function New-UWPForm {
     </Grid>
 </Window>
 "@
-
     # Create a runspace to run the form in
     $newRunspace.ApartmentState = "STA"
     $newRunspace.ThreadOptions = "ReuseThread"
@@ -692,10 +691,7 @@ function New-UWPForm {
                 # Update Progress TextBlock
                 if ($syncHash.EndUWP -eq $true) {
                     $SyncHash.ProgressTextBlock.Text = "Account Migration Complete"
-                    # stop the timer
-                    $timer.Stop() # Stop the timer
-                    $SyncHash.Window.Close() # Close the WPF window
-                    [System.Windows.Forms.Application]::Exit() # Exit the application
+                    $timer.Stop()
                     return
                 } else {
                     $SyncHash.ProgressTextBlock.Text = "$($SyncHash.Text): $($SyncHash.Percent)%"
@@ -704,13 +700,6 @@ function New-UWPForm {
                     $SyncHash.ElapsedTimeTextBlock.Text = "Elapsed Time: $etString"
                 }
             }
-
-            # Add closed event handler
-            $syncHash.Window.Add_Closed({
-                    [System.Windows.Forms.Application]::Exit() # Exit the application loop
-                    $timer.Stop() #Stop the timer
-                })
-
             $syncHash.Window.Show() | Out-Null
             $appContext = [System.Windows.Forms.ApplicationContext]::new()
             [void][System.Windows.Forms.Application]::Run($appContext)
@@ -718,23 +707,8 @@ function New-UWPForm {
     # Invoke PS Command
     $psCommand.Runspace = $newRunspace
     $data = $psCommand.BeginInvoke()
-
-    # End invoke the PS Command
-    if (syncHash.EndUWP -eq $true) {
-        $psCommand.EndInvoke($data)
-        $syncHash.Runspace.Close()
-        $syncHash.Runspace.Dispose()
-    }
-
-    Register-ObjectEvent -InputObject $SyncHash.Runspace -EventName 'AvailabilityChanged' -Action {
-        if ($Sender.RunspaceAvailability -eq "Available") {
-            $Sender.CloseAsync()
-            $Sender.Dispose()
-        }
-    } | Out-Null
     return $syncHash
 }
-
 
 # Hide the powershell console window
 $hwnd = (Get-Process -Id $pid).MainWindowHandle
