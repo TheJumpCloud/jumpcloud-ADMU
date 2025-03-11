@@ -673,8 +673,6 @@ function New-UWPForm {
             # JC Image
             $SyncHash.JCLogoImg.Source = $syncHash.base64JCLogo
 
-            # Hide cursor
-            # $syncHash.Window.Cursor = [System.Windows.Input.Cursors]::None
             # Time to update the form
             $startTime = [DateTime]::Now
             $syncHash.Window.Add_SourceInitialized( {
@@ -692,11 +690,8 @@ function New-UWPForm {
                 # Update Progress TextBlock
                 if ($syncHash.EndUWP -eq $true) {
                     $SyncHash.ProgressTextBlock.Text = "Account Migration Complete"
-                    # stop the timer
-                    $timer.Stop() # Stop the timer
                     $SyncHash.Window.Close() # Close the WPF window
                     [System.Windows.Forms.Application]::Exit() # Exit the application
-                    return
                 } else {
                     $SyncHash.ProgressTextBlock.Text = "$($SyncHash.Text): $($SyncHash.Percent)%"
                     $elapsedTime = [DateTime]::Now - $startTime
@@ -705,12 +700,6 @@ function New-UWPForm {
                 }
             }
 
-            # Add closed event handler
-            $syncHash.Window.Add_Closed({
-                    [System.Windows.Forms.Application]::Exit() # Exit the application loop
-                    $timer.Stop() #Stop the timer
-                })
-
             $syncHash.Window.Show() | Out-Null
             $appContext = [System.Windows.Forms.ApplicationContext]::new()
             [void][System.Windows.Forms.Application]::Run($appContext)
@@ -718,23 +707,9 @@ function New-UWPForm {
     # Invoke PS Command
     $psCommand.Runspace = $newRunspace
     $data = $psCommand.BeginInvoke()
-
-    # End invoke the PS Command
-    if (syncHash.EndUWP -eq $true) {
-        $psCommand.EndInvoke($data)
-        $syncHash.Runspace.Close()
-        $syncHash.Runspace.Dispose()
-    }
-
-    Register-ObjectEvent -InputObject $SyncHash.Runspace -EventName 'AvailabilityChanged' -Action {
-        if ($Sender.RunspaceAvailability -eq "Available") {
-            $Sender.CloseAsync()
-            $Sender.Dispose()
-        }
-    } | Out-Null
+    # return the synchash
     return $syncHash
 }
-
 
 # Hide the powershell console window
 $hwnd = (Get-Process -Id $pid).MainWindowHandle
@@ -751,6 +726,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     Write-ToLog "Initializing UWP FORM....."
     # Initialize the form
     $UWPForm = New-UWPForm
+    Write-ToLog "New runspace form on runspaceID: $($UWPForm.Runspace.Id)"
     # init log
     Write-ToLog -Message ('########### Begin UWP App ###########')
     # set files:
@@ -839,14 +815,12 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                                 copy-item -path $path -destination "$path.old" -force
                                 New-Item $Path -Force -ItemType File
                             }
-
                         }
                         end {
                             # Write log entry to $Path
                             "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
                         }
                     }
-
                     try {
                         $appxList = Import-CSV "$homepath\AppData\Local\JumpCloudADMU\appx_manifest.csv"
                         # Create the log file.  The `-Force` parameter ensures overwriting.
@@ -854,7 +828,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                         "Starting Appx Package Registration" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                         $appxCount = $appxList.Count
                         "There are $($appxCount) appx to be registered" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-
 
                         #success Counter
                         $appxSuccessCounter = 0
@@ -963,8 +936,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                 $ptaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\pta_manifestLog.txt"
 
                 Write-ToLog -Message ("PTA Registration Complete.  $ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
-
-
             }
         }
     }
@@ -974,7 +945,8 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
 
     Write-ToLog -Message ('########### End UWP App ###########')
     $UWPForm.EndUWP = $true
-    # Exit the runspace
+    # Exit the runspace after two seconds
+    Start-Sleep -Seconds 2
     $UWPForm.Runspace.Close()
     $UWPForm.Runspace.Dispose()
     exit
