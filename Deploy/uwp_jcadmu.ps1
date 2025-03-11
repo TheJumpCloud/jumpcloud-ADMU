@@ -647,14 +647,6 @@ function New-UWPForm {
         </StackPanel>
 
         </Grid>
-        <TextBlock Name="ElapsedTimeTextBlock"
-            Grid.Row="0"
-            Grid.Column="2"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Bottom"
-            Margin="10"
-            FontSize="12"
-            Foreground="Gray" />
     </Grid>
 </Window>
 "@
@@ -673,7 +665,6 @@ function New-UWPForm {
             $SyncHash.JCLogoImg.Source = $syncHash.base64JCLogo
 
             # Time to update the form
-            $startTime = [DateTime]::Now
             $syncHash.Window.Add_SourceInitialized( {
                     $timer = new-object System.Windows.Threading.DispatcherTimer
                     $timer.Interval = [TimeSpan]"0:0:0.01"
@@ -693,9 +684,6 @@ function New-UWPForm {
                     [System.Windows.Forms.Application]::Exit() # Exit the application
                 } else {
                     $SyncHash.ProgressTextBlock.Text = "$($SyncHash.Text): $($SyncHash.Percent)%"
-                    $elapsedTime = [DateTime]::Now - $startTime
-                    $etString = $elapsedTime.ToString("hh\:mm\:ss")
-                    $SyncHash.ElapsedTimeTextBlock.Text = "Elapsed Time: $etString"
                 }
             }
             $syncHash.Window.Show() | Out-Null
