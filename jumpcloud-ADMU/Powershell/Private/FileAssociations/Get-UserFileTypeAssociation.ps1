@@ -36,14 +36,20 @@ function Get-UserFileTypeAssociation {
         $UseAdmuPath = $true
     )
     begin {
+        # define a list
         $manifestList = [System.Collections.ArrayList]::new()
+        # dynamically create the path to search
         $basePath = "HKEY_USERS:\$($UserSid)"
-        $pathSuffix = "\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
+        $pathSuffix = "\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
 
         if ($UseAdmuPath) {
             $fullPath = "$($basePath)_admu$($pathSuffix)"
         } else {
             $fullPath = "$($basePath)$($pathSuffix)"
+        }
+        # Validate file permissions on registry item
+        if ("HKEY_USERS" -notin (Get-PSDrive | Select-Object name).Name) {
+            New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
         }
     }
     process {
@@ -54,10 +60,12 @@ function Get-UserFileTypeAssociation {
             foreach ($ext in $exts) {
                 $indivExtension = $ext.PSChildName
                 $progId = (Get-ItemProperty "$($fullPath)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
-                $manifestList.Add([PSCustomObject]@{
-                        extension = $indivExtension
-                        programId = $progId
-                    }) | Out-Null # Suppress output from Add()
+                if ( ( -NOT [System.String]::IsNullOrEmpty($indivExtension) ) -AND ( -NOT [System.String]::IsNullOrEmpty($progId) ) ) {
+                    $manifestList.Add([PSCustomObject]@{
+                            extension = $indivExtension
+                            programId = $progId
+                        }) | Out-Null
+                }
             }
         }
     }

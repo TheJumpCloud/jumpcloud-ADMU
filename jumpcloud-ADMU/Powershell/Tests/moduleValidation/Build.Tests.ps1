@@ -1,6 +1,6 @@
 Describe "Module Validation Tests" -Tag "Module Validation" {
     BeforeAll {
-        $env:ModuleVersionType = "Patch"
+        $env:ModuleVersionType = $env:RELEASE_TYPE
         if ($env:ModuleVersionType -eq "patch") {
             $env:ModuleVersionType = "build"
         }

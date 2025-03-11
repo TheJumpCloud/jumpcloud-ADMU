@@ -27,6 +27,16 @@ Describe "Get-ProtocolTypeAssociation Acceptance Tests" -Tag "Acceptance" {
         $protocolTypeAssociations = Get-ProtocolTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
         # Should not be null or empty
         $protocolTypeAssociations | Should -Not -BeNullOrEmpty
+        # contains both expected types
+        $protocolTypeAssociations.extension | Should -Not -BeNullOrEmpty
+        $protocolTypeAssociations.programId | Should -Not -BeNullOrEmpty
+        # there should be no empty items
+        foreach ($ext in $protocolTypeAssociations.extension) {
+            $ext | Should -Not -BeNullOrEmpty
+        }
+        foreach ($programId in $protocolTypeAssociations.programId) {
+            $programId | Should -Not -BeNullOrEmpty
+        }
 
     }
 

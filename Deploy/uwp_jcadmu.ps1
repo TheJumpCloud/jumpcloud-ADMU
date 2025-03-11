@@ -596,7 +596,6 @@ function New-UWPForm {
     $synchash.Percent = '0'
     $synchash.Text = 'Completing Account Migration'
     $syncHash.base64JCLogo = DecodeBase64Image -ImageBase64 $newJCLogoBase64
-    $synchash.closeWindow = $false
     $syncHash.EndUWP = $false
 
     # optionally run this app in windowed view by switching the variable below to: $false
@@ -648,10 +647,17 @@ function New-UWPForm {
         </StackPanel>
 
         </Grid>
+        <TextBlock Name="ElapsedTimeTextBlock"
+            Grid.Row="0"
+            Grid.Column="2"
+            HorizontalAlignment="Right"
+            VerticalAlignment="Bottom"
+            Margin="10"
+            FontSize="12"
+            Foreground="Gray" />
     </Grid>
 </Window>
 "@
-
     # Create a runspace to run the form in
     $newRunspace.ApartmentState = "STA"
     $newRunspace.ThreadOptions = "ReuseThread"
@@ -666,29 +672,32 @@ function New-UWPForm {
             # JC Image
             $SyncHash.JCLogoImg.Source = $syncHash.base64JCLogo
 
-            $updateForm = {
-                # Update Progress TextBlock
-                if ($syncHash.EndUWP -eq $true) {
-                    $SyncHash.ProgressTextBlock.Text = "Account Migration Complete"
-                    Break
-                } else {
-                    $SyncHash.ProgressTextBlock.Text = "$($SyncHash.Text): $($SyncHash.Percent)%"
-                }
-            }
-            # Hide cursor
-            # $syncHash.Window.Cursor = [System.Windows.Input.Cursors]::None
             # Time to update the form
+            $startTime = [DateTime]::Now
             $syncHash.Window.Add_SourceInitialized( {
                     $timer = new-object System.Windows.Threading.DispatcherTimer
                     $timer.Interval = [TimeSpan]"0:0:0.01"
                     $timer.Add_Tick( $updateForm )
                     $timer.Start()
                     if (!$timer.IsEnabled ) {
-                        $clock.Close()
+                        $timer.Stop()
                         Write-Error "Timer didn't start"
                     }
                 } )
 
+            $updateForm = {
+                # Update Progress TextBlock
+                if ($syncHash.EndUWP -eq $true) {
+                    $SyncHash.ProgressTextBlock.Text = "Account Migration Complete"
+                    $SyncHash.Window.Close() # Close the WPF window
+                    [System.Windows.Forms.Application]::Exit() # Exit the application
+                } else {
+                    $SyncHash.ProgressTextBlock.Text = "$($SyncHash.Text): $($SyncHash.Percent)%"
+                    $elapsedTime = [DateTime]::Now - $startTime
+                    $etString = $elapsedTime.ToString("hh\:mm\:ss")
+                    $SyncHash.ElapsedTimeTextBlock.Text = "Elapsed Time: $etString"
+                }
+            }
             $syncHash.Window.Show() | Out-Null
             $appContext = [System.Windows.Forms.ApplicationContext]::new()
             [void][System.Windows.Forms.Application]::Run($appContext)
@@ -696,24 +705,9 @@ function New-UWPForm {
     # Invoke PS Command
     $psCommand.Runspace = $newRunspace
     $data = $psCommand.BeginInvoke()
-
-    # If synchash is closed, close the runspace
-    if ($syncHash.EndUWP -eq $true) {
-        $syncHash.Window.Close()
-        [System.Windows.Forms.Application]::Exit()
-        $syncHash.Runspace.Close()
-        $syncHash.Runspace.Dispose()
-    }
-
-    Register-ObjectEvent -InputObject $SyncHash.Runspace -EventName 'AvailabilityChanged' -Action {
-        if ($Sender.RunspaceAvailability -eq "Available") {
-            $Sender.CloseAsync()
-            $Sender.Dispose()
-        }
-    } | Out-Null
+    # return the synchash
     return $syncHash
 }
-
 
 # Hide the powershell console window
 $hwnd = (Get-Process -Id $pid).MainWindowHandle
@@ -730,6 +724,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
     Write-ToLog "Initializing UWP FORM....."
     # Initialize the form
     $UWPForm = New-UWPForm
+    Write-ToLog "New runspace form on runspaceID: $($UWPForm.Runspace.Id)"
     # init log
     Write-ToLog -Message ('########### Begin UWP App ###########')
     # set files:
@@ -818,14 +813,12 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                                 copy-item -path $path -destination "$path.old" -force
                                 New-Item $Path -Force -ItemType File
                             }
-
                         }
                         end {
                             # Write log entry to $Path
                             "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
                         }
                     }
-
                     try {
                         $appxList = Import-CSV "$homepath\AppData\Local\JumpCloudADMU\appx_manifest.csv"
                         # Create the log file.  The `-Force` parameter ensures overwriting.
@@ -834,17 +827,16 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                         $appxCount = $appxList.Count
                         "There are $($appxCount) appx to be registered" | Out-File -FilePath $logFile -Encoding UTF8 -Append
 
-
                         #success Counter
                         $appxSuccessCounter = 0
                         foreach ($item in $appxList) {
-                            try {
-                                Add-AppxPackage -DisableDevelopmentMode -Register -ForceApplicationShutdown "$($item.InstallLocation)\AppxManifest.xml"
-                                "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                                $appxSuccessCounter++
-                            } catch {
+                            Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml" -ErrorAction SilentlyContinue -ErrorVariable packageFailed
+                            if ($packageFailed) {
                                 "Error registering $($item.InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                            } else {
+                                "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                             }
+                            $appxSuccessCounter++
                         }
                         "Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                         Write-ToLog -Message ("Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully")
@@ -862,7 +854,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                 $timeoutSeconds = 120  # Set the maximum wait time in seconds for the APPX job
                 $startTime = Get-Date
 
-                while ($j.State -ne "Completed" -and $j.State -ne "Failed" -and ((Get-Date).Subtract($startTime).TotalSeconds) -lt $timeoutSeconds) {
+                while (($j.State -ne "Completed") -and ($j.State -ne "Failed") -and (((Get-Date).Subtract($startTime).TotalSeconds) -lt $timeoutSeconds)) {
                     if (Test-Path "$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") {
                         $lines = Get-Content -Path:("$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") -Raw
                         # Count the number of lines in the log file
@@ -876,7 +868,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                     }
                     Start-Sleep -Seconds 1
                 }
-
                 # Get the final result (if needed)
                 Receive-Job -Job $j
 
@@ -886,7 +877,7 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                     Stop-Job $j
                     Remove-Job $j
                 } elseif ($j.State -eq "Failed") {
-                    Write-ToLog "AppX job  failed."
+                    Write-ToLog "AppX job failed."
                     Stop-Job $j
                     Remove-Job $j
                 } else {
@@ -906,18 +897,17 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                     $percent = [Math]::Round([Math]::Ceiling(($curAllListCount / $allListsCount) * 100))
                     $UWPForm.Percent = $percent
 
-                    if ($item.programId) {
-                        Write-ToLog -Message ("Registering FTA Extension: $($item.extension) ProgramID: $($item.programId)")
-                        # Output to the log file
-                        try {
-                            $ftaOutput += Set-FTA -Extension $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
-                            Write-ToLog -Message ("Success")
-                            $ftaSuccessCounter++
-                        } catch {
-                            Write-ToLog -Message ("Failure")
-                            Write-ToLog -Message ($ProcessError)
-                        }
+                    Write-ToLog -Message ("Registering FTA Extension: $($item.extension) ProgramID: $($item.programId)")
+                    # Output to the log file
+                    try {
+                        $ftaOutput += Set-FTA -Extension $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
+                        Write-ToLog -Message ("Success")
+                        $ftaSuccessCounter++
+                    } catch {
+                        Write-ToLog -Message ("Failure")
+                        Write-ToLog -Message ($ProcessError)
                     }
+
                 }
                 $ftaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\fta_manifestLog.txt"
                 Write-ToLog -Message ("FTA Registration Complete.  $ftaSuccessCounter/$ftaCount file type associations registered successfully.")
@@ -944,8 +934,6 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                 $ptaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\pta_manifestLog.txt"
 
                 Write-ToLog -Message ("PTA Registration Complete.  $ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
-
-
             }
         }
     }
@@ -955,7 +943,12 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
 
     Write-ToLog -Message ('########### End UWP App ###########')
     $UWPForm.EndUWP = $true
+    # Exit the runspace after two seconds
+    Start-Sleep -Seconds 2
+    $UWPForm.Runspace.Close()
+    $UWPForm.Runspace.Dispose()
+    exit
 } else {
-    Write-ToLog -Message ("The registry key $ADMUKEY does not exist.  The UWP app will not run.")
+    Write-ToLog -Message ("The registry key $ADMUKEY does not exist. The UWP app will not run.")
     exit
 }

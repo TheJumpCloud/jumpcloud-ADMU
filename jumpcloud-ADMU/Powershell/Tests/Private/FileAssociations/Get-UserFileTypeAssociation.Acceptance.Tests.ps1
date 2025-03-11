@@ -27,6 +27,18 @@ Describe "Get-UserFileTypeAssociation Acceptance Tests" -Tag "Acceptance" {
         $userFileTypeAssociations = Get-UserFileTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
         # Should not be null or empty
         $userFileTypeAssociations | Should -Not -BeNullOrEmpty
+        # contains both expected types
+        $userFileTypeAssociations.extension | Should -Not -BeNullOrEmpty
+        $userFileTypeAssociations.programId | Should -Not -BeNullOrEmpty
+        # there should be no empty items
+        foreach ($ext in $userFileTypeAssociations.extension) {
+            $ext | Should -Not -BeNullOrEmpty
+            # each extension should start with a '.'
+            $ext[0] | should -Be "."
+        }
+        foreach ($programId in $userFileTypeAssociations.programId) {
+            $programId | Should -Not -BeNullOrEmpty
+        }
     }
 
     # Add more acceptance tests as needed
