@@ -1,6 +1,5 @@
 Describe -Name "UWP Tests" -Tag "Acceptance" {
     BeforeAll {
-
         # Output the root module path
         Write-Host "Root Module Path: $($Global:rootModule)"
         Write-Host "Current Test Path: $PSScriptRoot"
@@ -25,7 +24,6 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             }
 
             if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
-                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
             }
             # set the file type associations
@@ -48,6 +46,20 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
                 $Key = [Microsoft.Win32.Registry]::'Users'.CreateSubKey("$($currentUserSID)\SOFTWARE\JCADMU")
                 $key.Close()
             }
+
+            # set log paths
+            $appxPath = "$profileImagePath\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
+            $ftaPath = "$profileImagePath\AppData\Local\JumpCloudADMU\fta_manifestLog.txt"
+            $ptaPath = "$profileImagePath\AppData\Local\JumpCloudADMU\pta_manifestLog.txt"
+            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
+
+            # remove each file if it exists:
+            foreach ($filelogPath in $appxPath, $ftaPath, $ptaPath, $logPath) {
+                if (Test-Path $filelogPath) {
+                    Remove-Item $filelogPath -Force
+                }
+            }
+
         }
         It -Name "Tests that the individual logs are generated post uwp run" {
 
@@ -55,24 +67,12 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             Get-Item "$path\protocolTypeAssociations.csv" | should -not -BeNullOrEmpty
             Get-Item "$path\appx_manifest.csv" | should -not -BeNullOrEmpty
 
-            write-host "begin uwp"
             . $uwpPath
-            write-host "done with uwp"
-
-            $appxPath = "$profileImagePath\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
-            $ftaPath = "$profileImagePath\AppData\Local\JumpCloudADMU\fta_manifestLog.txt"
-            $ptaPath = "$profileImagePath\AppData\Local\JumpCloudADMU\pta_manifestLog.txt"
-            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
 
             $appxLog = Get-Content $appxPath -Raw
             $ftaLog = Get-Content $ftaPath -Raw
             $ptaLog = Get-Content $ptaPath -Raw
             $mainLog = Get-Content $logPath -Raw
-
-            # Write-Host "appx: $appxLog"
-            # Write-Host "fta: $ftaLog"
-            # Write-Host "pta: $ptaLog"
-            # Write-Host "log: $mainLog"
 
             $mainLog | Should -Match "FTA Registration Complete"
             $mainLog | Should -Match "Appx Package Registration Complete"
@@ -94,7 +94,6 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Call the function
             . $uwpPath
-            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
             $mainLog = Get-Content $logPath -Raw
             $mainLog | Should -Match "Appx Package Registration Complete"
         }
@@ -108,7 +107,6 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Call the function
             . $uwpPath
-            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
             $mainLog = Get-Content $logPath -Raw
             $mainLog | Should -Match "PTA Registration Complete"
         }
@@ -122,7 +120,6 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Call the function
             . $uwpPath
-            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
             $mainLog = Get-Content $logPath -Raw
             $mainLog | Should -Match "FTA Registration Complete"
         }
@@ -139,7 +136,6 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Call the function
             . $uwpPath
-            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
             $mainLog = Get-Content $logPath -Raw
             Write-Host "pta: $mainLog"
 
@@ -156,7 +152,6 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Call the function
             . $uwpPath
-            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
             $mainLog = Get-Content $logPath -Raw
             $mainLog | Should -Match "PTA Registration Complete"
         }
@@ -171,7 +166,6 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Call the function
             . $uwpPath
-            $logPath = "$profileImagePath\AppData\Local\JumpCloudADMU\log.txt"
             $mainLog = Get-Content $logPath -Raw
             $mainLog | Should -Match "FTA Registration Complete"
         }
@@ -192,6 +186,61 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             # Check if programId is wordpad
             $fta.ProgId | Should -Contain "wordpad"
             $pta.ProgId | Should -Contain "notepad"
+        }
+        It -Name "Tests when all CSV files are empty" {
+            # Create empty CSV files
+            New-Item -ItemType File -Path "$path\fileTypeAssociations.csv" -Force | Out-Null
+            New-Item -ItemType File -Path "$path\protocolTypeAssociations.csv" -Force | Out-Null
+            New-Item -ItemType File -Path "$path\appx_manifest.csv" -Force | Out-Null
+
+            . $uwpPath
+
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "There are 0 file type associations to be registered"
+            $mainLog | Should -Match "There are 0 appx to be registered"
+            $mainLog | Should -Match "There are 0 protocol type associations to be registered"
+        }
+
+        It -Name "Tests when the registry key does not exist" {
+            # Remove the registry key if it exists
+            Remove-Item -Path $ADMUKEY -Force -ErrorAction SilentlyContinue
+
+            . $uwpPath
+
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "The registry key .* does not exist\. The UWP app will not run\."
+
+        }
+
+        It -Name "Tests when the FTA registration fails" -Skip {
+            # skipping this test, even mocked data writes to the registry and the test fails because Set-FTA does not encounter an error.
+            # Simulate FTA registration failure by providing invalid data
+            $fileTypeAssociations = @(
+                [PSCustomObject]@{ extension = ".invalid"; programId = "invalid" }
+            )
+            $fileTypeAssociations | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
+
+            . $uwpPath
+
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "Failure"
+        }
+
+        It -Name "Tests when the PTA registration fails" {
+            # Simulate PTA registration failure by providing invalid data
+            $protocolTypeAssociations = @(
+                [PSCustomObject]@{ protocol = "invalid"; programId = "InvalidProgram" }
+            )
+            $protocolTypeAssociations | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
+
+            . $uwpPath
+
+            $mainLog = Get-Content $logPath -Raw
+
+            $mainLog | Should -Match "Failure"
         }
 
     }

@@ -33,7 +33,9 @@ function Get-ProtocolTypeAssociation {
 
     )
     begin {
+        # define a list
         $manifestList = [System.Collections.ArrayList]::new()
+        # dynamically create the path to search
         $basePath = "HKEY_USERS:\$($UserSid)"
         $pathSuffix = "\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
 
@@ -42,6 +44,10 @@ function Get-ProtocolTypeAssociation {
         } else {
             $fullPath = "$($basePath)$($pathSuffix)"
         }
+        # Validate file permissions on registry item
+        if ("HKEY_USERS" -notin (Get-PSDrive | Select-Object name).Name) {
+            New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
+        }
     }
     process {
 
@@ -49,11 +55,12 @@ function Get-ProtocolTypeAssociation {
             Get-ChildItem $fullPath* |
             ForEach-Object {
                 $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
-                if ($progId) {
+                $extension = $_.PSChildName
+                if ( ( -NOT [System.String]::IsNullOrEmpty($extension) ) -AND ( -NOT [System.String]::IsNullOrEmpty($progId) ) ) {
                     $manifestList.Add([PSCustomObject]@{
-                            extension = $_.PSChildName
+                            extension = $extension
                             programId = $progId
-                        }) | Out-Null # Suppress output from Add()
+                        }) | Out-Null
                 }
             }
         }

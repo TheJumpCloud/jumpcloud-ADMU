@@ -34,7 +34,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.7.12'
+        $admuVersion = '2.7.14'
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
 
@@ -537,7 +537,7 @@ Function Start-Migration {
                 Set-ValueToKey -registryRoot Users -keyPath "$($newusersid)_admu\SOFTWARE\JCADMU" -Name "previousProfilePath" -value "$oldUserProfileImagePath" -regValueKind String
             }
             ### End reg key check for new user
-            $path = $oldUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
+            $path = Join-Path $oldUserProfileImagePath '\AppData\Local\JumpCloudADMU'
             If (!(test-path $path)) {
                 New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
@@ -549,15 +549,14 @@ Function Start-Migration {
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
             }
             Write-ToProgress -ProgressBar $Progressbar -Status "CopyDefaultProtocols" -form $isForm
-
+            # Get the file type associations while the user registry is loaded
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $SelectedUserSid
             Write-ToLog -Message:('Found ' + $fileTypeAssociations.count + ' File Type Associations')
             $fileTypeAssociations | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
-
+            # Get the protocol type associations while the user registry is loaded
             $protocolTypeAssociations = Get-ProtocolTypeAssociation -UserSid $SelectedUserSid
             Write-ToLog -Message:('Found ' + $protocolTypeAssociations.count + ' Protocol Type Associations')
             $protocolTypeAssociations | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
-
 
             $regQuery = REG QUERY HKU *>&1
             # Unload "Selected" and "NewUser"
