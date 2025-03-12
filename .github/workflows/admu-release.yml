@@ -142,6 +142,8 @@ jobs:
             ${{ github.workspace }}/JumpCloud.ADMU.*.nupkg
   Draft-GH-Release:
     needs: [Build-Sign-ADMU]
+    outputs:
+      RELEASE_TAG: ${{ steps.validate-tag.outputs.RELEASE_TAG }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -150,6 +152,7 @@ jobs:
         with:
           name: jumpcloud-admu
       - name: Build Draft Release
+        id: validate-tag
         run: |
           VERSION=$(grep -Po '(\d+\.\d+\.\d+)' ${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.psd1)
           TITLE="JumpCloud ADMU v$VERSION"
@@ -158,7 +161,8 @@ jobs:
           BODY="$TITLE $CHANGELOG"
           # draft release
           (gh release view $TAG && echo "Release exists for $TAG") || gh release create $TAG --title "$TITLE" --notes "$BODY" --draft
-          echo "RELEASE_TAG=$TAG" >> $GITHUB_ENV
+          echo "setting $TAG as output"
+          echo "RELEASE_TAG=$TAG" >> $GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   Trigger-Repository-Dispatch:
@@ -172,7 +176,7 @@ jobs:
               -H "Authorization: Bearer ${{ secrets.DISPATCH_GH_TOKEN }}" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
               https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU-signing/dispatches \
-              -d '{"event_type": "create-tag", "client_payload": {"release_tag": "'"${{ env.RELEASE_TAG }}"'"}}'
+              -d '{"event_type": "create-tag", "client_payload": {"release_tag": "'"${{ needs.Draft-GH-Release.outputs.RELEASE_TAG }}"'"}}'
   Manual-Approval-Release:
     needs: ["Draft-GH-Release"]
     environment: PublishToPSGallery
