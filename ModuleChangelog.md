@@ -1,3 +1,16 @@
+## 2.7.15
+
+Release Date: March 18, 2025
+
+#### RELEASE NOTES
+
+```
+This release enhances user directory redirection validation. Migrations now proceed correctly when user shell folders are redirected to OneDrive, Google Drive, and other local paths.
+```
+
+#### BUG FIXES:
+N/A
+
 ## 2.7.14
 
 Release Date: March 12, 2025
