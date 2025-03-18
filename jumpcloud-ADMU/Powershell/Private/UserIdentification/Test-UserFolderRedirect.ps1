@@ -56,13 +56,14 @@ function Test-UserFolderRedirect {
                 }
                 # Get the registry value for the user folder
                 $folderRegKeyValue = (Get-Item -path $fullPath ).GetValue($folderRegKey , '', 'DoNotExpandEnvironmentNames')
-                $defaultRegFolder = "%USERPROFILE%\$userFolder"
+                #$defaultRegFolder = "%USERPROFILE%\$userFolder"
                 # If the registry value does not match the default path, set redirectedDirectory to true and log the error
-                if ($folderRegKeyValue -ne $defaultRegFolder) {
-                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue) does not match default path  - $($defaultRegFolder)") -Level warn
+                $regex = '^\\\\[a-zA-Z0-9.-]+\\[a-zA-Z0-9._-]+(\\[a-zA-Z0-9._-]+)*$' # regex for network paths ie \\server\share\folder, \\server.example.com\share\folder
+                if ($folderRegKeyValue -match $regex) {
+                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue) is a network path (IP or Domain). Migration NOT allowed.") -Level warn
                     $redirectedDirectory = $true
                 } else {
-                    Write-ToLog -Message:("User Shell Folder: $($userFolder) is default")
+                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue). Migration allowed.")
                 }
             }
         } else {
