@@ -56,7 +56,7 @@ function Test-UserFolderRedirect {
                 }
                 # Get the registry value for the user folder
                 $folderRegKeyValue = (Get-Item -path $fullPath ).GetValue($folderRegKey , '', 'DoNotExpandEnvironmentNames')
-                $defaultRegFolder = "%USERPROFILE%\$userFolder"
+                #$defaultRegFolder = "%USERPROFILE%\$userFolder"
                 # If the registry value does not match the default path, set redirectedDirectory to true and log the error
                 $regex = '^\\\\[a-zA-Z0-9.-]+\\[a-zA-Z0-9._-]+(\\[a-zA-Z0-9._-]+)*$' # regex for network paths ie \\server\share\folder, \\server.example.com\share\folder
                 if ($folderRegKeyValue -match $regex) {
