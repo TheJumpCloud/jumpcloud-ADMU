@@ -122,8 +122,7 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
                 $psd1Version | Should -BeGreaterThan $latestModule.Version
             } else {
                 $psd1Version | Should -BeGreaterThan $latestModule.Version
-                Write-Host "$($latestModule.Version.$($env:ModuleVersionType) + 1)"
-                $psd1Version.$($env:ModuleVersionType) | Should -Be ($latestModule.Version.$($env:ModuleVersionType) + 1)
+                $psd1Version.$($env:ModuleVersionType) | Should -Be ((([version]$($latestModule.Version)).build) + 1)
             }
         }
         It 'The date on the current version of the Module Manifest file should be todays date' {
