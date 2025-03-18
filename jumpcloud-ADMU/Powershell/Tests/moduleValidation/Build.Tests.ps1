@@ -119,9 +119,10 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
             if ($env:ModuleVersionType -eq "manual") {
                 # Manual Versioning
                 # Given version should be greater than master
-                $psd1Version | Should -be $latestModule.Version
+                $psd1Version | Should -BeGreaterThan $latestModule.Version
             } else {
                 $psd1Version | Should -BeGreaterThan $latestModule.Version
+                Write-Host "$($latestModule.Version.$($env:ModuleVersionType) + 1)"
                 $psd1Version.$($env:ModuleVersionType) | Should -Be ($latestModule.Version.$($env:ModuleVersionType) + 1)
             }
         }
