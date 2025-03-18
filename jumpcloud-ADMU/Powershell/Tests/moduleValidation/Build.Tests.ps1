@@ -110,6 +110,21 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
     }
 
     Context "Module PSD1 Validation" {
+        # Validate PSD1 version matches the module version
+        It 'PSD1 version' {
+            $psd1Content = Get-Content -Path $psd1Path
+            $psd1Regex = "ModuleVersion[\s\S]+(([0-9]+)\.([0-9]+)\.([0-9]+))"
+            $psd1VersionMatch = Select-String -InputObject:($psd1Content) -Pattern:($psd1Regex)
+            $psd1Version = [version]$psd1VersionMatch.Matches.Groups[1].value
+            if ($env:ModuleVersionType -eq "manual") {
+                # Manual Versioning
+                # Given version should be greater than master
+                $psd1Version | Should -be $latestModule.Version
+            } else {
+                $psd1Version | Should -BeGreaterThan $latestModule.Version
+                $psd1Version.$($env:ModuleVersionType) | Should -Be ($latestModule.Version.$($env:ModuleVersionType) + 1)
+            }
+        }
         It 'The date on the current version of the Module Manifest file should be todays date' {
             # get content from current path
             $moduleContent = Get-Content -Path ("$psd1Path")
