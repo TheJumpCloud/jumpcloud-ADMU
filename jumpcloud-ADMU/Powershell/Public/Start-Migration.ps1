@@ -34,7 +34,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.7.15'
+        $admuVersion = '2.7.16'
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
 
@@ -157,7 +157,6 @@ Function Start-Migration {
             break
         }
 
-
         Write-ToLog -Message:("Bind as admin = $($BindAsAdmin)")
         $trackAccountMerge = $false
         # Track migration steps
@@ -186,7 +185,6 @@ Function Start-Migration {
 
         Write-ToLog -Message("The Selected Migration user is: $JumpCloudUsername") -Level Verbose
 
-
         Write-ToLog -Message:('Creating JCADMU Temporary Path in ' + $jcAdmuTempPath)
         if (!(Test-path $jcAdmuTempPath)) {
             new-item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
@@ -203,6 +201,8 @@ Function Start-Migration {
         } else {
             Write-ToLog -message:("No Scheduled Tasks to disable")
         }
+        # Get domain status
+        $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
     }
     Process {
 
@@ -210,7 +210,6 @@ Function Start-Migration {
         $SelectedLocalUsername = "$($localComputerName)\$($JumpCloudUserName)"
         Write-ToLog -Message:('Windows Profile "' + $SelectedUserName + '" is going to be converted to "' + $localComputerName + '\' + $JumpCloudUsername + '"') -Level Verbose
         #region SilentAgentInstall
-
 
         $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
         Write-ToProgress -ProgressBar $Progressbar -Status "Install" -form $isForm

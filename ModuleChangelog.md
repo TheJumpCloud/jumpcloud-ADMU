@@ -1,3 +1,17 @@
+## 2.7.16
+
+Release Date: March 25, 2025
+
+#### RELEASE NOTES
+
+```
+This release addresses an issue introduced v2.7.11 where local domains were no longer being left when the tool was prompted to leave a domain post-migration
+```
+
+#### BUG FIXES:
+
+Addresses an issue where the tool would not leave local domains
+
 ## 2.7.15
 
 Release Date: March 18, 2025
@@ -9,6 +23,7 @@ This release enhances user directory redirection validation. Migrations now proc
 ```
 
 #### BUG FIXES:
+
 N/A
 
 ## 2.7.14
