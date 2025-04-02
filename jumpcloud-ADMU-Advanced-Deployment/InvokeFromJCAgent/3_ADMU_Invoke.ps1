@@ -18,9 +18,24 @@ $JumpCloudAPIKey = ''
 $JumpCloudOrgID = '' # This field is required if you use a MTP API Key
 $SetDefaultWindowsUser = $true # Set the default last logged on windows user to the JumpCloud user (default True)
 
+# Option to shutdown or restart
+# Restarting the system is the default behavior
+# If you want to shutdown the system, set the postMigrationBehavior to Shutdown
+# The 'shutdown' behavior performs a shutdown of the system in a much faster manner than 'restart' which can take 5 mins form the time the command is issued
+$postMigrationBehavior = 'Restart' # Restart or Shutdown
+
 ################################################################################
 # Do not edit below
 ################################################################################
+
+# validate postMigrationBehavior
+if ($postMigrationBehavior -notin @('Restart', 'Shutdown')) {
+    Write-Host "[status] Invalid postMigrationBehavior specified, exiting..."
+    exit 1
+} else {
+    # set the postMigrationBehavior to lower case and continue
+    $postMigrationBehavior = $postMigrationBehavior.ToLower()
+}
 
 # Create the GitHub credential set
 $password = ConvertTo-SecureString "$GHToken" -AsPlainText -Force
@@ -55,9 +70,14 @@ $ImportedCSV = Import-Csv -Path $discoverycsvlocation
 # define list of user we want to migrate
 $UsersToMigrate = @()
 
+$computerName = $env:COMPUTERNAME
+$serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+
+write-host "[status] Computer Name: $($computerName)"
+write-host "[status] Serial Number: $($serialNumber)"
 # Find user to be migrated
 foreach ($row in $ImportedCSV) {
-    if ($row.LocalComputerName -eq ($env:COMPUTERNAME)) {
+    if (($row.LocalComputerName -eq ($computerName)) -AND ($row.SerialNumber -eq $serialNumber) -AND ($row.JumpCloudUserName -ne '')) {
         Write-Host "[status] Imported entry for $($row.LocalPath) | Converting to JumpCloud User $($row.JumpCloudUserName)"
         $UsersToMigrate += [PSCustomObject]@{
             selectedUsername  = $row.SID
@@ -66,18 +86,40 @@ foreach ($row in $ImportedCSV) {
     }
 }
 
+# if the $UsersToMigrate is empty, exit
+If ($UsersToMigrate.Count -eq 0) {
+    Write-Host "[status] No users to migrate, exiting..."
+    exit 1
+}
+
 # validate users to be migrated
 foreach ($user in $UsersToMigrate) {
     # Validate parameter are not empty:
     If ([string]::IsNullOrEmpty($user.JumpCloudUserName)) {
-        Write-Error "Could not migrate user, entry not found in CSV for JumpCloud Username: $($user.selectedUsername)"
+        Write-Error "[status] Could not migrate user, entry not found in CSV for JumpCloud Username: $($user.selectedUsername)"
         exit 1
     }
 }
 
 # Install the latest ADMU from PSGallery
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Install-Module JumpCloud.ADMU -Force
+$latestADMUModule = Find-Module -Name JumpCloud.ADMU -ErrorAction SilentlyContinue
+$installedADMUModule = Get-InstalledModule -Name JumpCloud.ADMU -ErrorAction SilentlyContinue
+if (-NOT $installedADMUModule) {
+    Write-Host "[status] JumpCloud ADMU module not found, installing..."
+    Install-Module JumpCloud.ADMU -Force
+} else {
+    # update the module if it's not the latest version
+    if ($latestADMUModule.Version -ne $installedADMUModule.Version) {
+        Write-Host "[status] JumpCloud ADMU module found, updating..."
+        Uninstall-Module -Name Jumpcloud.ADMU -AllVersions
+        Install-Module JumpCloud.ADMU -Force
+    } else {
+        Write-Host "[status] JumpCloud ADMU module is up to date"
+    }
+}
+
+
 
 # wait just a moment to ensure the ADMU was downloaded from PSGallery
 start-sleep -Seconds 5
@@ -178,7 +220,13 @@ if ($ForceRebootAfterMigration) {
             "x-org-id"  = $JumpCloudOrgID
         }
     }
-    write-host "[status] invoking reboot command through JumpCloud"
-    $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systems/$($systemKey)/command/builtin/restart" -Method POST -Headers $headers
+    write-host "[status] invoking $postMigrationBehavior command through JumpCloud agent, this may take a moment..."
+    $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systems/$($systemKey)/command/builtin/$postMigrationBehavior" -Method POST -Headers $headers
+    if ($response.queueId) {
+        Write-Host "[status] $postMigrationBehavior command was successful"
+    } else {
+        Write-Host "[status] $postMigrationBehavior command was not successful, please $postMigrationBehavior manually"
+        exit 1
+    }
 }
 exit 0
