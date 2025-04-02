@@ -65,6 +65,7 @@ function Get-ADMUSystemsForMigration {
                             $_.Uuid
                         }
                         JumpCloudUserName = $null
+                        SerialNumber      = $system.serialNumber
                     }
                 ) | Out-Null
             }
