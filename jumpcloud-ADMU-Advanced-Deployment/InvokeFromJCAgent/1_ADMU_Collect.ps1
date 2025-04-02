@@ -13,21 +13,21 @@ if ($null -eq (Get-InstalledModule -Name "PowerShellForGitHub" -ErrorAction Sile
 # If system is Mac, save to home directory
 If ($IsMacOS) {
     $tempDir = '~/'
-    $newjsonoutputdir = $tempDir + '/' + $env:COMPUTERNAME + '.json'
-    $workingdir = $tempDir + '\jumpcloud-discovery'
-    $discoverycsvlocation = $workingdir + '\jcdiscovery.csv'
+    $newJsonOuputDir = $tempDir + '/' + $env:COMPUTERNAME + '.json'
+    $workingDir = $tempDir + '\jumpcloud-discovery'
+    $discoveryCSVLocation = $workingDir + '\jcdiscovery.csv'
 } elseif ($IsWindows) {
     # If system is Windows and running Powershell 7.x.xxx, save to %TEMP%\Jumpcloud-discovery
-    $windowstemp = [System.Environment]::GetEnvironmentVariable('TEMP', 'Machine')
-    $newjsonoutputdir = $windowstemp + '\' + $env:COMPUTERNAME + '.json'
-    $workingdir = $windowstemp + '\jumpcloud-discovery'
-    $discoverycsvlocation = $workingdir + '\jcdiscovery.csv'
+    $windowsTemp = [System.Environment]::GetEnvironmentVariable('TEMP', 'Machine')
+    $newJsonOuputDir = $windowsTemp + '\' + $env:COMPUTERNAME + '.json'
+    $workingDir = $windowsTemp + '\jumpcloud-discovery'
+    $discoveryCSVLocation = $workingDir + '\jcdiscovery.csv'
 } else {
     # Assume PowerShell 5.1.xxx
-    $windowstemp = [System.Environment]::GetEnvironmentVariable('TEMP', 'Machine')
-    $newjsonoutputdir = $windowstemp + '\' + $env:COMPUTERNAME + '.json'
-    $workingdir = $windowstemp + '\jumpcloud-discovery'
-    $discoverycsvlocation = $workingdir + '\jcdiscovery.csv'
+    $windowsTemp = [System.Environment]::GetEnvironmentVariable('TEMP', 'Machine')
+    $newJsonOuputDir = $windowsTemp + '\' + $env:COMPUTERNAME + '.json'
+    $workingDir = $windowsTemp + '\jumpcloud-discovery'
+    $discoveryCSVLocation = $workingDir + '\jcdiscovery.csv'
 }
 
 
@@ -76,15 +76,26 @@ function Get-ADMUSystemsForMigration {
     }
 }
 $allUsers = Get-ADMUSystemsForMigration
-if (-NOT (Test-Path -Path $workingdir)) {
-    New-Item -ItemType Directory -Force -Path $workingdir | Out-Null
+if (-NOT (Test-Path -Path $workingDir)) {
+    New-Item -ItemType Directory -Force -Path $workingDir | Out-Null
 }
-$combinedjson = $AllUsers | ConvertTo-Csv -NoTypeInformation | Out-File $discoverycsvlocation
+$combinedJSON = $AllUsers | ConvertTo-Csv -NoTypeInformation | Out-File $discoveryCSVLocation
 # Auth to github
 Set-GitHubAuthentication -Credential $cred
 
 # set content string
-$discoverycsvContent = (get-content -Path $discoverycsvlocation -Raw)
+$discoveryCSVContent = (get-content -Path $discoveryCSVLocation -Raw)
+
+# disable telemetry reminder
+Set-GitHubConfiguration -SuppressTelemetryReminder
+# disable telemetry to prevent warning message
+Set-GitHubConfiguration -DisableTelemetry
 
 # upload to github
-Set-GitHubContent -OwnerName $GHUsername -RepositoryName $GHRepoName -BranchName 'main' -Path "jcdiscovery.csv" -CommitMessage "CSV Upload $(Get-Date)" -Content $discoverycsvContent
+try {
+    Set-GitHubContent -OwnerName $GHUsername -RepositoryName $GHRepoName -BranchName 'main' -Path "jcdiscovery.csv" -CommitMessage "CSV Upload $(Get-Date)" -Content $discoveryCSVContent
+    Write-host "Upload of CSV complete"
+    Write-Host "Wrote 85 lines to the GitHub CSV file"
+} catch {
+    Write-Host "Upload of CSV failed, please check your GitHub credentials"
+}
