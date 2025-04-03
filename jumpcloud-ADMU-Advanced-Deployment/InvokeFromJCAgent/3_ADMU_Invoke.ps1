@@ -179,22 +179,22 @@ foreach ($user in $UsersToMigrate) {
         #TODO: switch to form to de-clutter
         if ($LeaveDomainAfterMigration) {
             if ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
-                Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $true -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser
+                Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $true -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -adminDebug $true
             } else {
-                Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $true -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -JumpCloudOrgID $JumpCloudOrgID -SetDefaultWindowsUser $SetDefaultWindowsUser
+                Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -LeaveDomain $true -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -JumpCloudOrgID $JumpCloudOrgID -SetDefaultWindowsUser $SetDefaultWindowsUser -adminDebug $true
             }
         } else {
             if ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
-                Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser
+                Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -adminDebug $true
             } else {
-                Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -JumpCloudOrgID $JumpCloudOrgID -SetDefaultWindowsUser $SetDefaultWindowsUser
+                Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -JumpCloudOrgID $JumpCloudOrgID -SetDefaultWindowsUser $SetDefaultWindowsUser -adminDebug $true
             }
         }
     } else {
         if ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
-            Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser
+            Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -adminDebug $true
         } else {
-            Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -JumpCloudOrgID $JumpCloudOrgID -SetDefaultWindowsUser $SetDefaultWindowsUser
+            Start-Migration -JumpCloudUserName $user.JumpCloudUserName -SelectedUserName $user.selectedUsername -TempPassword $TempPassword -UpdateHomePath $UpdateHomePath -AutobindJCUser $AutobindJCUser -JumpCloudAPIKey $JumpCloudAPIKey -BindAsAdmin $BindAsAdmin -JumpCloudOrgID $JumpCloudOrgID -SetDefaultWindowsUser $SetDefaultWindowsUser -adminDebug $true
         }
 
     }
