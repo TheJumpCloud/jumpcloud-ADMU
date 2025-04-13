@@ -33,7 +33,7 @@ Function Show-SelectionForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.7.16"
+        Title="JumpCloud ADMU 2.7.17"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -229,7 +229,7 @@ Function Show-SelectionForm {
                     <CheckBox Name="cb_bindAsAdmin" Content="Bind As Admin" HorizontalAlignment="Left" Margin="118,56,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
                     <CheckBox Name="cb_leaveDomain" ToolTipService.ShowOnDisabled="True" Content="Leave Domain" HorizontalAlignment="Left" Margin="10,56,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                     <CheckBox Name="cb_autobindJCUser" Content="Autobind JC User" HorizontalAlignment="Left" Margin="118,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" />
-                    <Image Name="img_connectKeyValid" HorizontalAlignment="Left" Height="23" Margin="446,135,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Connect Key must be 40chars &amp; not contain spaces" />
+                    <Image Name="img_connectKeyValid" HorizontalAlignment="Left" Height="23" Margin="446,135,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Connect Key must not be empty &amp; not contain spaces" />
                     <Image Name="img_connectKeyInfo" HorizontalAlignment="Left" Height="14" Margin="152,114,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="The Connect Key provides you with a means of associating this system with your JumpCloud organization. The Key is used to deploy the agent to this system." />
                     <Image Name="img_apiKeyInfo" HorizontalAlignment="Left" Height="14" Margin="124,167,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Click the link for more info on how to obtain the api key. The API key must be from a user with at least 'Manager' or 'Administrator' privileges." />
                     <Image Name="img_apiKeyValid" HorizontalAlignment="Left" Height="23" Margin="446,188,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Correct error" />
@@ -430,8 +430,7 @@ Function Show-SelectionForm {
     $cb_installJCAgent.Add_Checked( { $img_connectKeyValid.Visibility = 'Visible' })
     $cb_installJCAgent.Add_Checked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If (((Test-CharLen -len 40 -testString $tb_JumpCloudConnectKey.Password) -and (Test-HasNoSpace $tb_JumpCloudConnectKey.Password)) -eq $false) {
-                #$tb_JumpCloudConnectKey.Tooltip = "Connect Key Must be 40chars & Not Contain Spaces"
+            If (((Test-IsNotEmpty $tb_JumpCloudConnectKey.Password) -and (Test-HasNoSpace $tb_JumpCloudConnectKey.Password)) -eq $false) {
                 $tb_JumpCloudConnectKey.Background = "#FFC6CBCF"
                 $tb_JumpCloudConnectKey.BorderBrush = "#FFF90000"
             } Else {
@@ -450,8 +449,7 @@ Function Show-SelectionForm {
     $cb_installJCAgent.Add_Unchecked( { $img_connectKeyValid.Visibility = 'Hidden' })
     $cb_installJCAgent.Add_Unchecked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If (((Test-CharLen -len 40 -testString $tb_JumpCloudConnectKey.Password) -and (Test-HasNoSpace $tb_JumpCloudConnectKey.Password) -or ($cb_installJCAgent.IsEnabled)) -eq $false) {
-                #$tb_JumpCloudConnectKey.Tooltip = "Connect Key Must be 40chars & Not Contain Spaces"
+            If (((Test-IsNotEmpty $tb_JumpCloudConnectKey.Password) -and (Test-HasNoSpace $tb_JumpCloudConnectKey.Password) -or ($cb_installJCAgent.IsEnabled)) -eq $false) {
                 $tb_JumpCloudConnectKey.Background = "#FFC6CBCF"
                 $tb_JumpCloudConnectKey.BorderBrush = "#FFF90000"
             } Else {
@@ -473,7 +471,6 @@ Function Show-SelectionForm {
     $cb_autobindJCUser.Add_Checked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
             If (Test-IsNotEmpty $tb_JumpCloudAPIKey.Password ) {
-                #$tb_JumpCloudAPIKey.Tooltip = "API Key Must be 40chars & Not Contain Spaces"
                 $tb_JumpCloudAPIKey.Background = "#FFC6CBCF"
                 $tb_JumpCloudAPIKey.BorderBrush = "#FFF90000"
             } Else {
@@ -496,7 +493,6 @@ Function Show-SelectionForm {
     $cb_autobindJCUser.Add_Unchecked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
             If ((!(Test-IsNotEmpty $tb_JumpCloudAPIKey.Password) -or ($cb_autobindJCUser.IsEnabled)) -eq $false) {
-                #$tb_JumpCloudAPIKey.Tooltip = "API Key Must be 40chars & Not Contain Spaces"
                 $tb_JumpCloudAPIKey.Background = "#FFC6CBCF"
                 $tb_JumpCloudAPIKey.BorderBrush = "#FFF90000"
             } Else {
@@ -540,11 +536,11 @@ Function Show-SelectionForm {
     # Validate Connect Key
     $tb_JumpCloudConnectKey.Add_PasswordChanged( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If (((Test-CharLen -len 40 -testString $tb_JumpCloudConnectKey.Password) -and (Test-HasNoSpace $tb_JumpCloudConnectKey.Password)) -eq $false) {
+            If (((Test-IsNotEmpty $tb_JumpCloudConnectKey.Password) -and (Test-HasNoSpace $tb_JumpCloudConnectKey.Password)) -eq $false) {
                 $tb_JumpCloudConnectKey.Background = "#FFC6CBCF"
                 $tb_JumpCloudConnectKey.BorderBrush = "#FFF90000"
                 $img_connectKeyValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
-                $img_connectKeyValid.ToolTip = "Connect Key must be 40chars & not contain spaces."
+                $img_connectKeyValid.ToolTip = "Connect Key must not be null or contain spaces."
             } Else {
                 $tb_JumpCloudConnectKey.Background = "white"
                 $tb_JumpCloudConnectKey.FontWeight = "Normal"
@@ -635,8 +631,8 @@ Function Show-SelectionForm {
     # Validate Migrate Profile & return $formResults
     $btn_migrateProfile.Add_Click( {
             if ($tb_JumpCloudAPIKey.Password -And $tb_JumpCloudUserName.Text -And $cb_autobindJCUser.IsChecked) {
-                # If text field is default/ not 40 chars
-                if (!(Test-CharLen -len 40 -testString $tb_JumpCloudConnectKey.Password)) {
+                # If text field is not empty continue
+                if (!(Test-IsNotEmpty $tb_JumpCloudConnectKey.Password)) {
                     # Validate the the JumpCLoud Agent Conf File exists:
                     $keyResult = Test-JumpCloudSystemKey -WindowsDrive $(Get-WindowsDrive)
                     if (!$keyResult) {

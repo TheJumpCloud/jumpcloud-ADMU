@@ -153,7 +153,7 @@ Feature: Selection form disallows user migration for invalid ConnectKeys
         And a "1234" is pasted in the ConnectKey text field
         And a JumpCloud valid username is specified in the username text box
         And a valid password is specified in the password text box
-        Then the "Migrate Profile" button should NOT become active and be greyed-out
+        Then the "Migrate Profile" button should become active and NOT be greyed-out (during migration the agent will fail to join a JumpCloud Organization)
 
     Scenario: Disallows "Migrate Profile" Button for ConnectKeys with spaces
         Given The selection form is opened
