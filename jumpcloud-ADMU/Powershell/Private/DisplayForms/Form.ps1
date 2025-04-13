@@ -536,7 +536,7 @@ Function Show-SelectionForm {
     # Validate Connect Key
     $tb_JumpCloudConnectKey.Add_PasswordChanged( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If (((Test-IsNotEmpty $tb_JumpCloudConnectKey.Password) -and (Test-HasNoSpace $tb_JumpCloudConnectKey.Password)) -eq $false) {
+            If ((-Not (Test-IsNotEmpty $tb_JumpCloudConnectKey.Password) -and -NOT (Test-HasNoSpace $tb_JumpCloudConnectKey.Password))) {
                 $tb_JumpCloudConnectKey.Background = "#FFC6CBCF"
                 $tb_JumpCloudConnectKey.BorderBrush = "#FFF90000"
                 $img_connectKeyValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
