@@ -1,3 +1,13 @@
+## 2.7.17
+
+Release Date: April 13, 2025
+
+#### RELEASE NOTES
+
+```
+Newly generated JumpCloud connect keys are no longer only limited to 40 characters this change removes the check to validate connect key length.
+```
+
 ## 2.7.16
 
 Release Date: March 25, 2025

@@ -95,8 +95,8 @@ Function Test-MigrationButton {
         If (-Not (Test-HasNoSpace $tb_JumpCloudConnectKey.Password)) {
             throw "A connectKey string can not contain a space ' ' character"
         }
-        If (-Not (($($tb_JumpCloudConnectKey.Password).length) -eq 40)) {
-            throw "A connectKey string must be equal to 40 characters in length"
+        If (((Test-IsNotEmpty $tb_JumpCloudConnectKey.Password))) {
+            throw "A connectKey string must not be null"
         }
 
     }
