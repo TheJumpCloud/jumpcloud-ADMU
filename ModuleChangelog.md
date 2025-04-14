@@ -1,6 +1,6 @@
 ## 2.7.17
 
-Release Date: April 13, 2025
+Release Date: April 14, 2025
 
 #### RELEASE NOTES
 

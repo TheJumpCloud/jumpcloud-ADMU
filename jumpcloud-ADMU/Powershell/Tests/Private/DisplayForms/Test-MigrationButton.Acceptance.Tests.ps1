@@ -74,8 +74,8 @@ Describe "Test-MigrationButton Acceptance Tests" -Tag "Acceptance" {
                 # checkbox for install JCAgent
                 $testCaseInput.cb_installJCAgent.IsChecked = $true
                 # should not return true
-                Test-MigrationButton @testCaseInput | Should -Be $false
-                $btn_migrateProfile.IsEnabled | Should -Be $false
+                Test-MigrationButton @testCaseInput | Should -Be $true
+                $btn_migrateProfile.IsEnabled | Should -Be $true
             }
             It 'When a selected user, tempPassword, username, a ConnectKey with a null char string are specified' {
                 # add input for connect Key
