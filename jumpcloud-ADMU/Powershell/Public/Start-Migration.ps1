@@ -49,7 +49,7 @@ Function Start-Migration {
             $profileSize = Get-ProfileSize -profilePath $oldUserProfileImagePath
 
             $JumpCloudUserName = $inputObject.JumpCloudUserName
-            if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
+            if ($inputObject.JumpCloudConnectKey) {
                 $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
             }
             if ($inputObject.JumpCloudAPIKey) {
