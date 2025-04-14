@@ -12,7 +12,7 @@ Function Start-Migration {
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$BindAsAdmin = $false,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$SetDefaultWindowsUser = $true,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AdminDebug = $false,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(40, 40)][string]$JumpCloudConnectKey,
+        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][string]$JumpCloudConnectKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][string]$JumpCloudAPIKey,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(24, 24)][string]$JumpCloudOrgID,
         [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ValidateUserShellFolder = $true,
@@ -34,7 +34,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.7.16'
+        $admuVersion = '2.7.17'
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
 
@@ -49,7 +49,7 @@ Function Start-Migration {
             $profileSize = Get-ProfileSize -profilePath $oldUserProfileImagePath
 
             $JumpCloudUserName = $inputObject.JumpCloudUserName
-            if (($inputObject.JumpCloudConnectKey).Length -eq 40) {
+            if ($inputObject.JumpCloudConnectKey) {
                 $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
             }
             if ($inputObject.JumpCloudAPIKey) {
