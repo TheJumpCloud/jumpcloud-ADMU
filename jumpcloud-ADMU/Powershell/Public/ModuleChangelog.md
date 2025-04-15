@@ -5,16 +5,24 @@ Release Date: April 15, 2025
 #### RELEASE NOTES
 
 ```
-Resolves a bug in 2.7.17 where the connectKey would validate but not allow a user to complete GUI migration
+{{Fill in the Release Notes}}
 ```
+
+#### FEATURES:
+
+{{Fill in the Features}}
+
+#### IMPROVEMENTS:
+
+{{Fill in the Improvements}}
 
 #### BUG FIXES:
 
-Resolves the bug where the start migration button would never initiate migration
+{{Fill in the Bug Fixes}}
 
 ## 2.7.17
 
-Release Date: April 14, 2025
+Release Date: April 15, 2025
 
 #### RELEASE NOTES
 
