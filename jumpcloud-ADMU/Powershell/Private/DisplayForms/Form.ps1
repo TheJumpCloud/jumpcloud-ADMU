@@ -33,7 +33,7 @@ Function Show-SelectionForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.7.17"
+        Title="JumpCloud ADMU 2.7.18"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -631,8 +631,8 @@ Function Show-SelectionForm {
     # Validate Migrate Profile & return $formResults
     $btn_migrateProfile.Add_Click( {
             if ($tb_JumpCloudAPIKey.Password -And $tb_JumpCloudUserName.Text -And $cb_autobindJCUser.IsChecked) {
-                # If text field is not empty continue
-                if (!(Test-IsNotEmpty $tb_JumpCloudConnectKey.Password)) {
+                # If text field is epmty continue
+                if ((Test-IsNotEmpty $tb_JumpCloudConnectKey.Password)) {
                     # Validate the the JumpCLoud Agent Conf File exists:
                     $keyResult = Test-JumpCloudSystemKey -WindowsDrive $(Get-WindowsDrive)
                     if (!$keyResult) {
