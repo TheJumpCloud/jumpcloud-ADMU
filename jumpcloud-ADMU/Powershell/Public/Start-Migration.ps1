@@ -1,22 +1,128 @@
 Function Start-Migration {
     [CmdletBinding(HelpURI = "https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration")]
     Param (
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][string]$JumpCloudUserName,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][string]$SelectedUserName,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $true)][ValidateNotNullOrEmpty()][string]$TempPassword,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$LeaveDomain = $false,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ForceReboot = $false,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$UpdateHomePath = $false,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$InstallJCAgent = $false,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AutobindJCUser = $false,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$BindAsAdmin = $false,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$SetDefaultWindowsUser = $true,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$AdminDebug = $false,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][string]$JumpCloudConnectKey,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][string]$JumpCloudAPIKey,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][ValidateLength(24, 24)][string]$JumpCloudOrgID,
-        [Parameter(ParameterSetName = 'cmd', Mandatory = $false)][bool]$ValidateUserShellFolder = $true,
-        [Parameter(ParameterSetName = "form")][Object]$inputObject)
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $true,
+            HelpMessage = "The new local username to be created on the local system. If 'AutobindJCUser' is selected, this will be the JumpCloud username and must match a username within JumpCloud. If 'AutobindJCUser' is not selected, this will be the local username to be created on the local system.")]
+        [string]
+        $JumpCloudUserName,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $true,
+            HelpMessage = "The AD Username to be migrated. This is the existing AD User on the system that will be converted to a local user. Input in this field can either be in the domain/username (ex: 'mycorpsoft/reid.sullivan') format or an account SID (ex: 'S-1-5-21-3702388936-1108443347-3360745512-1029').")]
+        [string]
+        $SelectedUserName,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $true,
+            HelpMessage = "The password to be set for the new local user. This password will be set as the local migrated user's password and will be used to log into the local system. This password must meet the local system's password complexity requirements. When the 'AutobindJCUser' is selected, this temporary password will be overwritten by the JumpCloud password and not used on first login.")]
+        [ValidateNotNullOrEmpty()]
+        [string]$TempPassword,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU will attempt to leave the domain post-migration.")]
+        [bool]
+        $LeaveDomain = $false,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU will reboot the device post-migration.")]
+        [bool]
+        $ForceReboot = $false,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU will rename the user's home directory to match the new local username. In most cases this is not needed and will likely cause issues with applications expecting settings to be found using the old username profileImagePath. This is set to false by default and is not not recommended to be used generally.")]
+        [bool]
+        $UpdateHomePath = $false,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU will attempt to install the JumpCloud Agent on the local system.")]
+        [bool]
+        $InstallJCAgent = $false,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU will attempt to autobind the local user to JumpCloud. This requires a valid JumpCloud API Key and Org ID to be provided. If this is not set, the local user will not be bound to JumpCloud.")]
+        [bool]
+        $AutobindJCUser = $false,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set to true, and used in conjunction with 'AutobindJCUser', the ADMU will attempt to bind the local user to JumpCloud as an administrator. This requires a valid JumpCloud API Key and Org ID to be provided. If this is not set, the local user will be bound to JumpCloud as a standard user.")]
+        [bool]
+        $BindAsAdmin = $false,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU will set the newly migrated local user to the last logged in user. On the login screen, the newly migrated user will be the first user displayed post-migration. This is set to true by default.")]
+        [bool]
+        $SetDefaultWindowsUser = $true,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU will stream additional verbose logs to the console. This is set to false by default.")]
+        [bool]
+        $AdminDebug = $false,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set and used in conjunction with the 'InstallJCAgent' parameter, the ADMU will attempt to install the JumpCloud Agent using the provided JumpCloud Connect Key. This is required for the agent to be installed and configured correctly. If this is not set, the agent will not be installed.")]
+        [string]
+        $JumpCloudConnectKey,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will authenticate to JumpCloud using the provided API Key and Org ID. This is required for the user to be bound to JumpCloud correctly. If this is not set, the user will not be bound to JumpCloud.")]
+        [string]
+        $JumpCloudAPIKey,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will authenticate to JumpCloud using the provided Org ID. This is required for the user to be bound to JumpCloud correctly. If this is not set, the user will not be bound to JumpCloud. This parameter is only required for MTP Administrator API keys.")]
+        [ValidateLength(24, 24)]
+        [string]
+        $JumpCloudOrgID,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU will validate that the user profile does not have any redirected directories. If a user profile has a directory redirected to some remote server or location, the ADMU will not be able to migrate the user profile correctly. This is set to true by default. If this is set to false, the ADMU will not validate the user profile and will attempt to migrate the user profile regardless of any redirected directories. In this case, if some user had their documents redirected to some remote server additional configuration would be required in the new user profile to access the remote files.")]
+        [bool]
+        $ValidateUserShellFolder = $true,
+        [Parameter(
+            ParameterSetName = 'systemContext',
+            Mandatory = $false)]
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            DontShow)]
+        [bool]
+        $systemContextBinding = $false,
+        [Parameter(
+            ParameterSetName = 'systemContext',
+            Mandatory = $true,
+            HelpMessage = "When set amd used in conjunction with the 'systemContextBinding' parameter, the ADMU will run in system context. This is required for the user to be bound to JumpCloud correctly. If this is not set, the user will not be bound to JumpCloud.")]
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            DontShow)]
+        [ValidateLength(24, 24)]
+        [string]
+        $JumpCloudUserID,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU will validate that the AD user profile has biometric data stored in the '\HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WinBio\AccountInfo' registry key. If the user profile has biometric data, the ADMU will remove the biometric data from the registry post-migration of the user profile. This setting will remove biometric data for all users on the device windows obfuscates biometric data, it can not be linked to any one user on a device. The only way to remove a single user's fingerprint data is to remove all biometric data on the device. Only use this parameter if you agree that doing so will remove all biometric data from the device being migrated.  This is set to false by default.")]
+        [bool]
+        $RemoveBiometrics = $false,
+        [Parameter(
+            ParameterSetName = "form")]
+        [Object]
+        $inputObject
+    )
 
     Begin {
         # Define misc static variables
@@ -91,7 +197,7 @@ Function Start-Migration {
         Write-ToLog -Message:('Gathering system & profile information')
         Write-ToLog -Message:("Form is set to $isForm")
 
-
+        #region validation
         # validate API KEY/ OrgID if Autobind is selected
         if ($AutobindJCUser) {
             if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
@@ -156,6 +262,24 @@ Function Start-Migration {
             Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and Hostname cannot be the same. Exiting..."
             break
         }
+
+        if ($systemContextBinding -eq $true) {
+            $getSystem = Invoke-SystemContextAPI -method 'GET' -endpoint 'systems'
+            if ($getSystem.id) {
+                Write-ToLog "[status] The systemContext API is available for this system, the system context API will be used for binding"
+                Write-ToLog "[status] SystemID: $($getSystem.id)"
+                Write-ToLog "[status] Hostname: $($getSystem.hostname)"
+                $validatedSystemContextAPI = $true
+                $validatedSystemID = $getSystem.id
+            } else {
+                $validatedSystemContextAPI = $false
+                Write-ToLog "[status] The systemContext API is not available for this system, please use the standard binding method"
+                Write-Error "Could not bind using the systemContext API, please use the standard binding method"
+                exit 1
+            }
+        }
+
+        #endregion validtion
 
         Write-ToLog -Message:("Bind as admin = $($BindAsAdmin)")
         $trackAccountMerge = $false
@@ -959,7 +1083,7 @@ Function Start-Migration {
             # TODO: test and return non-terminating error here
 
             #region AutobindUserToJCSystem
-            if ($AutobindJCUser -eq $true) {
+            if (($AutobindJCUser -eq $true) -And ($systemContextBinding -eq $false)) {
                 $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
                 if ($bindResult) {
                     Write-ToLog -Message:('jumpcloud autobind step succeeded for user ' + $JumpCloudUserName) -Level Verbose
@@ -968,6 +1092,10 @@ Function Start-Migration {
                     Write-ToLog -Message:('jumpcloud autobind step failed, apikey or jumpcloud username is incorrect.') -Level:('Warn')
                     # $admuTracker.autoBind.fail = $true
                 }
+            }
+            if (($systemContextBinding -eq $true) -And ($AutobindJCUser -eq $false)) {
+                Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $JumpCloudUserID -admin $BindAsAdmin
+
             }
             #endregion AutobindUserToJCSystem
 
@@ -1037,6 +1165,16 @@ Function Start-Migration {
                     Write-ToLog -Message:('Device is not joined to a domain, skipping leave domain step')
                 }
             }
+
+            #region BiometricData
+            if ($RemoveBiometrics) {
+                $userBioData = Get-WinBioUserBySID -sid $SelectedUserSID
+                if ($userBioData) {
+                    Write-ToLog "[status] Removing biometrics for user: $($SelectedUserName)"
+                    Remove-Fingerprint -sid $SelectedUserSID
+                }
+            }
+            #endregion BiometricData
 
             # re-enable scheduled tasks if they were disabled
             if ($ScheduledTasks) {
