@@ -10,17 +10,21 @@ Function Invoke-SystemContextAPI {
         [validateSet('systems/memberof', 'systems', 'systems/associations', 'systems/users', 'systemgroups/members')]
         $endpoint,
         [Parameter(Mandatory = $false)]
+        [Parameter(ParameterSetName = "association")]
         [string]
         [validateSet('add', 'remove', 'update')]
         $op,
         [Parameter(Mandatory = $false)]
+        [Parameter(ParameterSetName = "association")]
         [string]
         [validateSet('user', 'systemgroup')]
         $type,
         [Parameter(Mandatory = $false)]
+        [Parameter(ParameterSetName = "association")]
         [bool]
         $admin,
         [Parameter(Mandatory = $false)]
+        [Parameter(ParameterSetName = "association")]
         [string]
         $id
 
@@ -33,6 +37,7 @@ Function Invoke-SystemContextAPI {
         } catch {
             throw "Could not get systemKey from jcagent.conf"
         }
+        # TODO: for pwsh 5.1 we need to load the library for PWSH 7+ we can use the native RSA
         # Referenced Library for RSA
         # https://github.com/wing328/PSPetstore/blob/87a2c455a7c62edcfc927ff5bf4955b287ef483b/src/PSOpenAPITools/Private/RSAEncryptionProvider.cs
         Add-Type -typedef @"
@@ -351,36 +356,43 @@ Function Invoke-SystemContextAPI {
                 throw "Invalid endpoint '$endpoint'."
             }
         }
-        # validate the association parameters for users
-        if ($endpoint -eq 'systems/associations' -and $method -eq 'POST') {
-            # depending on what's passed in, create a IWR body for the systemContext API
-            $form = @{
-                "id"         = "$id"
-                "type"       = "$type"
-                "op"         = "$op"
-                "attributes" = @{
-                    "sudo" = @{
-                        "enabled"         = $admin
-                        "withoutPassword" = $false
+
+        if ($PSCmdlet.ParameterSetName -eq 'association') {
+            switch ($endpoint) {
+                "systems/associations" {
+                    If ($method -eq 'POST') {
+                        $form = @{
+                            "id"         = "$id"
+                            "type"       = "$type"
+                            "op"         = "$op"
+                            "attributes" = @{
+                                "sudo" = @{
+                                    "enabled"         = $admin
+                                    "withoutPassword" = $false
+                                }
+                            }
+                        } | ConvertTo-Json -Depth 10
+                    } else {
+                        if ($id -or $admin -or $type -or $op) {
+                            throw "The parameters 'id,', 'admin', 'type', and 'op' can only be used with the endpoint 'systems/associations' and method 'POST'."
+                        }
                     }
                 }
-            }
-        } else {
-            if ($id -or $admin -or $type -or $op) {
-                throw "The parameters 'id,', 'admin', 'type', and 'op' can only be used with the endpoint 'systems/associations' and method 'POST'."
-            }
-        }
-        # validate the association parameters for systemGroups
-        If ($endpoint -eq 'systemgroups/members' -and $method -eq 'POST') {
-            # depending on what's passed in, create a IWR body for the systemContext API
-            $form = @{
-                "id"   = "$id"
-                "type" = "$type"
-                "op"   = "$op"
-            }
-        } else {
-            if ($id -or $type -or $op) {
-                throw "The parameters 'id', 'type', and 'op' can only be used with the endpoint 'systemgroups/members' and method 'POST'."
+
+                "systemgroups/members" {
+                    If ($method -eq 'POST') {
+                        $form = @{
+                            "id"   = "$id"
+                            "type" = "$type"
+                            "op"   = "$op"
+                        } | ConvertTo-Json -Depth 10
+                    } else {
+                        if ($id -or $type -or $op) {
+                            throw "The parameters 'id', 'type', and 'op' can only be used with the endpoint 'systemgroups/members' and method 'POST'."
+                        }
+                    }
+                }
+                Default {}
             }
         }
     }
@@ -415,13 +427,13 @@ Function Invoke-SystemContextAPI {
                 $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers
             }
             'PUT' {
-                Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
+                $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
             }
             'POST' {
-                Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
+                $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
             }
             'DELETE' {
-                Invoke-RestMethod -Method DELETE -Uri "https://console.jumpcloud.com/$requestURL" -ContentType 'application/json' -Headers $headers
+                $request = Invoke-RestMethod -Method DELETE -Uri "https://console.jumpcloud.com/$requestURL" -ContentType 'application/json' -Headers $headers
             }
             Default {
                 'Invalid method specified. Valid methods are: GET, PUT, POST, DELETE.'
