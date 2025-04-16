@@ -210,7 +210,9 @@ Function Start-Migration {
                     $ValidatedJumpCloudOrgName = "$($OrgSelection[1])"
                     $ValidatedJumpCloudOrgID = "$($OrgSelection[0])"
                     If (-Not $ValidatedJumpCloudOrgID) {
-                        Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
+                        if (-Not $systemContextBinding) {
+                            Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
+                        }
                         break
                     }
                 }
@@ -224,32 +226,42 @@ Function Start-Migration {
                     $ValidatedJumpCloudOrgName = "$($OrgSelection[1])"
                     $ValidatedJumpCloudOrgID = "$($OrgSelection[0])"
                     If (-Not $ValidatedJumpCloudOrgID) {
-                        Throw [System.Management.Automation.ValidationMetadataException] "ORG ID Could not be validated"
+                        if (-Not $systemContextBinding) {
+                            Throw [System.Management.Automation.ValidationMetadataException] "ORG ID Could not be validated"
+                        }
                         break
                     }
                 }
             } elseif ((([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
                 # Throw Error
-                Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User"
+                if (-Not $systemContextBinding) {
+                    Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User"
+                }
                 break
             } elseif ((([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
                 # Throw Error
-                Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User"
-                break
+                if (-Not $systemContextBinding) {
+                    Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autobinding a JC User"
+                    break
+                } else {
+                    Write-ToLog -Message:("No JumpCloudAPIKey or OrgID provided, skipping validation, using systemContext API")
+                }
             }
-            # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
-            $ret, $JumpCloudUserId, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
-            # Write to log all variables above
-            Write-ToLog -Message:("JumpCloudUserName: $($JumpCloudUserName), JumpCloudsystemUserName = $($JumpCloudsystemUserName)")
+            if (-Not $systemContextBinding) {
 
-            if ($JumpCloudsystemUserName) {
-                $JumpCloudUsername = $JumpCloudsystemUserName
-            }
-            if ($ret -eq $false) {
-                Throw [System.Management.Automation.ValidationMetadataException] "The specified JumpCloudUsername does not exist"
-                break
-            }
+                # Throw error if $ret is false, if we are autobinding users and the specified username does not exist, throw an error and terminate here
+                $ret, $JumpCloudUserId, $JumpCloudsystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+                # Write to log all variables above
+                Write-ToLog -Message:("JumpCloudUserName: $($JumpCloudUserName), JumpCloudsystemUserName = $($JumpCloudsystemUserName)")
 
+                if ($JumpCloudsystemUserName) {
+                    $JumpCloudUsername = $JumpCloudsystemUserName
+                }
+                if ($ret -eq $false) {
+                    Throw [System.Management.Automation.ValidationMetadataException] "The specified JumpCloudUsername does not exist"
+                    break
+                }
+            }
         }
         # Validate ConnectKey if Install Agent is selected
         If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) {
@@ -257,7 +269,7 @@ Function Start-Migration {
             break
         }
 
-        # Validate JCUserName and Hostname are not the equal. If eaqual, throw error and exit
+        # Validate JCUserName and Hostname are not the equal. If equal, throw error and exit
         if ($JumpCloudUserName -eq $env:computername) {
             Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and Hostname cannot be the same. Exiting..."
             break
@@ -1093,7 +1105,7 @@ Function Start-Migration {
                     # $admuTracker.autoBind.fail = $true
                 }
             }
-            if (($systemContextBinding -eq $true) -And ($AutobindJCUser -eq $false)) {
+            if (($systemContextBinding -eq $true) -And ($AutobindJCUser -eq $true)) {
                 Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $JumpCloudUserID -admin $BindAsAdmin
 
             }
