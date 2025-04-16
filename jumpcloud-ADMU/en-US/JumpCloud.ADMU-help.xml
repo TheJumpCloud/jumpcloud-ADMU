@@ -195,6 +195,18 @@
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>RemoveBiometrics</maml:name>
+          <maml:description>
+            <maml:para>When set to true, the ADMU will validate that the AD user profile has biometric data stored in the '\HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WinBio\AccountInfo' registry key. If the user profile has biometric data, the ADMU will remove the biometric data from the registry post-migration of the user profile. This setting will remove biometric data for all users on the device windows obfuscates biometric data, it can not be linked to any one user on a device. The only way to remove a single user's fingerprint data is to remove all biometric data on the device. Only use this parameter if you agree that doing so will remove all biometric data from the device being migrated.  This is set to false by default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
       </command:syntaxItem>
       <command:syntaxItem>
         <maml:name>Start-Migration</maml:name>
@@ -397,6 +409,18 @@
         <maml:name>ValidateUserShellFolder</maml:name>
         <maml:description>
           <maml:para>Option to bypass User Shell Folder validation. When set to `$false`, the migration will not verify whether folders (Desktop, Downloads, Documents, Videos, Pictures, Music, Favorites) are redirected to another location, such as a network shared folder (e.g., `\192.168.50.78\SharedFolder\USERNAME\Desktop`). Use this parameter with caution. After migration, the user may encounter a shared folder error and will need to provide account credentials to restore their shared folders</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>RemoveBiometrics</maml:name>
+        <maml:description>
+          <maml:para>When set to true, the ADMU will validate that the AD user profile has biometric data stored in the '\HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WinBio\AccountInfo' registry key. If the user profile has biometric data, the ADMU will remove the biometric data from the registry post-migration of the user profile. This setting will remove biometric data for all users on the device windows obfuscates biometric data, it can not be linked to any one user on a device. The only way to remove a single user's fingerprint data is to remove all biometric data on the device. Only use this parameter if you agree that doing so will remove all biometric data from the device being migrated.  This is set to false by default.</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>
