@@ -1180,7 +1180,7 @@ Function Start-Migration {
 
             #region BiometricData
             if ($RemoveBiometrics) {
-                $userBioData = Get-WinBioUserBySID -sid $SelectedUserSID
+                $userBioData = Get-WinBioUserBySID -sid $selectedUserSID
                 if ($userBioData) {
                     Write-ToLog "[status] Removing biometrics for user: $($SelectedUserName)"
                     Remove-WinBioFingerprint -sid $SelectedUserSID
