@@ -39,8 +39,10 @@ Function Invoke-SystemContextAPI {
         }
         # TODO: for pwsh 5.1 we need to load the library for PWSH 7+ we can use the native RSA
         # Referenced Library for RSA
-        # https://github.com/wing328/PSPetstore/blob/87a2c455a7c62edcfc927ff5bf4955b287ef483b/src/PSOpenAPITools/Private/RSAEncryptionProvider.cs
-        Add-Type -typedef @"
+        Switch ($PSVersionTable.PSVersion.Major) {
+            '5' {
+                # https://github.com/wing328/PSPetstore/blob/87a2c455a7c62edcfc927ff5bf4955b287ef483b/src/PSOpenAPITools/Private/RSAEncryptionProvider.cs
+                Add-Type -typedef @"
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -314,6 +316,12 @@ Function Invoke-SystemContextAPI {
     }
 
 "@
+            }
+            Default {
+                Write-Verbose "PowerShell version: $($PSVersionTable.PSVersion)"
+            }
+        }
+
 
         # Validate the method and endpoint combination
         switch ($endpoint) {
@@ -409,8 +417,21 @@ Function Invoke-SystemContextAPI {
         $result = $sha.ComputeHash($data)
         # Private Key Path
         $PrivateKeyFilePath = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
+        # set the Hash Algorithm
         $hashAlgo = [System.Security.Cryptography.HashAlgorithmName]::SHA256
-        [System.Security.Cryptography.RSA]$rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($PrivateKeyFilePath)
+        # depending on the powershell version 5 or 7 we need to load the RSA provider
+        switch ($PSVersionTable.PSVersion.Major) {
+            '5' {
+                # Load the RSA Encryption Provider
+                [System.Security.Cryptography.RSA]$rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($PrivateKeyFilePath)
+            }
+            Default {
+                # For PowerShell 7+ we can use the native RSA
+                $pem = Get-Content -Path $PrivateKeyFilePath -Raw
+                $rsa = [System.Security.Cryptography.RSA]::Create()
+                $rsa.ImportFromPem($pem)
+            }
+        }
         # Format the Signature
         $signedBytes = $rsa.SignHash($result, $hashAlgo, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
         $signature = [Convert]::ToBase64String($signedBytes)
