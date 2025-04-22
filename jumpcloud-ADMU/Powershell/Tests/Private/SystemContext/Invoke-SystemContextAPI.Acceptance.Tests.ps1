@@ -64,7 +64,7 @@ Describe "Invoke-SystemContextAPI Acceptance Tests" -Tag "Acceptance" {
         }
         AfterAll {
             # for local testing this can be enabled:
-            # $usersToRemove = Get-JCSdkUser | Where-Object { $_.username -match "ADMU_" }
+            # $usersToRemove = Get-JCSdkUser | Where-Object { $_.email -match "@jumpcloudadmu.com" }
             # foreach ($user in $usersToRemove) {
             #     # If User Exists, remove from the org
             #     Remove-JcSdkUser -Id $user.Id | Out-Null
