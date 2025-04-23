@@ -141,6 +141,7 @@ function Get-ADMUSystemsForMigration {
     }
 }
 # get the users
+write-host "[status] Getting AD users and devices from JumpCloud..."
 $allUsers = Get-ADMUSystemsForMigration
 # convert the users to a CSV
 $combinedJSON = $AllUsers | ConvertTo-Csv -NoTypeInformation | Out-File $discoveryCSVLocation
