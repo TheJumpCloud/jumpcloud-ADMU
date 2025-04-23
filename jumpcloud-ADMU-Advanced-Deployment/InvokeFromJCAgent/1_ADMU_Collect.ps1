@@ -1,37 +1,44 @@
-################################################################################
-# Update Variables Below
-################################################################################
+[CmdletBinding()]
+param (
+    [Parameter(Mandatory = $true, ParameterSetName = 'Default', HelpMessage = "Switch to export the CSV file")]
+    [switch]
+    $ExportToCSV,
 
-# CSV or Github input
-$dataSource = 'csv' # csv or github
+    [Parameter(Mandatory = $false, ParameterSetName = 'Default', HelpMessage = "The directory path to export the file to")]
+    [Parameter(Mandatory = $false, ParameterSetName = 'Github', HelpMessage = "The directory path to export the file to")]
+    [string]
+    $ExportPath,
 
-# Github vars only required if $dataSource = 'github'
-$GHUsername = ''
-$GHToken = '' # https://github.com/settings/tokens needs token to write/create repo
-$GHRepoName = 'Jumpcloud-ADMU-Discovery'
+    [Parameter(Mandatory = $true, ParameterSetName = 'GitHub', HelpMessage = "Switch to export the CSV file and upload to GitHub")]
+    [switch]
+    $ExportToGitHub,
 
+    [Parameter(Mandatory = $true, ParameterSetName = 'GitHub', HelpMessage = "The GitHub Username to use for authentication")]
+    [string]
+    $GitHubUsername,
+
+    [Parameter(Mandatory = $true, ParameterSetName = 'GitHub', HelpMessage = "The GitHub PAT Token to use for authentication")]
+    [string]
+    $GitHubToken,
+
+    [Parameter(Mandatory = $false, ParameterSetName = 'GitHub', HelpMessage = "The GitHub Repository Name to store the CSV file")]
+    [string]
+    $GitHubRepoName = 'Jumpcloud-ADMU-Discovery'
+)
 
 ################################################################################
 # Do not edit below
 ################################################################################
 
-#region validation
-
-# validate dataSource
-if ($dataSource -notin @('csv', 'github')) {
-    Write-Host "[status] Invalid data source specified, exiting..."
-    exit 1
-}
-
-if ($dataSource -eq 'github') {
+if ($ExportToGitHub) {
     # check if the GitHub token is set
-    if (-not $GHToken) {
-        Write-Host "[status] Required script variable 'GHToken' not set, exiting..."
+    if (-not $GitHubToken) {
+        Write-Host "[status] Required script variable 'GitHubToken' not set, exiting..."
         exit 1
     }
     # check if the GitHub username is set
-    if (-not $GHUsername) {
-        Write-Host "[status] Required script variable 'GHUsername' not set, exiting..."
+    if (-not $GitHubUsername) {
+        Write-Host "[status] Required script variable 'GitHubUsername' not set, exiting..."
         exit 1
     }
     # Check if the GitHub module is installed
@@ -39,8 +46,8 @@ if ($dataSource -eq 'github') {
         Install-Module PowerShellForGitHub -Force
     }
     # create the GitHub credential object
-    $password = ConvertTo-SecureString "$GHToken" -AsPlainText -Force
-    $Cred = New-Object System.Management.Automation.PSCredential ($GHUsername, $password)
+    $password = ConvertTo-SecureString "$GitHubToken" -AsPlainText -Force
+    $Cred = New-Object System.Management.Automation.PSCredential ($GitHubUsername, $password)
     # Auth to github
     Set-GitHubAuthentication -Credential $cred
 
@@ -50,26 +57,41 @@ if ($dataSource -eq 'github') {
     Set-GitHubConfiguration -DisableTelemetry
 }
 
-# If system is Mac, save to home directory
-If ($IsMacOS) {
-    $tempDir = '~/'
-    $newJsonOuputDir = $tempDir + '/' + $env:COMPUTERNAME + '.json'
-    $workingDir = $tempDir + '\jumpcloud-discovery'
-    $discoveryCSVLocation = $workingDir + '\jcdiscovery.csv'
-} elseif ($IsWindows) {
-    # If system is Windows and running Powershell 7.x.xxx, save to %TEMP%\Jumpcloud-discovery
-    $windowsTemp = [System.Environment]::GetEnvironmentVariable('TEMP', 'Machine')
-    $newJsonOuputDir = $windowsTemp + '\' + $env:COMPUTERNAME + '.json'
-    $workingDir = $windowsTemp + '\jumpcloud-discovery'
-    $discoveryCSVLocation = $workingDir + '\jcdiscovery.csv'
+# set the $discoveryCSVLocation if the $exportPath variable has been set, otherwise set it to a temp location:
+If ($ExportPath) {
+    # test that the export path is a valid directory
+    if (-not (Test-Path -Path $ExportPath)) {
+        Write-Host "[status] Export path: $ExportPath does not exist yet, creating..."
+        New-Item -ItemType Directory -Force -Path $ExportPath | Out-Null
+    }
+    # set the export CSV location
+    $discoveryCSVLocation = Join-Path -Path $ExportPath -ChildPath 'jcdiscovery.csv'
 } else {
-    # Assume PowerShell 5.1.xxx
-    $windowsTemp = [System.Environment]::GetEnvironmentVariable('TEMP', 'Machine')
-    $newJsonOuputDir = $windowsTemp + '\' + $env:COMPUTERNAME + '.json'
-    $workingDir = $windowsTemp + '\jumpcloud-discovery'
-    $discoveryCSVLocation = $workingDir + '\jcdiscovery.csv'
+    # If system is Mac, save to home directory
+    If ($IsMacOS) {
+        $tempDir = '~/'
+        $newJsonOutputDir = $tempDir + '/' + $env:COMPUTERNAME + '.json'
+        $workingDir = $tempDir + '\jumpcloud-discovery'
+    } elseif ($IsWindows) {
+        # If system is Windows and running Powershell 7.x.xxx, save to %TEMP%\Jumpcloud-discovery
+        $windowsTemp = [System.Environment]::GetEnvironmentVariable('TEMP', 'Machine')
+        $newJsonOutputDir = $windowsTemp + '\' + $env:COMPUTERNAME + '.json'
+        $workingDir = $windowsTemp + '\jumpcloud-discovery'
+    } else {
+        # Assume PowerShell 5.1.xxx
+        $windowsTemp = [System.Environment]::GetEnvironmentVariable('TEMP', 'Machine')
+        $newJsonOutputDir = $windowsTemp + '\' + $env:COMPUTERNAME + '.json'
+        $workingDir = $windowsTemp + '\jumpcloud-discovery'
+    }
+    # create the working directory if it doesn't exist
+    if (-NOT (Test-Path -Path $workingDir)) {
+        New-Item -ItemType Directory -Force -Path $workingDir | Out-Null
+    }
+    # set the export CSV location
+    $discoveryCSVLocation = join-path -path $workingDir -ChildPath '\jcdiscovery.csv'
 }
 
+Write-Host "[status] Export path: $discoveryCSVLocation"
 
 function Get-ADMUSystemsForMigration {
     [OutputType([System.Collections.ArrayList])]
@@ -118,31 +140,29 @@ function Get-ADMUSystemsForMigration {
         return $list
     }
 }
+# get the users
 $allUsers = Get-ADMUSystemsForMigration
-if (-NOT (Test-Path -Path $workingDir)) {
-    New-Item -ItemType Directory -Force -Path $workingDir | Out-Null
-}
-
+# convert the users to a CSV
 $combinedJSON = $AllUsers | ConvertTo-Csv -NoTypeInformation | Out-File $discoveryCSVLocation
 
-switch ($DataSource) {
-    'csv' {
-        # write the CSV to the working directory
-        $discoveryCSVContent = (get-content -Path $discoveryCSVLocation -Raw)
-        Write-Host "CSV file created at: $discoveryCSVLocation"
-    }
-    'github' {
-        # write the CSV to the working directory
-        $discoveryCSVContent = (get-content -Path $discoveryCSVLocation -Raw)
-        Write-Host "CSV file created at: $discoveryCSVLocation"
-        # upload to github
-        try {
-            Set-GitHubContent -OwnerName $GHUsername -RepositoryName $GHRepoName -BranchName 'main' -Path "jcdiscovery.csv" -CommitMessage "CSV Upload $(Get-Date)" -Content $discoveryCSVContent
-            Write-host "Upload of CSV complete"
-            Write-Host "Wrote $($discoveryCSVContent.count) lines to the GitHub CSV file"
-        } catch {
-            Write-Host "Upload of CSV failed, please check your GitHub credentials"
-        }
+
+If ($ExportToCSV) {
+    # write the CSV to the working directory
+    $discoveryCSVContent = (get-content -Path $discoveryCSVLocation -Raw)
+    Write-Host "CSV file created at: $discoveryCSVLocation"
+}
+
+If ($ExportToGitHub) {
+    # write the CSV to the working directory
+    $discoveryCSVContent = (get-content -Path $discoveryCSVLocation -Raw)
+    Write-Host "CSV file created at: $discoveryCSVLocation"
+    # upload to github
+    try {
+        Set-GitHubContent -OwnerName $GitHubUsername -RepositoryName $GitHubRepoName -BranchName 'main' -Path "jcdiscovery.csv" -CommitMessage "CSV Upload $(Get-Date)" -Content $discoveryCSVContent
+        Write-host "Upload of CSV complete"
+        Write-Host "Wrote $($discoveryCSVContent.count) lines to the GitHub CSV file"
+    } catch {
+        Write-Host "Upload of CSV failed, please check your GitHub credentials"
     }
 }
 
