@@ -93,31 +93,19 @@ Function Start-Migration {
         [bool]
         $ValidateUserShellFolder = $true,
         [Parameter(
-            ParameterSetName = 'systemContext',
-            Mandatory = $false)]
-        [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
             DontShow)]
         [bool]
         $systemContextBinding = $false,
         [Parameter(
-            ParameterSetName = 'systemContext',
-            Mandatory = $true,
-            HelpMessage = "When set amd used in conjunction with the 'systemContextBinding' parameter, the ADMU will run in system context. This is required for the user to be bound to JumpCloud correctly. If this is not set, the user will not be bound to JumpCloud.")]
-        [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
+            HelpMessage = "When set amd used in conjunction with the 'systemContextBinding' parameter, the ADMU will run in system context. This is required for the user to be bound to JumpCloud correctly. If this is not set, the user will not be bound to JumpCloud.",
             DontShow)]
         [ValidateLength(24, 24)]
         [string]
         $JumpCloudUserID,
-        [Parameter(
-            ParameterSetName = 'cmd',
-            Mandatory = $false,
-            HelpMessage = "When set to true, the ADMU will validate that the AD user profile has biometric data stored in the '\HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WinBio\AccountInfo' registry key. If the user profile has biometric data, the ADMU will remove the biometric data from the registry post-migration of the user profile. This setting will remove biometric data for all users on the device windows obfuscates biometric data, it can not be linked to any one user on a device. The only way to remove a single user's fingerprint data is to remove all biometric data on the device. Only use this parameter if you agree that doing so will remove all biometric data from the device being migrated.  This is set to false by default.")]
-        [bool]
-        $RemoveBiometrics = $false,
         [Parameter(
             ParameterSetName = "form")]
         [Object]
@@ -125,6 +113,21 @@ Function Start-Migration {
     )
 
     Begin {
+        # parameter set validation:
+        Write-Host $PSCmdlet.ParameterSetName
+
+        # validate that the APIKey or ORGID parameters are not set
+        if ($PSBoundParameters.ContainsKey('systemContextBinding') -And ($PSBoundParameters.ContainsKey('JumpCloudAPIKey') -or $PSBoundParameters.ContainsKey('JumpCloudOrgID'))) {
+            Throw "The 'SystemContextBinding' parameter cannot be used with the 'JumpCloudAPIKey' or 'JumpCloudOrgID' parameters."
+            break
+        }
+        # validate that the $systemContextBinding parameter is set and the $JumpCloudUserID parameter is set
+        if ($PSBoundParameters.ContainsKey('systemContextBinding') -And ( -NOT $PSBoundParameters.ContainsKey('JumpCloudUserID'))) {
+
+            Throw "The 'SystemContextBinding' parameter must be used with the 'JumpCloudUserID' parameter. Please set a 'JumpCloudUserID' for the userID you with to bind."
+            break
+        }
+
         # Define misc static variables
         $netBiosName = Get-NetBiosName
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
@@ -1177,16 +1180,6 @@ Function Start-Migration {
                     Write-ToLog -Message:('Device is not joined to a domain, skipping leave domain step')
                 }
             }
-
-            #region BiometricData
-            if ($RemoveBiometrics) {
-                $userBioData = Get-WinBioUserBySID -sid $selectedUserSID
-                if ($userBioData) {
-                    Write-ToLog "[status] Removing biometrics for user: $($SelectedUserName)"
-                    Remove-WinBioFingerprint -sid $SelectedUserSID
-                }
-            }
-            #endregion BiometricData
 
             # re-enable scheduled tasks if they were disabled
             if ($ScheduledTasks) {
