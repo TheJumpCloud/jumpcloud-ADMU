@@ -1,3 +1,6 @@
+# This script is designed to be run from the JumpCloud Agent and uploaded to a
+# JumpCloud Command
+# The script will run the ADMU command to migrate a user to JumpCloud
 ################################################################################
 # Update Variables Below
 ################################################################################
@@ -5,22 +8,22 @@
 # CSV or Github input
 $dataSource = 'csv' # csv or github
 
-# CSV vars only required if the dataSource is set to 'csv' this is the name of the CSV uploaded to the JumpCloud command
+# CSV variables only required if the dataSource is set to 'csv' this is the name of the CSV uploaded to the JumpCloud command
 $csvName = 'jcdiscovery.csv'
 
-# Github vars only required if dataSource is set to 'github' and the csv is stored in a remote repo
-$GHUsername = ''
-$GHToken = '' # https://github.com/settings/tokens needs token to write/create repo
-$GHRepoName = 'Jumpcloud-ADMU-Discovery'
+# Github variables only required if dataSource is set to 'github' and the csv is stored in a remote repo
+$GitHubUsername = ''
+$GitHubToken = '' # https://github.com/settings/tokens needs token to write/create repo
+$GitHubRepoName = 'Jumpcloud-ADMU-Discovery'
 
-# ADMU vars
+# ADMU variables
 $TempPassword = 'Temp123!Temp123!'
 $LeaveDomain = $true
 $ForceReboot = $true
 $UpdateHomePath = $false
 $AutobindJCUser = $true
 $BindAsAdmin = $false # Bind user as admin (default False)
-$JumpCloudAPIKey = ''
+$JumpCloudAPIKey = '' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
 $JumpCloudOrgID = '' # This field is required if you use a MTP API Key
 $SetDefaultWindowsUser = $true # Set the default last logged on windows user to the JumpCloud user (default True)
 
@@ -37,16 +40,8 @@ $systemContextBinding = $true # Bind using the systemContext API (default False)
 # for more information, see the JumpCloud documentation: https://docs.jumpcloud.com/api/2.0/index.html#section/System-Context
 # this script will throw an error '3' if the systemContext API is not available for the system
 
-# option to delete biometric data
-$deleteBiometricData = $true # Delete biometric data (default False)
-
 ################################################################################
 # Do not edit below
-################################################################################
-#region functions
-
-################################################################################
-#endregion functions
 ################################################################################
 #region validation
 
@@ -68,11 +63,6 @@ if ($postMigrationBehavior -notin @('Restart', 'Shutdown')) {
 # validate the systemContextBinding param
 if ($systemContextBinding -notin @($true, $false)) {
     Write-Host "[status] Invalid systemContextBinding specified, exiting..."
-    exit 1
-}
-# validate the deleteBiometricData param
-if ($deleteBiometricData -notin @($true, $false)) {
-    Write-Host "[status] Invalid deleteBiometricData specified, exiting..."
     exit 1
 }
 # validate the required ADMU parameters:
@@ -133,7 +123,7 @@ if ($systemContextBinding -eq $true) {
         $validatedSystemContextAPI = $false
         Write-Host "[status] The systemContext API is not available for this system, please use the standard binding method"
         Write-Error "Could not bind using the systemContext API, please use the standard binding method"
-        exit 1
+        exit 3
     }
 }
 #endregion validation
@@ -147,32 +137,32 @@ switch ($dataSource) {
         }
         # check if the CSV file exists
         # get the CSV data from the temp directory
-        $discoverycsvlocation = "C:\Windows\Temp\$csvName"
-        if (-not (Test-Path -Path $discoverycsvlocation)) {
+        $discoveryCSVLocation = "C:\Windows\Temp\$csvName"
+        if (-not (Test-Path -Path $discoveryCSVLocation)) {
             Write-Host "[status] CSV file not found, exiting..."
             exit 1
         }
     }
     'github' {
         # check if the GitHub token is set
-        if (-not $GHToken) {
-            Write-Host "[status] Required script variable 'GHToken' not set, exiting..."
+        if (-not $GitHubToken) {
+            Write-Host "[status] Required script variable 'GitHubToken' not set, exiting..."
             exit 1
         }
         # check if the GitHub username is set
-        if (-not $GHUsername) {
-            Write-Host "[status] Required script variable 'GHUsername' not set, exiting..."
+        if (-not $GitHubUsername) {
+            Write-Host "[status] Required script variable 'GitHubUsername' not set, exiting..."
             exit 1
         }
 
         # Create the GitHub credential set
-        $password = ConvertTo-SecureString "$GHToken" -AsPlainText -Force
-        $Cred = New-Object System.Management.Automation.PSCredential ($GHUsername, $password)
+        $password = ConvertTo-SecureString "$GitHubToken" -AsPlainText -Force
+        $Cred = New-Object System.Management.Automation.PSCredential ($GitHubUsername, $password)
 
         # set working directory for GitHub csv
-        $windowstemp = [System.Environment]::GetEnvironmentVariable('TEMP', 'Machine')
-        $workingdir = $windowstemp
-        $discoverycsvlocation = $workingdir + '\jcdiscovery.csv'
+        $windowsTemp = [System.Environment]::GetEnvironmentVariable('TEMP', 'Machine')
+        $workingDir = $windowsTemp
+        $discoveryCSVLocation = $workingDir + '\jcdiscovery.csv'
 
         # Set security protocol
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
@@ -186,9 +176,9 @@ switch ($dataSource) {
         Set-GitHubAuthentication -Credential $cred
 
         # Download jcdiscovery.csv from GH
-        $jcdiscoverycsv = (Get-GitHubContent -OwnerName $GHUsername -RepositoryName $GHRepoName -BranchName 'main' -ErrorAction SilentlyContinue -WarningAction SilentlyContinue).Entries | Where-Object { $_.name -match 'jcdiscovery.csv' } | Select-Object name, download_url
-        New-Item -ItemType Directory -Force -Path $workingdir | Out-Null
-        $dlname = ($workingdir + '\jcdiscovery.csv')
+        $jcdiscoverycsv = (Get-GitHubContent -OwnerName $GitHubUsername -RepositoryName $GitHubRepoName -BranchName 'main' -ErrorAction SilentlyContinue -WarningAction SilentlyContinue).Entries | Where-Object { $_.name -match 'jcdiscovery.csv' } | Select-Object name, download_url
+        New-Item -ItemType Directory -Force -Path $workingDir | Out-Null
+        $dlname = ($workingDir + '\jcdiscovery.csv')
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         Invoke-WebRequest -Uri $jcdiscoverycsv.download_url -OutFile $dlname
     }
@@ -196,7 +186,7 @@ switch ($dataSource) {
 
 # Import the CSV & check for one row per system
 try {
-    $ImportedCSV = Import-Csv -Path $discoverycsvlocation
+    $ImportedCSV = Import-Csv -Path $discoveryCSVLocation
 } catch {
     Write-Host "[status] Error importing CSV file, exiting..."
     exit 1
@@ -246,13 +236,22 @@ $latestADMUModule = Find-Module -Name JumpCloud.ADMU -ErrorAction SilentlyContin
 $installedADMUModule = Get-InstalledModule -Name JumpCloud.ADMU -ErrorAction SilentlyContinue
 if (-NOT $installedADMUModule) {
     Write-Host "[status] JumpCloud ADMU module not found, installing..."
-    Install-Module JumpCloud.ADMU -Force
+    try {
+        Install-Module JumpCloud.ADMU -Force
+    } catch {
+        throw "Failed to install JumpCloud ADMU module"
+    }
 } else {
     # update the module if it's not the latest version
     if ($latestADMUModule.Version -ne $installedADMUModule.Version) {
         Write-Host "[status] JumpCloud ADMU module found, updating..."
-        Uninstall-Module -Name Jumpcloud.ADMU -AllVersions
-        Install-Module JumpCloud.ADMU -Force
+        try {
+            Uninstall-Module -Name Jumpcloud.ADMU -AllVersions
+            Install-Module JumpCloud.ADMU -Force
+
+        } catch {
+            throw "[status] Failed to update JumpCloud ADMU module, exiting..."
+        }
     } else {
         Write-Host "[status] JumpCloud ADMU module is up to date"
     }
@@ -357,21 +356,6 @@ foreach ($user in $UsersToMigrate) {
         exit 1
     } else {
         Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)"
-
-        # if biometrics were enabled, remove them
-        if ($RemoveBiometrics) {
-            # check if the user even has biometic data
-            $userBioData = Get-WinBioUserBySID -sid $user.selectedUsername
-            if ($userBioData) {
-                Write-Host "[status] Removing biometrics for user: $($user.JumpCloudUserName)"
-                Remove-Fingerprint -sid $user.selectedUsername
-            }
-        }
-        # If the systemContextAPI was validated, run the systemContext API command
-        If ($validatedSystemContextAPI -And $validatedSystemID) {
-            # associate the migration user with the systemContext API
-            Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $user.jumpcloudUserID -admin $BindAsAdmin
-        }
     }
 }
 # If force restart was specified, we kick off a command to initiate the restart
