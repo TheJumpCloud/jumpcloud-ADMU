@@ -16,6 +16,31 @@ Describe "Invoke-SystemContextAPI Acceptance Tests" -Tag "Acceptance" {
             $currentPath = Split-Path $currentPath -Parent
         }
         . "$helpFunctionDir\$fileName"
+    }
+    Context "Without the agent installed" {
+        It "Should throw an error when the agent is not installed" {
+            { Invoke-SystemContextAPI -method "GET" -endpoint "systems" } | Should -Throw
+        }
+    }
+}
+Describe "Invoke-SystemContextAPI Acceptance Tests" -Tag "InstallJC" {
+    BeforeAll {
+        # import all functions
+        $currentPath = $PSScriptRoot # Start from the current script's directory.
+        $TargetDirectory = "helperFunctions"
+        $FileName = "Import-AllFunctions.ps1"
+        while ($currentPath -ne $null) {
+            $filePath = Join-Path -Path $currentPath $TargetDirectory
+            if (Test-Path $filePath) {
+                # File found! Return the full path.
+                $helpFunctionDir = $filePath
+                break
+            }
+
+            # Move one directory up.
+            $currentPath = Split-Path $currentPath -Parent
+        }
+        . "$helpFunctionDir\$fileName"
 
         $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
         $regex = 'systemKey\":\"(\w+)\"'

@@ -432,7 +432,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.AutobindJCUser = $true
                     $testCaseInput.SystemContextBinding = $true
                     # Add the JumpCloudUserID parameter
-                    $testCaseInputAdd("JumpCloudUserID", $GeneratedUser.Id)
+                    $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
                     # Migrate the initialized user to the second username
                     { Start-Migration @testCaseInput } | Should -Not -Throw
 
@@ -456,7 +456,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInputBindAsAdmin = $true
                     $testCaseInput.SystemContextBinding = $true
                     # Add the JumpCloudUserID parameter
-                    $testCaseInputAdd("JumpCloudUserID", $GeneratedUser.Id)
+                    $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
                     # Migrate the initialized user to the second username
                     { Start-Migration @testCaseInput } | Should -Not -Throw
 
