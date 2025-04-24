@@ -113,10 +113,9 @@ Function Start-Migration {
     )
 
     Begin {
-        # parameter set validation:
-        Write-Host $PSCmdlet.ParameterSetName
+        # parameter combination validation:
 
-        # validate that the APIKey or ORGID parameters are not set
+        # validate that the APIKey or ORGID parameters are not set with the systemContextBinding parameter
         if ($PSBoundParameters.ContainsKey('systemContextBinding') -And ($PSBoundParameters.ContainsKey('JumpCloudAPIKey') -or $PSBoundParameters.ContainsKey('JumpCloudOrgID'))) {
             Throw "The 'SystemContextBinding' parameter cannot be used with the 'JumpCloudAPIKey' or 'JumpCloudOrgID' parameters."
             break
@@ -127,6 +126,17 @@ Function Start-Migration {
             Throw "The 'SystemContextBinding' parameter must be used with the 'JumpCloudUserID' parameter. Please set a 'JumpCloudUserID' for the userID you with to bind."
             break
         }
+        # validate that the $InstallJCAgent parameter is set with the systemContextBinding parameter
+        if ($PSBoundParameters.ContainsKey('InstallJCAgent') -And $PSBoundParameters.ContainsKey('systemContextBinding')) {
+            Throw "The 'InstallJCAgent' parameter cannot be used with the 'SystemContextBinding' parameter."
+            break
+        }
+        # validate that the $JumpCloudConnectKey parameter is set with the systemContextBinding parameter
+        if ($PSBoundParameters.ContainsKey('JumpCloudConnectKey') -And $PSBoundParameters.ContainsKey('systemContextBinding')) {
+            Throw "The 'JumpCloudConnectKey' parameter cannot be used with the 'SystemContextBinding' parameter."
+            break
+        }
+
 
         # Define misc static variables
         $netBiosName = Get-NetBiosName

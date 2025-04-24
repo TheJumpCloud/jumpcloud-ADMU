@@ -21,6 +21,76 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
         # import the init user function:
         . "$helpFunctionDir\Initialize-TestUser.ps1"
     }
+    Context "SystemContext Parameter Validation for non-APIKey Migrations" {
+        # Test Setup
+        BeforeEach {
+            # sample password
+            $tempPassword = "Temp123!"
+            # username to migrate
+            $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # username to migrate to
+            $userToMigrateTo = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+
+            # Initialize-TestUser
+            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            # define test case input
+            $testCaseInput = @{
+                JumpCloudUserName       = $userToMigrateTo
+                SelectedUserName        = $userToMigrateFrom
+                TempPassword            = $tempPassword
+                LeaveDomain             = $false
+                ForceReboot             = $false
+                UpdateHomePath          = $false
+                InstallJCAgent          = $false
+                AutobindJCUser          = $false
+                BindAsAdmin             = $false
+                SetDefaultWindowsUser   = $true
+                AdminDebug              = $false
+                # JumpCloudConnectKey     = $null
+                # JumpCloudAPIKey         = $null
+                # JumpCloudOrgID          = $null
+                ValidateUserShellFolder = $true
+                SystemContextBinding    = $true
+                JumpCloudUserID         = $null
+            }
+            # remove the log
+            $logPath = "C:\Windows\Temp\jcadmu.log"
+            if (Test-Path -Path $logPath) {
+                Remove-Item $logPath
+                New-Item $logPath -Force -ItemType File
+            }
+        }
+        It "Tests that the the start-migration function throws for 'systemContextBinding' parameters when the JumpCloudUserID is not set/ is null" {
+            # Should throw when the length is not 24 chars
+            { Start-Migration @testCaseInput } | Should -Throw
+            # should throw when the 'JumpCloudUserID' parameter is missing
+            $testCaseInput.Remove("JumpCloudUserID")
+            { Start-Migration @testCaseInput } | Should -Throw
+
+        }
+        It "Tests that the the start-migration function throws for 'systemContextBinding' parameters when the JumpCloudUserID is set and the APIKey/ ORGId is set" {
+            # set the JumpCloudUserID to a 24 char string
+            $testCaseInput.JumpCloudUserID = "123456789012345678901234"
+            $testCaseInput.Add('JumpCloudAPIKey', "123456789012345678901234")
+            { Start-Migration @testCaseInput } | Should -Throw
+            $testCaseInput.Add('JumpCloudOrgID', "123456789012345678901234")
+            { Start-Migration @testCaseInput } | Should -Throw
+        }
+        It "Tests that the start-migration function throws for 'systemContextBinding' parameters when InstallJumpCloudAgent parameter is set" {
+            # set the JumpCloudUserID to a 24 char string
+            $testCaseInput.JumpCloudUserID = "123456789012345678901234"
+            # set the InstallJCAgent to true
+            $testCaseInput.InstallJCAgent = $true
+            { Start-Migration @testCaseInput } | Should -Throw
+        }
+        It "Tests that the start-migration function throws for 'systemContextBinding' parameters when JumpCloudConnectKey parameter is set" {
+            # set the JumpCloudUserID to a 24 char string
+            $testCaseInput.JumpCloudUserID = "123456789012345678901234"
+            # set the InstallJCAgent to true
+            $testCaseInput.Add('JumpCloudConnectKey', "123456789012345678901234")
+            { Start-Migration @testCaseInput } | Should -Throw
+        }
+    }
     Context "Migration Scenarios" {
         # Test Setup
         BeforeEach {
@@ -293,6 +363,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                 JumpCloudAPIKey         = $env:PESTER_APIKEY
                 JumpCloudOrgID          = $env:PESTER_ORGID
                 ValidateUserShellFolder = $true
+                SystemContextBinding    = $false
+                # JumpCloudUserID         = $null
             }
             # remove the log
             $logPath = "C:\Windows\Temp\jcadmu.log"
@@ -347,6 +419,52 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # the system should be associated to the user
                     $association | Should -not -BeNullOrEmpty
                     # the association should be sudo enabled
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
+                }
+                It "Associates a JumpCloud user using 'systemContextBinding'" {
+                    # set the $testCaseInput
+                    # For systemContextBinding, remove the APIKey/ ORgID params
+                    $testCaseInput.Remove('JumpCloudApiKey')
+                    $testCaseInput.Remove('JumpCloudOrgID')
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutobindJCUser = $true
+                    $testCaseInput.SystemContextBinding = $true
+                    # Add the JumpCloudUserID parameter
+                    $testCaseInputAdd("JumpCloudUserID", $GeneratedUser.Id)
+                    # Migrate the initialized user to the second username
+                    { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                    # get the system association:
+                    $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                    # the system should be associated to the user
+                    $association | Should -not -BeNullOrEmpty
+                    # the association should NOT be sudo enabled
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
+                }
+                It "Associates a JumpCloud user as an 'admin' using 'systemContextBinding'" {
+                    # set the $testCaseInput
+                    # For systemContextBinding, remove the APIKey/ ORgID params
+                    $testCaseInput.Remove('JumpCloudApiKey')
+                    $testCaseInput.Remove('JumpCloudOrgID')
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutobindJCUser = $true
+                    # for this test, associate the user as an Admin
+                    $testCaseInputBindAsAdmin = $true
+                    $testCaseInput.SystemContextBinding = $true
+                    # Add the JumpCloudUserID parameter
+                    $testCaseInputAdd("JumpCloudUserID", $GeneratedUser.Id)
+                    # Migrate the initialized user to the second username
+                    { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                    # get the system association:
+                    $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                    # the system should be associated to the user
+                    $association | Should -not -BeNullOrEmpty
+                    # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
                 }
                 # remove the users
