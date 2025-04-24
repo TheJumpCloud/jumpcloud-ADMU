@@ -5,12 +5,11 @@ Release Date: April 16, 2025
 #### RELEASE NOTES
 
 ```
-Add new feature to remove fingerprints/ biometric data post-migration. Add new feature to bind user with the systemContextAPI as opposed to APIKey/ OrgID credentials.
+Add new feature to bind user with the systemContextAPI as opposed to APIKey/ OrgID credentials.
 ```
 
 #### FEATURES:
 
-The ADMU now allows for removal of biometric data using the `$removeBiometrics` parameter
 The ADMU now allows for binding a userID to the device post-migration with the `$systemContextBinding` & `$JumpCloudUserID` parameters
 
 #### IMPROVEMENTS:
