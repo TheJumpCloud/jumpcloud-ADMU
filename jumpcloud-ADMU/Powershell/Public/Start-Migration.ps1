@@ -116,23 +116,23 @@ Function Start-Migration {
         # parameter combination validation:
 
         # validate that the APIKey or ORGID parameters are not set with the systemContextBinding parameter
-        if ($PSBoundParameters.ContainsKey('systemContextBinding') -And ($PSBoundParameters.ContainsKey('JumpCloudAPIKey') -or $PSBoundParameters.ContainsKey('JumpCloudOrgID'))) {
+        if (($PSBoundParameters.ContainsKey('systemContextBinding') -And $systemContextBinding -eq $true) -And ($PSBoundParameters.ContainsKey('JumpCloudAPIKey') -or $PSBoundParameters.ContainsKey('JumpCloudOrgID'))) {
             Throw "The 'SystemContextBinding' parameter cannot be used with the 'JumpCloudAPIKey' or 'JumpCloudOrgID' parameters."
             break
         }
         # validate that the $systemContextBinding parameter is set and the $JumpCloudUserID parameter is set
-        if ($PSBoundParameters.ContainsKey('systemContextBinding') -And ( -NOT $PSBoundParameters.ContainsKey('JumpCloudUserID'))) {
+        if (($PSBoundParameters.ContainsKey('systemContextBinding') -And $systemContextBinding -eq $true) -And ( -NOT $PSBoundParameters.ContainsKey('JumpCloudUserID'))) {
 
             Throw "The 'SystemContextBinding' parameter must be used with the 'JumpCloudUserID' parameter. Please set a 'JumpCloudUserID' for the userID you with to bind."
             break
         }
         # validate that the $InstallJCAgent parameter is set with the systemContextBinding parameter
-        if ($PSBoundParameters.ContainsKey('InstallJCAgent') -And $PSBoundParameters.ContainsKey('systemContextBinding')) {
+        if (($PSBoundParameters.ContainsKey('systemContextBinding') -And $systemContextBinding -eq $true) -And $PSBoundParameters.ContainsKey('InstallJCAgent')) {
             Throw "The 'InstallJCAgent' parameter cannot be used with the 'SystemContextBinding' parameter."
             break
         }
         # validate that the $JumpCloudConnectKey parameter is set with the systemContextBinding parameter
-        if ($PSBoundParameters.ContainsKey('JumpCloudConnectKey') -And $PSBoundParameters.ContainsKey('systemContextBinding')) {
+        if (($PSBoundParameters.ContainsKey('systemContextBinding') -And $systemContextBinding -eq $true) -And $PSBoundParameters.ContainsKey('JumpCloudConnectKey')) {
             Throw "The 'JumpCloudConnectKey' parameter cannot be used with the 'SystemContextBinding' parameter."
             break
         }
