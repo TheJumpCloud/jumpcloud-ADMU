@@ -38,7 +38,6 @@ $systemContextBinding = $true # Bind using the systemContext API (default False)
 # If you want to bind using the systemContext API, set the systemContextBinding to true
 # The systemContextBinding option is only available for devices that have enrolled a device using a JumpCloud Administrators Connect Key
 # for more information, see the JumpCloud documentation: https://docs.jumpcloud.com/api/2.0/index.html#section/System-Context
-# this script will throw an error '3' if the systemContext API is not available for the system
 
 ################################################################################
 # Do not edit below
@@ -189,8 +188,8 @@ foreach ($row in $ImportedCSV) {
         Write-Host "[status] Imported entry for $($row.LocalPath) | Converting to JumpCloud User $($row.JumpCloudUserName)"
         $UsersToMigrate += [PSCustomObject]@{
             selectedUsername  = $row.SID
-            jumpcloudUserName = $row.JumpCloudUserName
-            jumpcloudUserID   = $row.JumpCloudUserID
+            JumpCloudUserName = $row.JumpCloudUserName
+            JumpCloudUserID   = $row.JumpCloudUserID
         }
     }
 }
@@ -206,6 +205,10 @@ foreach ($user in $UsersToMigrate) {
     # Validate parameter are not empty:
     If ([string]::IsNullOrEmpty($user.JumpCloudUserName)) {
         Write-Error "[status] Could not migrate user, entry not found in CSV for JumpCloud Username: $($user.selectedUsername)"
+        exit 1
+    }
+    If (($systemContextBinding -eq $true) -And ([string]::IsNullOrEmpty($user.JumpCloudUserID))) {
+        Write-Error "[status] Could not migrate user, entry not found in CSV for JumpCloud UserID: $($user.selectedUsername); this field is required for systemContextBinding"
         exit 1
     }
 }
@@ -320,13 +323,13 @@ foreach ($user in $UsersToMigrate) {
         $migrationParams.Add('JumpCloudOrgID', $JumpCloudOrgID)
     }
     # if the systemContextAPI has been validated, remove the binding parameters from the $migrationParams
-    If ($validatedSystemContextAPI) {
+    If ($systemContextBinding -eq $true) {
         # remove the binding parameters from the $migrationParams
         $migrationParams.Remove('AutobindJCUser')
         $migrationParams.Remove('BindAsAdmin')
         $migrationParams.Remove('JumpCloudAPIKey')
         $migrationParams.Remove('JumpCloudOrgID')
-
+        $migrationParams.Add('JumpCloudUserID', $user.JumpCloudUserID)
     }
     # Start the migration
     Write-Host "[status] Begin Migration for user: $($user.selectedUsername) -> $($user.JumpCloudUserName)"
@@ -344,30 +347,46 @@ foreach ($user in $UsersToMigrate) {
 # If force restart was specified, we kick off a command to initiate the restart
 # this ensures that the JumpCloud commands reports a success
 if ($ForceRebootAfterMigration) {
-    $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
-    $regex = 'systemKey\":\"(\w+)\"'
-    $systemKey = [regex]::Match($config, $regex).Groups[1].Value
-    if ([string]::IsNullOrEmpty($systemKey)) {
-        Write-Host "JumpCloud SystemID could not be verified, exiting..."
-        exit 1
-    }
-    if ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
-        $headers = @{
-            "x-api-key" = $JumpCloudAPIKey
+    if ($systemContextBinding -eq $true) {
+        switch ($postMigrationBehavior) {
+            'shutdown' {
+                Write-Host "[status] Shutting down the system with PowerShell..."
+                Stop-Computer -ComputerName localhost -force
+            }
+            'restart' {
+                Write-Host "[status] Restarting the system with PowerShell..."
+                Restart-Computer -ComputerName localhost -force
+            }
         }
+        Write-Host "[status] Restarting system using systemContext API..."
+        $postMigrationBehavior = 'restart'
     } else {
-        $headers = @{
-            "x-api-key" = $JumpCloudAPIKey
-            "x-org-id"  = $JumpCloudOrgID
+        Write-Host "[status] Restarting system using JumpCloud API..."
+        $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
+        $regex = 'systemKey\":\"(\w+)\"'
+        $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+        if ([string]::IsNullOrEmpty($systemKey)) {
+            Write-Host "JumpCloud SystemID could not be verified, exiting..."
+            exit 1
         }
-    }
-    write-host "[status] invoking $postMigrationBehavior command through JumpCloud agent, this may take a moment..."
-    $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systems/$($systemKey)/command/builtin/$postMigrationBehavior" -Method POST -Headers $headers
-    if ($response.queueId) {
-        Write-Host "[status] $postMigrationBehavior command was successful"
-    } else {
-        Write-Host "[status] $postMigrationBehavior command was not successful, please $postMigrationBehavior manually"
-        exit 1
+        if ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
+            $headers = @{
+                "x-api-key" = $JumpCloudAPIKey
+            }
+        } else {
+            $headers = @{
+                "x-api-key" = $JumpCloudAPIKey
+                "x-org-id"  = $JumpCloudOrgID
+            }
+        }
+        write-host "[status] invoking $postMigrationBehavior command through JumpCloud agent, this may take a moment..."
+        $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systems/$($systemKey)/command/builtin/$postMigrationBehavior" -Method POST -Headers $headers
+        if ($response.queueId) {
+            Write-Host "[status] $postMigrationBehavior command was successful"
+        } else {
+            Write-Host "[status] $postMigrationBehavior command was not successful, please $postMigrationBehavior manually"
+            exit 1
+        }
     }
 }
 exit 0
