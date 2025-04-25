@@ -31,7 +31,7 @@ $SetDefaultWindowsUser = $true # Set the default last logged on windows user to 
 # Restarting the system is the default behavior
 # If you want to shutdown the system, set the postMigrationBehavior to Shutdown
 # The 'shutdown' behavior performs a shutdown of the system in a much faster manner than 'restart' which can take 5 mins form the time the command is issued
-$postMigrationBehavior = 'Restart' # Restart or Shutdown
+$postMigrationBehavior = 'shutdown' # Restart or Shutdown
 
 # option to bind using the systemContext API
 $systemContextBinding = $true # Bind using the systemContext API (default False)
@@ -70,35 +70,22 @@ if ([string]::IsNullOrEmpty($TempPassword)) {
     Write-Host "[status] Required script variable 'TempPassword' not set, exiting..."
     exit 1
 }
-# validate that leaveDomain is a boolean
-if ($LeaveDomain -notin @($true, $false)) {
-    Write-Host "[status] Required script variable 'LeaveDomain' not set, exiting..."
-    exit 1
+# Define a hashtable of variables to validate
+$booleanVariables = @{
+    LeaveDomain           = $LeaveDomain
+    ForceReboot           = $ForceReboot
+    UpdateHomePath        = $UpdateHomePath
+    AutobindJCUser        = $AutobindJCUser
+    BindAsAdmin           = $BindAsAdmin
+    SetDefaultWindowsUser = $SetDefaultWindowsUser
 }
-# validate that forceReboot is a boolean
-if ($ForceReboot -notin @($true, $false)) {
-    Write-Host "[status] Required script variable 'ForceReboot' not set, exiting..."
-    exit 1
-}
-# validate that updateHomePath is a boolean
-if ($UpdateHomePath -notin @($true, $false)) {
-    Write-Host "[status] Required script variable 'UpdateHomePath' not set, exiting..."
-    exit 1
-}
-# validate that autobindJCUser is a boolean
-if ($AutobindJCUser -notin @($true, $false)) {
-    Write-Host "[status] Required script variable 'AutobindJCUser' not set, exiting..."
-    exit 1
-}
-# validate that bindAsAdmin is a boolean
-if ($BindAsAdmin -notin @($true, $false)) {
-    Write-Host "[status] Required script variable 'BindAsAdmin' not set, exiting..."
-    exit 1
-}
-# validate that setDefaultWindowsUser is a boolean
-if ($SetDefaultWindowsUser -notin @($true, $false)) {
-    Write-Host "[status] Required script variable 'SetDefaultWindowsUser' not set, exiting..."
-    exit 1
+
+# Validate each variable in the hashtable
+foreach ($key in $booleanVariables.Keys) {
+    if ($booleanVariables[$key] -notin @($true, $false)) {
+        Write-Host "[status] Required script variable '$key' not set or invalid, exiting..."
+        exit 1
+    }
 }
 # API key and ORGID validation
 # The JumpCloud API Key can be null if the systemContextBinding is set to true
@@ -185,7 +172,7 @@ write-host "[status] Serial Number: $($serialNumber)"
 # Find user to be migrated
 foreach ($row in $ImportedCSV) {
     if (($row.LocalComputerName -eq ($computerName)) -AND ($row.SerialNumber -eq $serialNumber) -AND ($row.JumpCloudUserName -ne '')) {
-        Write-Host "[status] Imported entry for $($row.LocalPath) | Converting to JumpCloud User $($row.JumpCloudUserName)"
+        Write-Host "[status] AD user path $($row.LocalPath) | Converting to JumpCloud User $($row.JumpCloudUserName)"
         $UsersToMigrate += [PSCustomObject]@{
             selectedUsername  = $row.SID
             JumpCloudUserName = $row.JumpCloudUserName
@@ -232,7 +219,7 @@ if (-NOT $installedADMUModule) {
     if ($latestADMUModule.Version -ne $installedADMUModule.Version) {
         Write-Host "[status] JumpCloud ADMU module found, updating..."
         try {
-            Uninstall-Module -Name Jumpcloud.ADMU -AllVersions
+            Uninstall-Module -Name JumpCloud.ADMU -AllVersions
             Install-Module JumpCloud.ADMU -Force
 
         } catch {
@@ -243,56 +230,72 @@ if (-NOT $installedADMUModule) {
     }
 }
 
+# locally import the module (#TODO: remove before publish)
+$path = "C:\scripts\jumpcloud-ADMU\Jumpcloud.ADMU.psd1"
+$module = Import-Module $path -Force
+$module = Get-Module JumpCloud.ADMU
+# check that the module was imported
+# $module = Import-Module JumpCloud.ADMU -Force -ErrorAction SilentlyContinue
+# $module = Get-Module JumpCloud.ADMU
+if ($null -eq $module) {
+    Write-Host "[status] Failed to import JumpCloud ADMU module, exiting..."
+    # exit 1
+} else {
+    Write-Host "[status] JumpCloud ADMU module imported successfully; running version $($module.Version)"
+}
 # wait just a moment to ensure the ADMU was downloaded from PSGallery
 start-sleep -Seconds 5
 
-#endregion installADMU
-
-#region logoffUsers
-# Query User Sessions & logoff
-# get rid of the > char & break out into a CSV type object
-$quserResult = (quser) -replace '^>', ' ' | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
-# create a list for users
-$processedUsers = @()
-foreach ($obj in $quserResult) {
-    # if missing an entry for one of: USERNAME,SESSIONNAME,ID,STATE,IDLE TIME OR LOGON TIME, add a comma
-    if ($obj.Split(',').Count -ne 6) {
-        # Write-Host ($obj -replace '(^[^,]+)', '$1,')
-        $processedUsers += ($obj -replace '(^[^,]+)', '$1,')
-    } else {
-        # Write-Host ($obj)
-        $processedUsers += $obj
-    }
-}
-$UsersList = $processedUsers | ConvertFrom-Csv
-Write-host "[status] $($usersList.count) will be logged out"
-foreach ($user in $UsersList) {
-    If (($user.username)) {
-        write-host "[status] Logging off user: $($user.username) with ID: $($user.ID)"
-        # Force Logout
-        logoff.exe $($user.ID)
-    }
-}
-
+#endregion installADMU\
 # Run ADMU
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
 
 # If multiple users are planned to be migrated: set the force reboot / leave domain options to false:
 if ($UsersToMigrate) {
+    #region logoffUsers
+    # Query User Sessions & logoff
+    # get rid of the > char & break out into a CSV type object
+    $quserResult = (quser) -replace '^>', ' ' | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
+    # create a list for users
+    $processedUsers = @()
+    foreach ($obj in $quserResult) {
+        # if missing an entry for one of: USERNAME,SESSIONNAME,ID,STATE,IDLE TIME OR LOGON TIME, add a comma
+        if ($obj.Split(',').Count -ne 6) {
+            # Write-Host ($obj -replace '(^[^,]+)', '$1,')
+            $processedUsers += ($obj -replace '(^[^,]+)', '$1,')
+        } else {
+            # Write-Host ($obj)
+            $processedUsers += $obj
+        }
+    }
+    $UsersList = $processedUsers | ConvertFrom-Csv
+    Write-host "[status] Logging off users..."
+    foreach ($user in $UsersList) {
+        If (($user.username)) {
+            write-host "[status] Logging off user: $($user.username) with ID: $($user.ID)"
+            # Force Logout
+            logoff.exe $($user.ID)
+        }
+    }
+    #endregion logoffUsers
     if ($LeaveDomain) {
         $LeaveDomain = $false
-        Write-Host "[status] The Domain will be left for the last user migrated on this system"
+        Write-Host "[status] The Domain will attempt to be un-joined for the last user migrated on this system"
         $LeaveDomainAfterMigration = $true
     }
 
     # if you force with the JumpCloud command, the results will never be written to the console, we always want to reboot/shutdown with the built in commands.
     if ($ForceReboot) {
         $ForceReboot = $false
-        Write-Host "[status] The system will be restarted after the last user is migrated"
+        Write-Host "[status] The system will $postMigrationBehavior after the last user is migrated"
         $ForceRebootAfterMigration = $true
     }
+} else {
+    Write-Host "[status] No users to migrate, exiting..."
+    exit 1
 }
 
+#region migration
 # Get the last user in the migration list
 $lastUser = $($UsersToMigrate | Select-Object -Last 1)
 
@@ -332,18 +335,21 @@ foreach ($user in $UsersToMigrate) {
         $migrationParams.Add('JumpCloudUserID', $user.JumpCloudUserID)
     }
     # Start the migration
-    Write-Host "[status] Begin Migration for user: $($user.selectedUsername) -> $($user.JumpCloudUserName)"
+    Write-Host "[status] Begin Migration for JumpCloudUser: $($user.JumpCloudUserName)"
 
-    Start-Migration @migrationParams
-
-    # Check if the migration was successful
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[status] Migration failed for user: $($user.JumpCloudUserName), exiting..."
-        exit 1
-    } else {
+    try {
+        # Start the migration
+        Start-Migration @migrationParams
         Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)"
+    } catch {
+        Write-Host "[status] Migration failed for user: $($user.JumpCloudUserName), exiting..."
+        Write-Host "[status] Error: $($_.Exception.Message)"
+        exit 1
     }
 }
+#endregion migration
+
+#region restart/shutdown
 # If force restart was specified, we kick off a command to initiate the restart
 # this ensures that the JumpCloud commands reports a success
 if ($ForceRebootAfterMigration) {
@@ -358,8 +364,6 @@ if ($ForceRebootAfterMigration) {
                 Restart-Computer -ComputerName localhost -force
             }
         }
-        Write-Host "[status] Restarting system using systemContext API..."
-        $postMigrationBehavior = 'restart'
     } else {
         Write-Host "[status] Restarting system using JumpCloud API..."
         $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
@@ -389,4 +393,5 @@ if ($ForceRebootAfterMigration) {
         }
     }
 }
+#endregion restart/shutdown
 exit 0

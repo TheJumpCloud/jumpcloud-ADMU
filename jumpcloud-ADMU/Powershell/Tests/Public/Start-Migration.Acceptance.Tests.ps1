@@ -42,7 +42,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 ForceReboot             = $false
                 UpdateHomePath          = $false
                 InstallJCAgent          = $false
-                AutobindJCUser          = $false
+                AutoBindJCUser          = $false
                 BindAsAdmin             = $false
                 SetDefaultWindowsUser   = $true
                 AdminDebug              = $false
@@ -112,7 +112,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 ForceReboot             = $false
                 UpdateHomePath          = $false
                 InstallJCAgent          = $false
-                AutobindJCUser          = $false
+                AutoBindJCUser          = $false
                 BindAsAdmin             = $false
                 SetDefaultWindowsUser   = $true
                 AdminDebug              = $false
@@ -355,7 +355,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                 ForceReboot             = $false
                 UpdateHomePath          = $false
                 InstallJCAgent          = $false
-                AutobindJCUser          = $false
+                AutoBindJCUser          = $false
                 BindAsAdmin             = $false
                 SetDefaultWindowsUser   = $true
                 AdminDebug              = $false
@@ -392,7 +392,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.JumpCloudUserName = $userToMigrateTo
                     $testCaseInput.SelectedUserName = $userToMigrateFrom
                     $testCaseInput.TempPassword = $tempPassword
-                    $testCaseInput.AutobindJCUser = $true
+                    $testCaseInput.AutoBindJCUser = $true
                     # Migrate the initialized user to the second username
                     { Start-Migration @testCaseInput } | Should -Not -Throw
 
@@ -409,7 +409,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.JumpCloudUserName = $userToMigrateTo
                     $testCaseInput.SelectedUserName = $userToMigrateFrom
                     $testCaseInput.TempPassword = $tempPassword
-                    $testCaseInput.AutobindJCUser = $true
+                    $testCaseInput.AutoBindJCUser = $true
                     # for this test, associate the user as an Admin
                     $testCaseInput.BindAsAdmin = $true
                     # Migrate the initialized user to the second username
@@ -429,7 +429,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.JumpCloudUserName = $userToMigrateTo
                     $testCaseInput.SelectedUserName = $userToMigrateFrom
                     $testCaseInput.TempPassword = $tempPassword
-                    $testCaseInput.AutobindJCUser = $true
+                    $testCaseInput.AutoBindJCUser = $false
                     $testCaseInput.SystemContextBinding = $true
                     # Add the JumpCloudUserID parameter
                     $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
@@ -451,7 +451,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.JumpCloudUserName = $userToMigrateTo
                     $testCaseInput.SelectedUserName = $userToMigrateFrom
                     $testCaseInput.TempPassword = $tempPassword
-                    $testCaseInput.AutobindJCUser = $true
+                    $testCaseInput.AutoBindJCUser = $false
                     # for this test, associate the user as an Admin
                     $testCaseInput.BindAsAdmin = $true
                     $testCaseInput.SystemContextBinding = $true
@@ -478,7 +478,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.JumpCloudUserName = $userToMigrateTo
                     $testCaseInput.SelectedUserName = $userToMigrateFrom
                     $testCaseInput.TempPassword = $tempPassword
-                    $testCaseInput.AutobindJCUser = $true
+                    $testCaseInput.AutoBindJCUser = $true
                     # Migrate the initialized user to the second username
                     { Start-Migration @testCaseInput } | Should -Throw
 
