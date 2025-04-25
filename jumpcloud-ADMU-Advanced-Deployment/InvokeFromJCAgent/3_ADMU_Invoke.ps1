@@ -339,6 +339,10 @@ foreach ($user in $UsersToMigrate) {
         # Start the migration
         Start-Migration @migrationParams
         Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)"
+        #region post-migration
+        # Add any addition code here to modify the user post-migration
+        # The migrated user home directory should be set to the $user.userPath variable
+        #endregion post-migration
     } catch {
         Write-Host "[status] Migration failed for user: $($user.JumpCloudUserName), exiting..."
         Write-Host "[status] Error: $($_.Exception.Message)"
