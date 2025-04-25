@@ -252,10 +252,10 @@ if ($UsersToMigrate) {
     #region logoffUsers
     # Query User Sessions & logoff
     # get rid of the > char & break out into a CSV type object
-    $quserResult = (quser) -replace '^>', ' ' | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
+    $loggedInUsers = (quser) -replace '^>', ' ' | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
     # create a list for users
     $processedUsers = @()
-    foreach ($obj in $quserResult) {
+    foreach ($obj in $loggedInUsers) {
         # if missing an entry for one of: USERNAME,SESSIONNAME,ID,STATE,IDLE TIME OR LOGON TIME, add a comma
         if ($obj.Split(',').Count -ne 6) {
             # Write-Host ($obj -replace '(^[^,]+)', '$1,')
