@@ -31,10 +31,10 @@ $SetDefaultWindowsUser = $true # Set the default last logged on windows user to 
 # Restarting the system is the default behavior
 # If you want to shutdown the system, set the postMigrationBehavior to Shutdown
 # The 'shutdown' behavior performs a shutdown of the system in a much faster manner than 'restart' which can take 5 mins form the time the command is issued
-$postMigrationBehavior = 'shutdown' # Restart or Shutdown
+$postMigrationBehavior = 'Restart' # Restart or Shutdown
 
 # option to bind using the systemContext API
-$systemContextBinding = $true # Bind using the systemContext API (default False)
+$systemContextBinding = $false # Bind using the systemContext API (default False)
 # If you want to bind using the systemContext API, set the systemContextBinding to true
 # The systemContextBinding option is only available for devices that have enrolled a device using a JumpCloud Administrators Connect Key
 # for more information, see the JumpCloud documentation: https://docs.jumpcloud.com/api/2.0/index.html#section/System-Context
