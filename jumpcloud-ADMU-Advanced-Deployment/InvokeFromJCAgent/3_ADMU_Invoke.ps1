@@ -236,7 +236,7 @@ $module = Import-Module JumpCloud.ADMU -Force -ErrorAction SilentlyContinue
 $module = Get-Module JumpCloud.ADMU
 if ($null -eq $module) {
     Write-Host "[status] Failed to import JumpCloud ADMU module, exiting..."
-    # exit 1
+    exit 1
 } else {
     Write-Host "[status] JumpCloud ADMU module imported successfully; running version $($module.Version)"
 }
