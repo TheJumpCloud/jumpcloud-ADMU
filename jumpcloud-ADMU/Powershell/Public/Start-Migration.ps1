@@ -279,7 +279,7 @@ Function Start-Migration {
         if ($systemContextBinding -eq $true) {
             $getSystem = Invoke-SystemContextAPI -method 'GET' -endpoint 'systems'
             if ($getSystem.id) {
-                Write-ToLog "[status] The systemContext API is available for this system, the system context API will be used for binding"
+                Write-ToLog "[status] The systemContext API is available for this system, the system context API will be used to associate the userID: $($JumpCloudUserID) to the system"
                 Write-ToLog "[status] SystemID: $($getSystem.id)"
                 Write-ToLog "[status] Hostname: $($getSystem.hostname)"
                 $validatedSystemContextAPI = $true
@@ -357,7 +357,7 @@ Function Start-Migration {
                 Remove-ItemIfExist -Path "$windowsDrive\Program Files\Jumpcloud\" -Recurse
             }
             # Agent Installer
-            # Do write-Progess and create an artificial progress percent till $agentInstallStatus is true
+            # Do write-Progress and create an artificial progress percent till $agentInstallStatus is true
             $agentInstallStatus = Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($JumpCloudConnectKey) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
 
 
@@ -1105,6 +1105,7 @@ Function Start-Migration {
                 }
             }
             if ($systemContextBinding -eq $true) {
+                Write-ToLog -Message:("Attempting to associate system to userID: $JumpCloudUserID with SystemContext API") -Level Verbose
                 Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $JumpCloudUserID -admin $BindAsAdmin
             }
             #endregion AutoBindUserToJCSystem
