@@ -352,6 +352,8 @@ foreach ($user in $UsersToMigrate) {
 # this ensures that the JumpCloud commands reports a success
 if ($ForceRebootAfterMigration) {
     if ($systemContextBinding -eq $true) {
+        # wait 20 seconds after migration to ensure the agent has time to associate the user to the device
+        Start-Sleep 20
         switch ($postMigrationBehavior) {
             'shutdown' {
                 Write-Host "[status] Shutting down the system with PowerShell..."
