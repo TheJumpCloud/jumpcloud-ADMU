@@ -115,7 +115,6 @@ Function Start-Migration {
 
     Begin {
         # parameter combination validation:
-
         # Validate parameter combinations when $systemContextBinding is set to $true
         if ($systemContextBinding -eq $true) {
             $invalidStringParams = @('JumpCloudAPIKey', 'JumpCloudOrgID', 'InstallJCAgent', 'JumpCloudConnectKey') | Where-Object { $PSBoundParameters.ContainsKey($_) }
@@ -201,10 +200,18 @@ Function Start-Migration {
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion) -Level Verbose
         Write-ToLog -Message:('Script starting; Log file location: ' + $jcAdmuLogFile)
         Write-ToLog -Message:('Gathering system & profile information')
-        Write-ToLog -Message:("Form is set to $isForm")
+        Write-ToLog -Message:('Parameter Input: ')
+        $PSBoundParameters.GetEnumerator() | ForEach-Object {
+            if ($_.Key -eq 'TempPassword') {
+                Write-ToLog -Message:("Parameter: $($_.Key) = <hidden>")
+            } else {
+                Write-ToLog -Message:("Parameter: $($_.Key) = $($_.Value)")
+            }
+        }
+        # Log all supplied parameters
 
         #region validation
-        # validate API KEY/ OrgID if Autobind is selected
+        # validate API KEY/ OrgID if AutoBind is selected
         if ($AutoBindJCUser) {
             if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
                 # Validate Org/ APIKEY & Return OrgID
@@ -285,9 +292,7 @@ Function Start-Migration {
             }
         }
 
-        #endregion validtion
-
-        Write-ToLog -Message:("Bind as admin = $($BindAsAdmin)")
+        #endregion validation
         $trackAccountMerge = $false
         # Track migration steps
         $admuTracker = [Ordered]@{
@@ -1088,7 +1093,7 @@ Function Start-Migration {
             #endregion Add To Local Users Group
             # TODO: test and return non-terminating error here
 
-            #region AutobindUserToJCSystem
+            #region AutoBindUserToJCSystem
             if ($AutoBindJCUser -eq $true) {
                 $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
                 if ($bindResult) {
@@ -1102,7 +1107,7 @@ Function Start-Migration {
             if ($systemContextBinding -eq $true) {
                 Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $JumpCloudUserID -admin $BindAsAdmin
             }
-            #endregion AutobindUserToJCSystem
+            #endregion AutoBindUserToJCSystem
 
             #region Leave Domain or AzureAD
 
@@ -1249,8 +1254,6 @@ Function Start-Migration {
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) {
             Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile) -Level Verbose
             Write-ToProgress -ProgressBar $Progressbar -Status "MigrationComplete" -form $isForm
-            Write-ToLog -Message:('Tool options chosen were : ' + "`nInstall JC Agent = " + $InstallJCAgent + "`nLeave Domain = " + $LeaveDomain + "`nForce Reboot = " + $ForceReboot + "`nUpdate Home Path = " + $UpdateHomePath + "`nAutobind JC User = " + $AutoBindJCUser) -Level Verbose
-
         } else {
             Write-ToLog -Message:("ADMU encoutered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warn
             Write-ToLog -Message:("The following migration steps were reverted to their original state: $FixedErrors") -Level Warn
