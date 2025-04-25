@@ -1,6 +1,6 @@
 ## 2.8.0
 
-Release Date: April 16, 2025
+Release Date: April 25, 2025
 
 #### RELEASE NOTES
 

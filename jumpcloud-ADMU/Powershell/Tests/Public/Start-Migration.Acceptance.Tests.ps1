@@ -441,7 +441,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # the system should be associated to the user
                     $association | Should -not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
-                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $false
                 }
                 It "Associates a JumpCloud user as an 'admin' using 'systemContextBinding'" {
                     # set the $testCaseInput

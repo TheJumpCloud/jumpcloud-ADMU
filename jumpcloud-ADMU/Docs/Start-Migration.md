@@ -19,13 +19,7 @@ Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPass
  [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
  [-AutobindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-SetDefaultWindowsUser <Boolean>]
  [-AdminDebug <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>]
- [-ValidateUserShellFolder <Boolean>] [-RemoveBiometrics <Boolean>]
- [<CommonParameters>]
-```
-
-### systemContext
-```
-Start-Migration [<CommonParameters>]
+ [-ValidateUserShellFolder <Boolean>] [<CommonParameters>]
 ```
 
 ### form
@@ -336,21 +330,6 @@ Option to bypass User Shell Folder validation.
 When set to \`$false\`, the migration will not verify whether folders (Desktop, Downloads, Documents, Videos, Pictures, Music, Favorites) are redirected to another location, such as a network shared folder (e.g., \`\192.168.50.78\SharedFolder\USERNAME\Desktop\`).
 Use this parameter with caution.
 After migration, the user may encounter a shared folder error and will need to provide account credentials to restore their shared folders
-
-```yaml
-Type: System.Boolean
-Parameter Sets: cmd
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -RemoveBiometrics
-When set to true, the ADMU will validate that the AD user profile has biometric data stored in the '\HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WinBio\AccountInfo' registry key. If the user profile has biometric data, the ADMU will remove the biometric data from the registry post-migration of the user profile. This setting will remove biometric data for all users on the device windows obfuscates biometric data, it can not be linked to any one user on a device. The only way to remove a single user's fingerprint data is to remove all biometric data on the device. Only use this parameter if you agree that doing so will remove all biometric data from the device being migrated.  This is set to false by default.
 
 ```yaml
 Type: System.Boolean
