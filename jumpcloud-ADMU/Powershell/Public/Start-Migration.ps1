@@ -287,8 +287,8 @@ Function Start-Migration {
             } else {
                 $validatedSystemContextAPI = $false
                 Write-ToLog "[status] The systemContext API is not available for this system, please use the standard binding method"
-                Write-Error "Could not bind using the systemContext API, please use the standard binding method"
-                exit 1
+                Throw "Could not bind using the systemContext API, please consider using the APIKey and OrgID parameters."
+                break
             }
         }
 
