@@ -17,7 +17,7 @@ Starts the JumpCloud Active Directory Migration process.
 ```
 Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPassword <String>
  [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
- [-AutobindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-SetDefaultWindowsUser <Boolean>]
+ [-AutoBindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-SetDefaultWindowsUser <Boolean>]
  [-AdminDebug <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>]
  [-ValidateUserShellFolder <Boolean>] [<CommonParameters>]
 ```
@@ -203,22 +203,6 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -AutobindJCUser
-
-This parameter will bind the username specified in the \`JumpCloudUserName\` field to the current system after Migration.
-
-```yaml
-Type: System.Boolean
-Parameter Sets: cmd
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
 ### -UpdateHomePath
 
 If set to $true, the ADMU will attempt to rename the selected username's homepath to the jumpcloud username.
@@ -330,6 +314,22 @@ Option to bypass User Shell Folder validation.
 When set to \`$false\`, the migration will not verify whether folders (Desktop, Downloads, Documents, Videos, Pictures, Music, Favorites) are redirected to another location, such as a network shared folder (e.g., \`\192.168.50.78\SharedFolder\USERNAME\Desktop\`).
 Use this parameter with caution.
 After migration, the user may encounter a shared folder error and will need to provide account credentials to restore their shared folders
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -AutoBindJCUser
+
+This parameter will bind the username specified in the \`JumpCloudUserName\` field to the current system after Migration.
 
 ```yaml
 Type: System.Boolean
