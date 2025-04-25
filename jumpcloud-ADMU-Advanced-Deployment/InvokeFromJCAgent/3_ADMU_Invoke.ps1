@@ -21,7 +21,7 @@ $TempPassword = 'Temp123!Temp123!'
 $LeaveDomain = $true
 $ForceReboot = $true
 $UpdateHomePath = $false
-$AutobindJCUser = $true
+$AutoBindJCUser = $true
 $BindAsAdmin = $false # Bind user as admin (default False)
 $JumpCloudAPIKey = '' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
 $JumpCloudOrgID = '' # This field is required if you use a MTP API Key
@@ -75,7 +75,7 @@ $booleanVariables = @{
     LeaveDomain           = $LeaveDomain
     ForceReboot           = $ForceReboot
     UpdateHomePath        = $UpdateHomePath
-    AutobindJCUser        = $AutobindJCUser
+    AutoBindJCUser        = $AutoBindJCUser
     BindAsAdmin           = $BindAsAdmin
     SetDefaultWindowsUser = $SetDefaultWindowsUser
 }
@@ -177,6 +177,7 @@ foreach ($row in $ImportedCSV) {
             selectedUsername  = $row.SID
             JumpCloudUserName = $row.JumpCloudUserName
             JumpCloudUserID   = $row.JumpCloudUserID
+            userPath          = $row.LocalPath
         }
     }
 }
@@ -307,7 +308,7 @@ foreach ($user in $UsersToMigrate) {
         SelectedUserName      = $user.selectedUsername
         TempPassword          = $TempPassword
         UpdateHomePath        = $UpdateHomePath
-        AutobindJCUser        = $AutobindJCUser
+        AutoBindJCUser        = $AutoBindJCUser
         JumpCloudAPIKey       = $JumpCloudAPIKey
         BindAsAdmin           = $BindAsAdmin
         SetDefaultWindowsUser = $SetDefaultWindowsUser
@@ -324,7 +325,7 @@ foreach ($user in $UsersToMigrate) {
     # if the systemContextAPI has been validated, remove the binding parameters from the $migrationParams
     If ($systemContextBinding -eq $true) {
         # remove the binding parameters from the $migrationParams
-        $migrationParams.Remove('AutobindJCUser')
+        $migrationParams.Remove('AutoBindJCUser')
         $migrationParams.Remove('JumpCloudAPIKey')
         $migrationParams.Remove('JumpCloudOrgID')
         # add the systemContextAPI parameters to the $migrationParams
