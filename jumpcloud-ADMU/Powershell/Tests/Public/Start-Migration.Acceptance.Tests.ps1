@@ -453,7 +453,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.TempPassword = $tempPassword
                     $testCaseInput.AutobindJCUser = $true
                     # for this test, associate the user as an Admin
-                    $testCaseInputBindAsAdmin = $true
+                    $testCaseInput.BindAsAdmin = $true
                     $testCaseInput.SystemContextBinding = $true
                     # Add the JumpCloudUserID parameter
                     $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
