@@ -109,23 +109,6 @@ if ($systemContextBinding -eq $false) {
         exit 1
     }
 }
-
-# if the systemContextBinding is set to true, the JumpCloudAPIKey is not required but the SystemKey needs to exist:
-if ($systemContextBinding -eq $true) {
-    $getSystem = Invoke-SystemContextAPI -method 'GET' -endpoint 'systems'
-    if ($getSystem.id) {
-        Write-Host "[status] The systemContext API is available for this system, the system context API will be used for binding"
-        Write-Host "[status] SystemID: $($getSystem.id)"
-        Write-Host "[status] Hostname: $($getSystem.hostname)"
-        $validatedSystemContextAPI = $true
-        $validatedSystemID = $getSystem.id
-    } else {
-        $validatedSystemContextAPI = $false
-        Write-Host "[status] The systemContext API is not available for this system, please use the standard binding method"
-        Write-Error "Could not bind using the systemContext API, please use the standard binding method"
-        exit 3
-    }
-}
 #endregion validation
 
 #region dataImport
