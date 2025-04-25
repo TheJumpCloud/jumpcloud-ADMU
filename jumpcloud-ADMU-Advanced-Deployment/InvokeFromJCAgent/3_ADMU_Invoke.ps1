@@ -230,13 +230,9 @@ if (-NOT $installedADMUModule) {
     }
 }
 
-# locally import the module (#TODO: remove before publish)
-$path = "C:\scripts\jumpcloud-ADMU\Jumpcloud.ADMU.psd1"
-$module = Import-Module $path -Force
-$module = Get-Module JumpCloud.ADMU
 # check that the module was imported
-# $module = Import-Module JumpCloud.ADMU -Force -ErrorAction SilentlyContinue
-# $module = Get-Module JumpCloud.ADMU
+$module = Import-Module JumpCloud.ADMU -Force -ErrorAction SilentlyContinue
+$module = Get-Module JumpCloud.ADMU
 if ($null -eq $module) {
     Write-Host "[status] Failed to import JumpCloud ADMU module, exiting..."
     # exit 1
@@ -329,9 +325,10 @@ foreach ($user in $UsersToMigrate) {
     If ($systemContextBinding -eq $true) {
         # remove the binding parameters from the $migrationParams
         $migrationParams.Remove('AutobindJCUser')
-        $migrationParams.Remove('BindAsAdmin')
         $migrationParams.Remove('JumpCloudAPIKey')
         $migrationParams.Remove('JumpCloudOrgID')
+        # add the systemContextAPI parameters to the $migrationParams
+        $migrationParams.Add('systemContextBinding', $true)
         $migrationParams.Add('JumpCloudUserID', $user.JumpCloudUserID)
     }
     # Start the migration
