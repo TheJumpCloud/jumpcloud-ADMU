@@ -1,3 +1,21 @@
+## 2.8.0
+
+Release Date: April 25, 2025
+
+#### RELEASE NOTES
+
+```
+Add new feature to bind user with the systemContextAPI as opposed to APIKey/ OrgID credentials.
+```
+
+#### FEATURES:
+
+The ADMU now allows for binding a userID to the device post-migration with the `$systemContextBinding` & `$JumpCloudUserID` parameters
+
+#### IMPROVEMENTS:
+
+Addition help messaging generated for the Start-Migration parameter and parameter sets
+
 ## 2.7.18
 
 Release Date: April 15, 2025
