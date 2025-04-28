@@ -118,7 +118,7 @@ Describe "ADMU Data Collection Script Tests" -Tag "InstallJC" {
                 # define the CSV data for this user
                 $csvData += [PSCustomObject]@{
                     SID               = $testUserSID
-                    LocalPath         = Get-ProfileImagePath -UserSid $testUserSID
+                    LocalPath         = $null # not necessary for this test
                     LocalComputerName = $env:COMPUTERNAME
                     LocalUsername     = $userToMigrateFrom
                     JumpCloudUserName = $userToMigrateTo
