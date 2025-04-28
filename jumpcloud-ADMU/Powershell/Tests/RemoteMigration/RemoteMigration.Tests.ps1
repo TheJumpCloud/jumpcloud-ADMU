@@ -130,7 +130,7 @@ Describe "ADMU Data Collection Script Tests" -Tag "InstallJC" {
                 # copy the CSV to the expected location for the migration script:
                 Copy-Item -Path  $csvPath -Destination "C:\Windows\Temp\jcdiscovery.csv" -Force
                 # check if the CSV file exists
-                C:\Windows\Temp\jcdiscovery.csv | Should -Not -BeNullOrEmpty
+                Get-Content -Path "C:\Windows\Temp\jcdiscovery.csv" | Should -Not -BeNullOrEmpty
 
             } Else { Throw "Test is not designed to be run locally" }
 
