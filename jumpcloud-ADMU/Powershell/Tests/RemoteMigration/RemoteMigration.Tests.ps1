@@ -137,7 +137,7 @@ Describe "ADMU Data Collection Script Tests" -Tag "InstallJC" {
         }
         It "Should run the ADMU migration script and migrate the user with the System Context API" {
             # set the path to the script
-            $scriptPath3_ADMU_Migrate = Join-Path -Path $scriptPath -ChildPath "3_ADMU_Migrate.ps1"
+            $scriptPath3_ADMU_Migrate = Join-Path -Path $scriptPath -ChildPath "3_ADMU_Invoke.ps1"
             # set the variables in the script:
             $sc = Get-Content -Path $scriptPath3_ADMU_Migrate
             # Disable default force reboot
