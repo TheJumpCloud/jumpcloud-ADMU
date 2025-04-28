@@ -169,6 +169,13 @@ Describe "ADMU Data Collection Script Tests" -Tag "InstallJC" {
             # test the migration
             # check if the user has been migrated
 
+            # get the user after migration
+            $migratedUser = Get-LocalUser -Username $userToMigrateTo
+            # the user should exist
+            $migratedUser | Should -Not -BeNullOrEmpty
+
+
+
             # get the system association:
             $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
             # the system should be associated to the user
