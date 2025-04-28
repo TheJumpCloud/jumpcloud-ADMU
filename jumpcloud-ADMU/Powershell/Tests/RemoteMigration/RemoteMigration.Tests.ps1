@@ -152,7 +152,7 @@ Describe "ADMU Data Collection Script Tests" -Tag "InstallJC" {
             # set the module path
             $regexPattern4 = '\$module = Import-Module JumpCloud\.ADMU -Force -ErrorAction SilentlyContinue'
             # get the module path relative to the script
-            $modulePath = Join-Path -Path $currentPath -ChildPath "..\..\..\..\JumpCloud.ADMU.psd1"
+            $modulePath = Join-Path -Path $currentPath -ChildPath "..\..\JumpCloud.ADMU.psd1"
             $modulePath = Resolve-Path $modulePath
             $replacement4 = "`$module = Import-Module $modulePath -Force"
             # set the content of the script
