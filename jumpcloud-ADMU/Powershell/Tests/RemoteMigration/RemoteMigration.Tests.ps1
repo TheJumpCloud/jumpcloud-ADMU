@@ -109,7 +109,7 @@ Describe "ADMU Data Collection Script Tests" -Tag "InstallJC" {
                 Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
 
                 # Get the test user's SID
-                $testUser = Get-JCUser -Username $userToMigrateFrom
+                $testUser = Get-LocalUser $userToMigrateFrom
                 $testUserSID = $testUser.SID.Value
 
                 #update the CSV with the test user
