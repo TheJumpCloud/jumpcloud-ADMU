@@ -1097,16 +1097,49 @@ Function Start-Migration {
             if ($AutoBindJCUser -eq $true) {
                 $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
                 if ($bindResult) {
-                    Write-ToLog -Message:('jumpcloud autobind step succeeded for user ' + $JumpCloudUserName) -Level Verbose
+                    Write-ToLog -Message:('JumpCloud AutoBind step succeeded for user ' + $JumpCloudUserName) -Level Verbose
                     $admuTracker.autoBind.pass = $true
                 } else {
-                    Write-ToLog -Message:('jumpcloud autobind step failed, apikey or jumpcloud username is incorrect.') -Level:('Warn')
+                    Write-ToLog -Message:('JumpCloud AutoBind step failed, apikey or username is incorrect.') -Level:('Warn')
                     # $admuTracker.autoBind.fail = $true
                 }
             }
             if ($systemContextBinding -eq $true) {
                 Write-ToLog -Message:("Attempting to associate system to userID: $JumpCloudUserID with SystemContext API") -Level Verbose
-                Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $JumpCloudUserID -admin $BindAsAdmin
+                try {
+                    $systemAssociationPost = Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $JumpCloudUserID -admin $BindAsAdmin
+                    # Get the associations:
+                    # wait one second for the system to be associated
+                    Start-Sleep 1
+                    # get the system associations
+                    $systemAssociations = Invoke-SystemContextAPI -method "GET" -endpoint "systems/associations"
+                    # the userID Should be in the list of associations
+                    If ($JumpCloudUserID -in $systemAssociations.to.id) {
+                        Write-ToLog -Message:("System Association was successful.") -Level Verbose
+                        $association = $systemAssociations | Where-Object { $_.to.id -eq $JumpCloudUserID }
+                        Write-tolog -Message:("System Association ID: $($association.to.id)") -Level Verbose
+                        Write-tolog -Message:("System Association Type: $($association.to.type)") -Level Verbose
+                        Write-tolog -Message:("System Association SudoAttributes = $($association.attributes.sudo)") -Level Verbose
+                    } Else {
+                        Write-ToLog -Message:('JumpCloud AutoBind with system context API step failed, apikey or JumpCloudUserID is incorrect.') -Level:('Warn')
+                    }
+                } Catch {
+                    Write-ToLog -Message:('JumpCloud AutoBind with system context API step failed, apikey or JumpCloudUserID is incorrect.') -Level:('Warn')
+                    if ($_.Exception.Message -match "409") {
+                        Write-ToLog -Message:("Error: 409 Conflict") -Level:('Warn')
+                        Write-ToLog -Message:("The system is already associated with the user.") -Level:('Warn')
+                    } elseif ($_.Exception.Message -match "404") {
+                        Write-ToLog -Message:("Error: 404 Not Found") -Level:('Warn')
+                        Write-ToLog -Message:("The userID $jumpCloudUserID was not found.")
+                    } elseif ($_.Exception.Message -match "403") {
+                        Write-ToLog -Message:("Error: 403 Forbidden") -Level:('Warn')
+                        write-host "The system does not have permission to perform this action." -Level:('Warn')
+                    } else {
+                        # note the exection message
+                        Write-ToLog -Message:($($_.Exception.Message)) -Level:('Warn')
+                    }
+                }
+
             }
             #endregion AutoBindUserToJCSystem
 
