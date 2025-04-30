@@ -170,7 +170,7 @@ Describe "ADMU Data Collection Script Tests" -Tag "InstallJC" {
             # check if the user has been migrated
 
             # get the user after migration
-            $migratedUser = Get-LocalUser -Username $userToMigrateTo
+            $migratedUser = Get-LocalUser $userToMigrateTo
             # the user should exist
             $migratedUser | Should -Not -BeNullOrEmpty
 
