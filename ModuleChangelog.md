@@ -1,3 +1,13 @@
+## 2.8.1
+
+Release Date: April 30, 2025
+
+#### RELEASE NOTES
+
+```
+Module Tests updated for new remote migration scripts
+```
+
 ## 2.8.0
 
 Release Date: April 25, 2025
@@ -239,7 +249,7 @@ Release Date: July 16, 2024
 ```
 * UI improvements for Form
 * While migrating with the exe application, the ADMU will now show the progress of the migration within a GUI window. Migration logs can be viewed in this window, new migrations can be triggered after a successful or failed migration.
-* Updated JC brandings
+* Updated JC branding
 * Added an optional param -AdminDebug for showing verbose log messages
 * An error mapping function was added to the tool to provide better feedback when the tool encounters an issue with a migration.
 ```
@@ -247,8 +257,8 @@ Release Date: July 16, 2024
 #### Bug Fixes:
 
 ```
-* When loading/ unloading a user's registry hive and an error is encounered, the tool will attempt to close any processes owned by that user.
-* Added a validation to check if jumpcloud username and local username are the same
+* When loading/ unloading a user's registry hive and an error is encountered, the tool will attempt to close any processes owned by that user.
+* Added a validation to check if JumpCloud username and local username are the same
 * UWP wording change
 ```
 
@@ -592,7 +602,7 @@ Added ability to change the rename step in the profile home path step. This defa
 #### IMPROVEMENTS:
 
 ```
-Adds 'Update Home Path' paramater and checkbox
+Adds 'Update Home Path' parameter and checkbox
 ```
 
 ## 1.6.3
@@ -602,7 +612,7 @@ Release Date: April 13, 2021
 #### RELEASE NOTES
 
 ```
-Some remote agents or RMM tools may invoke commands as NT Authority\System. If the ADMU is remotely invoked with those tools and run as the  NT Authority\System account, previous versions of the ADMU would fail to migrate sucessfully. v1.6.3 addresses this and resets permissions of the blank profile so that NT Authority\System can delete the blank profile after it's NTUSER.DAT & UsrClass.dat files have been copied back to the user-to-migrate's profile.
+Some remote agents or RMM tools may invoke commands as NT Authority\System. If the ADMU is remotely invoked with those tools and run as the  NT Authority\System account, previous versions of the ADMU would fail to migrate successfully. v1.6.3 addresses this and resets permissions of the blank profile so that NT Authority\System can delete the blank profile after it's NTUSER.DAT & UsrClass.dat files have been copied back to the user-to-migrate's profile.
 ```
 
 #### IMPROVEMENTS:
@@ -677,12 +687,12 @@ Release Date: February 18, 2021
 #### RELEASE NOTES
 
 ```
-Updates to the Invoke Migartion script for auto binding the migration changes before reboot.
+Updates to the Invoke Migration script for auto binding the migration changes before reboot.
 ```
 
 #### BUG FIXES:
 
-Fix for the invoke migration script where the jumpcloud user was never bound to the system after migration.
+Fix for the invoke migration script where the JumpCloud user was never bound to the system after migration.
 
 ## 1.5.4
 
@@ -691,7 +701,7 @@ Release Date: February 11, 2021
 #### RELEASE NOTES
 
 ```
-Minor bug fixes to improve conversion process when run as foregin language.
+Minor bug fixes to improve conversion process when run as foreign language.
 Add monitor job and improve admu-discovery script.
 ```
 
@@ -762,9 +772,9 @@ Release Date: Dec 10, 2020
 #### RELEASE NOTES
 
 ```
-Ability to convert rather than duplicate domain user accounts. User's AppData is kept intact. This conversion process is much faster than the default behaivor of migration and no addtitional storage space is required.
+Ability to convert rather than duplicate domain user accounts. User's AppData is kept intact. This conversion process is much faster than the default behavior of migration and no additional storage space is required.
 
-The Convet User Process makes several changes to the registry. It is reccommended to take a backup before converting the user account. Included in this release is an additional option to take a system restore checkpoint before running the ADMU.
+The Convert User Process makes several changes to the registry. It is recommended to take a backup before converting the user account. Included in this release is an additional option to take a system restore checkpoint before running the ADMU.
 ```
 
 #### FEATURES:
@@ -832,7 +842,7 @@ Release Date: July 2, 2020
 #### RELEASE NOTES
 
 ```
-Fix CLI bug when installing JCAgent, improve compatability with foreign language windows versions.
+Fix CLI bug when installing JCAgent, improve compatibility with foreign language windows versions.
 ```
 
 #### IMPROVEMENTS:
@@ -968,7 +978,7 @@ January 31, 2020
 #### RELEASE NOTES
 
 - Readme changes
-- Add aditional tests
+- Add additional tests
 
 ## 1.2.8
 
@@ -1005,7 +1015,7 @@ December 31, 2019
 - Fix $AzureADProfile string & boolean error
 - PSScriptAnalyzer fixes
 - Azure Pipelines & testsetup script for local build server
-- Changes for seperating repo from support
+- Changes for separating repo from support
 - Add in additional exe, gpo tests
 - Fix flaky 'Add-LocalUser Function' test by swapping 'get-localgroupmember' with 'net localgroup users'
 
