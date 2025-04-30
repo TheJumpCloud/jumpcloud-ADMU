@@ -153,7 +153,6 @@ switch (`$PSCmdlet.ParameterSetName) {
         Write-Host "Running in Form mode"
     }
 }
-start-sleep -seconds 3
 "@
         $paramStringSimple = @"
 [CmdletBinding()]
@@ -279,27 +278,32 @@ $formsContent
         # Define executable region
         # endRegion
         $executableRegionParams = @"
-switch (`$form) {
+switch (`$PSCmdlet.ParameterSetName) {
     'exe' {
         Write-Host "Running in EXE mode"
-        `$migrationParams = @{
-            JumpCloudUserName = `$JumpCloudUserName
-            SelectedUserName = `$SelectedUserName
-            TempPassword = `$TempPassword
-            LeaveDomain = [bool]::Parse(`$LeaveDomain)
-            ForceReboot = [bool]::Parse(`$ForceReboot)
-            UpdateHomePath = [bool]::Parse(`$UpdateHomePath)
-            InstallJCAgent = [bool]::Parse(`$InstallJCAgent)
-            AutoBindJCUser = [bool]::Parse(`$AutoBindJCUser)
-            BindAsAdmin = [bool]::Parse(`$BindAsAdmin)
-            SetDefaultWindowsUser = [bool]::Parse(`$SetDefaultWindowsUser)
-            AdminDebug = [bool]::Parse(`$AdminDebug)
-            JumpCloudConnectKey = `$JumpCloudConnectKey
-            JumpCloudAPIKey = `$JumpCloudAPIKey
-            JumpCloudOrgID = `$JumpCloudOrgID
-            ValidateUserShellFolder = [bool]::Parse(`$ValidateUserShellFolder)
-            systemContextBinding = [bool]::Parse(`$systemContextBinding)
-            JumpCloudUserID = `$JumpCloudUserID
+        `$booleanParams = @(
+            'LeaveDomain',
+            'ForceReboot',
+            'UpdateHomePath',
+            'InstallJCAgent',
+            'AutoBindJCUser',
+            'BindAsAdmin',
+            'SetDefaultWindowsUser',
+            'AdminDebug',
+            'systemContextBinding',
+            'ValidateUserShellFolder',
+            'SkipForm'
+        )
+        `$migrationParams = @{}
+        # for each parameter in PSBoundParameters, add it to the migrationParams hashtable
+        foreach (`$param in `$PSBoundParameters.Keys) {
+            if (`$PSBoundParameters.ContainsKey(`$param)) {
+                if (`$param -in `$booleanParams) {
+                    `$migrationParams[`$param] = [bool]::Parse(`$PSBoundParameters[`$param])
+                } else {
+                    `$migrationParams[`$param] = `$PSBoundParameters[`$param]
+                }
+            }
         }
         write-host "Running in EXE mode with the following parameters:"
         `$migrationParams.GetEnumerator() | ForEach-Object {
@@ -311,8 +315,8 @@ switch (`$form) {
         }
         start-migration `@migrationParams
     }
-    Default {
-        Write-Host "Running in Default mode"
+    'DefaultToForm' {
+        Write-Host "Running in Default form mode mode"
         `$formResults = Show-SelectionForm
         If (`$formResults) {
             Start-Migration -inputObject:(`$formResults)
@@ -333,7 +337,7 @@ If (`$formResults) {
 }
 "@
         # add executable region to the template
-        $templateString += $executableRegion + [Environment]::NewLine
+        $templateString += $executableRegionParams + [Environment]::NewLine
     }
     end {
         # write out the file
