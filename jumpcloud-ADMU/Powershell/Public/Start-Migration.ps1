@@ -202,7 +202,10 @@ Function Start-Migration {
         Write-ToLog -Message:('Gathering system & profile information')
         Write-ToLog -Message:('Parameter Input: ')
         $PSBoundParameters.GetEnumerator() | ForEach-Object {
-            if ($_.Key -eq 'TempPassword') {
+            if (($_.Key -eq 'TempPassword') -or
+                ($_.Key -eq 'JumpCloudAPIKey') -or
+                ($_.Key -eq 'JumpCloudOrgID') -or
+                ($_.Key -eq 'JumpCloudConnectKey')) {
                 Write-ToLog -Message:("Parameter: $($_.Key) = <hidden>")
             } else {
                 Write-ToLog -Message:("Parameter: $($_.Key) = $($_.Value)")
