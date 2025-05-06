@@ -9,13 +9,6 @@ param (
     $forceRebuild
 )
 
-# validate that the right version of PS2EXE is installed
-$ps2exeVersion = (Get-Module -Name PS2EXE).Version
-$requiredPs2exeVersion = [version]"1.0.15"
-if ($ps2exeVersion -lt $requiredPs2exeVersion) {
-    Write-Error "PS2EXE version $requiredPs2exeVersion or higher is required. Please update your PS2EXE module."
-    return
-}
 
 If (-not $ADMUGetConfig) {
     . $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
@@ -89,11 +82,11 @@ If (-not [System.String]::IsNullOrEmpty($PSD1Version)) {
         requireAdmin = $true
     }
     # attempt to build the GUI EXE
-    $GuiEXE = Invoke-ps2exe @GUI_ADMUParameters
+    Invoke-ps2exe @GUI_ADMUParameters
     # get the built EXE
     $guiExeFile = Get-Item $guiOutputPath
     $guiHash = (Get-FileHash -algorithm SHA256 -path $guiExeFile).Hash
-    Write-Host "`n==== GUI_JCADMU.EXE Build Status ===="
+    Write-Host "==== GUI_JCADMU.EXE Build Status ===="
     Write-Host "Version: $($guiExeFile.VersionInfo.FileVersionRaw)"
     Write-Host "Build Date: $($guiExeFile.CreationTime)"
     Write-Host "Size (bytes): $($guiExeFile.Length)"
@@ -121,11 +114,11 @@ try {
         iconFile    = ($FolderPath_ModuleRootPath + '\Deploy\admu.ico')
     }
     # attempt to build the UWP EXE
-    $UwpEXE = Invoke-ps2exe @UWP_ADMUParameters
+    Invoke-ps2exe @UWP_ADMUParameters
     # get the built EXE
     $uwpExeFile = Get-Item $uwpOutputPath
     $uwpHash = (Get-FileHash -algorithm SHA256 -path $uwpExeFile).Hash
-    Write-Host "`n==== UWP_JCADMU.EXE Build Status ===="
+    Write-Host "==== UWP_JCADMU.EXE Build Status ===="
     Write-Host "Version: $($uwpExeFile.VersionInfo.FileVersionRaw)"
     Write-Host "Build Date: $($uwpExeFile.CreationTime)"
     Write-Host "Size (bytes): $($uwpExeFile.Length)"
