@@ -1,14 +1,11 @@
-#Requires -Modules "PS2EXE"
 [CmdletBinding()]
 param (
     [Parameter()]
     [System.String]
-    $ModuleName = "JumpCloud.ADMU",
-    [Parameter(Mandatory = $false)]
-    [switch]
-    $forceRebuild
+    $ModuleName = "JumpCloud.ADMU"
 )
-
+# This script will build a new JumpCloud EXE File
+Write-Host "======= Begin Build-Exe ======="
 
 If (-not $ADMUGetConfig) {
     . $PSScriptRoot\Get-Config.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
@@ -49,41 +46,29 @@ $FormVersion | Should -Be $PSD1Version
 $progressFormVersion | Should -Be $PSD1Version
 
 # Check for a template file:
-$admuTemplatePath = Test-Path -Path:("$PSScriptRoot/admuTemplate.ps1")
-
-# determine if the template file needs to be generated
-If (-Not $admuTemplatePath -or $forceRebuild) {
-    Write-Host "==== Generating Template File ====`n"
+If (-Not (Test-Path -Path:("$PSScriptRoot/admuTemplate.ps1"))) {
+    "A Template file does not exist, creating template file"
     # Build ADMU.PS1 File:
-    . $PSScriptRoot\Functions\New-ADMUTemplate.ps1
+    . $PSScriptRoot\New-ADMUTemplate.ps1
     New-ADMUTemplate -ExportPath "$PSScriptRoot/admuTemplate.ps1"
 }
 if (-Not (Test-Path -Path:("$PSScriptRoot/admuTemplate.ps1"))) {
     throw "A template file does not exist, an EXE can not be built."
 }
 
-
+# TODO: double check but 1.0.15 should be good to run on core versions of PWSH
+# Get PSVersion Table PS2EXE can only run in pwsh shell
+# $PSVersion = $PSVersionTable
+# If ($PSVersion.PSEdition -eq "Core") {
+#     Write-Warning "Building ADMU exe binary files requires PowerShell Non-Core edition and a windows host"
+# } else {
+If (-Not (Get-InstalledModule -Name ps2exe -ErrorAction Ignore)) {
+    Install-Module -Name ps2exe -RequiredVersion '1.0.13' -force
+}
+Import-Module -Name ps2exe
 If (-not [System.String]::IsNullOrEmpty($PSD1Version)) {
-    # set the inputFilePath
-    $ADMUFilePath = Join-Path -Path:($PSScriptRoot) -ChildPath:("admuTemplate.ps1")
     $guiOutputPath = ($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\exe\gui_jcadmu.exe')
-
-    # set the PS2EXE parameters
-    $GUI_ADMUParameters = @{
-        inputFile    = $ADMUFilePath
-        outputFile   = $guiOutputPath
-        title        = 'JumpCloud ADMU'
-        product      = 'JumpCloud ADMU'
-        description  = 'JumpCloud AD Migration Utility'
-        copyright    = "(c) $year"
-        version      = $PSD1Version
-        company      = 'JumpCloud'
-        iconFile     = ($FolderPath_ModuleRootPath + '\Deploy\admu.ico')
-        requireAdmin = $true
-    }
-    # attempt to build the GUI EXE
-    Invoke-ps2exe @GUI_ADMUParameters
-    # get the built EXE
+    Invoke-ps2exe -inputFile "$PSScriptRoot/admuTemplate.ps1" -outputFile $guiOutputPath -title 'JumpCloud ADMU' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility' -copyright "(c) $year" -version $Psd1Version -company 'JumpCloud' -requireAdmin -iconFile ($FolderPath_ModuleRootPath + '\Deploy\admu.ico')
     $guiExeFile = Get-Item $guiOutputPath
     $guiHash = (Get-FileHash -algorithm SHA256 -path $guiExeFile).Hash
     Write-Host "==== GUI_JCADMU.EXE Build Status ===="
@@ -96,26 +81,11 @@ If (-not [System.String]::IsNullOrEmpty($PSD1Version)) {
     Write-Error ('Unable to find version number in "' + $PSD1Path + '" using regex "' + $VersionPsd1Regex + '"')
     throw "gui_jcadmu.exe was not generated"
 }
+$uwpPath = $FolderPath_ModuleRootPath + '\Deploy\uwp_jcadmu.ps1'
 # Always generate a new UWP EXE
 try {
-    $uwpPath = $FolderPath_ModuleRootPath + '\Deploy\uwp_jcadmu.ps1'
     $uwpOutputPath = ($FolderPath_ModuleRootPath + '\jumpcloud-ADMU\exe\uwp_jcadmu.exe')
-
-    # set the PS2EXE parameters
-    $UWP_ADMUParameters = @{
-        inputFile   = $uwpPath
-        outputFile  = $uwpOutputPath
-        title       = 'JumpCloud ADMU UWP Fix'
-        product     = 'JumpCloud ADMU'
-        description = 'JumpCloud AD Migration Utility UWP Fix Executable'
-        copyright   = "(c) $year"
-        version     = $PSD1Version
-        company     = 'JumpCloud'
-        iconFile    = ($FolderPath_ModuleRootPath + '\Deploy\admu.ico')
-    }
-    # attempt to build the UWP EXE
-    Invoke-ps2exe @UWP_ADMUParameters
-    # get the built EXE
+    Invoke-ps2exe -inputFile ($uwpPath) -outputFile $uwpOutputPath -title 'JumpCloud ADMU UWP Fix' -product 'JumpCloud ADMU' -description 'JumpCloud AD Migration Utility UWP Fix Executable' -copyright "(c) $year" -version $Psd1Version -company 'JumpCloud' -iconFile ($FolderPath_ModuleRootPath + '\Deploy\admu.ico')
     $uwpExeFile = Get-Item $uwpOutputPath
     $uwpHash = (Get-FileHash -algorithm SHA256 -path $uwpExeFile).Hash
     Write-Host "==== UWP_JCADMU.EXE Build Status ===="
