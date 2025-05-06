@@ -1,11 +1,11 @@
 ## 2.8.1
 
-Release Date: May 6, 2025
+Release Date: April 30, 2025
 
 #### RELEASE NOTES
 
 ```
-Module Tests updated for new remote migration scripts. Updated logging parameters.
+Module Tests updated for new remote migration scripts
 ```
 
 ## 2.8.0
