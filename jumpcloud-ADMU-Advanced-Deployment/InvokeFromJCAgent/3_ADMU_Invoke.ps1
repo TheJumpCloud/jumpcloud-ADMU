@@ -250,11 +250,6 @@ Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
 # If multiple users are planned to be migrated: set the force reboot / leave domain options to false:
 if ($UsersToMigrate) {
     #region logoffUsers
-    if ($env:CI) {
-        Write-Host "[status] Skipping logoff of users..."
-    } else {
-        # Logoff all users
-        Write-Host "[status] Logging off all users..."
     # Query User Sessions & logoff
     # get rid of the > char & break out into a CSV type object
     $loggedInUsers = (quser) -replace '^>', ' ' | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
@@ -277,7 +272,6 @@ if ($UsersToMigrate) {
             write-host "[status] Logging off user: $($user.username) with ID: $($user.ID)"
             # Force Logout
             logoff.exe $($user.ID)
-            }
         }
     }
     #endregion logoffUsers
