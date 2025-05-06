@@ -33,173 +33,8 @@ Function New-ADMUTemplate {
         $Private = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/*.ps1" -Recurse | Where-Object { ($_.fullname -notmatch "DisplayForms") -AND ($_.fullname -notmatch "DisplayAssets") } )
     }
     process {
-        # define the string parameters for the exe
-        $paramString = @"
-[CmdletBinding(DefaultParameterSetName = 'DefaultToForm')]
-Param (
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$true)]
-    [string]
-    `$JumpCloudUserName,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$true)]
-    [string]
-   `$SelectedUserName,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$true)]
-    [string]
-    `$TempPassword,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [string]
-    `$LeaveDomain = `$false,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [string]
-    `$ForceReboot = `$false,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [string]
-    `$UpdateHomePath = `$false,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [string]
-    `$InstallJCAgent = `$false,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [string]
-    `$AutoBindJCUser = `$false,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [string]
-    `$BindAsAdmin = `$false,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [string]
-    `$SetDefaultWindowsUser = `$true,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [string]
-    `$AdminDebug = `$false,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [string]
-    `$JumpCloudConnectKey,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [string]
-    `$JumpCloudAPIKey,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [ValidateLength(24, 24)]
-    [string]
-    `$JumpCloudOrgID,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [string]
-    `$ValidateUserShellFolder = `$true,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [string]
-    `$systemContextBinding = `$false,
-    [Parameter(
-        ParameterSetName = 'exe',
-        Mandatory = `$false)]
-    [ValidateLength(24, 24)]
-    [string]
-    `$JumpCloudUserID,
-    [Parameter(
-        ParameterSetName = 'DefaultToForm',
-        Mandatory = `$false)]
-    [string]
-    `$form = "true"
-)
-
-`$booleanParams = @(
-    'LeaveDomain',
-    'ForceReboot',
-    'UpdateHomePath',
-    'InstallJCAgent',
-    'AutoBindJCUser',
-    'BindAsAdmin',
-    'SetDefaultWindowsUser',
-    'AdminDebug',
-    'systemContextBinding',
-    'ValidateUserShellFolder',
-    'SkipForm'
-)
-
-switch (`$PSCmdlet.ParameterSetName) {
-    'exe' {
-        Write-Host "Running in EXE mode"
-    }
-    'DefaultToForm' {
-        Write-Host "Running in Form mode"
-    }
-}
-start-sleep -seconds 3
-"@
-        $paramStringSimple = @"
-[CmdletBinding()]
-Param (
-    [string]`$JumpCloudUserName,
-    [string]`$SelectedUserName,
-    [string]`$TempPassword,
-    [string]`$LeaveDomain,
-    [string]`$ForceReboot,
-    [string]`$UpdateHomePath,
-    [string]`$InstallJCAgent,
-    [string]`$AutoBindJCUser,
-    [string]`$BindAsAdmin,
-    [string]`$SetDefaultWindowsUser,
-    [string]`$AdminDebug,
-    [string]`$JumpCloudConnectKey,
-    [string]`$JumpCloudAPIKey,
-    [string]`$JumpCloudOrgID,
-    [string]`$ValidateUserShellFolder,
-    [string]`$systemContextBinding,
-    [string]`$JumpCloudUserID,
-    [string]`$form
-)
-
-`$booleanParams = @(
-    'LeaveDomain',
-    'ForceReboot',
-    'UpdateHomePath',
-    'InstallJCAgent',
-    'AutoBindJCUser',
-    'BindAsAdmin',
-    'SetDefaultWindowsUser',
-    'AdminDebug',
-    'systemContextBinding',
-    'ValidateUserShellFolder',
-    'SkipForm'
-)
-start-sleep -seconds 3
-"@
-
-        $templateString += $paramString + [Environment]::NewLine
-
         #define Run As Admin block
         $adminString = @"
-write-host "======= Begin Run As Admin ======="
-start-sleep 1
 # Validate the user is an administrator
 if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -match "S-1-5-32-544")) -eq `$false) {
     Write-Host 'ADMU must be ran as an administrator.'
@@ -220,11 +55,9 @@ if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -
 
         # Set the private region:
         $privateFunctionsRegion = @"
-Write-Host "======= Begin Load Functions ======="
-Start-sleep 1
-#region Private Functions ##
+## Region Private Functions ##
 $PrivateFunctionsContent
-#endregion Private Functions ##
+## End Region Private Functions ##
 "@
         # add private functions region to template
         $templateString += $privateFunctionsRegion + [Environment]::NewLine
@@ -262,9 +95,9 @@ $PrivateFunctionsContent
 
         # define forms region:
         $formsRegion = @"
-#region Forms ##
+## Region Forms ##
 $formsContent
-#endregion Forms ##
+## End Region Forms ##
 "@
 
         # add the forms region to the template
@@ -278,53 +111,7 @@ $formsContent
 
         # Define executable region
         # endRegion
-        $executableRegionParams = @"
-switch (`$form) {
-    'exe' {
-        Write-Host "Running in EXE mode"
-        `$migrationParams = @{
-            JumpCloudUserName = `$JumpCloudUserName
-            SelectedUserName = `$SelectedUserName
-            TempPassword = `$TempPassword
-            LeaveDomain = [bool]::Parse(`$LeaveDomain)
-            ForceReboot = [bool]::Parse(`$ForceReboot)
-            UpdateHomePath = [bool]::Parse(`$UpdateHomePath)
-            InstallJCAgent = [bool]::Parse(`$InstallJCAgent)
-            AutoBindJCUser = [bool]::Parse(`$AutoBindJCUser)
-            BindAsAdmin = [bool]::Parse(`$BindAsAdmin)
-            SetDefaultWindowsUser = [bool]::Parse(`$SetDefaultWindowsUser)
-            AdminDebug = [bool]::Parse(`$AdminDebug)
-            JumpCloudConnectKey = `$JumpCloudConnectKey
-            JumpCloudAPIKey = `$JumpCloudAPIKey
-            JumpCloudOrgID = `$JumpCloudOrgID
-            ValidateUserShellFolder = [bool]::Parse(`$ValidateUserShellFolder)
-            systemContextBinding = [bool]::Parse(`$systemContextBinding)
-            JumpCloudUserID = `$JumpCloudUserID
-        }
-        write-host "Running in EXE mode with the following parameters:"
-        `$migrationParams.GetEnumerator() | ForEach-Object {
-            if (`$_.Key -eq 'TempPassword') {
-                Write-Host -Message:("Parameter: `$(`$_.Key) = <hidden>")
-            } else {
-                Write-Host -Message:("Parameter: `$(`$_.Key) = `$(`$_.Value) | `$(`$_.Value.GetType().Name)")
-            }
-        }
-        start-migration `@migrationParams
-    }
-    Default {
-        Write-Host "Running in Default mode"
-        `$formResults = Show-SelectionForm
-        If (`$formResults) {
-            Start-Migration -inputObject:(`$formResults)
-        } Else {
-            Write-Output ('Exiting ADMU process')
-        }
-    }
-}
-"@
-
         $executableRegion = @"
-Write-Host "======= Begin ADMU Process ======="
 `$formResults = Show-SelectionForm
 If (`$formResults) {
     Start-Migration -inputObject:(`$formResults)
@@ -337,7 +124,6 @@ If (`$formResults) {
     }
     end {
         # write out the file
-        Write-Host "Writing out the template file to $ExportPath"
         $templateString | Out-File $ExportPath -Force
     }
 }
