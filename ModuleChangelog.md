@@ -1,11 +1,11 @@
-## 2.8.1
+## 2.8.3
 
-Release Date: May 6, 2025
+Release Date: May 07, 2025
 
 #### RELEASE NOTES
 
 ```
-Update to the logging function to specify certain parameters to be excluded from the log file.
+Update to the logging function to specify certain parameters to be excluded from the log file. Updated the remote migration script to include several new validation steps.
 ```
 
 ## 2.8.0
