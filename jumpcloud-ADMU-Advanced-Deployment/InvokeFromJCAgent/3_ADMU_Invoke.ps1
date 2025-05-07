@@ -33,6 +33,9 @@ $SetDefaultWindowsUser = $true # Set the default last logged on windows user to 
 # The 'shutdown' behavior performs a shutdown of the system in a much faster manner than 'restart' which can take 5 mins form the time the command is issued
 $postMigrationBehavior = 'Restart' # Restart or Shutdown
 
+# Option to remove the existing MDM
+$removeMDM = $false # Remove the existing MDM (default false)
+
 # option to bind using the systemContext API
 $systemContextBinding = $false # Bind using the systemContext API (default False)
 # If you want to bind using the systemContext API, set the systemContextBinding to true
@@ -156,8 +159,16 @@ switch ($dataSource) {
 # Import the CSV & check for one row per system
 try {
     $ImportedCSV = Import-Csv -Path $discoveryCSVLocation
+    Write-Host "[status] CSV Imported."
+    Write-Host "[status] CSV Imported, found $($ImportedCSV.Count) rows"
+    Write-Host "[status] row headers: $($ImportedCSV[0].PSObject.Properties.Name)"
+    # if "localComputerName", "SerialNumber", "JumpCloudUserName" are not in the CSV, exit
+    if (!($ImportedCSV[0].PSObject.Properties.Name -contains "LocalComputerName") -or !($ImportedCSV[0].PSObject.Properties.Name -contains "SerialNumber") -or !($ImportedCSV[0].PSObject.Properties.Name -contains "JumpCloudUserName")) {
+        Write-Host "[error] CSV file does not contain the required headers, exiting..."
+        exit 1
+    }
 } catch {
-    Write-Host "[status] Error importing CSV file, exiting..."
+    Write-Host "[error] Error importing CSV file, exiting..."
     exit 1
 }
 
@@ -203,31 +214,50 @@ foreach ($user in $UsersToMigrate) {
 
 #endregion dataImport
 
-#region installADMU
+#region installADMU and required modules
 # Install the latest ADMU from PSGallery
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-$latestADMUModule = Find-Module -Name JumpCloud.ADMU -ErrorAction SilentlyContinue
-$installedADMUModule = Get-InstalledModule -Name JumpCloud.ADMU -ErrorAction SilentlyContinue
-if (-NOT $installedADMUModule) {
-    Write-Host "[status] JumpCloud ADMU module not found, installing..."
-    try {
-        Install-Module JumpCloud.ADMU -Force
-    } catch {
-        throw "Failed to install JumpCloud ADMU module"
-    }
+# install Nuget if required:
+$packageProviders = Get-PackageProvider | Select-Object name
+if (!($packageProviders.name -contains "nuget")) {
+    Write-Host "[status] NuGet not Found. Installing Package Provider"
+    Install-PackageProvider -Name NuGet -RequiredVersion 2.8.5.208 -Force
 } else {
-    # update the module if it's not the latest version
-    if ($latestADMUModule.Version -ne $installedADMUModule.Version) {
-        Write-Host "[status] JumpCloud ADMU module found, updating..."
-        try {
-            Uninstall-Module -Name JumpCloud.ADMU -AllVersions
-            Install-Module JumpCloud.ADMU -Force
+    Write-Host "[status] NuGet Module Found"
+}
+$packageProviders = Get-PackageProvider | Select-Object name
+if ("nuget" -in $packageProviders.name) {
+    write-host "[status] NuGet found. Importing into current session."
+    Import-PackageProvider -Name NuGet -RequiredVersion 2.8.5.208 -Force
+} else {
+    write-host "[status] NuGet Module Not Found"
+}
 
+$requiredModules = @('JumpCloud.ADMU')
+foreach ($module in $requiredModules) {
+    $latestModule = Find-Module -Name $module -ErrorAction SilentlyContinue
+    $installedModule = Get-InstalledModule -Name $module -ErrorAction SilentlyContinue
+    if (-NOT $installedModule) {
+        Write-Host "[status] $module module not found, installing..."
+        try {
+            Install-Module $module -Force
         } catch {
-            throw "[status] Failed to update JumpCloud ADMU module, exiting..."
+            throw "[error] Failed to install $module module"
         }
     } else {
-        Write-Host "[status] JumpCloud ADMU module is up to date"
+        # update the module if it's not the latest version
+        if ($latestModule.Version -ne $installedModule.Version) {
+            Write-Host "[status] $module module found, updating..."
+            try {
+                Uninstall-Module -Name $module -AllVersions
+                Install-Module $module -Force
+
+            } catch {
+                throw "[error] Failed to update $module module, exiting..."
+            }
+        } else {
+            Write-Host "[status] $module module is up to date"
+        }
     }
 }
 
@@ -235,7 +265,7 @@ if (-NOT $installedADMUModule) {
 $module = Import-Module JumpCloud.ADMU -Force -ErrorAction SilentlyContinue
 $module = Get-Module JumpCloud.ADMU
 if ($null -eq $module) {
-    Write-Host "[status] Failed to import JumpCloud ADMU module, exiting..."
+    Write-Host "[error] Failed to import JumpCloud ADMU module, exiting..."
     exit 1
 } else {
     Write-Host "[status] JumpCloud ADMU module imported successfully; running version $($module.Version)"
@@ -243,7 +273,7 @@ if ($null -eq $module) {
 # wait just a moment to ensure the ADMU was downloaded from PSGallery
 start-sleep -Seconds 5
 
-#endregion installADMU\
+#endregion installADMU
 # Run ADMU
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
 
@@ -350,6 +380,19 @@ foreach ($user in $UsersToMigrate) {
     }
 }
 #endregion migration
+
+# Un-manage the device from Intune:
+# Remove the existing MDM
+if ($removeMDM) {
+    # get the raw content from the script
+    $rawGitHubContentUrl = "https://raw.githubusercontent.com/TheJumpCloud/support/refs/heads/master/scripts/windows/remove_windowsMDM.ps1"
+    # download the script to the temp directory
+    $scriptPath = "$env:TEMP\remove_windowsMDM.ps1"
+    Invoke-WebRequest -Uri $rawGitHubContentUrl -OutFile $scriptPath
+    # run the script from the file
+    # Execute the script
+    & $scriptPath
+}
 
 #region restart/shutdown
 # If force restart was specified, we kick off a command to initiate the restart
