@@ -145,7 +145,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.8.0'
+        $admuVersion = '2.8.1'
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
 
@@ -202,7 +202,10 @@ Function Start-Migration {
         Write-ToLog -Message:('Gathering system & profile information')
         Write-ToLog -Message:('Parameter Input: ')
         $PSBoundParameters.GetEnumerator() | ForEach-Object {
-            if ($_.Key -eq 'TempPassword') {
+            if (($_.Key -eq 'TempPassword') -or
+                ($_.Key -eq 'JumpCloudAPIKey') -or
+                ($_.Key -eq 'JumpCloudOrgID') -or
+                ($_.Key -eq 'JumpCloudConnectKey')) {
                 Write-ToLog -Message:("Parameter: $($_.Key) = <hidden>")
             } else {
                 Write-ToLog -Message:("Parameter: $($_.Key) = $($_.Value)")

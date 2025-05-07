@@ -1,6 +1,16 @@
+## 2.8.1
+
+Release Date: May 6, 2025
+
+#### RELEASE NOTES
+
+```
+Update to the logging function to specify certain parameters to be excluded from the log file.
+```
+
 ## 2.8.0
 
-Release Date: April 25, 2025
+Release Date: May 06, 2025
 
 #### RELEASE NOTES
 
