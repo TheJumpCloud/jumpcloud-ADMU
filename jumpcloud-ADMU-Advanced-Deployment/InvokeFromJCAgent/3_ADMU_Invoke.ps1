@@ -33,6 +33,9 @@ $SetDefaultWindowsUser = $true # Set the default last logged on windows user to 
 # The 'shutdown' behavior performs a shutdown of the system in a much faster manner than 'restart' which can take 5 mins form the time the command is issued
 $postMigrationBehavior = 'Restart' # Restart or Shutdown
 
+# Option to remove the existing MDM
+$removeMDM = $false # Remove the existing MDM (default false)
+
 # option to bind using the systemContext API
 $systemContextBinding = $false # Bind using the systemContext API (default False)
 # If you want to bind using the systemContext API, set the systemContextBinding to true
@@ -350,6 +353,19 @@ foreach ($user in $UsersToMigrate) {
     }
 }
 #endregion migration
+
+# Un-manage the device from Intune:
+# Remove the existing MDM
+if ($removeMDM) {
+    # get the raw content from the script
+    $rawGitHubContentUrl = "https://raw.githubusercontent.com/TheJumpCloud/support/refs/heads/master/scripts/windows/remove_windowsMDM.ps1"
+    # download the script to the temp directory
+    $scriptPath = "$env:TEMP\remove_windowsMDM.ps1"
+    Invoke-WebRequest -Uri $rawGitHubContentUrl -OutFile $scriptPath
+    # run the script from the file
+    # Execute the script
+    & $scriptPath
+}
 
 #region restart/shutdown
 # If force restart was specified, we kick off a command to initiate the restart
