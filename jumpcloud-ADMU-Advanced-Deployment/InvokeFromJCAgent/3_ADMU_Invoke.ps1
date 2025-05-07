@@ -159,8 +159,16 @@ switch ($dataSource) {
 # Import the CSV & check for one row per system
 try {
     $ImportedCSV = Import-Csv -Path $discoveryCSVLocation
+    Write-Host "[status] CSV Imported."
+    Write-Host "[status] CSV Imported, found $($ImportedCSV.Count) rows"
+    Write-Host "[status] row headers: $($ImportedCSV[0].PSObject.Properties.Name)"
+    # if "localComputerName", "SerialNumber", "JumpCloudUserName" are not in the CSV, exit
+    if (!($ImportedCSV[0].PSObject.Properties.Name -contains "LocalComputerName") -or !($ImportedCSV[0].PSObject.Properties.Name -contains "SerialNumber") -or !($ImportedCSV[0].PSObject.Properties.Name -contains "JumpCloudUserName")) {
+        Write-Host "[error] CSV file does not contain the required headers, exiting..."
+        exit 1
+    }
 } catch {
-    Write-Host "[status] Error importing CSV file, exiting..."
+    Write-Host "[error] Error importing CSV file, exiting..."
     exit 1
 }
 
