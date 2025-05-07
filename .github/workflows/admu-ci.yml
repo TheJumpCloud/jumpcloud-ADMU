@@ -158,6 +158,23 @@ jobs:
             echo "File not found!"
             exit 1
           fi
+          # test if grep is installed:
+          if ! command -v grep &> /dev/null; then
+            echo "grep could not be found"
+            exit 1
+          fi
+          # show the location and version of grep binary:
+          echo "grep location: $(which grep)"
+          echo "grep version: $(grep --version)"
+          # test if gh is installed:
+          if ! command -v gh &> /dev/null; then
+            echo "gh could not be found"
+            exit 1
+          fi
+          # show the location and version of gh binary:
+          echo "gh location: $(which gh)"
+          echo "gh version: $(gh --version)"
+
           VERSION=$(grep -Po '(\d+\.\d+\.\d+)' ${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.psd1)
           echo "VERSION: $VERSION"
           TITLE="JumpCloud ADMU v$VERSION"
