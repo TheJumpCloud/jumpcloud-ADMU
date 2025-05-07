@@ -149,6 +149,15 @@ jobs:
       - name: Build Draft Release
         id: validate-tag
         run: |
+          echo "Building Draft Release"
+          echo "GITHUB_WORKSPACE: ${{ github.workspace }}"
+          echo "GITHUB_REPOSITORY: ${{ github.repository }}"
+          echo "GITHUB_REF: ${{ github.ref }}"
+          # test if the file exits:
+          if [ ! -f ${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.psd1 ]; then
+            echo "File not found!"
+            exit 1
+          fi
           VERSION=$(grep -Po '(\d+\.\d+\.\d+)' ${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.psd1)
           echo "VERSION: $VERSION"
           TITLE="JumpCloud ADMU v$VERSION"
