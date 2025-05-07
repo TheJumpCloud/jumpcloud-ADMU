@@ -135,60 +135,6 @@ jobs:
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psm1
             ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe
           retention-days: 1
-  Draft-GH-Release:
-    needs: [Build-Module]
-    outputs:
-      RELEASE_TAG: ${{ steps.validate-tag.outputs.RELEASE_TAG }}
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download ADMU artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: jumpcloud-admu-build
-      - name: Build Draft Release
-        id: validate-tag
-        run: |
-          echo "Building Draft Release"
-          echo "GITHUB_WORKSPACE: ${{ github.workspace }}"
-          echo "GITHUB_REPOSITORY: ${{ github.repository }}"
-          echo "GITHUB_REF: ${{ github.ref }}"
-          # test if the file exits:
-          if [ ! -f ${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.psd1 ]; then
-            echo "File not found!"
-            exit 1
-          fi
-          # test if grep is installed:
-          if ! command -v grep &> /dev/null; then
-            echo "grep could not be found"
-            exit 1
-          fi
-          # show the location and version of grep binary:
-          echo "grep location: $(which grep)"
-          echo "grep version: $(grep --version)"
-          # test if gh is installed:
-          if ! command -v gh &> /dev/null; then
-            echo "gh could not be found"
-            exit 1
-          fi
-          # show the location and version of gh binary:
-          echo "gh location: $(which gh)"
-          echo "gh version: $(gh --version)"
-
-          VERSION=$(grep -Po '(\d+\.\d+\.\d+)' ${{ github.workspace }}/jumpcloud-ADMU/JumpCloud.ADMU.psd1)
-          echo "VERSION: $VERSION"
-          TITLE="JumpCloud ADMU v$VERSION"
-          echo "TITLE: $TITLE"
-          CHANGELOG=$(cat ${{ github.workspace }}/ModuleChangelog.md |awk "/^## $VERSION/{ f = 1; next } /## [0-9]+.[0-9]+.[0-9]+/{ f = 0 } f")
-          TAG="v$VERSION"
-          echo "TAG: $TAG"
-          BODY="$TITLE $CHANGELOG"
-          # draft release
-          (gh release view $TAG && echo "Release exists for $TAG") || gh release create $TAG --title "$TITLE" --notes "$BODY" --draft
-          echo "setting $TAG as output"
-          echo "RELEASE_TAG=$TAG" >> $GITHUB_OUTPUT
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   Test-Module:
     needs: ["Setup-Build-Dependencies", "Check-PR-Labels", "Build-Module"]
     runs-on: windows-latest
