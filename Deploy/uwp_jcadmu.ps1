@@ -831,6 +831,14 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                     } catch {
                         "A critical error occurred: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                     }
+                    # lastly re-register the cloudExperience host appx package
+                    try {
+                        Write-ToLog -Message ("Attempting to re-register the cloudExperience host appx package")
+                        Get-AppxPackage *windows.cloudexperience* | Reset-AppxPackage
+                        Write-ToLog -Message ("Successfully re-registered the cloudExperience host appx package")
+                    } catch {
+                        Write-ToLog -Message ("Failed to re-register the cloudExperience host appx package: $($_.Exception.Message)")
+                    }
                 } -ArgumentList $homepath
 
                 # Monitor progress
