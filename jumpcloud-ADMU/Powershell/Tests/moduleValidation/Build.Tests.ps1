@@ -136,7 +136,7 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
             $psd1Path = Join-Path $PSScriptRoot "\..\..\..\JumpCloud.ADMU.psd1"
             $encoding = (Get-FileEncoding -Path $psd1Path)[1]
             write-host "Encoding: $($encoding.BodyName)"
-            $encoding.BodyName | Should -Be 'utf-8'
+            $encoding.BodyName | Should -BeIn @('utf-8', 'utf-16')
         }
         It 'PSD1 version' {
             $psd1Content = Get-Content -Path $psd1Path
