@@ -111,6 +111,33 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
 
     Context "Module PSD1 Validation" {
         # Validate PSD1 version matches the module version
+        It 'Validates the encoding of the PSD1 file' {
+            function Get-FileEncoding {
+                param(
+                    [string]$Path
+                )
+                $encoding = [System.Text.Encoding]::Default
+                $buffer = New-Object byte[] 4
+                $fileStream = [System.IO.FileStream]::new($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read)
+                $fileStream.Read($buffer, 0, 4)
+                $fileStream.Close()
+                if ($buffer[0] -eq 0xef -and $buffer[1] -eq 0xbb -and $buffer[2] -eq 0xbf) {
+                    $encoding = [System.Text.Encoding]::UTF8
+                } elseif ($buffer[0] -eq 0xfe -and $buffer[1] -eq 0xff) {
+                    $encoding = [System.Text.Encoding]::BigEndianUnicode
+                } elseif ($buffer[0] -eq 0xff -and $buffer[1] -eq 0xfe) {
+                    $encoding = [System.Text.Encoding]::Unicode
+                } elseif ($buffer[0] -eq 0x00 -and $buffer[1] -eq 0x00 -and $buffer[2] -eq 0xfe -and $buffer[3] -eq 0xff) {
+                    $encoding = [System.Text.Encoding]::UTF32
+                }
+                return $encoding
+            }
+
+            $psd1Path = Join-Path $PSScriptRoot "\..\..\..\JumpCloud.ADMU.psd1"
+            $encoding = (Get-FileEncoding -Path $psd1Path)[1]
+            write-host "Encoding: $($encoding.BodyName)"
+            $encoding.BodyName | Should -Be 'utf-8'
+        }
         It 'PSD1 version' {
             $psd1Content = Get-Content -Path $psd1Path
             $psd1Regex = "ModuleVersion[\s\S]+(([0-9]+)\.([0-9]+)\.([0-9]+))"
