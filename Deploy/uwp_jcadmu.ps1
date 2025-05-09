@@ -818,11 +818,12 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                         #success Counter
                         $appxSuccessCounter = 0
                         foreach ($item in $appxList) {
-                            Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml" -ErrorAction SilentlyContinue -ErrorVariable packageFailed
-                            if ($packageFailed) {
-                                "Error registering $($item.InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                            } else {
+                            try {
+                                Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml" -ErrorAction SilentlyContinue
                                 "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                            } catch {
+                                <#Do this if a terminating exception happens#>
+                                "Error registering $($item.InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                             }
                             $appxSuccessCounter++
                         }
@@ -833,11 +834,12 @@ if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
                     }
                     # lastly re-register the cloudExperience host appx package
                     try {
-                        Write-ToLog -Message ("Attempting to re-register the cloudExperience host appx package")
+                        # TODO: review if this is necessary
+                        "Attempting to re-register the cloudExperience host appx package" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                         Get-AppxPackage *windows.cloudexperience* | Reset-AppxPackage
-                        Write-ToLog -Message ("Successfully re-registered the cloudExperience host appx package")
+                        "Successfully re-registered the cloudExperience host appx package" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                     } catch {
-                        Write-ToLog -Message ("Failed to re-register the cloudExperience host appx package: $($_.Exception.Message)")
+                        "Failed to re-register the cloudExperience host appx package: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                     }
                 } -ArgumentList $homepath
 
