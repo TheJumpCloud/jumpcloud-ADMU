@@ -262,6 +262,7 @@ foreach ($module in $requiredModules) {
 }
 
 # check that the module was imported
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
 $module = Import-Module JumpCloud.ADMU -Force -ErrorAction SilentlyContinue
 $module = Get-Module JumpCloud.ADMU
 if ($null -eq $module) {
@@ -275,7 +276,6 @@ start-sleep -Seconds 5
 
 #endregion installADMU
 # Run ADMU
-Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
 
 # If multiple users are planned to be migrated: set the force reboot / leave domain options to false:
 if ($UsersToMigrate) {
