@@ -233,7 +233,7 @@ if ("nuget" -in $packageProviders.name) {
     write-host "[status] NuGet Module Not Found"
 }
 
-$requiredModules = @('JumpCloud.ADMU')
+$requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
 foreach ($module in $requiredModules) {
     $latestModule = Find-Module -Name $module -ErrorAction SilentlyContinue
     $installedModule = Get-InstalledModule -Name $module -ErrorAction SilentlyContinue
