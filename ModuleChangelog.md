@@ -1,3 +1,13 @@
+## 2.8.4
+
+Release Date: May 13, 2025
+
+#### RELEASE NOTES
+
+```
+This release addresses an issue with the ADMU where the tool would not leave a hybrid joined domain. This release also addresses an issue with Windows Universal Platform (UWP) applications where the tool would not register the UWP applications on first login if a path for the app was not found.
+```
+
 ## 2.8.3
 
 Release Date: May 7, 2025

@@ -7,3 +7,4 @@ JumpCloud.ADMU.nuspec
 Deploy/ADMU.ps1
 Deploy/admuTemplate.ps1
 *.exe
+*jcdiscovery.csv
