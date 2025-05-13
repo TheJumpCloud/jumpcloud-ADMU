@@ -145,7 +145,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.8.3'
+        $admuVersion = '2.8.4'
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
 
@@ -1130,10 +1130,43 @@ Function Start-Migration {
                 if ($ADJoined) {
                     switch ($ADJoined) {
                         "Hybrid" {
-                            Remove-Computer -force #LeaveHybrid
+                            # get the domain status
+                            $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
+                            Write-ToLog -Message:("Before attempting to leave the hybrid domain the system is joined to the following domains:") -Level:('Info')
+                            Write-ToLog -Message:("AzureADStatus Join: $AzureADStatus") -Level:('Info')
+                            Write-ToLog -Message:("LocalDomainStatus Join: $LocalDomainStatus") -Level:('Info')
+                            # Leave the domain for AD and LocalAD
+
+                            # for the Azure AD unjoin
+                            try {
+                                dsregcmd.exe /leave # Leave Azure AD
+                                $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
+                                Write-ToLog -Message:("After running dsregcmd /leave, the system is joined to the following domains:") -Level:('Info')
+                                Write-ToLog -Message:("AzureADStatus Join: $AzureADStatus") -Level:('Info')
+                                Write-ToLog -Message:("LocalDomainStatus Join: $LocalDomainStatus") -Level:('Info')
+                            } catch {
+                                $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
+                                Write-ToLog -Message:("After attempting to run dsregcmd /leave, the system is joined to the following domains:") -Level:('Info')
+                                Write-ToLog -Message:("AzureADStatus: $AzureADStatus") -Level:('Info')
+                            }
+
+                            # for the local domain unjoin
+                            try {
+                                $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+                                $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
+                                Write-ToLog -Message:("After running UnJoinDomainOrWorkGroup, the domain status is as follows:") -Level:('Info')
+                                Write-ToLog -Message:("AzureADStatus: $AzureADStatus") -Level:('Info')
+                                Write-ToLog -Message:("LocalDomainStatus: $LocalDomainStatus") -Level:('Info')
+                            } catch {
+                                $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
+                                Write-ToLog -Message:("After attempting to run UnJoinDomainOrWorkGroup, the system is joined to the following domains:") -Level:('Info')
+                                Write-ToLog -Message:("LocalDomainStatus: $LocalDomainStatus") -Level:('Info')
+                            }
+
+                            # finally print the status of the domains
                             $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
                             if ($AzureADStatus -match 'NO' -and $LocalDomainStatus -match 'NO') {
-                                Write-ToLog -Message:('Left Hybrid Domain successfully') -Level:('Info')
+                                Write-ToLog -Message:('The hybrid joined device has unjoined from the domain successfully') -Level:('Info')
                                 $admuTracker.leaveDomain.pass = $true
                             } else {
                                 Write-ToLog -Message:('Unable to leave Hybrid Domain') -Level:('Warn')
