@@ -228,6 +228,22 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 { Start-Migration @testCaseInput } | Should -Not -Throw
             }
         }
+        Context "User Profile Subdirectory Owners" {
+            It "Start-Migration should set the owner for user profile subdirectories" {
+                # set the $testCaseInput
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+                # Get the user profile subdirectory
+                $userProfilePath = "C:\Users\$($userToMigrateFrom)"
+                $subDirectories = Get-ChildItem -Path $userProfilePath -Directory
+                # Validate each subdirectory owner is the new user
+                foreach ($subDir in $subDirectories) {
+                    $subDirOwner = Get-Acl -Path $subDir.FullName | Select-Object -ExpandProperty Owner
+                    # Remove the domain from the owner string
+                    $subDirOwner = $subDirOwner -replace ".*\\", ""
+                    $subDirOwner | Should -Be "$($userToMigrateTo)"
+                }
+            }
+        }
         Context "General Failure Conditions" {
             It "Fails when the JumpCloudUsername and Selected username are the same" {
                 # set the $testCaseInput

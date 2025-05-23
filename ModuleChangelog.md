@@ -1,3 +1,13 @@
+## 2.8.5
+
+Release Date: May 23, 2025
+
+#### RELEASE NOTES
+
+```
+This release addresses an issue with the ADMU migration not setting the right subdirectory owners for the user profile
+```
+
 ## 2.8.4
 
 Release Date: May 13, 2025
