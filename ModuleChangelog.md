@@ -1,11 +1,11 @@
 ## 2.8.5
 
-Release Date: May 23, 2025
+Release Date: May 27, 2025
 
 #### RELEASE NOTES
 
 ```
-This release addresses an issue with the ADMU migration not setting the right subdirectory owners for the user profile
+This release changes the ownership of the migration profile's file directory to the newly migrated user. Previously the ownership of these directories remained under the AD user profile.
 ```
 
 ## 2.8.4
