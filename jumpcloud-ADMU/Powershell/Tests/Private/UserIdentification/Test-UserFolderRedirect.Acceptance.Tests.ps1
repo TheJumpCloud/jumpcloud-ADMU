@@ -122,6 +122,18 @@ Describe "Test-UserFolderRedirect and Test-WallpaperPolicy Acceptance Tests" -Ta
 
     Context 'Validates Wallpaper Policy Removal' {
         BeforeAll {
+            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+            }
+
+            #$currentSID = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
+            $newUser = "ADMU_User" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $password = '$T#st1234'
+            Initialize-TestUser -UserName $newUser -Password $Password
+
+            $userSid = Test-UsernameOrSID -usernameOrSid $newUser
+            # Load the registry hive for the user and add _admu after the sid
+            REG LOAD HKU\$($userSid)_admu "C:\Users\$newUser\NTUSER.DAT" *>&1
             # This context reuses the $userSid and loaded hive from the previous context.
             $policyPath = "HKEY_USERS:\$($userSid)_admu\Software\Microsoft\Windows\CurrentVersion\Policies\System"
             # Ensure the parent key exists for testing.
