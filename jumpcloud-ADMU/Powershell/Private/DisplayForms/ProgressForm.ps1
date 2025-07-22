@@ -22,7 +22,7 @@ function New-ProgressForm {
     <Window
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Name="Window" Title="JumpCloud ADMU 2.8.5"
+    Name="Window" Title="JumpCloud ADMU 2.8.6"
     WindowStyle="SingleBorderWindow"
     ResizeMode="NoResize"
     Background="White" Width="720" Height="550  ">
@@ -192,7 +192,7 @@ function New-ProgressForm {
             # Load an xaml form
 
             $syncHash.Window = [Windows.Markup.XamlReader]::parse( $SyncHash.XAML )
-        ([xml]$SyncHash.XAML).SelectNodes("//*[@Name]") | ForEach-Object { $SyncHash."$($_.Name)" = $SyncHash.Window.FindName($_.Name) }
+            ([xml]$SyncHash.XAML).SelectNodes("//*[@Name]") | ForEach-Object { $SyncHash."$($_.Name)" = $SyncHash.Window.FindName($_.Name) }
             # Image
             $SyncHash.JCLogoImg.Source = $syncHash.base64JCLogo
             $syncHash.Username.Content = $syncHash.UsernameInput

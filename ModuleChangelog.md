@@ -1,3 +1,16 @@
+## 2.8.6
+
+Release Date: July 22, 2025
+
+#### RELEASE NOTES
+
+```
+This release adds bug fix system instability caused by wallpaper policy
+```
+#### BUG FIXES:
+
+Resolves the issue with leftover wallpaper policy post migration system instability
+
 ## 2.8.5
 
 Release Date: May 29, 2025

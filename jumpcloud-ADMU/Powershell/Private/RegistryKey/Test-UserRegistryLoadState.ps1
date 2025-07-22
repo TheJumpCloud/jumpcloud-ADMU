@@ -29,16 +29,20 @@ Function Test-UserRegistryLoadState {
         try {
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
-            if ($ValidateDirectory) {
-                # return boolean for redirected user directories
-                $isFolderRedirect = Test-UserFolderRedirect -UserSid $UserSid
-            } else {
-                Write-ToLog "Skipping User Shell Folder Validation..."
-            }
         } catch {
             Write-AdmuErrorMessage -Error:("load_unload_error")
             Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
         }
+        # Validations during the load process
+        if ($ValidateDirectory) {
+            # return boolean for redirected user directories
+            $isFolderRedirect = Test-UserFolderRedirect -UserSid $UserSid
+        } else {
+            Write-ToLog "Skipping User Shell Folder Validation..."
+        }
+        # Validate the wallpaper policy
+        Test-WallpaperPolicy -UserSid $UserSid
+        ##### End of Validations #####
         try {
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
