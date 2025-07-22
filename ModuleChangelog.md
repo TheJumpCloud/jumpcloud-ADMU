@@ -5,7 +5,7 @@ Release Date: July 22, 2025
 #### RELEASE NOTES
 
 ```
-This release adds bug fix system instability caused by wallpaper policy
+This release adds a bug fix for system instability caused by wallpaper policy
 ```
 #### BUG FIXES:
 
