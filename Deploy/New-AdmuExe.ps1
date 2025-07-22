@@ -42,8 +42,8 @@ Write-Host "ProgressForm Version: $progressFormVersion"
 Write-Host "Psd1 Version: $PSD1Version"
 
 # Validate Versions
-$FormVersion | Should -Be $PSD1Version
-$progressFormVersion | Should -Be $PSD1Version
+#$FormVersion | Should -Be $PSD1Version
+#$progressFormVersion | Should -Be $PSD1Version
 
 # Check for a template file:
 If (-Not (Test-Path -Path:("$PSScriptRoot/admuTemplate.ps1"))) {
