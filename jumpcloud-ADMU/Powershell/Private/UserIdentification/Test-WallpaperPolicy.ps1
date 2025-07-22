@@ -40,7 +40,6 @@ function Test-WallpaperPolicy {
                 # Before removing, get the current wallpaper path defined in the policy.
                 $wallpaperPathValue = (Get-ItemProperty -Path $fullPath -Name "Wallpaper" -ErrorAction SilentlyContinue).Wallpaper
 
-                # Check if the wallpaper path value exists and matches the network path regex.
                 if ($wallpaperPathValue) {
                     Write-ToLog "Validated network wallpaper path: $($wallpaperPathValue). Proceeding with removal."
 
