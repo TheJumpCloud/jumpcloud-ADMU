@@ -1,3 +1,17 @@
+## 2.8.6
+
+Release Date: July 22, 2025
+
+#### RELEASE NOTES
+
+```
+This release addresses an issue when invoking the ADMU from a remote script.
+```
+
+#### BUG FIXES:
+
+- When an invalid API key was used to invoke the ADMU from a remote script, the tool would exit with an error code that was not properly handled and difficult to trace. A change to the remote invoke scripts is included in this release to ensure that the full error message is returned. The Start-Migration script will no longer error in the same way when an invalid API key is used.
+
 ## 2.8.5
 
 Release Date: May 29, 2025
