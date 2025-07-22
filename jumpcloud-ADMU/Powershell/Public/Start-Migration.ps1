@@ -10,7 +10,7 @@ Function Start-Migration {
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $true,
-            HelpMessage = "The AD Username to be migrated. This is the existing AD User on the system that will be converted to a local user. Input in this field can either be in the domain/username (ex: 'mycorpsoft/reid.sullivan') format or an account SID (ex: 'S-1-5-21-3702388936-1108443347-3360745512-1029').")]
+            HelpMessage = "The AD Username to be migrated. This is the existing AD User on the system that will be converted to a local user. Input in this field can either be in the domain/username (ex: 'MYCorpSoft/reid.sullivan') format or an account SID (ex: 'S-1-5-21-3702388936-1108443347-3360745512-1029').")]
         [string]
         $SelectedUserName,
         [Parameter(
@@ -148,7 +148,7 @@ Function Start-Migration {
         $admuVersion = '2.8.5'
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
-
+        $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
         If ($isForm) {
@@ -172,9 +172,9 @@ Function Start-Migration {
             $AutoBindJCUser = $inputObject.AutoBindJCUser
 
             # Validate JumpCloudSystemUserName to write to the GUI
-            $ret, $JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+            $ret, $script:JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
             $TempPassword = $inputObject.TempPassword
-            Write-ToLog -Message:("Test-JumpCloudUsername Results:`nUserFound: $($ret)`nJumpCloudUserName: $($JumpCloudUserName)`nJumpCloudUserId: $($JumpCloudUserId)`nJumpCloudSystemUserName: $($JumpCloudSystemUserName)")
+            Write-ToLog -Message:("Test-JumpCloudUsername Results:`nUserFound: $($ret)`nJumpCloudUserName: $($JumpCloudUserName)`nJumpCloudUserId: $($script:JumpCloudUserId)`nJumpCloudSystemUserName: $($JumpCloudSystemUserName)")
             # Write to progress bar
             $script:ProgressBar = New-ProgressForm
             if ($JumpCloudSystemUserName) {
@@ -255,7 +255,7 @@ Function Start-Migration {
             }
 
             # Throw error if $ret is false, if we are autoBinding users and the specified username does not exist, throw an error and terminate here
-            $ret, $JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+            $ret, $script:JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
             # Write to log all variables above
             Write-ToLog -Message:("JumpCloudUserName: $($JumpCloudUserName), JumpCloudSystemUserName = $($JumpCloudSystemUserName)")
 
@@ -282,7 +282,7 @@ Function Start-Migration {
         if ($systemContextBinding -eq $true) {
             $getSystem = Invoke-SystemContextAPI -method 'GET' -endpoint 'systems'
             if ($getSystem.id) {
-                Write-ToLog "[status] The systemContext API is available for this system, the system context API will be used to associate the userID: $($JumpCloudUserID) to the system"
+                Write-ToLog "[status] The systemContext API is available for this system, the system context API will be used to associate the userID: $($script:JumpCloudUserID) to the system"
                 Write-ToLog "[status] SystemID: $($getSystem.id)"
                 Write-ToLog "[status] Hostname: $($getSystem.hostname)"
                 $validatedSystemContextAPI = $true
@@ -1126,7 +1126,7 @@ Function Start-Migration {
 
             #region AutoBindUserToJCSystem
             if ($AutoBindJCUser -eq $true) {
-                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
+                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $script:JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
                 if ($bindResult) {
                     Write-ToLog -Message:('JumpCloud automatic bind step succeeded for user ' + $JumpCloudUserName) -Level Verbose
                     $admuTracker.autoBind.pass = $true
@@ -1136,8 +1136,8 @@ Function Start-Migration {
                 }
             }
             if ($systemContextBinding -eq $true) {
-                Write-ToLog -Message:("Attempting to associate system to userID: $JumpCloudUserID with SystemContext API") -Level Verbose
-                Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $JumpCloudUserID -admin $BindAsAdmin
+                Write-ToLog -Message:("Attempting to associate system to userID: $script:JumpCloudUserID with SystemContext API") -Level Verbose
+                Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $script:JumpCloudUserID -admin $BindAsAdmin
             }
             #endregion AutoBindUserToJCSystem
 
