@@ -122,7 +122,7 @@ Describe "Test-UserFolderRedirect and Test-WallpaperPolicy Acceptance Tests" -Ta
 
     Context 'Validates Wallpaper Policy Removal' {
         BeforeAll {
-            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
+            if ((Get-psdrive | Select-Object -ExpandProperty Name) -notmatch "HKEY_USERS") {
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }
 
