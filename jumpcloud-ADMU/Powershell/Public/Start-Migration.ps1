@@ -992,7 +992,6 @@ Function Start-Migration {
             $Acl.SetAccessRule($Ar)
             $Acl | Set-Acl -Path $newUserProfileImagePath
             #TODO: reverse track this if we fail later
-
             # Set the owner permission for the user profile path subdirectories
             try {
                 # Create a SecurityIdentifier object from the SID string
@@ -1009,12 +1008,11 @@ Function Start-Migration {
                         $acl.SetOwner($newOwnerSIDObject) # Set the owner using the SecurityIdentifier object
                         Set-Acl -Path $_.FullName -AclObject $acl
                         # Write-Host "Successfully set owner for $($_.FullName)" # Uncomment for verbose logging
+                        Write-ToLog "Owner set successfully for $($newUserProfileImagePath) and its contents."
                     } catch {
                         Write-ToLog "Failed to set owner for $($_.FullName): $($_.Exception.Message)" -level "Warn"
                     }
                 }
-                Write-ToLog "Owner set successfully for $($newUserProfileImagePath) and its contents."
-
             } catch {
                 Write-ToLog "An error occurred: $($_.Exception.Message)" -level "Warn"
                 Write-ToLog "Failed to set new owner $($NewUserSID) for $($newUserProfileImagePath) subdirectories" -level "Warn"
