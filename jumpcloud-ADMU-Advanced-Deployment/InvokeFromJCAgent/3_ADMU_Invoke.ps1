@@ -376,6 +376,7 @@ foreach ($user in $UsersToMigrate) {
     } catch {
         Write-Host "[status] Migration failed for user: $($user.JumpCloudUserName), exiting..."
         Write-Host "[status] Error: $($_.Exception.Message)"
+        Write-Host "[status] Full Exception: $($_ | Format-List * | Out-String)"
         exit 1
     }
 }

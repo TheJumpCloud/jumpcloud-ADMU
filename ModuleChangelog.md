@@ -5,11 +5,13 @@ Release Date: July 22, 2025
 #### RELEASE NOTES
 
 ```
-This release adds a bug fix for system instability caused by wallpaper policy
+This release addresses an issue when invoking the ADMU from a remote script and resolves an issue when a domain wallpaper was applied as a GPO before migration.
 ```
+
 #### BUG FIXES:
 
-Resolves the issue with leftover wallpaper policy post migration system instability
+- When an invalid API key was used to invoke the ADMU from a remote script, the tool would exit with an error code that was not properly handled and difficult to trace. A change to the remote invoke scripts is included in this release to ensure that the full error message is returned. The Start-Migration script will no longer error in the same way when an invalid API key is used.
+- When a device was migrated that had previously had a domain wallpaper applied, the previous versions of the ADMU would not detect this policy and a user migrated from this state would have a blank wallpaper on first login. This release will remove this wallpaper policy from the newly created user's registry. They will receive the default wallpaper and a new policy will need to be applied if a managed wallpaper is required. 
 
 ## 2.8.5
 

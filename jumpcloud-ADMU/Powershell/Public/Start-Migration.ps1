@@ -148,12 +148,12 @@ Function Start-Migration {
         $admuVersion = '2.8.6'
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
-
+        $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
         If ($isForm) {
-            $useragent = "JumpCloud_ADMU.Application/$($admuVersion)"
-            Write-ToLog -Message:("UserAgent: $useragent")
+            $userAgent = "JumpCloud_ADMU.Application/$($admuVersion)"
+            Write-ToLog -Message:("UserAgent: $userAgent")
             $SelectedUserName = $inputObject.SelectedUserName
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
             $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
@@ -172,15 +172,15 @@ Function Start-Migration {
             $AutoBindJCUser = $inputObject.AutoBindJCUser
 
             # Validate JumpCloudSystemUserName to write to the GUI
-            $ret, $JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+            $ret, $script:JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
             $TempPassword = $inputObject.TempPassword
-            Write-ToLog -Message:("Test-JumpCloudUsername Results:`nUserFound: $($ret)`nJumpCloudUserName: $($JumpCloudUserName)`nJumpCloudUserId: $($JumpCloudUserId)`nJumpCloudSystemUserName: $($JumpCloudSystemUserName)")
+            Write-ToLog -Message:("Test-JumpCloudUsername Results:`nUserFound: $($ret)`nJumpCloudUserName: $($JumpCloudUserName)`nJumpCloudUserId: $($script:JumpCloudUserId)`nJumpCloudSystemUserName: $($JumpCloudSystemUserName)")
             # Write to progress bar
-            $script:Progressbar = New-ProgressForm
+            $script:ProgressBar = New-ProgressForm
             if ($JumpCloudSystemUserName) {
-                Write-ToProgress -form $isForm -ProgressBar $Progressbar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudSystemUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath
+                Write-ToProgress -form $isForm -ProgressBar $ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudSystemUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath
             } else {
-                Write-ToProgress -form $isForm -ProgressBar $Progressbar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath
+                Write-ToProgress -form $isForm -ProgressBar $ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath
             }
 
             $BindAsAdmin = $inputObject.BindAsAdmin
@@ -188,7 +188,7 @@ Function Start-Migration {
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
         } else {
-            $useragent = "JumpCloud_ADMU.Powershell/$($admuVersion)"
+            $userAgent = "JumpCloud_ADMU.Powershell/$($admuVersion)"
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
         }
 
@@ -255,7 +255,7 @@ Function Start-Migration {
             }
 
             # Throw error if $ret is false, if we are autoBinding users and the specified username does not exist, throw an error and terminate here
-            $ret, $JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+            $ret, $script:JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
             # Write to log all variables above
             Write-ToLog -Message:("JumpCloudUserName: $($JumpCloudUserName), JumpCloudSystemUserName = $($JumpCloudSystemUserName)")
 
@@ -282,7 +282,7 @@ Function Start-Migration {
         if ($systemContextBinding -eq $true) {
             $getSystem = Invoke-SystemContextAPI -method 'GET' -endpoint 'systems'
             if ($getSystem.id) {
-                Write-ToLog "[status] The systemContext API is available for this system, the system context API will be used to associate the userID: $($JumpCloudUserID) to the system"
+                Write-ToLog "[status] The systemContext API is available for this system, the system context API will be used to associate the userID: $($script:JumpCloudUserID) to the system"
                 Write-ToLog "[status] SystemID: $($getSystem.id)"
                 Write-ToLog "[status] Hostname: $($getSystem.hostname)"
                 $validatedSystemContextAPI = $true
@@ -315,7 +315,7 @@ Function Start-Migration {
             ntfsPermissions               = @{'pass' = $false; 'fail' = $false }
             activeSetupHKLM               = @{'pass' = $false; 'fail' = $false }
             activeSetupHKU                = @{'pass' = $false; 'fail' = $false }
-            uwpAppXPacakges               = @{'pass' = $false; 'fail' = $false }
+            uwpAppXPackages               = @{'pass' = $false; 'fail' = $false }
             uwpDownloadExe                = @{'pass' = $false; 'fail' = $false }
             leaveDomain                   = @{'pass' = $false; 'fail' = $false }
             autoBind                      = @{'pass' = $false; 'fail' = $false }
@@ -350,7 +350,7 @@ Function Start-Migration {
         #region SilentAgentInstall
 
         $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
-        Write-ToProgress -ProgressBar $Progressbar -Status "Install" -form $isForm
+        Write-ToProgress -ProgressBar $ProgressBar -Status "Install" -form $isForm
 
         # Add value to the progress bar
 
@@ -368,7 +368,7 @@ Function Start-Migration {
                 Write-ToLog -Message:("JumpCloud Agent Install Done") -Level Verbose
             } else {
                 Write-ToLog -Message:("JumpCloud Agent Install Failed") -Level Warn
-                Write-ToProgress -ProgressBar $Progressbar -Status "JC Agent Install failed " -form $isForm -logLevel Error
+                Write-ToProgress -ProgressBar $ProgressBar -Status "JC Agent Install failed " -form $isForm -logLevel Error
                 exit
             }
         } elseif ($InstallJCAgent -eq $true -and ($AgentService)) {
@@ -378,7 +378,7 @@ Function Start-Migration {
         # While loop for breaking out of log gracefully:
         $MigrateUser = $true
         while ($MigrateUser) {
-            Write-ToProgress  -ProgressBar $Progressbar -Status "BackupUserFiles" -form $isForm
+            Write-ToProgress  -ProgressBar $ProgressBar -Status "BackupUserFiles" -form $isForm
 
             ### Begin Backup Registry for Selected User ###
             Write-ToLog -Message:('Creating Backup of User Registry Hive')
@@ -424,7 +424,7 @@ Function Start-Migration {
             }
             $admuTracker.newUserCreate.pass = $true
             # Initialize the Profile & Set SID
-            Write-ToProgress  -ProgressBar $Progressbar -Status "UserProfileUnit" -form $isForm
+            Write-ToProgress  -ProgressBar $ProgressBar -Status "UserProfileUnit" -form $isForm
 
             $NewUserSID = New-LocalUserProfile -username:($JumpCloudUsername) -ErrorVariable profileInit
             if ($profileInit) {
@@ -451,7 +451,7 @@ Function Start-Migration {
 
             ### Begin backup user registry for new user
             try {
-                Write-ToProgress -ProgressBar $Progressbar -Status "BackupRegHive" -form $isForm
+                Write-ToProgress -ProgressBar $ProgressBar -Status "BackupRegHive" -form $isForm
 
                 Backup-RegistryHive -profileImagePath $newUserProfileImagePath -SID $NewUserSID
             } catch {
@@ -466,7 +466,7 @@ Function Start-Migration {
             ### Begin Test Registry Steps
             # Test Registry Access before edits
 
-            Write-ToProgress -ProgressBar $Progressbar -Status "VerifyRegHive" -form $isForm
+            Write-ToProgress -ProgressBar $ProgressBar -Status "VerifyRegHive" -form $isForm
 
             Write-ToLog -Message:('Verifying registry files can be loaded and unloaded')
             try {
@@ -479,7 +479,7 @@ Function Start-Migration {
             }
             $admuTracker.testRegLoadUnload.pass = $true
             ### End Test Registry
-            Write-ToProgress -ProgressBar $Progressbar -Status "CopyLocalReg" -form $isForm
+            Write-ToProgress -ProgressBar $ProgressBar -Status "CopyLocalReg" -form $isForm
 
             Write-ToLog -Message:('Begin new local user registry copy') -Level Verbose
             # Give us admin rights to modify
@@ -496,7 +496,7 @@ Function Start-Migration {
                     }
                 }
             }
-            Write-ToProgress -ProgressBar $Progressbar -Status "GetACL" -form $isForm
+            Write-ToProgress -ProgressBar $ProgressBar -Status "GetACL" -form $isForm
 
             Write-ToLog -Message:("Get ACLs for $($newUserProfileImagePath)")
             $acl = Get-Acl ($newUserProfileImagePath)
@@ -519,7 +519,7 @@ Function Start-Migration {
             Write-ToLog -Message:("Applying ACL...")
             $acl | Set-Acl $newUserProfileImagePath
 
-            Write-ToProgress -ProgressBar $Progressbar -Status "CopyUser" -form $isForm
+            Write-ToProgress -ProgressBar $ProgressBar -Status "CopyUser" -form $isForm
             try {
                 # Load New User Profile Registry Keys
                 Set-UserRegistryLoadState -op "Load" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID -hive root
@@ -544,14 +544,14 @@ Function Start-Migration {
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                    # Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                     Start-Sleep 1
                 }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                    # Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                     Start-Sleep 1
                 }
                 reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
@@ -585,7 +585,7 @@ Function Start-Migration {
                 }
             }
 
-            Write-ToProgress -ProgressBar $Progressbar -Status "CopyUserRegFiles" -form $isForm
+            Write-ToProgress -ProgressBar $ProgressBar -Status "CopyUserRegFiles" -form $isForm
             #TODO: Out NULL?
             reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
             if ($?) {
@@ -597,13 +597,13 @@ Function Start-Migration {
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                    # $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $NewUserCloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                 }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                    # $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $SelectedUserCloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                 }
                 # attempt copy again:
                 reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
@@ -619,7 +619,7 @@ Function Start-Migration {
                 }
             }
             # Validate file permissions on registry item
-            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
+            if ("HKEY_USERS" -notin (Get-PSDrive | select-object name).Name) {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
             }
@@ -640,12 +640,12 @@ Function Start-Migration {
             $admuTracker.copyRegistry.pass = $true
 
             # Copy the profile containing the correct access and data to the destination profile
-            Write-ToProgress -ProgressBar $Progressbar -Status "CopyMergedProfile" -form $isForm
+            Write-ToProgress -ProgressBar $ProgressBar -Status "CopyMergedProfile" -form $isForm
             Write-ToLog -Message:('Copying merged profiles to destination profile path')
 
             # Set Registry Check Key for New User
             # Check that the installed components key does not exist
-            $ADMU_PackageKey = "HKEY_USERS:\$($newusersid)_admu\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
+            $ADMU_PackageKey = "HKEY_USERS:\$($newUserSID)_admu\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
             if (Get-Item $ADMU_PackageKey -ErrorAction SilentlyContinue) {
                 # If the account to be converted already has this key, reset the version
                 $rootlessKey = $ADMU_PackageKey.Replace('HKEY_USERS:\', '')
@@ -653,15 +653,15 @@ Function Start-Migration {
             }
             # $admuTracker.activeSetupHKU = $true
             # Set the trigger to reset Appx Packages on first login
-            $ADMUKEY = "HKEY_USERS:\$($newusersid)_admu\SOFTWARE\JCADMU"
-            if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
+            $RegKeyADMU = "HKEY_USERS:\$($newUserSID)_admu\SOFTWARE\JCADMU"
+            if (Get-Item $RegKeyADMU -ErrorAction SilentlyContinue) {
                 # If the registry Key exists (it wont unless it's been previously migrated)
                 Write-ToLog "The Key Already Exists"
                 # collect unused references in memory and clear
                 [gc]::collect()
                 # Attempt to unload
                 try {
-                    REG UNLOAD "HKU\$($newusersid)_admu" 2>&1 | out-null
+                    REG UNLOAD "HKU\$($newUserSID)_admu" 2>&1 | out-null
                 } catch {
                     Write-ToLog "This account has been previously migrated"
                 }
@@ -669,9 +669,9 @@ Function Start-Migration {
                 # }
             } else {
                 # Create the new key & remind add tracking from previous domain account for reversion if necessary
-                New-RegKey -registryRoot Users -keyPath "$($newusersid)_admu\SOFTWARE\JCADMU"
-                Set-ValueToKey -registryRoot Users -keyPath "$($newusersid)_admu\SOFTWARE\JCADMU" -Name "previousSID" -value "$SelectedUserSID" -regValueKind String
-                Set-ValueToKey -registryRoot Users -keyPath "$($newusersid)_admu\SOFTWARE\JCADMU" -Name "previousProfilePath" -value "$oldUserProfileImagePath" -regValueKind String
+                New-RegKey -registryRoot Users -keyPath "$($newUserSID)_admu\SOFTWARE\JCADMU"
+                Set-ValueToKey -registryRoot Users -keyPath "$($newUserSID)_admu\SOFTWARE\JCADMU" -Name "previousSID" -value "$SelectedUserSID" -regValueKind String
+                Set-ValueToKey -registryRoot Users -keyPath "$($newUserSID)_admu\SOFTWARE\JCADMU" -Name "previousProfilePath" -value "$oldUserProfileImagePath" -regValueKind String
             }
             ### End reg key check for new user
             $path = Join-Path $oldUserProfileImagePath '\AppData\Local\JumpCloudADMU'
@@ -681,11 +681,11 @@ Function Start-Migration {
 
             # SelectedUserSid
             # Validate file permissions on registry item
-            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
+            if ("HKEY_USERS" -notin (Get-PSDrive | select-object name).Name) {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
             }
-            Write-ToProgress -ProgressBar $Progressbar -Status "CopyDefaultProtocols" -form $isForm
+            Write-ToProgress -ProgressBar $ProgressBar -Status "CopyDefaultProtocols" -form $isForm
             # Get the file type associations while the user registry is loaded
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $SelectedUserSid
             Write-ToLog -Message:('Found ' + $fileTypeAssociations.count + ' File Type Associations')
@@ -720,13 +720,13 @@ Function Start-Migration {
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                    # $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $NewUserCloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                 }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                    # $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $NewUserCloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                 }
                 try {
                     Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
@@ -763,13 +763,13 @@ Function Start-Migration {
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                    # $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $NewUserCloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                 }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                    # $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $SelectedUserCloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                 }
                 try {
                     Rename-Item -Path "$oldUserProfileImagePath\NTUSER.DAT" -NewName "$oldUserProfileImagePath\NTUSER_original_$renameDate.DAT" -Force -ErrorAction Stop
@@ -825,13 +825,13 @@ Function Start-Migration {
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                    # $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $NewUserCloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                 }
                 # list processes for selectedUser
                 $processList = Get-ProcessByOwner -username $SelectedUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                    # $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                    # $SelectedUserCloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                 }
                 try {
                     Rename-Item -Path "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -NewName "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass_original_$renameDate.dat" -Force -ErrorAction Stop
@@ -880,13 +880,13 @@ Function Start-Migration {
                     $processList = Get-ProcessByOwner -username $JumpCloudUserName
                     if ($processList) {
                         Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
-                        # $NewUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                        # $NewUserCloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                     }
                     # list processes for selectedUser
                     $processList = Get-ProcessByOwner -username $SelectedUserName
                     if ($processList) {
                         Show-ProcessListResult -ProcessList $processList -domainUsername $SelectedUserName
-                        # $SelectedUserCloseResults = Close-ProcessByOwner -ProcesssList $processList -force $ADMU_closeProcess
+                        # $SelectedUserCloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                     }
                     try {
                         # try again:
@@ -988,7 +988,7 @@ Function Start-Migration {
             #ntfs acls on domain $windowsDrive\users\ dir
             $NewSPN_Name = $env:COMPUTERNAME + '\' + $JumpCloudUsername
             $Acl = Get-Acl $newUserProfileImagePath
-            $Ar = New-Object system.security.accesscontrol.filesystemaccessrule($NewSPN_Name, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+            $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule($NewSPN_Name, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
             $Acl.SetAccessRule($Ar)
             $Acl | Set-Acl -Path $newUserProfileImagePath
             #TODO: reverse track this if we fail later
@@ -1022,7 +1022,7 @@ Function Start-Migration {
             $validateNTUserDatPermissions, $validateNTUserDatPermissionsResults = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'
 
             $validateUsrClassDatPermissions, $validateUsrClassDatPermissionsResults = Test-DATFilePermission -path "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat" -username $JumpCloudUserName -type 'ntfs'
-            Write-ToProgress -ProgressBar $Progressbar -Status "ValidateUserPermissions" -form $isForm
+            Write-ToProgress -ProgressBar $ProgressBar -Status "ValidateUserPermissions" -form $isForm
 
             if ($validateNTUserDatPermissions ) {
                 Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath) `n$($validateNTUserDatPermissionsResults | Out-String)")
@@ -1034,17 +1034,17 @@ Function Start-Migration {
             } else {
                 Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control `n$($validateUsrClassDatPermissionsResults | Out-String)") -Level Warn
             }
-            ## End Regedit Block ##
+            ## End RegEdit Block ##
 
             ### Active Setup Registry Entry ###
-            Write-ToProgress -ProgressBar $Progressbar -Status "CreateRegEntries" -form $isForm
+            Write-ToProgress -ProgressBar $ProgressBar -Status "CreateRegEntries" -form $isForm
 
             Write-ToLog -Message:('Creating HKLM Registry Entries') -Level Verbose
 
             # Root Key Path
-            $ADMUKEY = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
+            $RegKeyInstalledAppx = "HKLM:\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
             # Remove Root from key to pass into functions
-            $rootlessKey = $ADMUKEY.Replace('HKLM:\', '')
+            $rootlessKey = $RegKeyInstalledAppx.Replace('HKLM:\', '')
             # Property Values
             $propertyHash = @{
                 IsInstalled = 1
@@ -1052,9 +1052,9 @@ Function Start-Migration {
                 StubPath    = "uwp_jcadmu.exe"
                 Version     = "1,0,00,0"
             }
-            if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
+            if (Get-Item $RegKeyInstalledAppx -ErrorAction SilentlyContinue) {
                 Write-ToLog -message:("The ADMU Registry Key exits")
-                $properties = Get-ItemProperty -Path "$ADMUKEY"
+                $properties = Get-ItemProperty -Path "$RegKeyInstalledAppx"
                 foreach ($item in $propertyHash.Keys) {
                     Write-ToLog -message:("Property: $($item) Value: $($properties.$item)")
                 }
@@ -1073,10 +1073,10 @@ Function Start-Migration {
             }
             # $admuTracker.activeSetupHKLM = $true
             ### End Active Setup Registry Entry Region ###
-            Write-ToProgress -ProgressBar $Progressbar -Status "DownloadUWPApps" -form $isForm
+            Write-ToProgress -ProgressBar $ProgressBar -Status "DownloadUWPApps" -form $isForm
 
             Write-ToLog -Message:('Updating UWP Apps for new user') -Level Verbose
-            $newUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newusersid) -Name 'ProfileImagePath'
+            $newUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newUserSID) -Name 'ProfileImagePath'
             # IF windows 10 remove the windows.search then it will be recreated on login
             if ($systemVersion.OSName -match "Windows 10") {
                 $searchFolder = "$newUserProfileImagePath\AppData\Local\Packages\Microsoft.Windows.Search_cw5n1h2txyewy"
@@ -1114,28 +1114,28 @@ Function Start-Migration {
                 # TODO: Get the checksum
                 # $admuTracker.uwpDownloadExe = $true
             }
-            Write-ToProgress -ProgressBar $Progressbar -Status "ConversionComplete" -form $isForm
+            Write-ToProgress -ProgressBar $ProgressBar -Status "ConversionComplete" -form $isForm
             Write-ToLog -Message:('Profile Conversion Completed') -Level Verbose
 
             #region Add To Local Users Group
-            Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUsername -erroraction silentlycontinue
+            Add-LocalGroupMember -SID S-1-5-32-545 -Member $JumpCloudUsername -ErrorAction SilentlyContinue
             #endregion Add To Local Users Group
             # TODO: test and return non-terminating error here
 
             #region AutoBindUserToJCSystem
             if ($AutoBindJCUser -eq $true) {
-                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
+                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $script:JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
                 if ($bindResult) {
-                    Write-ToLog -Message:('jumpcloud autobind step succeeded for user ' + $JumpCloudUserName) -Level Verbose
+                    Write-ToLog -Message:('JumpCloud automatic bind step succeeded for user ' + $JumpCloudUserName) -Level Verbose
                     $admuTracker.autoBind.pass = $true
                 } else {
-                    Write-ToLog -Message:('jumpcloud autobind step failed, apikey or jumpcloud username is incorrect.') -Level:('Warn')
+                    Write-ToLog -Message:('JumpCloud automatic bind step failed, Api Key or JumpCloud username is incorrect.') -Level:('Warn')
                     # $admuTracker.autoBind.fail = $true
                 }
             }
             if ($systemContextBinding -eq $true) {
-                Write-ToLog -Message:("Attempting to associate system to userID: $JumpCloudUserID with SystemContext API") -Level Verbose
-                Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $JumpCloudUserID -admin $BindAsAdmin
+                Write-ToLog -Message:("Attempting to associate system to userID: $script:JumpCloudUserID with SystemContext API") -Level Verbose
+                Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $script:JumpCloudUserID -admin $BindAsAdmin
             }
             #endregion AutoBindUserToJCSystem
 
@@ -1163,20 +1163,20 @@ Function Start-Migration {
                             Write-ToLog -Message:("LocalDomainStatus Join: $LocalDomainStatus") -Level:('Info')
                             # Leave the domain for AD and LocalAD
 
-                            # for the Azure AD unjoin
+                            # for the Azure AD un-join
                             try {
-                                dsregcmd.exe /leave # Leave Azure AD
+                                DSRegCmd.exe /leave # Leave Azure AD
                                 $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
-                                Write-ToLog -Message:("After running dsregcmd /leave, the system is joined to the following domains:") -Level:('Info')
+                                Write-ToLog -Message:("After running DSRegCmd /leave, the system is joined to the following domains:") -Level:('Info')
                                 Write-ToLog -Message:("AzureADStatus Join: $AzureADStatus") -Level:('Info')
                                 Write-ToLog -Message:("LocalDomainStatus Join: $LocalDomainStatus") -Level:('Info')
                             } catch {
                                 $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
-                                Write-ToLog -Message:("After attempting to run dsregcmd /leave, the system is joined to the following domains:") -Level:('Info')
+                                Write-ToLog -Message:("After attempting to run DSRegCmd /leave, the system is joined to the following domains:") -Level:('Info')
                                 Write-ToLog -Message:("AzureADStatus: $AzureADStatus") -Level:('Info')
                             }
 
-                            # for the local domain unjoin
+                            # for the local domain un-join
                             try {
                                 $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
                                 $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
@@ -1211,16 +1211,16 @@ Function Start-Migration {
                             }
                         }
                         "AzureADJoined" {
-                            dsregcmd.exe /leave # Leave Azure AD
-                            # Get Azure AD Status after running dsregcmd.exe /leave
+                            DSRegCmd.exe /leave # Leave Azure AD
+                            # Get Azure AD Status after running DSRegCmd.exe /leave
                             $AzureADStatus = Get-DomainStatus
-                            # Check Azure AD status after running dsregcmd.exe /leave as NTAUTHORITY\SYSTEM
+                            # Check Azure AD status after running DSRegCmd.exe /leave as NTAUTHORITY\SYSTEM
                             if ($AzureADStatus -match 'NO') {
-                                Write-toLog -message "Left Azure AD domain successfully. Device Domain State, AzureADJoined : $AzureADStatus"
+                                Write-ToLog -message "Left Azure AD domain successfully. Device Domain State, AzureADJoined : $AzureADStatus"
                                 $admuTracker.leaveDomain.pass = $true
                             } else {
-                                Write-ToLog -Message:('Unable to leave Azure Domain. Re-running dsregcmd.exe /leave') -Level:('Warn')
-                                dsregcmd.exe /leave # Leave Azure AD
+                                Write-ToLog -Message:('Unable to leave Azure Domain. Re-running DSRegCmd.exe /leave') -Level:('Warn')
+                                DSRegCmd.exe /leave # Leave Azure AD
 
                                 $AzureADStatus = Get-DomainStatus
                                 if ($AzureADStatus -match 'NO') {
@@ -1316,12 +1316,12 @@ Function Start-Migration {
         }
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) {
             Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile) -Level Verbose
-            Write-ToProgress -ProgressBar $Progressbar -Status "MigrationComplete" -form $isForm
+            Write-ToProgress -ProgressBar $ProgressBar -Status "MigrationComplete" -form $isForm
         } else {
-            Write-ToLog -Message:("ADMU encoutered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warn
+            Write-ToLog -Message:("ADMU encountered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warn
             Write-ToLog -Message:("The following migration steps were reverted to their original state: $FixedErrors") -Level Warn
             Write-ToLog -Message:('Script finished with errors; Log file location: ' + $jcAdmuLogFile) -Level Warn
-            Write-ToProgress -ProgressBar $Progressbar -Status $Script:ErrorMessage -form $isForm -logLevel "Error"
+            Write-ToProgress -ProgressBar $ProgressBar -Status $Script:ErrorMessage -form $isForm -logLevel "Error"
             Throw "JumpCloud ADMU was unable to migrate $selectedUserName"
         }
     }
