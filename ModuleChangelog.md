@@ -5,13 +5,14 @@ Release Date: July 25, 2025
 #### RELEASE NOTES
 
 ```
-This release addresses an issue when invoking the ADMU from a remote script and resolves an issue when a domain wallpaper was applied as a GPO before migration.
+This release includes several bug fixes for remotely invoking the ADMU, addresses an issue with GPO wallpaper policies and addresses an issue with permissions in sub directories of the AppData folder not being migrated correctly.
 ```
 
 #### BUG FIXES:
 
 - When an invalid API key was used to invoke the ADMU from a remote script, the tool would exit with an error code that was not properly handled and difficult to trace. A change to the remote invoke scripts is included in this release to ensure that the full error message is returned. The Start-Migration script will no longer error in the same way when an invalid API key is used.
 - When a device was migrated that had previously had a domain wallpaper applied, the previous versions of the ADMU would not detect this policy and a user migrated from this state would have a blank wallpaper on first login. This release will remove this wallpaper policy from the newly created user's registry. They will receive the default wallpaper and a new policy will need to be applied if a managed wallpaper is required.
+- Certain hidden directories in the AppData folder were not being migrated correctly. This release addresses this issue and ensures that all sub directories of the AppData folder are migrated with the correct permissions.
 
 ## 2.8.5
 
