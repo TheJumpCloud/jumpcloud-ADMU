@@ -1,4 +1,4 @@
-Describe "Test-UserFolderRedirect Acceptance Tests" -Tag "Acceptance" {
+Describe "Test-UserFolderRedirect and Set-WallpaperPolicy Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
@@ -117,6 +117,52 @@ Describe "Test-UserFolderRedirect Acceptance Tests" -Tag "Acceptance" {
             (Get-ItemProperty -Path $folderpath).Documents | Should -Be "%USERPROFILE%\Documents"
             # Test path
             Test-UserFolderRedirect -UserSid $userSid | Should -Be $false
+        }
+    }
+
+    Context 'Validates Wallpaper Policy Removal' {
+        BeforeAll {
+            if ((Get-psdrive | Select-Object -ExpandProperty Name) -notmatch "HKEY_USERS") {
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+            }
+
+            #$currentSID = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
+            $newUser = "ADMU_User" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $password = '$T#st1234'
+            Initialize-TestUser -UserName $newUser -Password $Password
+
+            $userSid = Test-UsernameOrSID -usernameOrSid $newUser
+            # Load the registry hive for the user and add _admu after the sid
+            REG LOAD HKU\$($userSid)_admu "C:\Users\$newUser\NTUSER.DAT" *>&1
+            # This context reuses the $userSid and loaded hive from the previous context.
+            $policyPath = "HKEY_USERS:\$($userSid)_admu\Software\Microsoft\Windows\CurrentVersion\Policies\System"
+            # Ensure the parent key exists for testing.
+            if (-not (Test-Path $policyPath)) {
+                New-Item -Path $policyPath -Force | Out-Null
+            }
+        }
+
+        It 'Should remove wallpaper policy' {
+            # Set a network wallpaper policy
+            Set-ItemProperty -Path $policyPath -Name "Wallpaper" -Value "\\Server\Share\wallpaper.jpg"
+            Set-ItemProperty -Path $policyPath -Name "WallpaperStyle" -Value "2"
+
+            # Run the function to test removal
+            Set-WallpaperPolicy -UserSid $userSid
+
+            # Verify the properties are removed
+            $wallpaperProp = Get-ItemProperty -Path $policyPath -Name "Wallpaper" -ErrorAction SilentlyContinue
+            $wallpaperStyleProp = Get-ItemProperty -Path $policyPath -Name "WallpaperStyle" -ErrorAction SilentlyContinue
+            $wallpaperStyleProp | Should -BeNull
+            $wallpaperProp | Should -BeNull
+        }
+
+        It 'Should run without error when no policy is set' {
+            # Ensure no policies are set before the test
+            Remove-ItemProperty -Path $policyPath -Name "Wallpaper", "WallpaperStyle" -ErrorAction SilentlyContinue
+
+            # The function should execute without throwing an error
+            { Set-WallpaperPolicy -UserSid $userSid } | Should -Not -Throw
         }
     }
 }
