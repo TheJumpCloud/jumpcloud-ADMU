@@ -1,4 +1,4 @@
-function Test-WallpaperPolicy {
+function Set-WallpaperPolicy {
     [CmdletBinding()] # Enables common parameters like -Verbose
     param (
         [Parameter(Mandatory = $true)]

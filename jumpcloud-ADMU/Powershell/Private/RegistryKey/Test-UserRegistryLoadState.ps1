@@ -41,7 +41,7 @@ Function Test-UserRegistryLoadState {
             Write-ToLog "Skipping User Shell Folder Validation..."
         }
         # Validate the wallpaper policy
-        Test-WallpaperPolicy -UserSid $UserSid
+        Set-WallpaperPolicy -UserSid $UserSid
         ##### End of Validations #####
         try {
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
