@@ -993,7 +993,7 @@ Function Start-Migration {
             #TODO: reverse track this if we fail later
             # Set the owner permission for the user profile path subdirectories
 
-            Write-ToLog "Attempting to set owner to $($newOwnerDisplayName) ($NewUserSID) for path: $newUserProfileImagePath"
+            Write-ToLog "Attempting to set owner to NTFS Permissions from: ($NewUserSID) to: $SelectedUserSID for path: $newUserProfileImagePath"
             Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath
 
             # Validate if .DAT has correct permissions
