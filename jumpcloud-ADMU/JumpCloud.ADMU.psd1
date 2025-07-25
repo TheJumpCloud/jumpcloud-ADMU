@@ -12,13 +12,13 @@
 RootModule = 'JumpCloud.ADMU.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.8.6'
+ModuleVersion = '2.8.7'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
 
 # ID used to uniquely identify this module
-GUID = '6e1deadb-81c0-49d2-b9f8-4dbc300de451'
+GUID = '901d14d5-73c2-4c29-9ca6-2d752a3cd61c'
 
 # Author of this module
 Author = 'JumpCloud Customer Tools Team'
