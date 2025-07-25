@@ -996,7 +996,6 @@ Function Start-Migration {
             Write-ToLog "Attempting to set owner to $($newOwnerDisplayName) ($NewUserSID) for path: $newUserProfileImagePath"
             Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath
 
-
             # Validate if .DAT has correct permissions
             $validateNTUserDatPermissions, $validateNTUserDatPermissionsResults = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'
 

@@ -16,13 +16,18 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $currentPath = Split-Path $currentPath -Parent
         }
         . "$helpFunctionDir\$fileName"
+        $testUsername = "regTest"
+        Initialize-TestUser -Username $testUsername -password "Temp123!Temp123!"
+        $userSid = Test-UsernameOrSID -usernameOrSid $testUsername
+
     }
     Context "Permission tests" {
         BeforeEach {
-            $testDir = Join-Path $env:TEMP "SetRegPermissionTest"
+            $testDir = Join-Path $HOME "SetRegPermissionTest"
             $sourceUser = [System.Security.Principal.WindowsIdentity]::GetCurrent()
             $sourceSID = $sourceUser.User.Value
-            $targetSID = "S-1-5-32-544" # Administrators group SID for testing
+
+            $targetSID = $userSid
             # Create test directory and files
             if (Test-Path $testDir) { Remove-Item $testDir -Recurse -Force }
             New-Item -ItemType Directory -Path $testDir | Out-Null
@@ -35,7 +40,31 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             if (Test-Path $testDir) { Remove-Item $testDir -Recurse -Force }
         }
 
-        It "Should transfer ownership from SourceSID to TargetSID for all files and directories" {
+        It "Should transfer ownership from SourceSID to TargetSID for all files and directories when the SourceSID is the owner of the files and directories" {
+            # first set the ownership to SourceID
+            $items = Get-ChildItem -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
+            # Create SecurityIdentifier objects
+            $SourceSIDObj = New-Object System.Security.Principal.SecurityIdentifier($SourceSID)
+            $TargetSIDObj = New-Object System.Security.Principal.SecurityIdentifier($TargetSID)
+
+            # Get NTAccount names for logging and ACLs
+            $SourceAccount = $SourceSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+            $TargetAccount = $TargetSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+            foreach ($item in $items) {
+
+                $acl = Get-Acl -Path $item.FullName
+                # Change owner if SourceSID is current owner
+                if (($acl.Owner -ne $SourceAccount)) {
+                    $acl.SetOwner($SourceSIDObj)
+                    try {
+                        Write-Warning "setting item"
+                        Set-Acl -Path $item.FullName -AclObject $acl
+                    } catch {
+                        Write-Warning "ahhh"
+                    }
+                }
+            }
+            # then attempt to update the ownership
             Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir
 
             $items = Get-ChildItem -Path $testDir -Recurse -Force
@@ -52,7 +81,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
                 $sourceUser.Name,
                 "FullControl",
-                [System.Security.AccessControl.InheritanceFlags]::ContainerInherit,
+                [System.Security.AccessControl.InheritanceFlags]::None,
                 [System.Security.AccessControl.PropagationFlags]::None,
                 [System.Security.AccessControl.AccessControlType]::Allow
             )

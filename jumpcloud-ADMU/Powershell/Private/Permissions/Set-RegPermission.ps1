@@ -18,18 +18,16 @@ function Set-RegPermission {
 
     # Get all files and folders recursively, including hidden/system
     $items = Get-ChildItem -Path $FilePath -Recurse -Force -ErrorAction SilentlyContinue
-
     foreach ($item in $items) {
         try {
             $acl = Get-Acl -Path $item.FullName
 
             if ($null -eq $acl) {
-                # Skip logging if ACL object is null
                 continue
             }
 
             # Change owner if SourceSID is current owner
-            if ($acl.Owner -eq $SourceAccount) {
+            if (($acl.Owner -ne $TargetAccount) -and ($acl.Owner -eq $SourceAccount)) {
                 $acl.SetOwner($TargetSIDObj)
                 Set-Acl -Path $item.FullName -AclObject $acl
             }
@@ -51,7 +49,9 @@ function Set-RegPermission {
 
             Set-Acl -Path $item.FullName -AclObject $acl
         } catch {
-            Write-ToLog "Failed to update $($item.FullName): $($_.Exception.Message)"
+            if ($_.Exception.Message -notmatch "because it is null") {
+                Write-ToLog "Failed to update $($item.FullName): $($_.Exception.Message)"
+            }
         }
     }
 }
