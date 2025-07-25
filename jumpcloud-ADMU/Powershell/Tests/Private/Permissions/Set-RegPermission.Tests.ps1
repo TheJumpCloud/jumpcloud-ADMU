@@ -1,4 +1,4 @@
-Describe "Close-ProcessByOwner Acceptance Tests" -Tag "Acceptance" {
+Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
@@ -50,7 +50,11 @@ Describe "Close-ProcessByOwner Acceptance Tests" -Tag "Acceptance" {
             $filePath = Join-Path $testDir "testfile.txt"
             $acl = Get-Acl $filePath
             $rule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                $sourceUser.Name, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
+                $sourceUser.Name,
+                "FullControl",
+                [System.Security.AccessControl.InheritanceFlags]::ContainerInherit,
+                [System.Security.AccessControl.PropagationFlags]::None,
+                [System.Security.AccessControl.AccessControlType]::Allow
             )
             $acl.AddAccessRule($rule)
             Set-Acl -Path $filePath -AclObject $acl
