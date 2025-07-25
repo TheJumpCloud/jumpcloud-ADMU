@@ -958,7 +958,6 @@ Function Start-Migration {
                 $admuTracker.renameHomeDirectory.pass = $true
                 # TODO: reverse track this if we fail later
             } else {
-
                 Write-ToLog -Message:("Parameter to Update Home Path was not set.")
                 Write-ToLog -Message:("The $JumpCloudUserName account will point to $oldUserProfileImagePath profile path")
                 $datPath = $oldUserProfileImagePath
@@ -993,30 +992,10 @@ Function Start-Migration {
             $Acl | Set-Acl -Path $newUserProfileImagePath
             #TODO: reverse track this if we fail later
             # Set the owner permission for the user profile path subdirectories
-            try {
-                # Create a SecurityIdentifier object from the SID string
-                $newOwnerSIDObject = New-Object System.Security.Principal.SecurityIdentifier($NewUserSID)
 
-                $newOwnerDisplayName = $newOwnerSIDObject.Translate([System.Security.Principal.NTAccount]).Value
+            Write-ToLog "Attempting to set owner to $($newOwnerDisplayName) ($NewUserSID) for path: $newUserProfileImagePath"
+            Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath
 
-                Write-ToLog "Attempting to set owner to $($newOwnerDisplayName) ($NewUserSID) for path: $newUserProfileImagePath"
-
-                # Get-ChildItem -Path $newUserProfileImagePath -Recurse -Force (Explanation below)
-                Get-ChildItem -Path $newUserProfileImagePath -Recurse | ForEach-Object {
-                    try {
-                        $acl = Get-Acl -Path $_.FullName
-                        $acl.SetOwner($newOwnerSIDObject) # Set the owner using the SecurityIdentifier object
-                        Set-Acl -Path $_.FullName -AclObject $acl
-                        # Write-Host "Successfully set owner for $($_.FullName)" # Uncomment for verbose logging
-                        Write-ToLog "Owner set successfully for $($newUserProfileImagePath) and its contents."
-                    } catch {
-                        Write-ToLog "Failed to set owner for $($_.FullName): $($_.Exception.Message)" -level "Warn"
-                    }
-                }
-            } catch {
-                Write-ToLog "An error occurred: $($_.Exception.Message)" -level "Warn"
-                Write-ToLog "Failed to set new owner $($NewUserSID) for $($newUserProfileImagePath) subdirectories" -level "Warn"
-            }
 
             # Validate if .DAT has correct permissions
             $validateNTUserDatPermissions, $validateNTUserDatPermissionsResults = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'
