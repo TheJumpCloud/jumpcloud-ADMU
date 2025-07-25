@@ -1,4 +1,4 @@
-Describe "Test-UserFolderRedirect and Test-WallpaperPolicy Acceptance Tests" -Tag "Acceptance" {
+Describe "Test-UserFolderRedirect and Set-WallpaperPolicy Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
@@ -148,7 +148,7 @@ Describe "Test-UserFolderRedirect and Test-WallpaperPolicy Acceptance Tests" -Ta
             Set-ItemProperty -Path $policyPath -Name "WallpaperStyle" -Value "2"
 
             # Run the function to test removal
-            Test-WallpaperPolicy -UserSid $userSid
+            Set-WallpaperPolicy -UserSid $userSid
 
             # Verify the properties are removed
             $wallpaperProp = Get-ItemProperty -Path $policyPath -Name "Wallpaper" -ErrorAction SilentlyContinue
@@ -162,7 +162,7 @@ Describe "Test-UserFolderRedirect and Test-WallpaperPolicy Acceptance Tests" -Ta
             Remove-ItemProperty -Path $policyPath -Name "Wallpaper", "WallpaperStyle" -ErrorAction SilentlyContinue
 
             # The function should execute without throwing an error
-            { Test-WallpaperPolicy -UserSid $userSid } | Should -Not -Throw
+            { Set-WallpaperPolicy -UserSid $userSid } | Should -Not -Throw
         }
     }
 }
