@@ -56,12 +56,8 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
                 # Change owner if SourceSID is current owner
                 if (($acl.Owner -ne $SourceAccount)) {
                     $acl.SetOwner($SourceSIDObj)
-                    try {
-                        Write-Warning "setting item"
-                        Set-Acl -Path $item.FullName -AclObject $acl
-                    } catch {
-                        Write-Warning "ahhh"
-                    }
+                    Set-Acl -Path $item.FullName -AclObject $acl
+
                 }
             }
             # then attempt to update the ownership
