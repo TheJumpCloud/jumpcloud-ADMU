@@ -23,8 +23,8 @@ $ForceReboot = $true
 $UpdateHomePath = $false
 $AutoBindJCUser = $true
 $BindAsAdmin = $false # Bind user as admin (default False)
-$JumpCloudAPIKey = '' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
-$JumpCloudOrgID = '' # This field is required if you use a MTP API Key
+$JumpCloudAPIKey = '#' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
+$JumpCloudOrgID = '#' # This field is required if you use a MTP API Key
 $SetDefaultWindowsUser = $true # Set the default last logged on windows user to the JumpCloud user (default True)
 
 # Option to shutdown or restart
@@ -37,7 +37,7 @@ $postMigrationBehavior = 'Restart' # Restart or Shutdown
 $removeMDM = $false # Remove the existing MDM (default false)
 
 # option to bind using the systemContext API
-$systemContextBinding = $false # Bind using the systemContext API (default False)
+$systemContextBinding = $true # Bind using the systemContext API (default False)
 # If you want to bind using the systemContext API, set the systemContextBinding to true
 # The systemContextBinding option is only available for devices that have enrolled a device using a JumpCloud Administrators Connect Key
 # for more information, see the JumpCloud documentation: https://docs.jumpcloud.com/api/2.0/index.html#section/System-Context
@@ -181,7 +181,14 @@ $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
 write-host "[status] Computer Name: $($computerName)"
 write-host "[status] Serial Number: $($serialNumber)"
 # Find user to be migrated
+$rowNum = 0
 foreach ($row in $ImportedCSV) {
+    $rowNum++
+    # Validate if JumpCloudSystemID is not null or empty
+    if ([string]::IsNullOrEmpty($row.JumpCloudSystemID)) {
+        Write-Host "[status] JumpCloudSystemID is null or empty for row number $($rowNum), exiting..."
+        exit 1
+    }
     if (($row.LocalComputerName -eq ($computerName)) -AND ($row.SerialNumber -eq $serialNumber) -AND ($row.JumpCloudUserName -ne '')) {
         Write-Host "[status] AD user path $($row.LocalPath) | Converting to JumpCloud User $($row.JumpCloudUserName)"
         $UsersToMigrate += [PSCustomObject]@{
@@ -192,27 +199,75 @@ foreach ($row in $ImportedCSV) {
         }
     }
 }
-
+#### CSV Validation ####
 # if the $UsersToMigrate is empty, exit
 If ($UsersToMigrate.Count -eq 0) {
     Write-Host "[status] No users to migrate, exiting..."
     exit 1
 }
 
-# validate users to be migrated
-foreach ($user in $UsersToMigrate) {
-    # Validate parameter are not empty:
-    If ([string]::IsNullOrEmpty($user.JumpCloudUserName)) {
-        Write-Error "[status] Could not migrate user, entry not found in CSV for JumpCloud Username: $($user.selectedUsername)"
-        exit 1
-    }
-    If (($systemContextBinding -eq $true) -And ([string]::IsNullOrEmpty($user.JumpCloudUserID))) {
-        Write-Error "[status] Could not migrate user, entry not found in CSV for JumpCloud UserID: $($user.selectedUsername); this field is required for systemContextBinding"
-        exit 1
+
+# Define the list of column headers that should not be empty.
+# These must exactly match the headers in your $UsersToMigrate objects.
+$requiredColumns = @(
+    "JumpCloudUserName",
+    "JumpCloudUserID"
+)
+# A flag to track if any validation errors were found.
+$validationFailed = $false
+$rowNumber = 0 # Start at 0 to account for the header row.
+
+# Loop through each row in the CSV file to validate it.
+foreach ($row in $UsersToMigrate) {
+    # validate users to be migrated
+    # # Validate parameter are not empty:
+    # If ([string]::IsNullOrEmpty($user.JumpCloudUserName)) {
+    #     Write-Error "[status] Could not migrate user, entry not found in CSV for JumpCloud Username: $($user.selectedUsername)"
+    #     exit 1
+    # }
+    # If (($systemContextBinding -eq $true) -And ([string]::IsNullOrEmpty($user.JumpCloudUserID))) {
+    #     Write-Error "[status] Could not migrate user, entry not found in CSV for JumpCloud UserID: $($user.selectedUsername); this field is required for systemContextBinding"
+    #     exit 1
+    # }
+    $rowNumber++ # Increment row number for accurate error reporting.
+
+    # Loop through each of the required column names.
+    foreach ($columnName in $requiredColumns) {
+        # Check if the column exists in the CSV.
+        if ($row.PSObject.Properties.Name -contains $columnName) {
+            # Get the value from the current row's column.
+            $value = $row.$columnName
+            # If SystemContextBinding is true, we need to check for JumpCloudUserID
+            if ($systemContextBinding -eq $true -and $columnName -eq "JumpCloudUserID") {
+                # If the systemContextBinding is true, we need to check for
+                # JumpCloudUserID, which should not be null or empty.
+                if ([string]::IsNullOrWhiteSpace($value)) {
+                    Write-Warning "Validation FAILED on Row $rowNumber : Column '$columnName' is empty, but it is required when systemContextBinding is true."
+                    $validationFailed = $true
+                }
+                continue # Skip further checks for this column if binding is true.
+            }
+            # Check if the value is null, empty, or consists only of white-space characters.
+            if ([string]::IsNullOrWhiteSpace($value)) {
+                Write-Warning "Validation FAILED on Row $rowNumber : Column '$columnName' is empty."
+                $validationFailed = $true
+            }
+        } else {
+            Write-Warning "Validation FAILED: Column '$columnName' does not exist in the CSV file."
+            $validationFailed = $true
+            # Break the inner loop since the column is missing for all subsequent rows.
+            break
+        }
     }
 }
+# If validation failed, print a summary and stop the script.
+if ($validationFailed) {
+    Write-Host "`nValidation complete. Issues were found. Please review the warnings above. Halting script."
+    exit 1
+}
 
-#endregion dataImport
+Write-Host "`nValidation successful. Proceeding with user migration..."
+#### End CSV Validation ####
 
 #region installADMU and required modules
 # Install the latest ADMU from PSGallery
@@ -326,60 +381,78 @@ if ($UsersToMigrate) {
 # Get the last user in the migration list
 $lastUser = $($UsersToMigrate | Select-Object -Last 1)
 
-# migrate each user
-foreach ($user in $UsersToMigrate) {
-    # Check if the user is the last user in the list
-    $isLastUser = ($user -eq $lastUser)
-    # the domain should only be left for the last user or the only user if there is only one
-    $leaveDomainParam = if ($isLastUser -and $LeaveDomainAfterMigration) { $true } else { $false }
-    # Create a hashtable for the migration parameters
-    $migrationParams = @{
-        JumpCloudUserName     = $user.JumpCloudUserName
-        SelectedUserName      = $user.selectedUsername
-        TempPassword          = $TempPassword
-        UpdateHomePath        = $UpdateHomePath
-        AutoBindJCUser        = $AutoBindJCUser
-        JumpCloudAPIKey       = $JumpCloudAPIKey
-        BindAsAdmin           = $BindAsAdmin
-        SetDefaultWindowsUser = $SetDefaultWindowsUser
-        LeaveDomain           = $leaveDomainParam
-        adminDebug            = $true
-    }
-    # Add JumpCloudOrgID if it's not null or empty
-    # This is required if you are using a MTP API Key
-    If ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
-        $migrationParams.Remove('JumpCloudOrgID')
-    } else {
-        $migrationParams.Add('JumpCloudOrgID', $JumpCloudOrgID)
-    }
-    # if the systemContextAPI has been validated, remove the binding parameters from the $migrationParams
-    If ($systemContextBinding -eq $true) {
-        # remove the binding parameters from the $migrationParams
-        $migrationParams.Remove('AutoBindJCUser')
-        $migrationParams.Remove('JumpCloudAPIKey')
-        $migrationParams.Remove('JumpCloudOrgID')
-        # add the systemContextAPI parameters to the $migrationParams
-        $migrationParams.Add('systemContextBinding', $true)
-        $migrationParams.Add('JumpCloudUserID', $user.JumpCloudUserID)
-    }
-    # Start the migration
-    Write-Host "[status] Begin Migration for JumpCloudUser: $($user.JumpCloudUserName)"
+Write-Host "Starting validation for file: $CsvPath" -ForegroundColor Green
+try {
 
-    try {
+    # --- START OF MIGRATION LOGIC ---
+
+    # Get the last user from the list to handle the LeaveDomain parameter correctly.
+    $lastUser = $UsersToMigrate | Select-Object -Last 1
+
+    # Loop through each user from the validated CSV and perform the migration.
+    foreach ($user in $UsersToMigrate) {
+        # Check if the user is the last user in the list
+        $isLastUser = ($user -eq $lastUser)
+        # The domain should only be left for the last user or the only user if there is only one
+        $leaveDomainParam = if ($isLastUser -and $LeaveDomainAfterMigration) { $true } else { $false }
+
+        # Create a hashtable for the migration parameters.
+        # NOTE: This assumes the CSV column 'LocalUsername' corresponds to the needed 'SelectedUserName'.
+        $migrationParams = @{
+            JumpCloudUserName     = $user.JumpCloudUserName
+            SelectedUserName      = $user.LocalUsername
+            TempPassword          = $TempPassword
+            UpdateHomePath        = $UpdateHomePath
+            AutoBindJCUser        = $AutoBindJCUser
+            JumpCloudAPIKey       = $JumpCloudAPIKey
+            BindAsAdmin           = $BindAsAdmin
+            SetDefaultWindowsUser = $SetDefaultWindowsUser
+            LeaveDomain           = $leaveDomainParam
+            adminDebug            = $true
+        }
+
+        # Add JumpCloudOrgID if it's not null or empty
+        # This is required if you are using a MTP API Key
+        If ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
+            $migrationParams.Remove('JumpCloudOrgID')
+        } else {
+            $migrationParams.Add('JumpCloudOrgID', $JumpCloudOrgID)
+        }
+
+        # if the systemContextAPI has been validated, remove the binding parameters from the $migrationParams
+        If ($systemContextBinding -eq $true) {
+            # remove the binding parameters from the $migrationParams
+            $migrationParams.Remove('AutoBindJCUser')
+            $migrationParams.Remove('JumpCloudAPIKey')
+            $migrationParams.Remove('JumpCloudOrgID')
+            # add the systemContextAPI parameters to the $migrationParams
+            $migrationParams.Add('systemContextBinding', $true)
+            $migrationParams.Add('JumpCloudUserID', $user.JumpCloudUserID)
+        }
+
         # Start the migration
-        Start-Migration @migrationParams
-        Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)"
-        #region post-migration
-        # Add any addition code here to modify the user post-migration
-        # The migrated user home directory should be set to the $user.userPath variable
-        #endregion post-migration
-    } catch {
-        Write-Host "[status] Migration failed for user: $($user.JumpCloudUserName), exiting..."
-        Write-Host "[status] Error: $($_.Exception.Message)"
-        Write-Host "[status] Full Exception: $($_ | Format-List * | Out-String)"
-        Write-host "[status] StackTrace: $($_.ScriptStackTrace)"
-        exit 1
+        Write-Host "[status] Begin Migration for JumpCloudUser: $($user.JumpCloudUserName)"
+
+        try {
+            # Start the migration. Ensure the 'Start-Migration' function is available.
+            Start-Migration @migrationParams
+            Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)" -ForegroundColor Green
+            #region post-migration
+            # Add any addition code here to modify the user post-migration
+            # The migrated user home directory should be set to the $user.userPath variable
+            #endregion post-migration
+        } catch {
+            Write-Host "[status] Migration failed for user: $($user.JumpCloudUserName), exiting..." -ForegroundColor Red
+            Write-Host "[status] Error: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "[status] Full Exception: $($_ | Format-List * | Out-String)"
+            Write-host "[status] StackTrace: $($_.ScriptStackTrace)"
+            exit 1
+        }
     }
+
+    Write-Host "`nAll user migrations have been processed." -ForegroundColor Cyan
+} catch {
+    Write-Error "An unexpected error occurred: $_"
 }
 #endregion migration
 
