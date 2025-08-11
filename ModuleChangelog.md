@@ -1,6 +1,22 @@
+## 2.8.8
+
+Release Date: August 11, 2025
+
+#### RELEASE NOTES
+
+```
+* Added informational log messages for the bulk ADMU script
+```
+
+
+#### IMPROVEMENTS:
+
+* Added CI tests for bulk ADMU
+
+
 ## 2.8.7
 
-Release Date: July 25, 2025
+Release Date: August 11, 2025
 
 #### RELEASE NOTES
 

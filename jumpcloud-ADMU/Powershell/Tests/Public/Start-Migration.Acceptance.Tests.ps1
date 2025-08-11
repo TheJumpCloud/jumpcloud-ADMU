@@ -483,6 +483,26 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
                 }
+                It "After successful migration, the log should have the success message" {
+                    # set the $testCaseInput
+                    # Write-ToLog -Message:('ADMU Migration completed successfully for user: ' + $SelectedUserSid)
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutoBindJCUser = $true
+                    # for this test, associate the user as an Admin
+                    $testCaseInput.BindAsAdmin = $true
+                    # Migrate the initialized user to the second username
+                    { Start-Migration @testCaseInput } | Should -Not -Throw
+                    # Get the SID of the generated user $userToMigrateFrom
+                    $userObject = New-Object System.Security.Principal.NTAccount($userToMigrateFrom)
+                    $userSID = $userObject.Translate([System.Security.Principal.SecurityIdentifier]).Value
+                    # Get the log from C:\Windows\Temp\jcadmu.log
+                    $logPath = "C:\Windows\Temp\jcadmu.log"
+                    Get-Content -Path $logPath | Should -Contain "ADMU Migration completed successfully for user: $($userSID)"
+
+                }
                 # remove the users
                 AfterEach {
                     Remove-JcSdkUser -Id $GeneratedUser.Id

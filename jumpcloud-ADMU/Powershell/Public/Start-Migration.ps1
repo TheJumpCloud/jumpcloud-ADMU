@@ -1294,6 +1294,7 @@ Function Start-Migration {
         }
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) {
             Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile) -Level Verbose
+            Write-ToLog -Message:('ADMU Migration completed successfully for user: ' + $SelectedUserSid)
             Write-ToProgress -ProgressBar $ProgressBar -Status "MigrationComplete" -form $isForm
         } else {
             Write-ToLog -Message:("ADMU encountered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warn

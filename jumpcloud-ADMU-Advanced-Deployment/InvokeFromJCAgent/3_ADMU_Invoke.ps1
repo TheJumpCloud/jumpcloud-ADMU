@@ -7,7 +7,6 @@
 
 # CSV or Github input
 $dataSource = 'csv' # csv or github
-
 # CSV variables only required if the dataSource is set to 'csv' this is the name of the CSV uploaded to the JumpCloud command
 $csvName = 'jcdiscovery.csv'
 
@@ -23,8 +22,8 @@ $ForceReboot = $true
 $UpdateHomePath = $false
 $AutoBindJCUser = $true
 $BindAsAdmin = $false # Bind user as admin (default False)
-$JumpCloudAPIKey = '#' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
-$JumpCloudOrgID = '#' # This field is required if you use a MTP API Key
+$JumpCloudAPIKey = 'YOURAPIKEY' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
+$JumpCloudOrgID = 'YOURORGID' # This field is required if you use a MTP API Key
 $SetDefaultWindowsUser = $true # Set the default last logged on windows user to the JumpCloud user (default True)
 
 # Option to shutdown or restart
@@ -167,9 +166,31 @@ try {
         Write-Host "[error] CSV file does not contain the required headers, exiting..."
         exit 1
     }
+
+    # --- ADDED VALIDATION ---
+    # Group the CSV data by computer name to check each device individually
+    $groupedByDevice = $ImportedCSV | Group-Object -Property 'LocalComputerName'
+
+    # Iterate over each group (each device)
+    foreach ($device in $groupedByDevice) {
+        # Within each device group, group by SID to find duplicates
+        $duplicateSids = $device.Group | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
+        Write-Host "[status] Found $($duplicateSids.Count) duplicate SIDs for device '$($device.Name)'."
+        # If any SID group has a count > 1, a duplicate exists for this device
+        if ($duplicateSids) {
+            # Get the first duplicate SID found for a clean error message
+            $firstDuplicate = $duplicateSids[0].Name
+            $computerName = $device.Name
+            Write-Host "[error] Duplicate SID '$firstDuplicate' found for LocalComputerName '$computerName'. SIDs must be unique per device."
+
+            # Throw a terminating error with a descriptive message
+            throw "VALIDATION FAILED: Duplicate SID found for LocalComputerName '$computerName'. SIDs must be unique per device. Halting script."
+        }
+    }
+    Write-Host "[status] SID uniqueness per device validated successfully."
 } catch {
     Write-Host "[error] Error importing CSV file, exiting..."
-    exit 1
+    throw "Error importing CSV file, $($_.Exception.Message)"
 }
 
 # define list of user we want to migrate
@@ -180,15 +201,29 @@ $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
 
 write-host "[status] Computer Name: $($computerName)"
 write-host "[status] Serial Number: $($serialNumber)"
-# Find user to be migrated
+# Find user to be migrated based on the CSV
+
 $rowNum = 0
+
+Write-Host "Starting user filtering and validation process..."
+
+# Loop through the source data one time.
 foreach ($row in $ImportedCSV) {
     $rowNum++
+    Write-Host "Processing row $rowNum..."
     # Validate if JumpCloudSystemID is not null or empty
-    if ([string]::IsNullOrEmpty($row.JumpCloudSystemID)) {
-        Write-Host "[status] JumpCloudSystemID is null or empty for row number $($rowNum), exiting..."
-        exit 1
+    if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
+        throw "VALIDATION FAILED on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
     }
+    # Define the fields that cannot be empty
+    $requiredFields = "JumpCloudSystemID", "SerialNumber", "LocalPath", "SID", "JumpCloudUserName", "LocalComputerName", "LocalUsername", "JumpCloudUserID"
+    # Loop through each required field and check it
+    foreach ($field in $requiredFields) {
+        if ([string]::IsNullOrWhiteSpace($row.$field)) {
+            throw "VALIDATION FAILED on row $rowNum : '$field' cannot be empty. Halting script."
+        }
+    }
+
     if (($row.LocalComputerName -eq ($computerName)) -AND ($row.SerialNumber -eq $serialNumber) -AND ($row.JumpCloudUserName -ne '')) {
         Write-Host "[status] AD user path $($row.LocalPath) | Converting to JumpCloud User $($row.JumpCloudUserName)"
         $UsersToMigrate += [PSCustomObject]@{
@@ -199,72 +234,23 @@ foreach ($row in $ImportedCSV) {
         }
     }
 }
-#### CSV Validation ####
-# if the $UsersToMigrate is empty, exit
-If ($UsersToMigrate.Count -eq 0) {
-    Write-Host "[status] No users to migrate, exiting..."
-    exit 1
+
+# --- Final Summary ---
+if ($UsersToMigrate.Count -eq 0) {
+    Write-Warning "Process complete. No users were found that matched the migration criteria."
+} else {
+    Write-Host "`nProcess complete. Successfully prepared $($UsersToMigrate.Count) user(s) for migration."
 }
-
-
-# Define the list of column headers that should not be empty.
-# These must exactly match the headers in your $UsersToMigrate objects.
-$requiredColumns = @(
-    "JumpCloudUserName",
-    "JumpCloudUserID"
-)
-# A flag to track if any validation errors were found.
-$validationFailed = $false
-$rowNumber = 0 # Start at 0 to account for the header row.
-
-# Loop through each row in the CSV file to validate it.
-foreach ($row in $UsersToMigrate) {
-    # validate users to be migrated
-    # # Validate parameter are not empty:
-    # If ([string]::IsNullOrEmpty($user.JumpCloudUserName)) {
-    #     Write-Error "[status] Could not migrate user, entry not found in CSV for JumpCloud Username: $($user.selectedUsername)"
-    #     exit 1
-    # }
-    # If (($systemContextBinding -eq $true) -And ([string]::IsNullOrEmpty($user.JumpCloudUserID))) {
-    #     Write-Error "[status] Could not migrate user, entry not found in CSV for JumpCloud UserID: $($user.selectedUsername); this field is required for systemContextBinding"
-    #     exit 1
-    # }
-    $rowNumber++ # Increment row number for accurate error reporting.
-
-    # Loop through each of the required column names.
-    foreach ($columnName in $requiredColumns) {
-        # Check if the column exists in the CSV.
-        if ($row.PSObject.Properties.Name -contains $columnName) {
-            # Get the value from the current row's column.
-            $value = $row.$columnName
-            # If SystemContextBinding is true, we need to check for JumpCloudUserID
-            if ($systemContextBinding -eq $true -and $columnName -eq "JumpCloudUserID") {
-                # If the systemContextBinding is true, we need to check for
-                # JumpCloudUserID, which should not be null or empty.
-                if ([string]::IsNullOrWhiteSpace($value)) {
-                    Write-Warning "Validation FAILED on Row $rowNumber : Column '$columnName' is empty, but it is required when systemContextBinding is true."
-                    $validationFailed = $true
-                }
-                continue # Skip further checks for this column if binding is true.
-            }
-            # Check if the value is null, empty, or consists only of white-space characters.
-            if ([string]::IsNullOrWhiteSpace($value)) {
-                Write-Warning "Validation FAILED on Row $rowNumber : Column '$columnName' is empty."
-                $validationFailed = $true
-            }
-        } else {
-            Write-Warning "Validation FAILED: Column '$columnName' does not exist in the CSV file."
-            $validationFailed = $true
-            # Break the inner loop since the column is missing for all subsequent rows.
-            break
-        }
+# Add a validation for duplicate SIDs
+$duplicateSIDs = $UsersToMigrate | Group-Object -Property selectedUsername | Where-Object { $_.Count -gt 1 }
+if ($duplicateSIDs) {
+    $duplicateSIDs | ForEach-Object {
+        Write-Host "[error] Duplicate SID found: $($_.Name)"
     }
+    throw "[error] Duplicate SIDs detected. Halting script."
 }
-# If validation failed, print a summary and stop the script.
-if ($validationFailed) {
-    Write-Host "`nValidation complete. Issues were found. Please review the warnings above. Halting script."
-    exit 1
-}
+
+# You can now proceed using the fully validated $UsersToMigrate array.
 
 Write-Host "`nValidation successful. Proceeding with user migration..."
 #### End CSV Validation ####
@@ -272,6 +258,7 @@ Write-Host "`nValidation successful. Proceeding with user migration..."
 #region installADMU and required modules
 # Install the latest ADMU from PSGallery
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
 # install Nuget if required:
 $packageProviders = Get-PackageProvider | Select-Object name
 if (!($packageProviders.name -contains "nuget")) {
@@ -288,6 +275,7 @@ if ("nuget" -in $packageProviders.name) {
     write-host "[status] NuGet Module Not Found"
 }
 
+# Define required modules
 $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
 foreach ($module in $requiredModules) {
     $latestModule = Find-Module -Name $module -ErrorAction SilentlyContinue
@@ -297,6 +285,7 @@ foreach ($module in $requiredModules) {
         try {
             Install-Module $module -Force
         } catch {
+            Write-Host "Please ensure the execution policy is not set to Restricted. You can set it to Bypass by using the command: Set-ExecutionPolicy Bypass -Force or if you have a Group Policy in place, set it to Allow Scripts."
             throw "[error] Failed to install $module module"
         }
     } else {
@@ -308,6 +297,7 @@ foreach ($module in $requiredModules) {
                 Install-Module $module -Force
 
             } catch {
+                Write-Host "Please ensure the execution policy is not set to Restricted. You can set it to Bypass by using the command: Set-ExecutionPolicy Bypass -Force or if you have a Group Policy in place, set it to Allow Scripts."
                 throw "[error] Failed to update $module module, exiting..."
             }
         } else {
@@ -316,12 +306,13 @@ foreach ($module in $requiredModules) {
     }
 }
 
-# check that the module was imported
-Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
+# Now, import the module and verify it loaded correctly.
+Write-Host "[Status] Importing JumpCloud.ADMU module..."
 $module = Import-Module JumpCloud.ADMU -Force -ErrorAction SilentlyContinue
 $module = Get-Module JumpCloud.ADMU
 if ($null -eq $module) {
     Write-Host "[error] Failed to import JumpCloud ADMU module, exiting..."
+    Write-Host "Please ensure the execution policy is not set to Restricted. You can set it to Bypass by using the command: Set-ExecutionPolicy Bypass -Force or if you have a Group Policy in place, set it to Allow Scripts."
     exit 1
 } else {
     Write-Host "[status] JumpCloud ADMU module imported successfully; running version $($module.Version)"
@@ -400,7 +391,7 @@ try {
         # NOTE: This assumes the CSV column 'LocalUsername' corresponds to the needed 'SelectedUserName'.
         $migrationParams = @{
             JumpCloudUserName     = $user.JumpCloudUserName
-            SelectedUserName      = $user.LocalUsername
+            SelectedUserName      = $user.selectedUsername
             TempPassword          = $TempPassword
             UpdateHomePath        = $UpdateHomePath
             AutoBindJCUser        = $AutoBindJCUser
@@ -434,6 +425,32 @@ try {
         Write-Host "[status] Begin Migration for JumpCloudUser: $($user.JumpCloudUserName)"
 
         try {
+            #### Check for previous migration success for the user #####
+            $logPath = "C:\Windows\Temp\jcadmu.log"
+            if (Test-Path -Path $logPath) {
+                $migrationVerified = Select-String -Path $logPath -Pattern "ADMU Migration completed successfully for user: $($migrationParams.SelectedUserName)" -Quiet -ErrorAction SilentlyContinue
+                if ($migrationVerified) {
+                    Write-Host "[WARNING] A previous migration for user $($migrationParams.SelectedUserName) was found in the log. Please verify that the migration was successful."
+                    exit 1
+                } else {
+                    Write-Host "Migration completion log entry for user $($migrationParams.SelectedUserName) not found. Continuing with migration..."
+                }
+            }
+            ### End of previous migration check #####
+
+            $ADStatus = dsregcmd.exe /status
+            foreach ($line in $ADStatus) {
+                if ($line -match "AzureADJoined : ") {
+                    $AzureADStatus = ($line.TrimStart('AzureADJoined : '))
+                }
+                if ($line -match "DomainJoined : ") {
+                    $LocalDomainStatus = ($line.TrimStart('DomainJoined : '))
+                }
+            }
+            # Write output for AzureAD and LocalDomain status
+            Write-Host "[status] AzureADJoined: $AzureADStatus"
+            Write-Host "[status] DomainJoined: $LocalDomainStatus"
+            # --- Script continues execution from this point ---
             # Start the migration. Ensure the 'Start-Migration' function is available.
             Start-Migration @migrationParams
             Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)" -ForegroundColor Green
@@ -455,7 +472,6 @@ try {
     Write-Error "An unexpected error occurred: $_"
 }
 #endregion migration
-
 # Un-manage the device from Intune:
 # Remove the existing MDM
 if ($removeMDM) {
