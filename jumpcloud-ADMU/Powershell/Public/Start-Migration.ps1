@@ -194,7 +194,6 @@ Function Start-Migration {
 
 
         $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
-
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion) -Level Verbose
@@ -383,8 +382,18 @@ Function Start-Migration {
             ### Begin Backup Registry for Selected User ###
             Write-ToLog -Message:('Creating Backup of User Registry Hive')
             # Get Profile Image Path from Registry
-
             $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
+
+            #### Validate if the $oldUserProfileImagePath has .WORKGROUP or .DOMAIN then error
+            $profileFolderName = Split-Path -Path $oldUserProfileImagePath -Leaf
+            Write-ToLog -Message:("Old User Profile Folder Name: $profileFolderName")
+            # Check for .WORKGROUP or a domain suffix (a dot followed by other characters)
+            if ($profileFolderName -match '\.WORKGROUP|\.\w+') {
+                Write-AdmuErrorMessage -ErrorName "user_profile_folder_name_error"
+                $admuTracker.backupOldUserReg.fail = $true
+                break
+            }
+
             #### Begin check for Registry system attribute
             if (Test-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System") {
                 Set-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System" -Operation "Remove"
@@ -1294,7 +1303,6 @@ Function Start-Migration {
         }
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) {
             Write-ToLog -Message:('Script finished successfully; Log file location: ' + $jcAdmuLogFile) -Level Verbose
-            Write-ToLog -Message:('ADMU Migration completed successfully for user: ' + $SelectedUserSid)
             Write-ToProgress -ProgressBar $ProgressBar -Status "MigrationComplete" -form $isForm
         } else {
             Write-ToLog -Message:("ADMU encountered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warn

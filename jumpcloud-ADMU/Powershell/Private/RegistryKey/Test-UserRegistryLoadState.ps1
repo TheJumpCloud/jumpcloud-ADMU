@@ -40,6 +40,15 @@ Function Test-UserRegistryLoadState {
         } else {
             Write-ToLog "Skipping User Shell Folder Validation..."
         }
+        # Check for previousSid from \Software\JCADMU
+        $previousSid = (Get-ItemProperty -Path "HKU:\ReidSullivanUser\Software\JCADMU" -Name "previousSid").previousSid
+        if ($previousSid) {
+            Write-ToLog "Found previous SID: $($previousSid)" -Level Error
+            Write-AdmuErrorMessage -Error:("load_unload_error")
+            Throw "This user has been migrated to JumpCloud previously. Exiting..."
+        } else {
+            Write-ToLog "No previous SID found. Continuing..."
+        }
         # Validate the wallpaper policy
         Set-WallpaperPolicy -UserSid $UserSid
         ##### End of Validations #####

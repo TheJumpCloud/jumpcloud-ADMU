@@ -37,6 +37,16 @@ function Write-AdmuErrorMessage {
             Write-ToLog -Message:("User Folder Redirection Error: One of the user's main folder (Desktop, Downloads, Documents, Favorites, Pictures, Videos, Music) path is redirected. Verify that the user's main folders path are set to default and not redirected to another path (ie. Network Drive). Please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Warn
             $Script:ErrorMessage = "User Folder Redirection Error. Click the link below for troubleshooting information."
         }
+        "user_profile_folder_name_error" {
+            Write-ToLog -Message:("User Profile Folder Name Error: The user profile folder name contains a .WORKGROUP or .domain suffix, which is not allowed. This indicates that the user has been migrated previously.") -Level Warn
+
+            $Script:ErrorMessage = "User Profile Folder Name Error. Click the link below for troubleshooting information."
+        }
+        "user_profile_previous_sid_error" {
+            Write-ToLog -Message:("User Profile Previous SID Error: The user profile for $SelectedUserSID has a PreviousSID key. The user may have been migrated previously.") -Level Warn
+
+            $Script:ErrorMessage = "User Profile Previous SID Error. Click the link below for troubleshooting information."
+        }
         Default {
             Write-ToLog -Message:("Error occurred, please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Warn
 

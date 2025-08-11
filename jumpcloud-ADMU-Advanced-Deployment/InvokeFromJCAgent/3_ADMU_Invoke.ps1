@@ -216,7 +216,7 @@ foreach ($row in $ImportedCSV) {
         throw "VALIDATION FAILED on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
     }
     # Define the fields that cannot be empty
-    $requiredFields = "JumpCloudSystemID", "SerialNumber", "LocalPath", "SID", "JumpCloudUserName", "LocalComputerName", "LocalUsername", "JumpCloudUserID"
+    $requiredFields = "LocalPath", "SID", "JumpCloudUserName"
     # Loop through each required field and check it
     foreach ($field in $requiredFields) {
         if ([string]::IsNullOrWhiteSpace($row.$field)) {
@@ -425,18 +425,6 @@ try {
         Write-Host "[status] Begin Migration for JumpCloudUser: $($user.JumpCloudUserName)"
 
         try {
-            #### Check for previous migration success for the user #####
-            $logPath = "C:\Windows\Temp\jcadmu.log"
-            if (Test-Path -Path $logPath) {
-                $migrationVerified = Select-String -Path $logPath -Pattern "ADMU Migration completed successfully for user: $($migrationParams.SelectedUserName)" -Quiet -ErrorAction SilentlyContinue
-                if ($migrationVerified) {
-                    Write-Host "[WARNING] A previous migration for user $($migrationParams.SelectedUserName) was found in the log. Please verify that the migration was successful."
-                    exit 1
-                } else {
-                    Write-Host "Migration completion log entry for user $($migrationParams.SelectedUserName) not found. Continuing with migration..."
-                }
-            }
-            ### End of previous migration check #####
 
             $ADStatus = dsregcmd.exe /status
             foreach ($line in $ADStatus) {
@@ -448,6 +436,7 @@ try {
                 }
             }
             # Write output for AzureAD and LocalDomain status
+            Write-Host "Domain status before migration:"
             Write-Host "[status] AzureADJoined: $AzureADStatus"
             Write-Host "[status] DomainJoined: $LocalDomainStatus"
             # --- Script continues execution from this point ---
@@ -459,8 +448,8 @@ try {
             # The migrated user home directory should be set to the $user.userPath variable
             #endregion post-migration
         } catch {
-            Write-Host "[status] Migration failed for user: $($user.JumpCloudUserName), exiting..." -ForegroundColor Red
-            Write-Host "[status] Error: $($_.Exception.Message)" -ForegroundColor Red
+            Write-Host "[status] Migration failed for user: $($user.JumpCloudUserName), exiting..."
+            Write-Host "[status] Error: $($_.Exception.Message)"
             Write-Host "[status] Full Exception: $($_ | Format-List * | Out-String)"
             Write-host "[status] StackTrace: $($_.ScriptStackTrace)"
             exit 1
