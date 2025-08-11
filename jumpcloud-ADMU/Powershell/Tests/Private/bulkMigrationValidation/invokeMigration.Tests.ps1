@@ -1,10 +1,4 @@
-# Invoke-ADMU-Migration.Tests.ps1
-# This Pester test suite validates the ADMU bulk migration script.
-# It requires Pester v5+. To run: Invoke-Pester
-
-# Dot-source the script to be tested.
-# Replace '.\ADMU-bulk-migration.ps1' with the name of your script file if it's different.
-Describe "ADMU Bulk Migration Script CI Tests" -Tags 'CI', 'ADMU' {
+Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
     # Validate the JumpCloud Agent is installed
     BeforeAll {

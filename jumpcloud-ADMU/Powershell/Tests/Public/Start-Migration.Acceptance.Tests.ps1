@@ -500,7 +500,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $userSID = $userObject.Translate([System.Security.Principal.SecurityIdentifier]).Value
                     # Get the log from C:\Windows\Temp\jcadmu.log
                     $logPath = "C:\Windows\Temp\jcadmu.log"
-                    Get-Content -Path $logPath | Should -Contain "ADMU Migration completed successfully for user: $($userSID)"
+                    { Get-Content -Path $logPath } | Should -Contain "ADMU Migration completed successfully for user: $($userSID)"
 
                 }
                 # remove the users
