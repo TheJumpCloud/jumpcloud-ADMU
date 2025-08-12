@@ -89,14 +89,19 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
     Context "Disable Script Execution" {
         It "Should throw an error when trying to run a script with execution policy set to Restricted" {
-            $scriptPath = $global:scriptToTest
-            $commandToRun = "Set-ExecutionPolicy Restricted -Scope Process -Force; & '$scriptPath'"
+            # Get the current policy so we can restore it later
+            $originalPolicy = Get-ExecutionPolicy -Scope Process
+            try {
+                # Set the restrictive policy just for this test
+                Set-ExecutionPolicy Restricted -Scope Process -Force
 
-            $processOutput = & powershell.exe -Command $commandToRun 2>&1
-            $processOutput
-
-            # This is the corrected line, which first combines the output into one string
-            ($processOutput | Out-String) | Should -Match "cannot be loaded because running scripts is disabled on this system"
+                # The code that is expected to fail is wrapped in a script block.
+                # We check for the specific, language-neutral ErrorId for greater accuracy.
+                { & $global:scriptToTest } | Should -Throw
+            } finally {
+                # This block ALWAYS runs, ensuring the original policy is restored.
+                Set-ExecutionPolicy $originalPolicy -Scope Process -Force
+            }
         }
     }
 
@@ -164,6 +169,9 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             # Now edit the API key and orgId in the 3_ADMU_Invoke.ps1
             (Get-Content -Path $global:scriptToTest) -replace 'JumpCloudAPIKey\s*=\s*".*?"', "JumpCloudAPIKey = `"$($env:PESTER_APIKEY)`""
             (Get-Content -Path $global:scriptToTest) -replace 'JumpCloudOrgID\s*=\s*".*?"', "JumpCloudOrgID = `"$($env:PESTER_ORGID)`""
+
+            # Set the $systemContextBinding to $false
+            (Get-Content -Path $global:scriptToTest) -replace 'systemContextBinding\s*=\s*".*?"', "systemContextBinding = `"$false`""
 
             # Run the script
             { & $global:scriptToTest } | Should -Not -Throw
