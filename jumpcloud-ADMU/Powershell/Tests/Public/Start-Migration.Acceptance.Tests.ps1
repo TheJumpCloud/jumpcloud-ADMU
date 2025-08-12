@@ -488,9 +488,10 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
 
                     # Now create a CSV to get these values: "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
                     $userObject = New-Object System.Security.Principal.NTAccount($userToMigrateFrom)
-                    $userProfile = Get-CimInstance -ClassName Win32_UserProfile | Where-Object { $_.SID -eq $sid }
+
 
                     $UserSid = $userObject.Translate([System.Security.Principal.SecurityIdentifier]).Value
+                    $userProfile = Get-CimInstance -ClassName Win32_UserProfile | Where-Object { $_.SID -eq $UserSid }
                     $localPath = $userProfile.LocalPath
                     $serialNumber = Get-CimInstance -ClassName Win32_BIOS | Select-Object -ExpandProperty SerialNumber
                     $csvContent = @"

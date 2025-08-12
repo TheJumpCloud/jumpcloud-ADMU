@@ -167,30 +167,31 @@ try {
         exit 1
     }
 
-    # --- ADDED VALIDATION ---
-    # Group the CSV data by computer name to check each device individually
-    $groupedByDevice = $ImportedCSV | Group-Object -Property 'LocalComputerName'
-
-    # Iterate over each group (each device)
-    foreach ($device in $groupedByDevice) {
-        # Within each device group, group by SID to find duplicates
-        $duplicateSids = $device.Group | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
-        Write-Host "[status] Found $($duplicateSids.Count) duplicate SIDs for device '$($device.Name)'."
-        # If any SID group has a count > 1, a duplicate exists for this device
-        if ($duplicateSids) {
-            # Get the first duplicate SID found for a clean error message
-            $firstDuplicate = $duplicateSids[0].Name
-            $computerName = $device.Name
-
-            # Throw a terminating error with a descriptive message
-            throw "[error] Duplicate SID '$firstDuplicate' found for LocalComputerName '$computerName'. SIDs must be unique per device."
-        }
-    }
-    Write-Host "[status] SID uniqueness per device validated successfully."
 } catch {
     Write-Host "[error] Error importing CSV file, exiting..."
     throw "Error importing CSV file, $($_.Exception.Message)"
 }
+
+# --- ADDED VALIDATION ---
+# Group the CSV data by computer name to check each device individually
+$groupedByDevice = $ImportedCSV | Group-Object -Property 'LocalComputerName'
+
+# Iterate over each group (each device)
+foreach ($device in $groupedByDevice) {
+    # Within each device group, group by SID to find duplicates
+    $duplicateSids = $device.Group | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
+    Write-Host "[status] Found $($duplicateSids.Count) duplicate SIDs for device '$($device.Name)'."
+    # If any SID group has a count > 1, a duplicate exists for this device
+    if ($duplicateSids) {
+        # Get the first duplicate SID found for a clean error message
+        $firstDuplicate = $duplicateSids[0].Name
+        $computerName = $device.Name
+
+        # Throw a terminating error with a descriptive message
+        throw "[error] Duplicate SID '$firstDuplicate' found for LocalComputerName '$computerName'. SIDs must be unique per device."
+    }
+}
+Write-Host "[status] SID uniqueness per device validated successfully."
 
 # define list of user we want to migrate
 $UsersToMigrate = @()
