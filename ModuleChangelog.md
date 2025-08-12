@@ -1,6 +1,6 @@
 ## 2.8.8
 
-Release Date: August 11, 2025
+Release Date: August 12, 2025
 
 #### RELEASE NOTES
 
@@ -16,7 +16,7 @@ Release Date: August 11, 2025
 
 ## 2.8.7
 
-Release Date: August 11, 2025
+Release Date: May 29, 2025
 
 #### RELEASE NOTES
 
