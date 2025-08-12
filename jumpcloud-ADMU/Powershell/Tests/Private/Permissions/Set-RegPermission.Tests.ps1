@@ -105,4 +105,67 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $acl.Owner | Should -Be $otherAccount
         }
     }
+    Context "Permission performance metrics" {
+        BeforeEach {
+            # init a user profile for testing:
+            # sample password
+            $tempPassword = "Temp123!"
+            # username to migrate
+            $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # username to migrate to
+            $userOldFunction = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # username to migrate to
+            $userNewFunction = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+
+            # Initialize-TestUser
+            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            Initialize-TestUser -username $userOldFunction -password $tempPassword
+            Initialize-TestUser -username $userNewFunction -password $tempPassword
+
+            #Check SID
+            $UserSID = Get-LocalUser -Name $userToMigrateFrom | Select-Object -ExpandProperty SID
+            $UserSIDOldFunction = Get-LocalUser -Name $userOldFunction | Select-Object -ExpandProperty SID
+            $UserSIDNewFunction = Get-LocalUser -Name $userNewFunction | Select-Object -ExpandProperty SID
+        }
+        It "Should perform faster than the previous set-acl way of doing things" {
+            # get the version of the set-RegPermission v2.8.7 from github:
+            $url = "https://github.com/TheJumpCloud/jumpcloud-ADMU/blob/v2.8.7/jumpcloud-ADMU/Powershell/Private/Permissions/Set-RegPermission.ps1"
+            $setRegPermissionV2 = Invoke-WebRequest -Uri $url -UseBasicParsing
+            $setRegPermissionV2Content = $setRegPermissionV2.Content
+            # replace the function name to Set-RegPermissionOld
+            $setRegPermissionV2Content = $setRegPermissionV2Content -replace "function Set-RegPermission", "function Set-RegPermissionOld"
+            # write
+            $setRegPermissionV2Path = Join-Path $testDir "Set-RegPermission-v2.8.7.ps1"
+            Set-Content -Path $setRegPermissionV2Path -Value $setRegPermissionV2Content -Force
+
+            # import the v2.8.7 version of Set-RegPermission
+            . $setRegPermissionV2Path
+
+            $regPermStopwatchOld = [System.Diagnostics.Stopwatch]::StartNew()
+            $userProfilePath = "C:\Users\$($userToMigrateFrom)"
+            $NewSPN_Name = $env:COMPUTERNAME + '\' + $userOldFunction
+            $Acl = Get-Acl $userProfilePath
+            $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule($NewSPN_Name, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+            $Acl.SetAccessRule($Ar)
+            $Acl | Set-Acl -Path $userProfilePath
+
+            Set-RegPermissionOld -sourceSID $UserSID -targetSID $UserSIDOldFunction -filePath $newUserProfileImagePath
+            $regPermStopwatchOld.Stop()
+
+            # perform the same operation with the new Set-RegPermission
+            # re-import the Set-RegPermission function
+            $regPermStopwatchNew = [System.Diagnostics.Stopwatch]::StartNew()
+            Set-RegPermission -SourceSID $UserSID -TargetSID $UserSIDNewFunction -FilePath $userProfilePath
+            $regPermStopwatchNew.Stop()
+
+            # Compare the times:
+            $oldTime = $regPermStopwatchOld.Elapsed.TotalSeconds
+            $newTime = $regPermStopwatchNew.Elapsed.TotalSeconds
+            Write-Host "Old Set-RegPermission time: $oldTime seconds"
+            Write-Host "New Set-RegPermission time: $newTime seconds"
+            $newTime | Should -BeLessThanOrEqual $oldTime
+
+        }
+
+    }
 }
