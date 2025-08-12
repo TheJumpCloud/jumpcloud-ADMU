@@ -127,19 +127,23 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $UserSIDOldFunction = Get-LocalUser -Name $userOldFunction | Select-Object -ExpandProperty SID
             $UserSIDNewFunction = Get-LocalUser -Name $userNewFunction | Select-Object -ExpandProperty SID
         }
-        It "Should perform faster than the previous set-acl way of doing things" {
+        It "Should perform directory permission clone faster than the pervious version of the Set-RegPermission function" {
             # get the version of the set-RegPermission v2.8.7 from github:
             $url = "https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/refs/heads/v2.8.7/jumpcloud-ADMU/Powershell/Private/Permissions/Set-RegPermission.ps1"
-            $setRegPermissionV2 = Invoke-WebRequest -Uri $url -UseBasicParsing
-            $setRegPermissionV2Content = $setRegPermissionV2.Content
+            $setRegPermissionOld = Invoke-WebRequest -Uri $url -UseBasicParsing
+            $setRegPermissionOldContent = $setRegPermissionOld.Content
             # replace the function name to Set-RegPermissionOld
-            $setRegPermissionV2Content = $setRegPermissionV2Content -replace "function Set-RegPermission", "function Set-RegPermissionOld"
+            $setRegPermissionOldContent = $setRegPermissionOldContent -replace "function Set-RegPermission", "function Set-RegPermissionOld"
             # write
-            $setRegPermissionV2Path = Join-Path $testDir "Set-RegPermission-v2.8.7.ps1"
-            Set-Content -Path $setRegPermissionV2Path -Value $setRegPermissionV2Content -Force
-
-            # import the v2.8.7 version of Set-RegPermission
-            . $setRegPermissionV2Path
+            $setRegPermissionOldPath = Join-Path -Path $env:TEMP "Set-RegPermission-v2.8.7.ps1"
+            Set-Content -Path $setRegPermissionOldPath -Value $setRegPermissionOldContent -Force
+            $setRegPermissionOldContent | Select-String "function Set-RegPermissionOld" | Should -Not -BeNullOrEmpty
+            if (-not (Test-Path $setRegPermissionOldPath)) {
+                throw "Set-RegPermission-v2.8.7.ps1 not found at $setRegPermissionOldPath"
+            }            # import the v2.8.7 version of Set-RegPermission
+            Write-Host "Importing Set-RegPermissionOld from $setRegPermissionOldPath"
+            . $setRegPermissionOldPath
+            Get-Command Set-RegPermissionOld | Should -Not -BeNullOrEmpty
 
             $regPermStopwatchOld = [System.Diagnostics.Stopwatch]::StartNew()
             $userProfilePath = "C:\Users\$($userToMigrateFrom)"
