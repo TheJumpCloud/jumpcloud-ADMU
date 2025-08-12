@@ -105,74 +105,95 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         }
     }
 
-    #     Context "Test Migration using Invoke" {
-    #         BeforeAll {
-    #             # for these tests, the jumpCloud agent needs to be installed:
-    #             $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
-    #             If (-Not $AgentService) {
-    #                 # set install variables
-    #                 $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
-    #                 $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
-    #                 $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-    #                 $AGENT_INSTALLER_PATH = "C:\Windows\Temp\jcagent-msi-signed.msi"
-    #                 $AGENT_BINARY_NAME = "jumpcloud-agent.exe"
-    #                 $CONNECT_KEY = $env:PESTER_CONNECTKEY
+    Context "Should Throw if Dependencies are Missing" {
+        It "Should throw an error if the NuGet provider cannot be installed" {
+            # Arrange: Create the test CSV file
+            $csvContent = @"
+"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
+"S-1-5-21-XYZ","C:\Users\j.doe","TEST-PC","j.doe","jane.doe","sadads","jcsystem123","TEST-SN-123"
+"@
+            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
+            Set-Content -Path $tempCsvPath -Value $csvContent -Force
 
-    #                 # now go install the agent
-    #                 Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($CONNECT_KEY) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
-    #             }
+            # --- Mock ALL external commands to isolate the script ---
 
-    #             # Auth to the JumpCloud Module
-    #             Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
+            # 1. Mock the check for NuGet. Return $null to force the install logic.
+            Mock Get-PackageProvider { return $null }
 
-    #             # get the org details
-    #             $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
-    #             $OrgName = "$($OrgSelection[1])"
-    #             $OrgID = "$($OrgSelection[0])"
-    #             # get the system key
-    #             $config = get-content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
-    #             $regex = 'systemKey\":\"(\w+)\"'
-    #             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
-    #             $global:scriptToTest = Join-Path $PSScriptRoot '..\..\..\..\jumpcloud-ADMU-Advanced-Deployment\InvokeFromJCAgent\3_ADMU_Invoke.ps1'
+            # 2. Mock the NuGet installation and make it THROW the error we want to test.
+            Mock Install-PackageProvider -ParameterFilter { $Name -eq 'NuGet' } -MockWith {
+                throw "Simulated Error: The NuGet provider installation failed."
+            }
 
-    #             if (-not (Test-Path $global:scriptToTest)) {
-    #                 throw "TEST SETUP FAILED: Script not found at the calculated path: $($global:scriptToTest). Please check the relative path in the BeforeAll block."
-    #             }
-    #         }
-    #         BeforeEach {
-    #             # # sample password
-    #             $tempPassword = "Temp123!"
-    #             # username to migrate
-    #             $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-    #             # username to migrate to
-    #             $userToMigrateTo = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-
-    #             # Initialize-TestUser
-    #             Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
-
-    #         }
-    #         It "Should successfully migrate a user with valid data" {
-    #             # Now create a CSV to get these values: "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-    #             $userObject = New-Object System.Security.Principal.NTAccount($userToMigrateFrom)
-    #             $userProfile = Get-CimInstance -ClassName Win32_UserProfile | Where-Object { $_.SID -eq $sid }
-
-    #             $UserSid = $userObject.Translate([System.Security.Principal.SecurityIdentifier]).Value
-    #             $localPath = $userProfile.LocalPath
-    #             $serialNumber = Get-CimInstance -ClassName Win32_BIOS | Select-Object -ExpandProperty SerialNumber
-    #             $csvContent = @"
-    #     SID,LocalPath,LocalComputerName,LocalUsername,JumpCloudUserName,JumpCloudUserID,JumpCloudSystemID,SerialNumber
-    #     $($userToMigrateFrom),$($localPath),$($env:COMPUTERNAME),$($userToMigrateFrom),$($userToMigrateTo),$($null),$($null),$($serialNumber)
-    # "@
-    #             $global:tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-    #             Set-Content -Path $global:tempCsvPath -Value $csvContent
-
-    #             # Now edit the API key and orgId in the 3_ADMU_Invoke.ps
+            # 3. Mock the check for other modules to prevent real checks and installations.
+            Mock Get-InstalledModule { return $true } # Pretend other modules are already installed.
+            Mock Find-Module { return $true } # Pretend modules are found.
+            Mock Install-Module { } # Do nothing when Install-Module is called.
+            Mock Uninstall-Module { } # Do nothing when Uninstall-Module is called.
+            Mock Import-Module { } # Do nothing when Import-Module is called.
+            Mock Get-Module { return $true } # Pretend the module was imported successfully.
 
 
+            # Act & Assert:
+            # The script will now hit the mocked Install-PackageProvider, which will throw our
+            # controlled exception. Pester will catch this and the test will pass.
+            { & $global:scriptToTest } | Should -Throw
+        }
+        It "Should throw an error if the PowerShellGet module cannot be installed" {
+            # Arrange: Set up the test file
+            $csvContent = @"
+"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
+"S-1-5-21-XYZ","C:\Users\j.doe","TEST-PC","j.doe","jane.doe","sadads","jcsystem123","TEST-SN-123"
+"@
+            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
+            Set-Content -Path $tempCsvPath -Value $csvContent -Force
 
-    #             # Run the script
-    #             { & $global:scriptToTest } | Should -Not -Throw
-    #         }
+            # --- Mock the environment for THIS test ---
+            # 1. Pretend NuGet is already installed.
+            Mock Get-PackageProvider { return [pscustomobject]@{name = 'nuget' } }
 
-    #     }
+            # 2. Pretend 'PowerShellGet' is MISSING, but other modules are found.
+            Mock Get-InstalledModule -ParameterFilter { $Name -eq 'PowerShellGet' } -MockWith { $null }
+            Mock Get-InstalledModule -ParameterFilter { $Name -ne 'PowerShellGet' } -MockWith { $true }
+
+            # 3. Make Install-Module FAIL specifically when called for 'PowerShellGet'.
+            Mock Install-Module -ParameterFilter { $Name -eq 'PowerShellGet' } -MockWith {
+                throw "Simulated Error: Failed to install PowerShellGet module."
+            }
+            # Make other calls to Install-Module do nothing.
+            Mock Install-Module -ParameterFilter { $Name -ne 'PowerShellGet' }
+
+            # Act & Assert: The script should fail when trying to install the missing module.
+            { & $global:scriptToTest } |  Should -Throw
+        }
+
+        It "Should throw an error if the JumpCloud.ADMU module cannot be installed" {
+            # Arrange: Set up the test file
+            $csvContent = @"
+"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
+"S-1-5-21-XYZ","C:\Users\j.doe","TEST-PC","j.doe","jane.doe","sadads","jcsystem123","TEST-SN-123"
+"@
+            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
+            Set-Content -Path $tempCsvPath -Value $csvContent -Force
+
+            # --- Mock the environment for THIS test ---
+            # 1. Pretend NuGet is already installed.
+            Mock Get-PackageProvider { return [pscustomobject]@{name = 'nuget' } }
+
+            # 2. Pretend 'JumpCloud.ADMU' is MISSING, but other modules are found.
+            Mock Get-InstalledModule -ParameterFilter { $Name -eq 'JumpCloud.ADMU' } -MockWith { $null }
+            Mock Get-InstalledModule -ParameterFilter { $Name -ne 'JumpCloud.ADMU' } -MockWith { $true }
+            Mock Find-Module { } # Prevent network call
+
+            # 3. Make Install-Module FAIL specifically when called for 'JumpCloud.ADMU'.
+            Mock Install-Module -ParameterFilter { $Name -eq 'JumpCloud.ADMU' } -MockWith {
+                throw "Simulated Error: Failed to install JumpCloud.ADMU module."
+            }
+            # Make other calls to Install-Module do nothing.
+            Mock Install-Module -ParameterFilter { $Name -ne 'JumpCloud.ADMU' }
+
+            # Act & Assert: The script should fail when trying to install the missing module.
+            { & $global:scriptToTest } | Should -Throw
+        }
+    }
 }

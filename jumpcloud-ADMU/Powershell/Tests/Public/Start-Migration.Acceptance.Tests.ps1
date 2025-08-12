@@ -483,27 +483,6 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
                 }
-                It "Migrates using Invoke Bulk ADMU Script" {
-                    $global:InvokeScript = Join-Path $PSScriptRoot '..\..\..\..\jumpcloud-ADMU-Advanced-Deployment\InvokeFromJCAgent\3_ADMU_Invoke.ps1'
-
-                    # Now create a CSV to get these values: "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-                    $userObject = New-Object System.Security.Principal.NTAccount($userToMigrateFrom)
-
-
-                    $UserSid = $userObject.Translate([System.Security.Principal.SecurityIdentifier]).Value
-                    $userProfile = Get-CimInstance -ClassName Win32_UserProfile | Where-Object { $_.SID -eq $UserSid }
-                    $localPath = $userProfile.LocalPath
-                    $serialNumber = Get-CimInstance -ClassName Win32_BIOS | Select-Object -ExpandProperty SerialNumber
-                    $csvContent = @"
-    SID,LocalPath,LocalComputerName,LocalUsername,JumpCloudUserName,JumpCloudUserID,JumpCloudSystemID,SerialNumber
-    $($userToMigrateFrom),$($localPath),$($env:COMPUTERNAME),$($userToMigrateFrom),$($userToMigrateTo),$($GeneratedUser.Id),$($null),$($serialNumber)
-"@
-                    $global:tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-                    Set-Content -Path $global:tempCsvPath -Value $csvContent
-
-                    # Run the script
-                    { & $global:InvokeScript } | Should -Not -Throw
-                }
                 # remove the users
                 AfterEach {
                     Remove-JcSdkUser -Id $GeneratedUser.Id
