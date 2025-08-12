@@ -161,6 +161,8 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             # Compare the times:
             $oldTime = $regPermStopwatchOld.Elapsed.TotalSeconds
             $newTime = $regPermStopwatchNew.Elapsed.TotalSeconds
+            $performanceIncrease = (($oldTime - $newTime) / $oldTime) * 100
+            Write-Host ("Performance increase: {0:N2}%" -f $performanceIncrease)
             Write-Host "Old Set-RegPermission time: $oldTime seconds"
             Write-Host "New Set-RegPermission time: $newTime seconds"
             $newTime | Should -BeLessOrEqual $oldTime
