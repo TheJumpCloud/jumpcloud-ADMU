@@ -181,10 +181,9 @@ try {
             # Get the first duplicate SID found for a clean error message
             $firstDuplicate = $duplicateSids[0].Name
             $computerName = $device.Name
-            Write-Host "[error] Duplicate SID '$firstDuplicate' found for LocalComputerName '$computerName'. SIDs must be unique per device."
 
             # Throw a terminating error with a descriptive message
-            throw "VALIDATION FAILED: Duplicate SID found for LocalComputerName '$computerName'. SIDs must be unique per device. Halting script."
+            throw "[error] Duplicate SID '$firstDuplicate' found for LocalComputerName '$computerName'. SIDs must be unique per device."
         }
     }
     Write-Host "[status] SID uniqueness per device validated successfully."

@@ -40,8 +40,13 @@ Function Test-UserRegistryLoadState {
         } else {
             Write-ToLog "Skipping User Shell Folder Validation..."
         }
+
         # Check for previousSid from \Software\JCADMU
-        $previousSid = (Get-ItemProperty -Path "HKU:\ReidSullivanUser\Software\JCADMU" -Name "previousSid").previousSid
+        if ("HKEY_USERS" -notin (Get-PSDrive | Select-Object name).Name) {
+            New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
+        }
+
+        $previousSid = (Get-ItemProperty -Path "HKEY_USERS:\$($UserSid)\Software\JCADMU" -Name "previousSid" -ErrorAction SilentlyContinue).previousSid
         if ($previousSid) {
             Write-ToLog "Found previous SID: $($previousSid)" -Level Error
             Write-AdmuErrorMessage -Error:("load_unload_error")
