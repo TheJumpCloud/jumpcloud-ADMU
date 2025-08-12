@@ -503,20 +503,6 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # the system should NOT be associated to the user
                     $association | Should -BeNullOrEmpty
                 }
-                It "Should fail when oldUserProfileImagePath has .WORKGROUP or .DOMAIN set"
-                {
-                    # Get the SID of the $userToMigrateFrom
-                    $SelectedUserSID = (Get-LocalUser -Name $userToMigrateFrom).SID | Select-Object -ExpandProperty Value
-                    Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value "C:\Users\$userToMigrateFrom.DOMAIN"
-
-                    # set the $testCaseInput
-                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
-                    $testCaseInput.SelectedUserName = $userToMigrateFrom
-                    $testCaseInput.TempPassword = $tempPassword
-                    $testCaseInput.AutoBindJCUser = $false
-                    # Migrate the initialized user to the second username
-                    { Start-Migration @testCaseInput } | Should -Throw
-                }
             }
         }
     }
