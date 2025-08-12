@@ -1,14 +1,9 @@
-Describe "Test-FileAttribute Acceptance Tests" -Tag "Acceptance" {
+Describe "Test-PreviousSID Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
         $TargetDirectory = "helperFunctions"
         $FileName = "Import-AllFunctions.ps1"
-        # create some file to test with:
-        $content = "placeholder text"
-        # save the file
-        $content | Out-File "C:\Windows\Temp\content.txt"
-        $contentFilePath = "C:\Windows\Temp\content.txt"
         while ($currentPath -ne $null) {
             $filePath = Join-Path -Path $currentPath $TargetDirectory
             if (Test-Path $filePath) {
