@@ -503,7 +503,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # the system should NOT be associated to the user
                     $association | Should -BeNullOrEmpty
                 }
-                It "Fails when oldUserProfileImagePath has .WORKGROUP or .DOMAIN set"
+                It "Should fail when oldUserProfileImagePath has .WORKGROUP or .DOMAIN set"
                 {
                     # Get the SID of the $userToMigrateFrom
                     $SelectedUserSID = (Get-LocalUser -Name $userToMigrateFrom).SID | Select-Object -ExpandProperty Value

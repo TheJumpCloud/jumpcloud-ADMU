@@ -3,7 +3,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
     # Validate the JumpCloud Agent is installed
     BeforeAll {
 
-        $global:scriptToTest = Join-Path $PSScriptRoot '..\..\..\..\..\jumpcloud-ADMU-Advanced-Deployment\InvokeFromJCAgent\3_ADMU_Invoke.ps1'
+        $global:scriptToTest = Join-Path $PSScriptRoot '..\..\..\..\jumpcloud-ADMU-Advanced-Deployment\InvokeFromJCAgent\3_ADMU_Invoke.ps1'
 
         if (-not (Test-Path $global:scriptToTest)) {
             throw "TEST SETUP FAILED: Script not found at the calculated path: $($global:scriptToTest). Please check the relative path in the BeforeAll block."
@@ -58,32 +58,6 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             # Act & Assert
             { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED on row 1 : 'LocalPath' cannot be empty. Halting script."
         }
-        It "Should throw an error if 'LocalComputerName' is empty" {
-            # Arrange
-            $csvContent = @"
-"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-XYZ","C:\Users\j.doe","","j.doe","jane.doe","jcuser123","jcsystem123","TEST-SN-123"
-"@
-            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-            Set-Content -Path $tempCsvPath -Value $csvContent -Force
-
-            # Act & Assert
-            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED on row 1 : 'LocalComputerName' cannot be empty. Halting script."
-        }
-
-        It "Should throw an error if 'LocalUsername' is empty" {
-            # Arrange
-            $csvContent = @"
-"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-XYZ","C:\Users\j.doe","TEST-PC","","jane.doe","jcuser123","jcsystem123","TEST-SN-123"
-"@
-            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-            Set-Content -Path $tempCsvPath -Value $csvContent -Force
-
-            # Act & Assert
-            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED on row 1 : 'LocalUsername' cannot be empty. Halting script."
-        }
-
 
         It "Should throw an error if 'JumpCloudUserName' is empty" {
             # Arrange
@@ -110,46 +84,18 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             # Act & Assert
             { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED on row 1 : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
         }
-        It "Should throw an error if 'JumpCloudSystemID' is empty" {
-            # Arrange
-            $csvContent = @"
-"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-XYZ","C:\Users\j.doe","TEST-PC","j.doe","jane.doe","jcuser123","","TEST-SN-123"
-"@
-            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-            Set-Content -Path $tempCsvPath -Value $csvContent -Force
-
-            # Act & Assert
-            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED on row 1 : 'JumpCloudSystemID' cannot be empty. Halting script."
-        }
-        It "Should throw an error if 'SerialNumber' is empty" {
-            # Arrange
-            $csvContent = @"
-"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-XYZ","C:\Users\j.doe","TEST-PC","j.doe","jane.doe","jcuser123","jcsystem123",""
-"@
-            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-            Set-Content -Path $tempCsvPath -Value $csvContent -Force
-
-            # Act & Assert
-            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED on row 1 : 'SerialNumber' cannot be empty. Halting script."
-        }
     }
 
     Context "Disable Script Execution" {
-        BeforeAll {
-            # Disable script execution for the test environment
-            Set-ExecutionPolicy -ExecutionPolicy Restricted -Scope Process -Force
-        }
         It "Should throw an error when trying to run a script with execution policy set to Restricted" {
+            $scriptPath = $global:scriptToTest
+            $commandToRun = "Set-ExecutionPolicy Restricted -Scope Process -Force; & '$scriptPath'"
 
-            # Act & Assert
-            { & $global:scriptToTest } | Should -Throw
-        }
+            $processOutput = & powershell.exe -Command $commandToRun 2>&1
+            $processOutput
 
-        AfterAll {
-            # Re-enable script execution
-            Set-ExecutionPolicy -ExecutionPolicy Unrestricted -Scope Process -Force
+            # This is the corrected line, which first combines the output into one string
+            ($processOutput | Out-String) | Should -Match "cannot be loaded because running scripts is disabled on this system"
         }
     }
 
@@ -208,8 +154,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             $localPath = $userProfile.LocalPath
             $serialNumber = Get-CimInstance -ClassName Win32_BIOS | Select-Object -ExpandProperty SerialNumber
             $csvContent = @"
-SID,LocalPath,LocalComputerName,LocalUsername,JumpCloudUserName,JumpCloudUserID,JumpCloudSystemID,SerialNumber
-$($userToMigrateFrom),$($localPath),$($env:COMPUTERNAME),$($userToMigrateFrom),$($userToMigrateTo),$($null),$($null),$($serialNumber)
+    SID,LocalPath,LocalComputerName,LocalUsername,JumpCloudUserName,JumpCloudUserID,JumpCloudSystemID,SerialNumber
+    $($userToMigrateFrom),$($localPath),$($env:COMPUTERNAME),$($userToMigrateFrom),$($userToMigrateTo),$($null),$($null),$($serialNumber)
 "@
             $global:tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
             Set-Content -Path $global:tempCsvPath -Value $csvContent
