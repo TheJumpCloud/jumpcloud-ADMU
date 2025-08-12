@@ -13,7 +13,7 @@ function Set-RegPermission {
     }
     process {
         # Grant the new user permissions with icacls::
-        icacls $FilePath /grant ${TargetSID}:(OI)(CI)F /T
+        icacls $FilePath /grant "*$($TargetSID):(OI)(CI)F" /T
         # Create SecurityIdentifier objects
         $SourceSIDObj = New-Object System.Security.Principal.SecurityIdentifier($SourceSID)
         $TargetSIDObj = New-Object System.Security.Principal.SecurityIdentifier($TargetSID)

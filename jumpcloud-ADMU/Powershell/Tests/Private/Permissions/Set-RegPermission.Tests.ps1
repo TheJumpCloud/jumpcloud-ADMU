@@ -129,7 +129,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
         }
         It "Should perform faster than the previous set-acl way of doing things" {
             # get the version of the set-RegPermission v2.8.7 from github:
-            $url = "https://github.com/TheJumpCloud/jumpcloud-ADMU/blob/v2.8.7/jumpcloud-ADMU/Powershell/Private/Permissions/Set-RegPermission.ps1"
+            $url = "https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/refs/heads/v2.8.7/jumpcloud-ADMU/Powershell/Private/Permissions/Set-RegPermission.ps1"
             $setRegPermissionV2 = Invoke-WebRequest -Uri $url -UseBasicParsing
             $setRegPermissionV2Content = $setRegPermissionV2.Content
             # replace the function name to Set-RegPermissionOld
@@ -149,7 +149,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $Acl.SetAccessRule($Ar)
             $Acl | Set-Acl -Path $userProfilePath
 
-            Set-RegPermissionOld -sourceSID $UserSID -targetSID $UserSIDOldFunction -filePath $newUserProfileImagePath
+            Set-RegPermissionOld -sourceSID $UserSID -targetSID $UserSIDOldFunction -filePath $userProfilePath
             $regPermStopwatchOld.Stop()
 
             # perform the same operation with the new Set-RegPermission
@@ -163,7 +163,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $newTime = $regPermStopwatchNew.Elapsed.TotalSeconds
             Write-Host "Old Set-RegPermission time: $oldTime seconds"
             Write-Host "New Set-RegPermission time: $newTime seconds"
-            $newTime | Should -BeLessThanOrEqual $oldTime
+            $newTime | Should -BeLessOrEqual $oldTime
 
         }
 
