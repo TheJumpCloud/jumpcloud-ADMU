@@ -1003,7 +1003,10 @@ Function Start-Migration {
             # Set the owner permission for the user profile path subdirectories
 
             Write-ToLog "Attempting to set owner to NTFS Permissions from: ($NewUserSID) to: $SelectedUserSID for path: $newUserProfileImagePath"
+            $regPermStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
             Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath
+            $regPermStopwatch.Stop()
+            Write-ToLog "Set-RegPermission completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
 
             # Validate if .DAT has correct permissions
             $validateNTUserDatPermissions, $validateNTUserDatPermissionsResults = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'
