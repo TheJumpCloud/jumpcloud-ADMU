@@ -135,11 +135,15 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             # replace the function name to Set-RegPermissionOld
             $setRegPermissionOldContent = $setRegPermissionOldContent -replace "function Set-RegPermission", "function Set-RegPermissionOld"
             # write
-            $setRegPermissionOldPath = Join-Path -Path $HOME "Set-RegPermission-v2.8.7.ps1"
+            $setRegPermissionOldPath = Join-Path -Path $env:TEMP "Set-RegPermission-v2.8.7.ps1"
             Set-Content -Path $setRegPermissionOldPath -Value $setRegPermissionOldContent -Force
-
-            # import the v2.8.7 version of Set-RegPermission
+            $setRegPermissionOldContent | Select-String "function Set-RegPermissionOld" | Should -Not -BeNullOrEmpty
+            if (-not (Test-Path $setRegPermissionOldPath)) {
+                throw "Set-RegPermission-v2.8.7.ps1 not found at $setRegPermissionOldPath"
+            }            # import the v2.8.7 version of Set-RegPermission
+            Write-Host "Importing Set-RegPermissionOld from $setRegPermissionOldPath"
             . $setRegPermissionOldPath
+            Get-Command Set-RegPermissionOld | Should -Not -BeNullOrEmpty
 
             $regPermStopwatchOld = [System.Diagnostics.Stopwatch]::StartNew()
             $userProfilePath = "C:\Users\$($userToMigrateFrom)"
