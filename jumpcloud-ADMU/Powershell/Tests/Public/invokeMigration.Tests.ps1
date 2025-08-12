@@ -43,7 +43,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Set-Content -Path $tempCsvPath -Value $csvContent -Force
 
             # Act & Assert: The script should throw a specific error that identifies
-            { & $global:scriptToTest } | Should -Throw
+
+            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED: Duplicate SID 'S-1-5-21-DUPLICATE-SID' found for LocalComputerName 'TEST-PC-1'. SIDs must be unique per device. Halting script."
         }
 
         It "Should throw an error if 'LocalPath' is empty" {
@@ -147,7 +148,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         }
         It "Should successfully migrate a user with valid data" {
             # Now create a CSV to get these values: "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-            $userObject = New-Object System.Security.Principal.NTAccount($username)
+            $userObject = New-Object System.Security.Principal.NTAccount($userToMigrateFrom)
             $userProfile = Get-CimInstance -ClassName Win32_UserProfile | Where-Object { $_.SID -eq $sid }
 
             $UserSid = $userObject.Translate([System.Security.Principal.SecurityIdentifier]).Value
