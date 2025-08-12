@@ -130,8 +130,8 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
         It "Should perform directory permission clone faster than the pervious version of the Set-RegPermission function" {
             # get the version of the set-RegPermission v2.8.7 from github:
             $url = "https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/refs/heads/v2.8.7/jumpcloud-ADMU/Powershell/Private/Permissions/Set-RegPermission.ps1"
-            $setRegPermissionV2 = Invoke-WebRequest -Uri $url -UseBasicParsing
-            $setRegPermissionOldContent = $setRegPermissionOldContent.Content
+            $setRegPermissionOld = Invoke-WebRequest -Uri $url -UseBasicParsing
+            $setRegPermissionOldContent = $setRegPermissionOld.Content
             # replace the function name to Set-RegPermissionOld
             $setRegPermissionOldContent = $setRegPermissionOldContent -replace "function Set-RegPermission", "function Set-RegPermissionOld"
             # write
