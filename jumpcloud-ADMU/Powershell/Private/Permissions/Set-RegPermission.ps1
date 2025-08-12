@@ -38,7 +38,9 @@ function Set-RegPermission {
                     Set-Acl -Path $item.FullName -AclObject $acl
                 }
 
-                # Copy SourceSID permissions to TargetSID
+
+                # Copy SourceSID permissions to TargetSID only if not already present
+                $aclChanged = $false
                 foreach ($access in $acl.Access) {
                     if ($access.IdentityReference -eq $SourceAccount) {
                         $perm = $access.FileSystemRights
@@ -46,14 +48,32 @@ function Set-RegPermission {
                         $propagation = $access.PropagationFlags
                         $type = $access.AccessControlType
 
-                        $newRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                            $TargetAccount, $perm, $inheritance, $propagation, $type
-                        )
-                        $acl.AddAccessRule($newRule)
+                        $targetHasRule = $false
+                        foreach ($targetAccess in $acl.Access) {
+                            if (
+                                $targetAccess.IdentityReference -eq $TargetAccount -and
+                                $targetAccess.FileSystemRights -eq $perm -and
+                                $targetAccess.InheritanceFlags -eq $inheritance -and
+                                $targetAccess.PropagationFlags -eq $propagation -and
+                                $targetAccess.AccessControlType -eq $type
+                            ) {
+                                $targetHasRule = $true
+                                break
+                            }
+                        }
+                        if (-not $targetHasRule) {
+                            $newRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                                $TargetAccount, $perm, $inheritance, $propagation, $type
+                            )
+                            $acl.AddAccessRule($newRule)
+                            $aclChanged = $true
+                        }
                     }
                 }
 
-                Set-Acl -Path $item.FullName -AclObject $acl
+                if ($aclChanged) {
+                    Set-Acl -Path $item.FullName -AclObject $acl
+                }
             } catch {
                 if ($_.Exception.Message -notmatch "because it is null") {
                     Write-ToLog "Failed to update $($item.FullName): $($_.Exception.Message)"
