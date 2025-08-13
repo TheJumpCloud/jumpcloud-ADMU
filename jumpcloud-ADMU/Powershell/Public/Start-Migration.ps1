@@ -987,15 +987,6 @@ Function Start-Migration {
             # logging
             Write-ToLog -Message:('New User Profile Path: ' + $newUserProfileImagePath + ' New User SID: ' + $NewUserSID)
             Write-ToLog -Message:('Old User Profile Path: ' + $oldUserProfileImagePath + ' Old User SID: ' + $SelectedUserSID)
-            # Write-ToLog -Message:("NTFS ACLs on domain $windowsDrive\users\ dir")
-            # #ntfs acls on domain $windowsDrive\users\ dir
-            # $NewSPN_Name = $env:COMPUTERNAME + '\' + $JumpCloudUsername
-            # $Acl = Get-Acl $newUserProfileImagePath
-            # $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule($NewSPN_Name, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
-            # $Acl.SetAccessRule($Ar)
-            # $Acl | Set-Acl -Path $newUserProfileImagePath
-            #TODO: reverse track this if we fail later
-            # Set the owner permission for the user profile path subdirectories
 
             Write-ToLog "Attempting to set owner to NTFS Permissions from: ($NewUserSID) to: $SelectedUserSID for path: $newUserProfileImagePath"
             $regPermStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
