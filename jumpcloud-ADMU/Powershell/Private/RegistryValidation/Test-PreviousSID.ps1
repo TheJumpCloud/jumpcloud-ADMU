@@ -40,7 +40,7 @@ function Test-PreviousSID {
 
     if ($previousSid) {
         # A previous SID was found. This indicates a prior migration.
-        Write-ToLog "Found previous SID: $($previousSid)" -Level Error
+        Write-ToLog "Found previous SID: $($previousSid)"
         return $true
     } else {
         # No previous SID was found. The user is clear for migration.
