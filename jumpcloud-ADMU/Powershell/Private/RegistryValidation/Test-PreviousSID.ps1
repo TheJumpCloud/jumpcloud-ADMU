@@ -32,7 +32,7 @@ function Test-PreviousSID {
     }
 
     # Construct the path to the JCADMU registry key for the specified user.
-    $registryPath = "HKEY_USERS:\$($UserSid)\Software\JCADMU"
+    $registryPath = "HKEY_USERS:\$($UserSid)_admu\Software\JCADMU"
 
     # Attempt to retrieve the 'previousSid' value.
     # We use -ErrorAction SilentlyContinue because the key not existing is a valid (and good) outcome.

@@ -40,15 +40,15 @@ Describe "Test-PreviousSID Acceptance Tests" -Tag "Acceptance" {
         if (-not (Get-PSDrive -Name 'HKEY_USERS' -ErrorAction SilentlyContinue)) {
             New-PSDrive -Name 'HKEY_USERS' -PSProvider 'Registry' -Root 'HKEY_USERS' | Out-Null
         }
-        New-Item -Path "HKEY_USERS:\$($currentUserSid)\Software\JCADMU" -Force | Out-Null
+        New-Item -Path "HKEY_USERS:\$($currentUserSid)_admu\Software\JCADMU" -Force | Out-Null
         # Ensure the key is created
-        Test-Path "HKEY_USERS:\$($currentUserSid)\Software\JCADMU" | Should -Be $true
+        Test-Path "HKEY_USERS:\$($currentUserSid)_admu\Software\JCADMU" | Should -Be $true
         # Set the PreviousSID value
-        Set-ItemProperty -Path "HKEY_USERS:\$($currentUserSid)\Software\JCADMU" -Name "PreviousSID" -Value "S-1-5-21-1234567890-1234567890-1234567890-1001" -Force
+        Set-ItemProperty -Path "HKEY_USERS:\$($currentUserSid)_admu\Software\JCADMU" -Name "PreviousSID" -Value "S-1-5-21-1234567890-1234567890-1234567890-1001" -Force
         # Run the test function
         Test-PreviousSID -UserSid $currentUserSid | Should -Be $true
         # Clean up
-        Remove-Item -Path "HKEY_USERS:\$($currentUserSid)\Software\JCADMU" -Recurse -Force | Out-Null
+        Remove-Item -Path "HKEY_USERS:\$($currentUserSid)_admu\Software\JCADMU" -Recurse -Force | Out-Null
     }
 
     # Add more acceptance tests as needed
