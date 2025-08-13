@@ -44,7 +44,7 @@ Describe "Test-PreviousSID Acceptance Tests" -Tag "Acceptance" {
         # Ensure the key is created
         Test-Path "HKEY_USERS:\$($currentUserSid)_admu\Software\JCADMU" | Should -Be $true
         # Set the PreviousSID value
-        Set-ItemProperty -Path "HKEY_USERS:\$($currentUserSid)_admu\Software\JCADMU" -Name "PreviousSID" -Value "S-1-5-21-1234567890-1234567890-1234567890-1001" -Force
+        Set-ItemProperty -Path "HKEY_USERS:\$($currentUserSid)_admu\Software\JCADMU" -Name "previousSid" -Value "S-1-5-21-1234567890-1234567890-1234567890-1001" -Force
         # Run the test function
         Test-PreviousSID -UserSid $currentUserSid | Should -Be $true
         # Clean up
