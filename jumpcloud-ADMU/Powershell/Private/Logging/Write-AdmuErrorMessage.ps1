@@ -43,7 +43,7 @@ function Write-AdmuErrorMessage {
             $Script:ErrorMessage = "User Profile Folder Name Error. Click the link below for troubleshooting information."
         }
         "user_profile_previous_sid_error" {
-            Write-ToLog -Message:("User Profile Previous SID Error: The user profile for $SelectedUserSID has a PreviousSID key. The user may have been migrated previously.") -Level Warn
+            Write-ToLog -Message:("User Profile Previous SID Error: The user profile has a PreviousSID key. The user may have been migrated previously.") -Level Warn
 
             $Script:ErrorMessage = "User Profile Previous SID Error. Click the link below for troubleshooting information."
         }

@@ -384,7 +384,7 @@ Function Start-Migration {
 
             # Validate UserDirectory for Domain path
             if (-not (Test-UserDirectoryPath -SelectedUserSID $SelectedUserSID)) {
-                Write-AdmuErrorMessage -ErrorName "user_directory_path_error"
+                Write-AdmuErrorMessage -ErrorName "user_profile_folder_name_error"
                 $admuTracker.backupOldUserReg.fail = $true
                 break
             }
