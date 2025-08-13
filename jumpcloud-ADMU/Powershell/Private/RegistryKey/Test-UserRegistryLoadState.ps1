@@ -43,7 +43,7 @@ Function Test-UserRegistryLoadState {
 
         # Check for previousSid from \Software\JCADMU
         if (Test-PreviousSID -UserSid $UserSid) {
-            Write-AdmuErrorMessage -Error:("load_unload_error")
+            Write-AdmuErrorMessage -Error:("user_profile_previous_sid_error")
             Throw "User $($UserSid) has already been migrated. Exiting..."
         }
         # Validate the wallpaper policy

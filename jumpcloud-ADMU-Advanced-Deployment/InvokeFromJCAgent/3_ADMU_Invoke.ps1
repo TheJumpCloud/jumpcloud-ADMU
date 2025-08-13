@@ -258,7 +258,13 @@ Write-Host "`nValidation successful. Proceeding with user migration..."
 #region installADMU and required modules
 # Install the latest ADMU from PSGallery
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+# List the execution policies
+$curExecutionPolicy = Get-ExecutionPolicy -List
 Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
+Write-Host "[status] Execution Policies:"
+$curExecutionPolicy | ForEach-Object {
+    Write-Host " - $($_.Scope): $($_.ExecutionPolicy)"
+}
 # install Nuget if required:
 $packageProviders = Get-PackageProvider | Select-Object name
 if (!($packageProviders.name -contains "nuget")) {
