@@ -16,40 +16,42 @@ Describe "Test-PreviousSID Acceptance Tests" -Tag "Acceptance" {
             $currentPath = Split-Path $currentPath -Parent
         }
         . "$helpFunctionDir\$fileName"
+
     }
-    It 'Validates the function Test-PreviousSID returns $false if PreviousSID is not present' {
-        # Get the current user SID
-        $currentUserSid = (Get-LocalUser -Name $env:USERNAME).SID.Value
-        # Create a test registry key for the current user
-        if (-not (Get-PSDrive -Name 'HKEY_USERS' -ErrorAction SilentlyContinue)) {
-            New-PSDrive -Name 'HKEY_USERS' -PSProvider 'Registry' -Root 'HKEY_USERS' | Out-Null
+    Context "Validate previousSid" {
+        BeforeAll {
+            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+            }
+            #$currentSID = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
+            $newUser = "ADMU_User" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $password = '$T#st1234'
+            Initialize-TestUser -UserName $newUser -Password $Password
+
+            $userSid = Test-UsernameOrSID -usernameOrSid $newUser
+            # Load the registry hive for the user and add _admu after the sid
+            REG LOAD HKU\$($userSid)_admu "C:\Users\$newUser\NTUSER.DAT" *>&1
+            $folderPath = "HKEY_USERS:\$($userSid)_admu\Software\JCADMU"
         }
-        New-Item -Path "HKEY_USERS:\$($currentUserSid)\Software\JCADMU" -Force | Out-Null
-        # Ensure the key is created
-        Test-Path "HKEY_USERS:\$($currentUserSid)\Software\JCADMU" | Should -Be $true
-        # Run the test function
-        Test-PreviousSID -UserSid $currentUserSid | Should -Be $false
-        # Clean up
-        Remove-Item -Path "HKEY_USERS:\$($currentUserSid)\Software\JCADMU" -Recurse -Force | Out-Null
+        It 'Validates the function Test-PreviousSID returns $false if PreviousSID is not present' {
+
+            Test-Path $folderPath | Should -Be $true
+            # Run the test function
+            # Should be empty
+            Test-PreviousSID -UserSid $userSid | Should -Be $false
+            # Clean up
+            Remove-Item -Path $folderPath -Recurse -Force | Out-Null
+        }
+
+        It "Validates the function Test-PreviousSID returns $true if PreviousSID is present" {
+            # Set the PreviousSID value
+            Set-ItemProperty -Path $folderPath -Name "previousSid" -Value "S-1-5-21-1234567890-1234567890-1234567890-1001" -Force
+            # Run the test function
+            Test-PreviousSID -UserSid $userSid | Should -Be $true
+            # Clean up
+            Remove-Item -Path $folderPath -Recurse -Force | Out-Null
+        }
+
     }
 
-    It "Validates the function Test-PreviousSID returns $true if PreviousSID is present" {
-        # Get the current user SID
-        $currentUserSid = (Get-LocalUser -Name $env:USERNAME).SID.Value
-        # Create a test registry key for the current user
-        if (-not (Get-PSDrive -Name 'HKEY_USERS' -ErrorAction SilentlyContinue)) {
-            New-PSDrive -Name 'HKEY_USERS' -PSProvider 'Registry' -Root 'HKEY_USERS' | Out-Null
-        }
-        New-Item -Path "HKEY_USERS:\$($currentUserSid)_admu\Software\JCADMU" -Force | Out-Null
-        # Ensure the key is created
-        Test-Path "HKEY_USERS:\$($currentUserSid)_admu\Software\JCADMU" | Should -Be $true
-        # Set the PreviousSID value
-        Set-ItemProperty -Path "HKEY_USERS:\$($currentUserSid)_admu\Software\JCADMU" -Name "previousSid" -Value "S-1-5-21-1234567890-1234567890-1234567890-1001" -Force
-        # Run the test function
-        Test-PreviousSID -UserSid $currentUserSid | Should -Be $true
-        # Clean up
-        Remove-Item -Path "HKEY_USERS:\$($currentUserSid)_admu\Software\JCADMU" -Recurse -Force | Out-Null
-    }
-
-    # Add more acceptance tests as needed
 }

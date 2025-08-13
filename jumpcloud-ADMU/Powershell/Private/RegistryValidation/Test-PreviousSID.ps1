@@ -35,7 +35,7 @@ function Test-PreviousSID {
     $registryPath = "HKEY_USERS:\$($UserSid)_admu\Software\JCADMU"
 
     # Attempt to retrieve the 'previousSid' value.
-    # We use -ErrorAction SilentlyContinue because the key not existing is a valid (and good) outcome.
+    # We use -ErrorAction SilentlyContinue for Null or empty so it doesn't throw.
     $previousSid = (Get-ItemProperty -Path $registryPath -Name "previousSid" -ErrorAction SilentlyContinue).previousSid
 
     if ($previousSid) {
