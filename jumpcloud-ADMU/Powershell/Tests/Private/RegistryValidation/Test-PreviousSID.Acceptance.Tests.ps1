@@ -17,6 +17,9 @@ Describe "Test-PreviousSID Acceptance Tests" -Tag "Acceptance" {
         }
         . "$helpFunctionDir\$fileName"
 
+        # import the helper functions:
+        . "$helpFunctionDir\initialize-TestUser.ps1"
+
     }
     Context "Validate previousSid" {
         BeforeAll {
