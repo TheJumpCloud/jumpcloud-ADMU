@@ -42,17 +42,9 @@ Function Test-UserRegistryLoadState {
         }
 
         # Check for previousSid from \Software\JCADMU
-        if ("HKEY_USERS" -notin (Get-PSDrive | Select-Object name).Name) {
-            New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
-        }
-
-        $previousSid = (Get-ItemProperty -Path "HKEY_USERS:\$($UserSid)\Software\JCADMU" -Name "previousSid" -ErrorAction SilentlyContinue).previousSid
-        if ($previousSid) {
-            Write-ToLog "Found previous SID: $($previousSid)" -Level Error
+        if (Test-PreviousSID -UserSid $UserSid) {
             Write-AdmuErrorMessage -Error:("load_unload_error")
-            Throw "This user has been migrated to JumpCloud previously. Exiting..."
-        } else {
-            Write-ToLog "No previous SID found. Continuing..."
+            Throw "User $($UserSid) has already been migrated. Exiting..."
         }
         # Validate the wallpaper policy
         Set-WallpaperPolicy -UserSid $UserSid

@@ -381,15 +381,10 @@ Function Start-Migration {
 
             ### Begin Backup Registry for Selected User ###
             Write-ToLog -Message:('Creating Backup of User Registry Hive')
-            # Get Profile Image Path from Registry
-            $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
 
-            #### Validate if the $oldUserProfileImagePath has .WORKGROUP or .DOMAIN then error
-            $profileFolderName = Split-Path -Path $oldUserProfileImagePath -Leaf
-            Write-ToLog -Message:("Old User Profile Folder Name: $profileFolderName")
-            # Check for .WORKGROUP or a domain suffix (a dot followed by other characters)
-            if ($profileFolderName -match '\.WORKGROUP|\.\w+') {
-                Write-AdmuErrorMessage -ErrorName "user_profile_folder_name_error"
+            # Validate UserDirectory for Domain path
+            if (-not (Test-UserDirectoryPath -SelectedUserSID $SelectedUserSID)) {
+                Write-AdmuErrorMessage -ErrorName "user_directory_path_error"
                 $admuTracker.backupOldUserReg.fail = $true
                 break
             }
