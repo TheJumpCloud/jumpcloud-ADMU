@@ -70,7 +70,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
                 }
             }
             # then attempt to update the ownership
-            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir -ACLOutputPath "\aclOutput\"
+            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir
 
             $items = Get-ChildItem -Path $testDir -Recurse -Force
             foreach ($item in $items) {
@@ -93,14 +93,14 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $acl.AddAccessRule($rule)
             Set-Acl -Path $filePath -AclObject $acl
 
-            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir -ACLOutputPath "\aclOutput\"
+            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir
 
             $acl = Get-Acl $filePath
             $targetAccount = (New-Object System.Security.Principal.SecurityIdentifier($targetSID)).Translate([System.Security.Principal.NTAccount]).Value
             $acl.Access | Where-Object { $_.IdentityReference -eq $targetAccount -and $_.FileSystemRights -eq "FullControl" } | Should -Not -BeNullOrEmpty
         }
 
-        It "Should not change ownership if file is not owned by SourceSID" -skip {
+        It "Should not change ownership if file is not owned by SourceSID" {
             $otherSID = "S-1-5-18" # Local System
             $otherAccount = (New-Object System.Security.Principal.SecurityIdentifier($otherSID)).Translate([System.Security.Principal.NTAccount]).Value
             $filePath = Join-Path $testDir "testfile.txt"
@@ -108,7 +108,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $acl.SetOwner((New-Object System.Security.Principal.SecurityIdentifier($otherSID)))
             Set-Acl -Path $filePath -AclObject $acl
 
-            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir -ACLOutputPath "\aclOutput\"
+            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir
 
             $acl = Get-Acl $filePath
             $acl.Owner | Should -Be $otherAccount
