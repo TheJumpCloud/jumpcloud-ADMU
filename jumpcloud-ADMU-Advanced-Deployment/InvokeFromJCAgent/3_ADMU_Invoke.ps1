@@ -286,13 +286,23 @@ foreach ($line in $lines) {
 If (($policies.MachinePolicy -eq "Restricted") -or
     ($policies.MachinePolicy -eq "AllSigned") -or
     ($policies.MachinePolicy -eq "RemoteSigned")) {
-    Write-Host "[status] Machine Policy is set to $($policies.MachinePolicy), this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
+    Throw "[status] Machine Policy is set to $($policies.MachinePolicy), this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
+}
+# If the Process policy is set to Restricted, AllSigned or RemoteSigned, we need to change it to Bypass
+If (($policies.Process -eq "Restricted") -or
+    ($policies.Process -eq "AllSigned") -or
+    ($policies.Process -eq "RemoteSigned" -or
+    ($policies.Process -eq "Undefined"))) {
+    Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), setting to Bypass"
+    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+} else {
+    Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), no changes made."
 }
 # If the localMachine policy is set to Restricted, AllSigned or RemoteSigned, we need to change it to Bypass
-If (($LocalMachine -eq "Restricted") -or
-    ($LocalMachine -eq "AllSigned") -or
-    ($LocalMachine -eq "RemoteSigned" -or
-    ($LocalMachine -eq "Undefined"))) {
+If (($policies.LocalMachine -eq "Restricted") -or
+    ($policies.LocalMachine -eq "AllSigned") -or
+    ($policies.LocalMachine -eq "RemoteSigned" -or
+    ($policies.LocalMachine -eq "Undefined"))) {
     Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), setting to Bypass"
     Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
 } else {

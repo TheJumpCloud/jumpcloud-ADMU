@@ -105,6 +105,62 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-ExecutionPolicy $originalPolicy -Scope Process -Force
             }
         }
+
+    }
+    Context "Should iterate through possible execution policies" {
+        # the JumpCloud Agent
+        BeforeAll {
+            $executionPolicies = @('Restricted', 'AllSigned', 'RemoteSigned', 'Unrestricted', 'Bypass')
+            $scopes = @('Process', 'CurrentUser', 'LocalMachine')
+
+            $computerName = $env:COMPUTERNAME
+            $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+            # Arrange: Create the test CSV file
+            $csvContent = @"
+"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
+"S-1-5-21-XYZ","C:\Users\j.doe",$computerName,"j.doe","jane.doe","sadads","jcsystem123",$serialNumber
+"@
+            # set the "valid" csv
+            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
+            Set-Content -Path $tempCsvPath -Value $csvContent -Force
+
+        }
+        It "Should throw an error when trying to run a script with MachinePolicy execution policy set to Restricted, AllSigned, or RemoteSigned" {
+            $executionPolicies = @('Restricted', 'AllSigned', 'RemoteSigned')
+            foreach ($policy in $executionPolicies) {
+                Mock Get-ExecutionPolicy -List {
+                    @"
+Scope ExecutionPolicy
+----- ---------------
+MachinePolicy       $policy
+   UserPolicy       Undefined
+      Process       Undefined
+  CurrentUser       Undefined
+ LocalMachine    Unrestricted
+"@
+                }
+                { & $global:scriptToTest } | Should -Throw "[status] Machine Policy is set to $policy, this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
+            }
+
+        }
+        It "Should set the execution policy to Bypass for Process scope if the Process policy is set to Restricted, AllSigned, or RemoteSigned" {
+            $executionPolicies = @('Restricted', 'AllSigned', 'RemoteSigned')
+            foreach ($policy in $executionPolicies) {
+                Set-ExecutionPolicy -Scope Process -ExecutionPolicy $policy -Force
+                Get-ExecutionPolicy -Scope Process | Should -Be $policy
+                & $global:scriptToTest
+                Get-ExecutionPolicy -Scope Process | Should -Be 'Bypass'
+            }
+        }
+        It "Should set the execution policy to Bypass for localMachine scope if the localMachine policy is set to Restricted, AllSigned, or RemoteSigned" {
+            $executionPolicies = @('Restricted', 'AllSigned', 'RemoteSigned')
+            foreach ($policy in $executionPolicies) {
+                Set-ExecutionPolicy -Scope localMachine -ExecutionPolicy $policy -Force
+                Get-ExecutionPolicy -Scope localMachine | Should -Be $policy
+                & $global:scriptToTest
+                Get-ExecutionPolicy -Scope localMachine | Should -Be 'Bypass'
+            }
+        }
     }
 
     Context "Should Throw if Dependencies are Missing" {
