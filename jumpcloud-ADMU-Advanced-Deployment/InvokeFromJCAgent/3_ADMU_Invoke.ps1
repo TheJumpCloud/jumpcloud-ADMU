@@ -1,5 +1,5 @@
-# This script is designed to be run from the JumpCloud Agent and uploaded to a
-# JumpCloud Command
+# This script is designed to be run from the JumpCloud Console as a command. It
+# will be invoked by the JumpCloud Agent on the target system.
 # The script will run the ADMU command to migrate a user to JumpCloud
 ################################################################################
 # Update Variables Below
@@ -36,7 +36,7 @@ $postMigrationBehavior = 'Restart' # Restart or Shutdown
 $removeMDM = $false # Remove the existing MDM (default false)
 
 # option to bind using the systemContext API
-$systemContextBinding = $true # Bind using the systemContext API (default False)
+$systemContextBinding = $false # Bind using the systemContext API (default False)
 # If you want to bind using the systemContext API, set the systemContextBinding to true
 # The systemContextBinding option is only available for devices that have enrolled a device using a JumpCloud Administrators Connect Key
 # for more information, see the JumpCloud documentation: https://docs.jumpcloud.com/api/2.0/index.html#section/System-Context
@@ -92,7 +92,7 @@ foreach ($key in $booleanVariables.Keys) {
 # API key and ORGID validation
 # The JumpCloud API Key can be null if the systemContextBinding is set to true
 if ($systemContextBinding -eq $false) {
-    if ([string]::IsNullOrEmpty($JumpCloudAPIKey)) {
+    if ([string]::IsNullOrEmpty($JumpCloudAPIKey) -And ($JumpCloudAPIKey -ne "YOURAPIKEY")) {
         Write-Host "[status] Required script variable 'JumpCloudAPIKey' not set, exiting..."
         exit 1
     }
@@ -173,12 +173,12 @@ try {
 }
 
 # --- ADDED VALIDATION ---
-# Group the CSV data by computer name to check each device individually
+# Group the CSV data by LocalComputerName to check each device individually
 $groupedByDevice = $ImportedCSV | Group-Object -Property 'LocalComputerName'
 
-# Iterate over each group (each device)
+# Iterate over each device
 foreach ($device in $groupedByDevice) {
-    # Within each device group, group by SID to find duplicates
+    # Within each device row, group by SID to find duplicates
     $duplicateSids = $device.Group | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
     Write-Host "[status] Found $($duplicateSids.Count) duplicate SIDs for device '$($device.Name)'."
     # If any SID group has a count > 1, a duplicate exists for this device
@@ -213,14 +213,14 @@ foreach ($row in $ImportedCSV) {
     Write-Host "Processing row $rowNum..."
     # Validate if JumpCloudSystemID is not null or empty
     if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
-        throw "VALIDATION FAILED on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
+        throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
     }
     # Define the fields that cannot be empty
     $requiredFields = "LocalPath", "SID", "JumpCloudUserName"
     # Loop through each required field and check it
     foreach ($field in $requiredFields) {
         if ([string]::IsNullOrWhiteSpace($row.$field)) {
-            throw "VALIDATION FAILED on row $rowNum : '$field' cannot be empty. Halting script."
+            throw "VALIDATION FAILED: on row $rowNum : '$field' cannot be empty. Halting script."
         }
     }
 
@@ -236,23 +236,15 @@ foreach ($row in $ImportedCSV) {
 }
 
 # --- Final Summary ---
+Write-Host "User CSV Validation Complete"
 if ($UsersToMigrate.Count -eq 0) {
-    Write-Warning "Process complete. No users were found that matched the migration criteria."
+    throw "VALIDATION FAILED: No users were found that matched the migration criteria, the localComputerName in the CSV must match the current computer name and the SerialNumber in the CSV must match the current serial number. Please check your CSV file and validate that the required fields are populated correctly."
 } else {
-    Write-Host "`nProcess complete. Successfully prepared $($UsersToMigrate.Count) user(s) for migration."
+    Write-Host "`nSuccessfully validated $($UsersToMigrate.Count) user(s) for migration."
 }
-# Add a validation for duplicate SIDs
-$duplicateSIDs = $UsersToMigrate | Group-Object -Property selectedUsername | Where-Object { $_.Count -gt 1 }
-if ($duplicateSIDs) {
-    $duplicateSIDs | ForEach-Object {
-        Write-Host "[error] Duplicate SID found: $($_.Name)"
-    }
-    throw "[error] Duplicate SIDs detected. Halting script."
-}
-
 # You can now proceed using the fully validated $UsersToMigrate array.
 
-Write-Host "`nValidation successful. Proceeding with user migration..."
+Write-Host "`nProceeding with user migration..."
 #### End CSV Validation ####
 
 #region installADMU and required modules
@@ -260,25 +252,82 @@ Write-Host "`nValidation successful. Proceeding with user migration..."
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 # List the execution policies
 $curExecutionPolicy = Get-ExecutionPolicy -List
-Set-ExecutionPolicy -ExecutionPolicy Bypass -Force
-Write-Host "[status] Execution Policies:"
-$curExecutionPolicy | ForEach-Object {
-    Write-Host " - $($_.Scope): $($_.ExecutionPolicy)"
+# Split the text into lines and filter out the header and separator lines
+$lines = $curExecutionPolicy -split "`n" | Where-Object { $_.Trim() -ne "" -and $_ -notmatch '^-{5}' -and $_ -notmatch 'Scope ExecutionPolicy' }
+
+# Create a custom object to store the policies
+$policies = [PSCustomObject]@{
+    MachinePolicy = ""
+    UserPolicy    = ""
+    Process       = ""
+    CurrentUser   = ""
+    LocalMachine  = ""
 }
+# Define the regex pattern to capture the scope and execution policy
+$regex = '@\{Scope=(.+?); ExecutionPolicy=(.+?)\}'
+# Iterate through each line and populate the custom object
+foreach ($line in $lines) {
+    # Use a regular expression to extract the scope and value
+    if ($line -match $regex) {
+        $scope = $matches[1]
+        $executionPolicy = $matches[2].Trim()
+
+        # Populate the custom object based on the scope
+        switch ($scope) {
+            "MachinePolicy" { $policies.MachinePolicy = $executionPolicy }
+            "UserPolicy" { $policies.UserPolicy = $executionPolicy }
+            "Process" { $policies.Process = $executionPolicy }
+            "CurrentUser" { $policies.CurrentUser = $executionPolicy }
+            "LocalMachine" { $policies.LocalMachine = $executionPolicy }
+        }
+    }
+}
+# if the machinePolicy is set to Restricted, AllSigned or RemoteSigned, the ADMU script can not run
+If (($policies.MachinePolicy -eq "Restricted") -or
+    ($policies.MachinePolicy -eq "AllSigned") -or
+    ($policies.MachinePolicy -eq "RemoteSigned")) {
+    Write-Host "[status] Machine Policy is set to $($policies.MachinePolicy), this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
+}
+# If the localMachine policy is set to Restricted, AllSigned or RemoteSigned, we need to change it to Bypass
+If (($LocalMachine -eq "Restricted") -or
+    ($LocalMachine -eq "AllSigned") -or
+    ($LocalMachine -eq "RemoteSigned" -or
+    ($LocalMachine -eq "Undefined"))) {
+    Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), setting to Bypass"
+    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
+} else {
+    Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), no changes made."
+}
+Write-Host "[status] Execution Policies:"
+Write-Host $policies
+
 # install Nuget if required:
-$packageProviders = Get-PackageProvider | Select-Object name
+$nugetRequiredVersion = "2.8.5.208"
+$packageProviders = Get-PackageProvider -Force | Select-Object name
 if (!($packageProviders.name -contains "nuget")) {
     Write-Host "[status] NuGet not Found. Installing Package Provider"
-    Install-PackageProvider -Name NuGet -RequiredVersion 2.8.5.208 -Force
+    try {
+        $installResponse = Install-PackageProvider -Name NuGet -RequiredVersion $nugetRequiredVersion -Force
+        Write-Host "[status] NuGet Module was successfully installed."
+    } catch {
+        $nugetURL = "https://onegetcdn.azureedge.net/providers/nuget-$($nugetRequiredVersion).package.swidtag"
+        $nugetResponse = Invoke-WebRequest $nugetURL
+        If ($nugetResponse.StatusCode -ne 200) {
+            Throw "The NuGet package provider could not be installed from $nugetURL. Please validate that no firewall or network restrictions are blocking the download. This is required to install the JumpCloud.ADMU and other required modules. This issue must first be resolved before proceeding with the ADMU script."
+        }
+    }
 } else {
-    Write-Host "[status] NuGet Module Found"
+    Write-Host "[status] NuGet Module was previously installed, skipping installation."
 }
-$packageProviders = Get-PackageProvider | Select-Object name
+$packageProviders = Get-PackageProvider -Force | Select-Object name
 if ("nuget" -in $packageProviders.name) {
-    write-host "[status] NuGet found. Importing into current session."
-    Import-PackageProvider -Name NuGet -RequiredVersion 2.8.5.208 -Force
-} else {
-    write-host "[status] NuGet Module Not Found"
+    try {
+        write-host "[status] NuGet found. Importing into current session."
+        $importResponse = Import-PackageProvider -Name NuGet -RequiredVersion $nugetRequiredVersion -Force
+        write-host "[status] NuGet version $($ImportResponse.Version.ToString()) successfully imported."
+    } catch {
+        throw "Could not import Nuget into the current session. Nuget is required to install the JumpCloud.ADMU module."
+    }
 }
 
 # Define required modules
@@ -291,7 +340,7 @@ foreach ($module in $requiredModules) {
         try {
             Install-Module $module -Force
         } catch {
-            Write-Host "Please ensure the execution policy is not set to Restricted. You can set it to Bypass by using the command: Set-ExecutionPolicy Bypass -Force or if you have a Group Policy in place, set it to Allow Scripts."
+            Write-Host "Please ensure the MachinePolicy or LocalMachine execution policy is not set to Restricted, AllSigned or RemoteSigned. You can set the LocalMachine policy to Bypass by using the command: `Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force` or if you have a MachinePolicy set, please modify you AD/ Entra GPO/ Policies and enable the use of scripts."
             throw "[error] Failed to install $module module"
         }
     } else {
@@ -301,7 +350,6 @@ foreach ($module in $requiredModules) {
             try {
                 Uninstall-Module -Name $module -AllVersions
                 Install-Module $module -Force
-
             } catch {
                 Write-Host "Please ensure the execution policy is not set to Restricted. You can set it to Bypass by using the command: Set-ExecutionPolicy Bypass -Force or if you have a Group Policy in place, set it to Allow Scripts."
                 throw "[error] Failed to update $module module, exiting..."
