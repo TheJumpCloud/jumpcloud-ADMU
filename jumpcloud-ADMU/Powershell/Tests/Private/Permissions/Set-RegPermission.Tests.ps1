@@ -118,7 +118,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
 
             Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir
             # the targetAccount should be added to the ACL
-            $acl = Get-Acl $filePath
+            $acl = Get-Acl $testDir
             $targetAccount = (New-Object System.Security.Principal.SecurityIdentifier($targetSID)).Translate([System.Security.Principal.NTAccount]).Value
             $acl.Access | Where-Object { $_.IdentityReference -eq $targetAccount } | Should -Not -BeNullOrEmpty
         }
