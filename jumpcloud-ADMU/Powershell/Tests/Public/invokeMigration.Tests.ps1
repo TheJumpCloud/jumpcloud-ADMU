@@ -165,93 +165,114 @@ MachinePolicy       $policy
 
     Context "Should Throw if Dependencies are Missing" {
         It "Should throw an error if the NuGet provider cannot be installed" {
-            # Arrange: Create the test CSV file
+            # Arrange: Set up the test file
+            # Get the required values from the local machine
+            $currentComputerName = $env:COMPUTERNAME
+            $currentSerialNumber = (Get-CimInstance -ClassName Win32_BIOS).SerialNumber
+
+            # Populate the CSV string with the machine's actual data
             $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-XYZ","C:\Users\j.doe","TEST-PC","j.doe","jane.doe","sadads","jcsystem123","TEST-SN-123"
+"S-1-5-21-VALID-SID-1001","C:\Users\test.user","${currentComputerName}","test.user","jane.doe","jc-user-123","jc-system-456","${currentSerialNumber}"
 "@
             $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
             Set-Content -Path $tempCsvPath -Value $csvContent -Force
+            Mock Get-PackageProvider { return @() } -Verifiable
 
-            # --- Mock ALL external commands to isolate the script ---
-
-            # 1. Mock the check for NuGet. Return $null to force the install logic.
-            Mock Get-PackageProvider { return $null }
-
-            # 2. Mock the NuGet installation and make it THROW the error we want to test.
+            # Mock Install-PackageProvider to throw an error, simulating a failed installation attempt.
+            # This triggers the 'catch' block in the script.
             Mock Install-PackageProvider -ParameterFilter { $Name -eq 'NuGet' } -MockWith {
-                throw "Simulated Error: The NuGet provider installation failed."
-            }
+                throw "Simulated failure to install package provider."
+            } -Verifiable
 
-            # 3. Mock the check for other modules to prevent real checks and installations.
-            Mock Get-InstalledModule { return $true } # Pretend other modules are already installed.
-            Mock Find-Module { return $true } # Pretend modules are found.
-            Mock Install-Module { } # Do nothing when Install-Module is called.
-            Mock Uninstall-Module { } # Do nothing when Uninstall-Module is called.
-            Mock Import-Module { } # Do nothing when Import-Module is called.
-            Mock Get-Module { return $true } # Pretend the module was imported successfully.
+            # Mock Invoke-WebRequest to return a non-200 status code.
+            # This simulates the failure of the fallback download mechanism in the script's catch block.
+            Mock Invoke-WebRequest {
+                return [PSCustomObject]@{ StatusCode = 404; StatusDescription = 'Not Found' }
+            } -Verifiable
 
+            # # Mock Invoke-WebRequest to return a non-200 status code.
+            # # This simulates the failure of the fallback download mechanism in the script's catch block.
+            # Mock Invoke-WebRequest {
+            #     return [PSCustomObject]@{ StatusCode = 404; StatusDescription = 'Not Found' }
+            # } -Verifiable
 
-            # Act & Assert:
-            # The script will now hit the mocked Install-PackageProvider, which will throw our
-            # controlled exception. Pester will catch this and the test will pass.
-            { & $global:scriptToTest } | Should -Throw
+            # The script defines this variable, so we define it here too for the test to build the expected error string.
+            # The script defines this variable, so we define it here too for the test to build the expected error string.
+            $nugetRequiredVersion = "2.8.5.208"
+            $nugetURL = "https://onegetcdn.azureedge.net/providers/nuget-$($nugetRequiredVersion).package.swidtag"
+
+            # Define the exact error message expected from the script's final throw statement.
+            $expectedErrorMessage = "The NuGet package provider could not be installed from $nugetURL. Please validate that no firewall or network restrictions are blocking the download. This is required to install the JumpCloud.ADMU and other required modules. This issue must first be resolved before proceeding with the ADMU script."
+
+            # Act & Assert: Execute the script and verify it throws the expected error.
+            { & $global:scriptToTest } | Should -Throw $expectedErrorMessage
         }
-        It "Should throw an error if the PowerShellGet module cannot be installed" {
-            # Arrange: Set up the test file
-            $csvContent = @"
+    }
+    It "Should throw an error if the PowerShellGet module cannot be installed" {
+        # Arrange: Set up the test file
+        # Get the required values from the local machine
+        $currentComputerName = $env:COMPUTERNAME
+        $currentSerialNumber = (Get-CimInstance -ClassName Win32_BIOS).SerialNumber
+
+        # Populate the CSV string with the machine's actual data
+        $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-XYZ","C:\Users\j.doe","TEST-PC","j.doe","jane.doe","sadads","jcsystem123","TEST-SN-123"
+"S-1-5-21-VALID-SID-1001","C:\Users\test.user","${currentComputerName}","test.user","jane.doe","jc-user-123","jc-system-456","${currentSerialNumber}"
 "@
-            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-            Set-Content -Path $tempCsvPath -Value $csvContent -Force
+        $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
+        Set-Content -Path $tempCsvPath -Value $csvContent -Force
 
-            # --- Mock the environment for THIS test ---
-            # 1. Pretend NuGet is already installed.
-            Mock Get-PackageProvider { return [pscustomobject]@{name = 'nuget' } }
+        # --- Mock the environment for THIS test ---
+        # 1. Pretend NuGet is already installed.
+        Mock Get-PackageProvider { return [pscustomobject]@{name = 'nuget' } }
 
-            # 2. Pretend 'PowerShellGet' is MISSING, but other modules are found.
-            Mock Get-InstalledModule -ParameterFilter { $Name -eq 'PowerShellGet' } -MockWith { $null }
-            Mock Get-InstalledModule -ParameterFilter { $Name -ne 'PowerShellGet' } -MockWith { $true }
+        # 2. Pretend 'PowerShellGet' is MISSING, but other modules are found.
+        Mock Get-InstalledModule -ParameterFilter { $Name -eq 'PowerShellGet' } -MockWith { $null }
+        Mock Get-InstalledModule -ParameterFilter { $Name -ne 'PowerShellGet' } -MockWith { $true }
 
-            # 3. Make Install-Module FAIL specifically when called for 'PowerShellGet'.
-            Mock Install-Module -ParameterFilter { $Name -eq 'PowerShellGet' } -MockWith {
-                throw "Simulated Error: Failed to install PowerShellGet module."
-            }
-            # Make other calls to Install-Module do nothing.
-            Mock Install-Module -ParameterFilter { $Name -ne 'PowerShellGet' }
-
-            # Act & Assert: The script should fail when trying to install the missing module.
-            { & $global:scriptToTest } |  Should -Throw
+        # 3. Make Install-Module FAIL specifically when called for 'PowerShellGet'.
+        Mock Install-Module -ParameterFilter { $Name -eq 'PowerShellGet' } -MockWith {
+            throw "Simulated Error: Failed to install PowerShellGet module."
         }
+        # Make other calls to Install-Module do nothing.
+        Mock Install-Module -ParameterFilter { $Name -ne 'PowerShellGet' }
 
-        It "Should throw an error if the JumpCloud.ADMU module cannot be installed" {
-            # Arrange: Set up the test file
-            $csvContent = @"
+        # Act & Assert: The script should fail when trying to install the missing module.
+        { & $global:scriptToTest } | Should -Throw "*Failed to install PowerShellGet module*"
+    }
+
+    It "Should throw an error if the JumpCloud.ADMU module cannot be installed" {
+        # Arrange: Set up the test file
+        # Get the required values from the local machine
+        $currentComputerName = $env:COMPUTERNAME
+        $currentSerialNumber = (Get-CimInstance -ClassName Win32_BIOS).SerialNumber
+
+        # Populate the CSV string with the machine's actual data
+        $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-XYZ","C:\Users\j.doe","TEST-PC","j.doe","jane.doe","sadads","jcsystem123","TEST-SN-123"
+"S-1-5-21-VALID-SID-1001","C:\Users\test.user","${currentComputerName}","test.user","jane.doe","jc-user-123","jc-system-456","${currentSerialNumber}"
 "@
-            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-            Set-Content -Path $tempCsvPath -Value $csvContent -Force
+        $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
+        Set-Content -Path $tempCsvPath -Value $csvContent -Force
 
-            # --- Mock the environment for THIS test ---
-            # 1. Pretend NuGet is already installed.
-            Mock Get-PackageProvider { return [pscustomobject]@{name = 'nuget' } }
+        # --- Mock the environment for THIS test ---
+        # 1. Pretend NuGet is already installed.
+        Mock Get-PackageProvider { return [pscustomobject]@{name = 'nuget' } }
 
-            # 2. Pretend 'JumpCloud.ADMU' is MISSING, but other modules are found.
-            Mock Get-InstalledModule -ParameterFilter { $Name -eq 'JumpCloud.ADMU' } -MockWith { $null }
-            Mock Get-InstalledModule -ParameterFilter { $Name -ne 'JumpCloud.ADMU' } -MockWith { $true }
-            Mock Find-Module { } # Prevent network call
+        # 2. Pretend 'JumpCloud.ADMU' is MISSING, but other modules are found.
+        Mock Get-InstalledModule -ParameterFilter { $Name -eq 'JumpCloud.ADMU' } -MockWith { $null }
+        Mock Get-InstalledModule -ParameterFilter { $Name -ne 'JumpCloud.ADMU' } -MockWith { $true }
+        Mock Find-Module { } # Prevent network call
 
-            # 3. Make Install-Module FAIL specifically when called for 'JumpCloud.ADMU'.
-            Mock Install-Module -ParameterFilter { $Name -eq 'JumpCloud.ADMU' } -MockWith {
-                throw "Simulated Error: Failed to install JumpCloud.ADMU module."
-            }
-            # Make other calls to Install-Module do nothing.
-            Mock Install-Module -ParameterFilter { $Name -ne 'JumpCloud.ADMU' }
-
-            # Act & Assert: The script should fail when trying to install the missing module.
-            { & $global:scriptToTest } | Should -Throw
+        # 3. Make Install-Module FAIL specifically when called for 'JumpCloud.ADMU'.
+        Mock Install-Module -ParameterFilter { $Name -eq 'JumpCloud.ADMU' } -MockWith {
+            throw "Simulated Error: Failed to install JumpCloud.ADMU module."
         }
+        # Make other calls to Install-Module do nothing.
+        Mock Install-Module -ParameterFilter { $Name -ne 'JumpCloud.ADMU' }
+
+        # Act & Assert: The script should fail when trying to install the missing module.
+        { & $global:scriptToTest } | Should -Throw "*Failed to install JumpCloud.ADMU module*"
     }
 }
