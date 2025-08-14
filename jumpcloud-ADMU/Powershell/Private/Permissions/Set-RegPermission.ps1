@@ -70,7 +70,7 @@ function Set-RegPermission {
                 }
                 # icacls $FilePath /setowner "*$($TargetSID)" /t /c /q
                 # Grant the new user permissions with icacls:
-                icacls $FilePath /grant "*$($TargetSID):(OI)(CI)F" 2>&1 /t /c /q | out-null
+                icacls $FilePath /grant "*$($TargetSID):(OI)(CI)F" /t /c /q 2>&1 | out-null
             }
             $false {
                 Write-Host "No changes made to permissions as the file is not accessible by the source user."
