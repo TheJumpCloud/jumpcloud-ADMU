@@ -5,79 +5,50 @@ function Set-RegPermission {
         [Parameter(Mandatory)]
         [string]$TargetSID,
         [Parameter(Mandatory)]
-        [string]$FilePath,
-        [Parameter()]
-        [string]$ACLOutputPath = "AppData\Local\JumpCloudADMU\"
+        [string]$FilePath
     )
-    begin {
-        # Get the user names from the SIDs
+
+    # Create SecurityIdentifier objects
+    $SourceSIDObj = New-Object System.Security.Principal.SecurityIdentifier($SourceSID)
+    $TargetSIDObj = New-Object System.Security.Principal.SecurityIdentifier($TargetSID)
+
+    # Get NTAccount names for logging and ACLs
+    $SourceAccount = $SourceSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+    $TargetAccount = $TargetSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+
+    # Get all files and folders recursively, including hidden/system
+    $items = Get-ChildItem -Path $FilePath -Recurse -Force -ErrorAction SilentlyContinue
+    foreach ($item in $items) {
         try {
-            $sourceUser = (New-Object System.Security.Principal.SecurityIdentifier $SourceSid).Translate([System.Security.Principal.NTAccount]).Value
-            $targetUser = (New-Object System.Security.Principal.SecurityIdentifier $TargetSid).Translate([System.Security.Principal.NTAccount]).Value
-        } catch {
-            Write-Error "Failed to translate SIDs to user names. Error: $_"
-        }
-
-        write-host "SOURCEUSER: $sourceUser"
-        write-host "TARGETUSER: $targetUser"
-        # save the ACLs to a file, will default to $filePath + AppData\Local\JumpCloudADMU if not specified
-        # test that the output path exists, if not create it
-        write-host "Setting outputPath with $filePath and $ACLOutputPath"
-        $outputPath = Join-Path -Path $FilePath -ChildPath $ACLOutputPath
-        if (-not (Test-Path -Path $outputPath)) {
-            New-Item -ItemType Directory -Path $outputPath | Out-Null
-        }
-        # determine if the $filePath has a member of $targetUser
-        $acl = Get-Acl $FilePath
-        foreach ($access in $acl.Access) {
-            Write-Host "Access: $($access.IdentityReference) - $($access.FileSystemRights) - $($access.AccessControlType)"
-            if ($access.IdentityReference -eq $sourceUser) {
-                $replace = $true
-                write-host "Found source user in ACL, will replace permissions."
-                break
+            $acl = Get-Acl -Path $item.FullName
+            if ($null -eq $acl) { continue }
+            $aclChanged = $false
+            # Change owner if SourceSID is current owner
+            if (($acl.Owner -ne $TargetAccount) -and ($acl.Owner -eq $SourceAccount)) {
+                $acl.SetOwner($TargetSIDObj)
+                $aclChanged = $true
             }
-        }
-        # $targetMember = $acl.Access | Where-Object { $_.IdentityReference -eq $sourceUser }
-        # write-host "Current member: $($targetMember.IdentityReference)"
-        # if ($targetMember) {
-        #     $replace = $false
-        # } else {
-        #     $replace = $true
-        # }
-
-    }
-    process {
-        switch ($replace) {
-            $true {
-                # for the root object $filePath, add an ACL entry for the target SID
-                $acl = Get-Acl -Path $FilePath
-                $newRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                    $targetUser, "FullControl", "ContainerInherit, ObjectInherit", "None", "Allow"
-                )
-                $acl.AddAccessRule($newRule)
-                Set-Acl -Path $FilePath -AclObject $acl
-                # create the full output path with filename:
-                $aclFilePath = Join-Path -Path $outputPath -ChildPath "aclfile.txt"
-                # save the ACLs to a file
-                icacls "$($FilePath)\*" /save $aclFilePath /t /c /q 2>&1 | out-null
-                # replace the SourceSID with TargetSID in the found files
-                icacls $FilePath /restore $aclFilePath /substitute "*$($SourceSID)" "*$($TargetSID)" /t /c /q 2>&1 | out-null
-                # set the owner the with icacls:
-                $childItems = Get-ChildItem -Path $FilePath -Force
-                foreach ($item in $childItems) {
-                    $FilePath = $item.FullName
-                    icacls $FilePath /setowner "*$($TargetSID)" /t /c /q 2>&1 | out-null
+            # Copy SourceSID permissions to TargetSID
+            foreach ($access in $acl.Access) {
+                if ($access.IdentityReference -eq $SourceAccount) {
+                    $perm = $access.FileSystemRights
+                    $inheritance = $access.InheritanceFlags
+                    $propagation = $access.PropagationFlags
+                    $type = $access.AccessControlType
+                    $newRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+                        $TargetAccount, $perm, $inheritance, $propagation, $type
+                    )
+                    $acl.AddAccessRule($newRule)
+                    $aclChanged = $true
                 }
-                # icacls $FilePath /setowner "*$($TargetSID)" /t /c /q
-                # Grant the new user permissions with icacls:
-                icacls $FilePath /grant "*$($TargetSID):(OI)(CI)F" /t /c /q 2>&1 | out-null
             }
-            $false {
-                Write-Host "No changes made to permissions as the file is not accessible by the source user."
+            if ($aclChanged) {
+                Set-Acl -Path $item.FullName -AclObject $acl
+            }
+        } catch {
+            if ($_.Exception.Message -notmatch "because it is null") {
+                Write-ToLog "Failed to update $($item.FullName): $($_.Exception.Message)"
             }
         }
-    }
-    end {
-
     }
 }
