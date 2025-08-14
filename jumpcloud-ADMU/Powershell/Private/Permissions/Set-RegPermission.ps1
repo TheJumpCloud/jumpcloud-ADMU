@@ -16,6 +16,17 @@ function Set-RegPermission {
     $SourceAccount = $SourceSIDObj.Translate([System.Security.Principal.NTAccount]).Value
     $TargetAccount = $TargetSIDObj.Translate([System.Security.Principal.NTAccount]).Value
 
+    # Add the targetAccount to the ACL if it doesn't already exist
+    $acl = Get-Acl -Path $FilePath
+    $targetMember = $acl.Access | Where-Object { $_.IdentityReference -eq $TargetAccount }
+    if (-not $targetMember) {
+        $newRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
+            $TargetAccount, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
+        )
+        $acl.AddAccessRule($newRule)
+        Set-Acl -Path $FilePath -AclObject $acl
+    }
+
     # Get all files and folders recursively, including hidden/system
     $items = Get-ChildItem -Path $FilePath -Recurse -Force -ErrorAction SilentlyContinue
     foreach ($item in $items) {

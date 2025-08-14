@@ -114,6 +114,15 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $acl.Owner | Should -Be $otherAccount
         }
 
+        It "Should add the targetAccount as a member of the ACL if it does not already exist" {
+
+            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir
+            # the targetAccount should be added to the ACL
+            $acl = Get-Acl $filePath
+            $targetAccount = (New-Object System.Security.Principal.SecurityIdentifier($targetSID)).Translate([System.Security.Principal.NTAccount]).Value
+            $acl.Access | Where-Object { $_.IdentityReference -eq $targetAccount } | Should -Not -BeNullOrEmpty
+        }
+
     }
     It "Should change the permission set for hidden files and folders" {
         # init a user profile for testing:
