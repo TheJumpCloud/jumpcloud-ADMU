@@ -211,7 +211,7 @@ Write-Host "Starting user filtering and validation process..."
 foreach ($row in $ImportedCSV) {
     $rowNum++
     Write-Host "Processing row $rowNum..."
-    # Validate if JumpCloudSystemID is not null or empty
+    # Validate if JumpCloudUserID is not null or empty
     if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
         throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
     }
@@ -426,7 +426,7 @@ if ($UsersToMigrate) {
 # Get the last user in the migration list
 $lastUser = $($UsersToMigrate | Select-Object -Last 1)
 
-Write-Host "Starting validation for file: $CsvPath" -ForegroundColor Green
+Write-Host "Starting validation for file: $CsvPath"
 try {
 
     # --- START OF MIGRATION LOGIC ---
@@ -491,12 +491,12 @@ try {
             }
             # Write output for AzureAD and LocalDomain status
             Write-Host "Domain status before migration:"
-            Write-Host "[status] AzureADJoined: $AzureADStatus"
-            Write-Host "[status] DomainJoined: $LocalDomainStatus"
+            Write-Host "[status] Azure/EntraID status: $AzureADStatus"
+            Write-Host "[status] Local domain status: $LocalDomainStatus"
             # --- Script continues execution from this point ---
             # Start the migration. Ensure the 'Start-Migration' function is available.
             Start-Migration @migrationParams
-            Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)" -ForegroundColor Green
+            Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)"
             #region post-migration
             # Add any addition code here to modify the user post-migration
             # The migrated user home directory should be set to the $user.userPath variable
@@ -510,7 +510,7 @@ try {
         }
     }
 
-    Write-Host "`nAll user migrations have been processed." -ForegroundColor Cyan
+    Write-Host "`nAll user migrations have been processed."
 } catch {
     Write-Error "An unexpected error occurred: $_"
 }
