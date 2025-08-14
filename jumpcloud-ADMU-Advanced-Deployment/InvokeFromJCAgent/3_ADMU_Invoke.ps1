@@ -211,7 +211,7 @@ Write-Host "Starting user filtering and validation process..."
 foreach ($row in $ImportedCSV) {
     $rowNum++
     Write-Host "Processing row $rowNum..."
-    # Validate if JumpCloudSystemID is not null or empty
+    # Validate if JumpCloudUserID is not null or empty
     if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
         throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
     }
