@@ -1,18 +1,17 @@
 ## 2.8.8
 
-Release Date: August 13, 2025
+Release Date: August 14, 2025
 
 #### RELEASE NOTES
 
 ```
-* Added informational log messages for the bulk ADMU script
+Added informational validation and logging messages for the bulk ADMU script. Improved performance for setting NTFS permissions on the user's profile directory.
 ```
-
 
 #### IMPROVEMENTS:
 
-* Added CI tests for bulk ADMU
-
+- Added CI tests for bulk ADMU
+- Improved performance for setting NTFS permissions on the user's profile directory
 
 ## 2.8.7
 
