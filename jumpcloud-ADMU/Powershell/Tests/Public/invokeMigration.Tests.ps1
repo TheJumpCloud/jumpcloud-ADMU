@@ -28,7 +28,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Set-Content -Path $tempCsvPath -Value $csvContent -Force
 
             # Act & Assert
-            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED on row 1 : 'SID' cannot be empty. Halting script."
+            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED: on row 1 : 'SID' cannot be empty. Halting script."
         }
         It "Should throw an error if a SID is duplicated for the same device" {
             # Arrange: Create a CSV where the same SID appears twice for the same LocalComputerName.
@@ -57,7 +57,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Set-Content -Path $tempCsvPath -Value $csvContent -Force
 
             # Act & Assert
-            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED on row 1 : 'LocalPath' cannot be empty. Halting script."
+            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED: on row 1 : 'LocalPath' cannot be empty. Halting script."
         }
 
         It "Should throw an error if 'JumpCloudUserName' is empty" {
@@ -70,7 +70,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Set-Content -Path $tempCsvPath -Value $csvContent -Force
 
             # Act & Assert
-            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED on row 1 : 'JumpCloudUserName' cannot be empty. Halting script."
+            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED: on row 1 : 'JumpCloudUserName' cannot be empty. Halting script."
         }
 
         It "Should throw an error if 'JumpCloudUserID' is empty" {
@@ -81,9 +81,11 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 "@
             $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
             Set-Content -Path $tempCsvPath -Value $csvContent -Force
-
+            (Get-Content -Path $global:scriptToTest -Raw) -replace '\$systemContextBinding = \$false', '$systemContextBinding = $true' | Set-Content -Path $global:scriptToTest
             # Act & Assert
-            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED on row 1 : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
+            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED: on row 1 : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
+            # Set systemContextBinding back to false
+            (Get-Content -Path $global:scriptToTest -Raw) -replace '\$systemContextBinding = \$true', '$systemContextBinding = $false' | Set-Content -Path $global:scriptToTest
         }
     }
 
