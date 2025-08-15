@@ -154,6 +154,22 @@ switch ($dataSource) {
         Invoke-WebRequest -Uri $jcdiscoverycsv.download_url -OutFile $dlname
     }
 }
+#TODO: function defs
+Function Confirm-RemoteInvokeParams {
+    # this checks the AMDU parms in the top of this are valid
+    # returns True/False
+}
+Function Confirm-UsersToMigrate {
+    # returns True/False, $usersToMigrate
+}
+Function Confirm-ExecutionPolicy {
+    # this checks the execution policy
+    # returns True/False
+}
+Function Confirm-InstalledModules {
+    # this checks the installed modules
+    # returns True/False
+}
 
 # Import the CSV & check for one row per system
 try {
