@@ -166,9 +166,98 @@ Function Confirm-ExecutionPolicy {
     # this checks the execution policy
     # returns True/False
 }
-Function Confirm-InstalledModules {
+Function Confirm-RequiredModule {
     # this checks the installed modules
     # returns True/False
+    begin {
+        $nugetRequiredVersion = "2.8.5.208"
+        $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
+        $allSuccess = $true
+    }
+    process {
+        $nugetSuccess = $false
+        $packageProviders = Get-PackageProvider -Force | Select-Object name
+        if (!($packageProviders.name -contains "nuget")) {
+            Write-Host "[status] NuGet not Found. Installing Package Provider"
+            try {
+                $installResponse = Install-PackageProvider -Name NuGet -RequiredVersion $nugetRequiredVersion -Force
+                Write-Host "[status] NuGet Module was successfully installed."
+            } catch {
+                $nugetURL = "https://onegetcdn.azureedge.net/providers/nuget-$($nugetRequiredVersion).package.swidtag"
+                $nugetResponse = Invoke-WebRequest $nugetURL
+                If ($nugetResponse.StatusCode -ne 200) {
+                    Write-Host "[error] The NuGet package provider could not be installed from $nugetURL."
+                    $allSuccess = $false
+                }
+            }
+        } else {
+            Write-Host "[status] NuGet Module was previously installed, skipping installation."
+        }
+        $packageProviders = Get-PackageProvider -Force | Select-Object name
+        if ("nuget" -in $packageProviders.name) {
+            try {
+                write-host "[status] NuGet found. Importing into current session."
+                $importResponse = Import-PackageProvider -Name NuGet -RequiredVersion $nugetRequiredVersion -Force
+                write-host "[status] NuGet version $($ImportResponse.Version.ToString()) successfully imported."
+                $nugetSuccess = $true
+            } catch {
+                Write-Host "[error] Could not import Nuget into the current session."
+                $allSuccess = $false
+            }
+        } else {
+            $allSuccess = $false
+        }
+        foreach ($module in $requiredModules) {
+            $moduleSuccess = $false
+            $latestModule = Find-Module -Name $module -ErrorAction SilentlyContinue
+            $installedModule = Get-InstalledModule -Name $module -ErrorAction SilentlyContinue
+            if (-NOT $installedModule) {
+                Write-Host "[status] $module module not found, installing..."
+                try {
+                    Install-Module $module -Force
+                } catch {
+                    Write-Host "[error] Failed to install $module module"
+                    $allSuccess = $false
+                }
+            } else {
+                if ($latestModule.Version -ne $installedModule.Version) {
+                    Write-Host "[status] $module module found, updating..."
+                    try {
+                        Uninstall-Module -Name $module -AllVersions
+                        Install-Module $module -Force
+                    } catch {
+                        Write-Host "[error] Failed to update $module module, exiting..."
+                        $allSuccess = $false
+                    }
+                } else {
+                    Write-Host "[status] $module module is up to date"
+                }
+            }
+            # Try to import the module
+            try {
+                Import-Module $module -Force -ErrorAction Stop
+                $imported = Get-Module $module
+                if ($null -eq $imported) {
+                    Write-Host "[error] Failed to import $module module."
+                    $allSuccess = $false
+                } else {
+                    Write-Host "[status] $module module imported successfully; running version $($imported.Version)"
+                    $moduleSuccess = $true
+                }
+            } catch {
+                Write-Host "[error] Failed to import $module module."
+                $allSuccess = $false
+            }
+        }
+    }
+    end {
+        # Return true if all required modules and NuGet were installed/imported successfully
+        if ($allSuccess -and $nugetSuccess) {
+            return $true
+        } else {
+            return $false
+        }
+    }
 }
 
 # Import the CSV & check for one row per system
@@ -327,78 +416,6 @@ If (($policies.LocalMachine -eq "Restricted") -or
 Write-Host "[status] Execution Policies:"
 Write-Host $policies
 
-# install Nuget if required:
-$nugetRequiredVersion = "2.8.5.208"
-$packageProviders = Get-PackageProvider -Force | Select-Object name
-if (!($packageProviders.name -contains "nuget")) {
-    Write-Host "[status] NuGet not Found. Installing Package Provider"
-    try {
-        $installResponse = Install-PackageProvider -Name NuGet -RequiredVersion $nugetRequiredVersion -Force
-        Write-Host "[status] NuGet Module was successfully installed."
-    } catch {
-        $nugetURL = "https://onegetcdn.azureedge.net/providers/nuget-$($nugetRequiredVersion).package.swidtag"
-        $nugetResponse = Invoke-WebRequest $nugetURL
-        If ($nugetResponse.StatusCode -ne 200) {
-            Throw "The NuGet package provider could not be installed from $nugetURL. Please validate that no firewall or network restrictions are blocking the download. This is required to install the JumpCloud.ADMU and other required modules. This issue must first be resolved before proceeding with the ADMU script."
-        }
-    }
-} else {
-    Write-Host "[status] NuGet Module was previously installed, skipping installation."
-}
-$packageProviders = Get-PackageProvider -Force | Select-Object name
-if ("nuget" -in $packageProviders.name) {
-    try {
-        write-host "[status] NuGet found. Importing into current session."
-        $importResponse = Import-PackageProvider -Name NuGet -RequiredVersion $nugetRequiredVersion -Force
-        write-host "[status] NuGet version $($ImportResponse.Version.ToString()) successfully imported."
-    } catch {
-        throw "Could not import Nuget into the current session. Nuget is required to install the JumpCloud.ADMU module."
-    }
-}
-
-# Define required modules
-$requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
-foreach ($module in $requiredModules) {
-    $latestModule = Find-Module -Name $module -ErrorAction SilentlyContinue
-    $installedModule = Get-InstalledModule -Name $module -ErrorAction SilentlyContinue
-    if (-NOT $installedModule) {
-        Write-Host "[status] $module module not found, installing..."
-        try {
-            Install-Module $module -Force
-        } catch {
-            Write-Host "Please ensure the MachinePolicy or LocalMachine execution policy is not set to Restricted, AllSigned or RemoteSigned. You can set the LocalMachine policy to Bypass by using the command: `Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force` or if you have a MachinePolicy set, please modify you AD/ Entra GPO/ Policies and enable the use of scripts."
-            throw "[error] Failed to install $module module"
-        }
-    } else {
-        # update the module if it's not the latest version
-        if ($latestModule.Version -ne $installedModule.Version) {
-            Write-Host "[status] $module module found, updating..."
-            try {
-                Uninstall-Module -Name $module -AllVersions
-                Install-Module $module -Force
-            } catch {
-                Write-Host "Please ensure the execution policy is not set to Restricted. You can set it to Bypass by using the command: Set-ExecutionPolicy Bypass -Force or if you have a Group Policy in place, set it to Allow Scripts."
-                throw "[error] Failed to update $module module, exiting..."
-            }
-        } else {
-            Write-Host "[status] $module module is up to date"
-        }
-    }
-}
-
-# Now, import the module and verify it loaded correctly.
-Write-Host "[Status] Importing JumpCloud.ADMU module..."
-$module = Import-Module JumpCloud.ADMU -Force -ErrorAction SilentlyContinue
-$module = Get-Module JumpCloud.ADMU
-if ($null -eq $module) {
-    Write-Host "[error] Failed to import JumpCloud ADMU module, exiting..."
-    Write-Host "Please ensure the execution policy is not set to Restricted. You can set it to Bypass by using the command: Set-ExecutionPolicy Bypass -Force or if you have a Group Policy in place, set it to Allow Scripts."
-    exit 1
-} else {
-    Write-Host "[status] JumpCloud ADMU module imported successfully; running version $($module.Version)"
-}
-# wait just a moment to ensure the ADMU was downloaded from PSGallery
-start-sleep -Seconds 5
 
 #endregion installADMU
 # Run ADMU
