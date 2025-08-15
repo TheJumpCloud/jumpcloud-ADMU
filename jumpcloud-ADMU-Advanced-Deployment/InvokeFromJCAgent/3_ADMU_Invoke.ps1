@@ -165,6 +165,82 @@ Function Confirm-UsersToMigrate {
 Function Confirm-ExecutionPolicy {
     # this checks the execution policy
     # returns True/False
+    begin {
+        $success = $true
+        $curExecutionPolicy = Get-ExecutionPolicy -List
+        $lines = $curExecutionPolicy -split "`n" | Where-Object { $_.Trim() -ne "" -and $_ -notmatch '^-{5}' -and $_ -notmatch 'Scope ExecutionPolicy' }
+        $policies = [PSCustomObject]@{
+            MachinePolicy = ""
+            UserPolicy    = ""
+            Process       = ""
+            CurrentUser   = ""
+            LocalMachine  = ""
+        }
+        $regex = '@\{Scope=(.+?); ExecutionPolicy=(.+?)\}'
+    }
+    process {
+        try {
+            foreach ($line in $lines) {
+                if ($line -match $regex) {
+                    $scope = $matches[1]
+                    $executionPolicy = $matches[2].Trim()
+                    switch ($scope) {
+                        "MachinePolicy" { $policies.MachinePolicy = $executionPolicy }
+                        "UserPolicy" { $policies.UserPolicy = $executionPolicy }
+                        "Process" { $policies.Process = $executionPolicy }
+                        "CurrentUser" { $policies.CurrentUser = $executionPolicy }
+                        "LocalMachine" { $policies.LocalMachine = $executionPolicy }
+                    }
+                }
+            }
+            # if the machinePolicy is set to Restricted, AllSigned or RemoteSigned, the ADMU script can not run
+            If (($policies.MachinePolicy -eq "Restricted") -or
+                ($policies.MachinePolicy -eq "AllSigned") -or
+                ($policies.MachinePolicy -eq "RemoteSigned")) {
+                Write-Host "[status] Machine Policy is set to $($policies.MachinePolicy), this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
+                $success = $false
+                return $false
+            }
+            # If the Process policy is set to Restricted, AllSigned or RemoteSigned, we need to change it to Bypass
+            if (($policies.Process -eq "Restricted") -or
+                ($policies.Process -eq "AllSigned") -or
+                ($policies.Process -eq "RemoteSigned") -or
+                ($policies.Process -eq "Undefined")) {
+                Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), setting to Bypass"
+                try {
+                    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+                } catch {
+                    Write-Host "[error] Failed to set Process execution policy to Bypass."
+                    $success = $false
+                }
+            } else {
+                Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), no changes made."
+            }
+            # If the localMachine policy is set to Restricted, AllSigned or RemoteSigned, we need to change it to Bypass
+            if (($policies.LocalMachine -eq "Restricted") -or
+                ($policies.LocalMachine -eq "AllSigned") -or
+                ($policies.LocalMachine -eq "RemoteSigned") -or
+                ($policies.LocalMachine -eq "Undefined")) {
+                Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), setting to Bypass"
+                try {
+                    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
+                } catch {
+                    Write-Host "[error] Failed to set LocalMachine execution policy to Bypass."
+                    $success = $false
+                }
+            } else {
+                Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), no changes made."
+            }
+            Write-Host "[status] Execution Policies:"
+            Write-Host $policies
+        } catch {
+            Write-Host "[error] Exception occurred in Confirm-ExecutionPolicy: $($_.Exception.Message)"
+            $success = $false
+        }
+    }
+    end {
+        return $success
+    }
 }
 Function Confirm-RequiredModule {
     # this checks the installed modules
@@ -355,66 +431,6 @@ Write-Host "`nProceeding with user migration..."
 #region installADMU and required modules
 # Install the latest ADMU from PSGallery
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-# List the execution policies
-$curExecutionPolicy = Get-ExecutionPolicy -List
-# Split the text into lines and filter out the header and separator lines
-$lines = $curExecutionPolicy -split "`n" | Where-Object { $_.Trim() -ne "" -and $_ -notmatch '^-{5}' -and $_ -notmatch 'Scope ExecutionPolicy' }
-
-# Create a custom object to store the policies
-$policies = [PSCustomObject]@{
-    MachinePolicy = ""
-    UserPolicy    = ""
-    Process       = ""
-    CurrentUser   = ""
-    LocalMachine  = ""
-}
-# Define the regex pattern to capture the scope and execution policy
-$regex = '@\{Scope=(.+?); ExecutionPolicy=(.+?)\}'
-# Iterate through each line and populate the custom object
-foreach ($line in $lines) {
-    # Use a regular expression to extract the scope and value
-    if ($line -match $regex) {
-        $scope = $matches[1]
-        $executionPolicy = $matches[2].Trim()
-
-        # Populate the custom object based on the scope
-        switch ($scope) {
-            "MachinePolicy" { $policies.MachinePolicy = $executionPolicy }
-            "UserPolicy" { $policies.UserPolicy = $executionPolicy }
-            "Process" { $policies.Process = $executionPolicy }
-            "CurrentUser" { $policies.CurrentUser = $executionPolicy }
-            "LocalMachine" { $policies.LocalMachine = $executionPolicy }
-        }
-    }
-}
-# if the machinePolicy is set to Restricted, AllSigned or RemoteSigned, the ADMU script can not run
-If (($policies.MachinePolicy -eq "Restricted") -or
-    ($policies.MachinePolicy -eq "AllSigned") -or
-    ($policies.MachinePolicy -eq "RemoteSigned")) {
-    Throw "[status] Machine Policy is set to $($policies.MachinePolicy), this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
-}
-# If the Process policy is set to Restricted, AllSigned or RemoteSigned, we need to change it to Bypass
-If (($policies.Process -eq "Restricted") -or
-    ($policies.Process -eq "AllSigned") -or
-    ($policies.Process -eq "RemoteSigned" -or
-    ($policies.Process -eq "Undefined"))) {
-    Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), setting to Bypass"
-    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-} else {
-    Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), no changes made."
-}
-# If the localMachine policy is set to Restricted, AllSigned or RemoteSigned, we need to change it to Bypass
-If (($policies.LocalMachine -eq "Restricted") -or
-    ($policies.LocalMachine -eq "AllSigned") -or
-    ($policies.LocalMachine -eq "RemoteSigned" -or
-    ($policies.LocalMachine -eq "Undefined"))) {
-    Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), setting to Bypass"
-    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
-} else {
-    Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), no changes made."
-}
-Write-Host "[status] Execution Policies:"
-Write-Host $policies
 
 
 #endregion installADMU
