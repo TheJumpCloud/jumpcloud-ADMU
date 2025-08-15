@@ -145,7 +145,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.8.7'
+        $admuVersion = '2.8.8'
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
         $script:JumpCloudUserID = $JumpCloudUserID
@@ -194,7 +194,6 @@ Function Start-Migration {
 
 
         $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
-
         Write-ToLog -Message:('####################################' + (get-date -format "dd-MMM-yyyy HH:mm") + '####################################')
         # Start script
         Write-ToLog -Message:('Running ADMU: ' + 'v' + $admuVersion) -Level Verbose
@@ -382,9 +381,14 @@ Function Start-Migration {
 
             ### Begin Backup Registry for Selected User ###
             Write-ToLog -Message:('Creating Backup of User Registry Hive')
-            # Get Profile Image Path from Registry
 
-            $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
+            # Validate UserDirectory for Domain path
+            if (-not (Test-UserDirectoryPath -SelectedUserSID $SelectedUserSID)) {
+                Write-AdmuErrorMessage -ErrorName "user_profile_folder_name_error"
+                $admuTracker.backupOldUserReg.fail = $true
+                break
+            }
+
             #### Begin check for Registry system attribute
             if (Test-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System") {
                 Set-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System" -Operation "Remove"
@@ -983,18 +987,12 @@ Function Start-Migration {
             # logging
             Write-ToLog -Message:('New User Profile Path: ' + $newUserProfileImagePath + ' New User SID: ' + $NewUserSID)
             Write-ToLog -Message:('Old User Profile Path: ' + $oldUserProfileImagePath + ' Old User SID: ' + $SelectedUserSID)
-            Write-ToLog -Message:("NTFS ACLs on domain $windowsDrive\users\ dir")
-            #ntfs acls on domain $windowsDrive\users\ dir
-            $NewSPN_Name = $env:COMPUTERNAME + '\' + $JumpCloudUsername
-            $Acl = Get-Acl $newUserProfileImagePath
-            $Ar = New-Object System.Security.AccessControl.FileSystemAccessRule($NewSPN_Name, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
-            $Acl.SetAccessRule($Ar)
-            $Acl | Set-Acl -Path $newUserProfileImagePath
-            #TODO: reverse track this if we fail later
-            # Set the owner permission for the user profile path subdirectories
 
             Write-ToLog "Attempting to set owner to NTFS Permissions from: ($NewUserSID) to: $SelectedUserSID for path: $newUserProfileImagePath"
+            $regPermStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
             Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath
+            $regPermStopwatch.Stop()
+            Write-ToLog "Set-RegPermission completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
 
             # Validate if .DAT has correct permissions
             $validateNTUserDatPermissions, $validateNTUserDatPermissionsResults = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'

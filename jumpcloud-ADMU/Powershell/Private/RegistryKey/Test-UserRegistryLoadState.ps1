@@ -40,6 +40,12 @@ Function Test-UserRegistryLoadState {
         } else {
             Write-ToLog "Skipping User Shell Folder Validation..."
         }
+
+        # Check for previousSid from \Software\JCADMU
+        if (Test-PreviousSID -UserSid $UserSid) {
+            Write-AdmuErrorMessage -Error:("user_profile_previous_sid_error")
+            Throw "User $($UserSid) has already been migrated. Exiting..."
+        }
         # Validate the wallpaper policy
         Set-WallpaperPolicy -UserSid $UserSid
         ##### End of Validations #####
