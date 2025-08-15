@@ -155,6 +155,7 @@ switch ($dataSource) {
     }
 }
 #TODO: function defs
+#region functionDefinitions
 Function Confirm-RemoteInvokeParams {
     # this checks the AMDU parms in the top of this are valid
     # returns True/False
@@ -176,6 +177,7 @@ Function Confirm-ExecutionPolicy {
             CurrentUser   = ""
             LocalMachine  = ""
         }
+
         $regex = '@\{Scope=(.+?); ExecutionPolicy=(.+?)\}'
     }
     process {
@@ -231,8 +233,10 @@ Function Confirm-ExecutionPolicy {
             } else {
                 Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), no changes made."
             }
-            Write-Host "[status] Execution Policies:"
-            Write-Host $policies
+            # Write-Host "[status] Execution Policies:"
+            # foreach ($policy in $policies.PSObject.Properties) {
+            #     Write-Host "$($policy.Name): $($policy.Value)"
+            # }
         } catch {
             Write-Host "[error] Exception occurred in Confirm-ExecutionPolicy: $($_.Exception.Message)"
             $success = $false
@@ -335,7 +339,7 @@ Function Confirm-RequiredModule {
         }
     }
 }
-
+#endregion functionDefinitions
 # Import the CSV & check for one row per system
 try {
     $ImportedCSV = Import-Csv -Path $discoveryCSVLocation
@@ -635,3 +639,4 @@ if ($ForceRebootAfterMigration) {
 }
 #endregion restart/shutdown
 exit 0
+

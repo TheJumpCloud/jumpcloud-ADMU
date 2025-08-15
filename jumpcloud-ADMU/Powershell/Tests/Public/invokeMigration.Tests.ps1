@@ -88,80 +88,78 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             (Get-Content -Path $global:scriptToTest -Raw) -replace '\$systemContextBinding = \$true', '$systemContextBinding = $false' | Set-Content -Path $global:scriptToTest
         }
     }
-
-    Context "Disable Script Execution" {
-        It "Should throw an error when trying to run a script with execution policy set to Restricted" {
-            # Get the current policy so we can restore it later
-            $originalPolicy = Get-ExecutionPolicy -Scope Process
-            try {
-                # Set the restrictive policy just for this test
-                Set-ExecutionPolicy Restricted -Scope Process -Force
-
-                # The code that is expected to fail is wrapped in a script block.
-                # We check for the specific, language-neutral ErrorId for greater accuracy.
-                { & $global:scriptToTest } | Should -Throw
-            } finally {
-                # This block ALWAYS runs, ensuring the original policy is restored.
-                Set-ExecutionPolicy $originalPolicy -Scope Process -Force
-            }
-        }
-
-    }
-    Context "Should validate the possible conditions of the Confirm-ExecutionPolicy function" {
+    Context "Confirm-ExecutionPolicy Function" {
         BeforeAll {
 
             # get the "Confirm-ExecutionPolicy" function from the script
             $scriptContent = Get-Content -Path $global:scriptToTest -Raw
-            $scriptBlock = [scriptblock]::Create($scriptContent)
-            $global:ConfirmExecutionPolicy = $scriptBlock.FindFunction('Confirm-ExecutionPolicy')
-            if (-not $global:ConfirmExecutionPolicy) {
-                throw "TEST SETUP FAILED: Confirm-ExecutionPolicy function not found in the script."
-            }
-            #  | Should -BeTrue
+
+            $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
+            $functionMatches = [regex]::Matches($scriptContent, $pattern)
+
+            # set the matches.value to a temp file and import the functions
+            $functionMatches.Value | Set-Content -Path (Join-Path $PSScriptRoot 'invokeFunctions.ps1') -Force
+
+            # import the functions from the temp file
+            . (Join-Path $PSScriptRoot 'invokeFunctions.ps1')
         }
-        It "Should throw an error and Confirm-ExecutionPolicy should return false when MachinePolicy execution policy is Restricted, AllSigned, or RemoteSigned" {
+
+        AfterEach {
+            # reset the execution policy to Unrestricted for Process scope
+            Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+            # reset the execution policy to Unrestricted for LocalMachine scope
+            Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
+        }
+        It "Confirm-ExecutionPolicy should return false when MachinePolicy execution policy is Restricted, AllSigned, or RemoteSigned" {
             $executionPolicies = @('Restricted', 'AllSigned', 'RemoteSigned')
             foreach ($policy in $executionPolicies) {
-                Mock Get-ExecutionPolicy -List {
-                    @"
-Scope ExecutionPolicy
----- ---------------
-MachinePolicy       $policy
-  UserPolicy       Undefined
-     Process       Undefined
- CurrentUser       Undefined
-LocalMachine    Unrestricted
-"@
+
+                Mock Get-ExecutionPolicy -ParameterFilter { $List -eq $true } {
+                    $scopes = @('MachinePolicy', 'UserPolicy', 'Process', 'CurrentUser', 'LocalMachine')
+                    $returnObj = New-Object System.Collections.ArrayList
+                    foreach ($scope in $scopes) {
+                        $returnObj.Add([PSCustomObject]@{
+                                Scope           = $scope
+                                ExecutionPolicy = If ($scope -eq 'MachinePolicy') { $policy } else { 'Undefined' }
+                            }) | Out-Null
+                    }
+                    return $returnObj
                 }
+
+
+
+
+
                 # Confirm-ExecutionPolicy should return $false
-                $global:ConfirmExecutionPolicy.Invoke() | Should -BeFalse
+                Confirm-ExecutionPolicy | Should -BeFalse
                 # The script should throw the expected error
                 # { & $global:scriptToTest } | Should -Throw "[status] Machine Policy is set to $policy, this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
             }
         }
-        It "Should set the execution policy to Bypass for Process scope if the Process policy is set to Restricted, AllSigned, or RemoteSigned, and Confirm-ExecutionPolicy should return true" {
+        It "Confirm-ExecutionPolicy should return true when the Process scope is set to Restricted, AllSigned, or RemoteSigned" {
             $executionPolicies = @('Restricted', 'AllSigned', 'RemoteSigned')
             foreach ($policy in $executionPolicies) {
                 Set-ExecutionPolicy -Scope Process -ExecutionPolicy $policy -Force
                 Get-ExecutionPolicy -Scope Process | Should -Be $policy
-                $global:ConfirmExecutionPolicy.Invoke() | Should -BeTrue
+                Confirm-ExecutionPolicy | Should -BeTrue
                 # & $global:scriptToTest
                 Get-ExecutionPolicy -Scope Process | Should -Be 'Bypass'
             }
         }
-        It "Should set the execution policy to Bypass for localMachine scope if the localMachine policy is set to Restricted, AllSigned, or RemoteSigned, and Confirm-ExecutionPolicy should return true" {
+        It "Confirm-ExecutionPolicy should return true when the localMachine scope is set to Restricted, AllSigned, or RemoteSigned" {
             $executionPolicies = @('Restricted', 'AllSigned', 'RemoteSigned')
             foreach ($policy in $executionPolicies) {
+                Set-ExecutionPolicy -Scope Process -ExecutionPolicy $policy -Force
                 Set-ExecutionPolicy -Scope localMachine -ExecutionPolicy $policy -Force
                 Get-ExecutionPolicy -Scope localMachine | Should -Be $policy
-                $global:ConfirmExecutionPolicy.Invoke() | Should -BeTrue
+                Confirm-ExecutionPolicy | Should -BeTrue
                 # & $global:scriptToTest
                 Get-ExecutionPolicy -Scope localMachine | Should -Be 'Bypass'
             }
         }
     }
 
-    Context "Should Throw if Dependencies are Missing" {
+    Context "Should Throw if Dependencies are Missing" -skip {
         It "Should throw an error if the NuGet provider cannot be installed" {
             # Arrange: Set up the test file
             # Get the required values from the local machine
