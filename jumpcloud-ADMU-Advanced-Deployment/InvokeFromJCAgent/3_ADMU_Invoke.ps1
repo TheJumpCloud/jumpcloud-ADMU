@@ -46,59 +46,105 @@ $systemContextBinding = $false # Bind using the systemContext API (default False
 ################################################################################
 #region validation
 
-# validate dataSource
-if ($dataSource -notin @('csv', 'github')) {
-    Write-Host "[status] Invalid data source specified, exiting..."
-    exit 1
-}
-
-# validate postMigrationBehavior
-if ($postMigrationBehavior -notin @('Restart', 'Shutdown')) {
-    Write-Host "[status] Invalid postMigrationBehavior specified, exiting..."
-    exit 1
-} else {
-    # set the postMigrationBehavior to lower case and continue
-    $postMigrationBehavior = $postMigrationBehavior.ToLower()
-}
-
-# validate the systemContextBinding param
-if ($systemContextBinding -notin @($true, $false)) {
-    Write-Host "[status] Invalid systemContextBinding specified, exiting..."
-    exit 1
-}
-# validate the required ADMU parameters:
-# validate tempPassword is not null
-if ([string]::IsNullOrEmpty($TempPassword)) {
-    Write-Host "[status] Required script variable 'TempPassword' not set, exiting..."
-    exit 1
-}
-# Define a hashtable of variables to validate
-$booleanVariables = @{
-    LeaveDomain           = $LeaveDomain
-    ForceReboot           = $ForceReboot
-    UpdateHomePath        = $UpdateHomePath
-    AutoBindJCUser        = $AutoBindJCUser
-    BindAsAdmin           = $BindAsAdmin
-    SetDefaultWindowsUser = $SetDefaultWindowsUser
-}
-
-# Validate each variable in the hashtable
-foreach ($key in $booleanVariables.Keys) {
-    if ($booleanVariables[$key] -notin @($true, $false)) {
-        Write-Host "[status] Required script variable '$key' not set or invalid, exiting..."
-        exit 1
-    }
-}
-# API key and ORGID validation
-# The JumpCloud API Key can be null if the systemContextBinding is set to true
-if ($systemContextBinding -eq $false) {
-    if ([string]::IsNullOrEmpty($JumpCloudAPIKey) -And ($JumpCloudAPIKey -ne "YOURAPIKEY")) {
-        Write-Host "[status] Required script variable 'JumpCloudAPIKey' not set, exiting..."
-        exit 1
-    }
-}
 #endregion validation
 
+
+#TODO: function defs
+function Confirm-MigrationParameter {
+    [CmdletBinding()]
+    param(
+        # --- Data Source Parameters ---
+        [ValidateSet('csv', 'github')]
+        [string]$dataSource = 'csv',
+
+        [string]$csvName = 'jcdiscovery.csv',
+        [string]$GitHubUsername = '',
+        [string]$GitHubToken = '',
+        [string]$GitHubRepoName = 'Jumpcloud-ADMU-Discovery',
+
+        # --- ADMU Core Parameters ---
+        [string]$TempPassword = 'Temp123!Temp123!',
+        [bool]$LeaveDomain = $true,
+        [bool]$ForceReboot = $true,
+        [bool]$UpdateHomePath = $false,
+        [bool]$AutoBindJCUser = $true,
+        [bool]$BindAsAdmin = $false,
+        [bool]$SetDefaultWindowsUser = $true,
+
+        # --- JumpCloud API Parameters ---
+        [bool]$systemContextBinding = $false,
+        [string]$JumpCloudAPIKey = 'YOURAPIKEY',
+        [string]$JumpCloudOrgID = 'YOURORGID',
+
+        # --- Post-Migration Behavior ---
+        [ValidateSet('Restart', 'Shutdown')]
+        [string]$postMigrationBehavior = 'Restart',
+
+        [bool]$removeMDM = $false
+    )
+
+    # --- Custom Validation Logic ---
+
+    # 1. Validate parameters based on the selected data source
+    if ($dataSource -eq 'csv') {
+        if ([string]::IsNullOrWhiteSpace($csvName)) {
+            throw "Parameter Validation Failed: When dataSource is 'csv', the 'csvName' parameter cannot be empty."
+        }
+    } elseif ($dataSource -eq 'github') {
+        if ([string]::IsNullOrWhiteSpace($GitHubUsername)) {
+            throw "Parameter Validation Failed: When dataSource is 'github', the 'GitHubUsername' parameter cannot be empty."
+        }
+        if ([string]::IsNullOrWhiteSpace($GitHubToken)) {
+            throw "Parameter Validation Failed: When dataSource is 'github', the 'GitHubToken' parameter cannot be empty."
+        }
+        if ([string]::IsNullOrWhiteSpace($GitHubRepoName)) {
+            throw "Parameter Validation Failed: When dataSource is 'github', the 'GitHubRepoName' parameter cannot be empty."
+        }
+    }
+
+    # 2. Validate TempPassword is not empty
+    if ([string]::IsNullOrEmpty($TempPassword)) {
+        throw "Parameter Validation Failed: The 'TempPassword' parameter cannot be empty."
+    }
+
+    # 3. Conditionally validate JumpCloud API parameters
+    # This check is crucial. It runs if the user relies on the default systemContextBinding=$false or sets it explicitly.
+    if (-not $systemContextBinding) {
+        if ([string]::IsNullOrWhiteSpace($JumpCloudAPIKey) -or $JumpCloudAPIKey -eq 'YOURAPIKEY') {
+            throw "Parameter Validation Failed: 'JumpCloudAPIKey' must be set to a valid key when 'systemContextBinding' is false."
+        }
+        if ([string]::IsNullOrWhiteSpace($JumpCloudOrgID) -or $JumpCloudOrgID -eq 'YOURORGID') {
+            throw "Parameter Validation Failed: 'JumpCloudOrgID' must be set to a valid ID when 'systemContextBinding' is false."
+        }
+    }
+
+    # If all validation checks pass, return true.
+    return $true
+}
+#region validation
+
+# validate dataSource
+$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource `
+    -csvName $csvName `
+    -GitHubUsername $GitHubUsername `
+    -GitHubToken $GitHubToken `
+    -GitHubRepoName $GitHubRepoName `
+    -TempPassword $TempPassword `
+    -LeaveDomain $LeaveDomain `
+    -ForceReboot $ForceReboot `
+    -UpdateHomePath $UpdateHomePath `
+    -AutoBindJCUser $AutoBindJCUser `
+    -BindAsAdmin $BindAsAdmin `
+    -SetDefaultWindowsUser $SetDefaultWindowsUser `
+    -systemContextBinding $systemContextBinding `
+    -JumpCloudAPIKey $JumpCloudAPIKey `
+    -JumpCloudOrgID $JumpCloudOrgID `
+    -postMigrationBehavior $postMigrationBehavior `
+    -removeMDM $removeMDM
+if ($confirmMigrationParameters) {
+    Write-Host "[STATUS] Migration parameters validated successfully."
+}
+#endregion validation
 #region dataImport
 switch ($dataSource) {
     'csv' {
@@ -154,14 +200,7 @@ switch ($dataSource) {
         Invoke-WebRequest -Uri $jcdiscoverycsv.download_url -OutFile $dlname
     }
 }
-#TODO: function defs
-Function Confirm-RemoteInvokeParams {
-    # this checks the AMDU parms in the top of this are valid
-    # returns True/False
-}
-Function Confirm-UsersToMigrate {
-    # returns True/False, $usersToMigrate
-}
+
 Function Confirm-ExecutionPolicy {
     # this checks the execution policy
     # returns True/False
@@ -336,92 +375,89 @@ Function Confirm-RequiredModule {
     }
 }
 
-# Import the CSV & check for one row per system
-try {
-    $ImportedCSV = Import-Csv -Path $discoveryCSVLocation
-    Write-Host "[status] CSV Imported."
-    Write-Host "[status] CSV Imported, found $($ImportedCSV.Count) rows"
-    Write-Host "[status] row headers: $($ImportedCSV[0].PSObject.Properties.Name)"
-    # if "localComputerName", "SerialNumber", "JumpCloudUserName" are not in the CSV, exit
-    if (!($ImportedCSV[0].PSObject.Properties.Name -contains "LocalComputerName") -or !($ImportedCSV[0].PSObject.Properties.Name -contains "SerialNumber") -or !($ImportedCSV[0].PSObject.Properties.Name -contains "JumpCloudUserName")) {
-        Write-Host "[error] CSV file does not contain the required headers, exiting..."
-        exit 1
+function Get-MigrationUsersFromCsv {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject[]])]
+    param(
+        # The full path to the discovery CSV file.
+        [Parameter(Mandatory = $true)]
+        [string]$csvPath,
+        [Parameter(Mandatory = $true)]
+        [boolean]$systemContextBinding
+    )
+
+    begin {
+        # 1. --- FILE AND HEADER VALIDATION ---
+        if (-not (Test-Path -Path $csvPath -PathType Leaf)) {
+            Write-Error "Validation Failed: The CSV file was not found at: '$csvPath'."
+            return $null # Return null on failure
+        }
+        $ImportedCSV = Import-Csv -Path $csvPath -ErrorAction Stop
     }
+    process {
+        $requiredHeaders = @("LocalComputerName", "SerialNumber", "JumpCloudUserName", "SID", "LocalPath")
+        $csvHeaders = $ImportedCSV[0].PSObject.Properties.Name
+        foreach ($header in $requiredHeaders) {
+            if ($header -notin $csvHeaders) {
+                throw "Validation Failed: The CSV is missing the required header: '$header'."
+            }
+        }
 
-} catch {
-    Write-Host "[error] Error importing CSV file, exiting..."
-    throw "Error importing CSV file, $($_.Exception.Message)"
-}
+        # 2. --- DUPLICATE SID VALIDATION ---
+        $groupedByDevice = $ImportedCSV | Group-Object -Property 'LocalComputerName'
+        foreach ($device in $groupedByDevice) {
+            $duplicateSids = $device.Group | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
+            if ($duplicateSids) {
+                throw "Validation Failed: Duplicate SID '$($duplicateSids[0].Name)' found for LocalComputerName '$($device.Name)'."
+            }
+        }
 
-# --- ADDED VALIDATION ---
-# Group the CSV data by LocalComputerName to check each device individually
-$groupedByDevice = $ImportedCSV | Group-Object -Property 'LocalComputerName'
+        # 3. --- FIND AND BUILD USER OBJECTS ---
+        $usersToMigrate = @()
+        $computerName = $env:COMPUTERNAME
+        $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
 
-# Iterate over each device
-foreach ($device in $groupedByDevice) {
-    # Within each device row, group by SID to find duplicates
-    $duplicateSids = $device.Group | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
-    Write-Host "[status] Found $($duplicateSids.Count) duplicate SIDs for device '$($device.Name)'."
-    # If any SID group has a count > 1, a duplicate exists for this device
-    if ($duplicateSids) {
-        # Get the first duplicate SID found for a clean error message
-        $firstDuplicate = $duplicateSids[0].Name
-        $computerName = $device.Name
+        foreach ($row in $ImportedCSV) {
+            # Validate if JumpCloudUserID is not null or empty
+            if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
+                throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
+            }
+            # --- Row content validation ---
+            $requiredFields = "LocalPath", "SID", "JumpCloudUserName"
+            foreach ($field in $requiredFields) {
+                if ([string]::IsNullOrWhiteSpace($row.$field)) {
+                    throw "Validation Failed: Row $($foreach.CurrentIndex + 1) is missing required data for field '$field'."
+                }
+            }
 
-        # Throw a terminating error with a descriptive message
-        throw "[error] Duplicate SID '$firstDuplicate' found for LocalComputerName '$computerName'. SIDs must be unique per device."
-    }
-}
-Write-Host "[status] SID uniqueness per device validated successfully."
-
-# define list of user we want to migrate
-$UsersToMigrate = @()
-
-$computerName = $env:COMPUTERNAME
-$serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
-
-write-host "[status] Computer Name: $($computerName)"
-write-host "[status] Serial Number: $($serialNumber)"
-# Find user to be migrated based on the CSV
-
-$rowNum = 0
-
-Write-Host "Starting user filtering and validation process..."
-
-# Loop through the source data one time.
-foreach ($row in $ImportedCSV) {
-    $rowNum++
-    Write-Host "Processing row $rowNum..."
-    # Validate if JumpCloudUserID is not null or empty
-    if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
-        throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
-    }
-    # Define the fields that cannot be empty
-    $requiredFields = "LocalPath", "SID", "JumpCloudUserName"
-    # Loop through each required field and check it
-    foreach ($field in $requiredFields) {
-        if ([string]::IsNullOrWhiteSpace($row.$field)) {
-            throw "VALIDATION FAILED: on row $rowNum : '$field' cannot be empty. Halting script."
+            # --- Filter for this machine and create the custom object ---
+            if (($row.LocalComputerName -eq $computerName) -and ($row.SerialNumber -eq $serialNumber)) {
+                $usersToMigrate += [PSCustomObject]@{
+                    UserSID           = $row.SID
+                    LocalProfilePath  = $row.LocalPath
+                    JumpCloudUserName = $row.JumpCloudUserName
+                    JumpCloudUserID   = $row.JumpCloudUserID
+                }
+            }
         }
     }
 
-    if (($row.LocalComputerName -eq ($computerName)) -AND ($row.SerialNumber -eq $serialNumber) -AND ($row.JumpCloudUserName -ne '')) {
-        Write-Host "[status] AD user path $($row.LocalPath) | Converting to JumpCloud User $($row.JumpCloudUserName)"
-        $UsersToMigrate += [PSCustomObject]@{
-            selectedUsername  = $row.SID
-            JumpCloudUserName = $row.JumpCloudUserName
-            JumpCloudUserID   = $row.JumpCloudUserID
-            userPath          = $row.LocalPath
+    end {
+        # 4. --- FINAL CHECK AND RETURN ---
+        if ($usersToMigrate.Count -eq 0) {
+            throw "Validation Failed: No users were found in the CSV matching this computer's name ('$computerName') and serial number ('$serialNumber')."
         }
+        return $usersToMigrate
     }
+
 }
 
-# --- Final Summary ---
-Write-Host "User CSV Validation Complete"
-if ($UsersToMigrate.Count -eq 0) {
-    throw "VALIDATION FAILED: No users were found that matched the migration criteria, the localComputerName in the CSV must match the current computer name and the SerialNumber in the CSV must match the current serial number. Please check your CSV file and validate that the required fields are populated correctly."
-} else {
-    Write-Host "`nSuccessfully validated $($UsersToMigrate.Count) user(s) for migration."
+# Call the function and store the result (which is either an array of users or $null)
+$users = Get-MigrationUsersFromCsv -CsvPath $discoveryCSVLocation -systemContextBinding $systemContextBinding
+
+# The 'if' statement automatically treats $null as false and a populated array as true
+if ($users) {
+    Write-Host "[Status] CSV: Validation successful. Proceeding with user migration..."
 }
 # You can now proceed using the fully validated $UsersToMigrate array.
 
