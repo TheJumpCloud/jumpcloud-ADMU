@@ -11,83 +11,452 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
     }
 
-    AfterEach {
-        if ($tempCsvPath -and (Test-Path $tempCsvPath)) {
-            Remove-Item $tempCsvPath -Force
+    Describe 'Confirm-MigrationParameter' -Tags 'Validation' {
+
+        # This block runs once before any tests in this 'Describe' block.
+        BeforeAll {
+            # --- IMPORTANT ---
+
+            # get the function definitions from the script
+            $scriptContent = Get-Content -Path $global:scriptToTest -Raw
+            $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
+            $functionMatches = [regex]::Matches($scriptContent, $pattern)
+
+            # set the matches.value to a temp file and import the functions
+            $tempFunctionFile = Join-Path $PSScriptRoot 'invokeFunctions.ps1'
+            $functionMatches.Value | Set-Content -Path $tempFunctionFile -Force
+
+            # import the functions from the temp file
+            . $tempFunctionFile
+        }
+        BeforeEach {
+            $baseParams = @{
+                # CSV or Github input
+                dataSource            = 'csv' # csv or github
+                # CSV variables
+                csvName               = 'jcdiscovery.csv'
+                # Github variables
+                GitHubUsername        = ''
+                GitHubToken           = ''
+                GitHubRepoName        = 'Jumpcloud-ADMU-Discovery'
+                # ADMU variables
+                TempPassword          = 'Temp123!Temp123!'
+                LeaveDomain           = $true
+                ForceReboot           = $true
+                UpdateHomePath        = $false
+                AutoBindJCUser        = $true
+                BindAsAdmin           = $false
+                SetDefaultWindowsUser = $true
+                # JumpCloud API Parameters - Using valid keys for the base case
+                JumpCloudAPIKey       = ''
+                JumpCloudOrgID        = ''
+                systemContextBinding  = $false
+                # Post-Migration Behavior
+                postMigrationBehavior = 'Restart' # Restart or Shutdown
+                # MDM Removal
+                removeMDM             = $false
+            }
+        }
+
+        Context "Default and Basic Validation" {
+            It "Should return TRUE when valid parameters are provided" {
+                $testParams = $baseParams.Clone()
+                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
+                $testParams.JumpCloudOrgID = 'TestORGID'
+                # The function defaults to dataSource 'csv', so we only need to provide valid API creds.
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should THROW if TempPassword is empty" {
+                $testParams = $baseParams.Clone()
+                $testParams.TempPassword = ''
+                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
+                $testParams.JumpCloudOrgID = 'TestORGID'
+                { Confirm-MigrationParameter @testParams } | Should -Throw "Parameter Validation Failed: The 'TempPassword' parameter cannot be empty."
+            }
+        }
+
+        Context "Data Source: CSV" {
+            It "Should return TRUE when dataSource is 'csv' and csvName is provided" {
+                $testParams = $baseParams.Clone()
+                $testParams.dataSource = 'csv'
+                $testParams.csvName = 'mydata.csv'
+                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
+                $testParams.JumpCloudOrgID = 'TestORGID'
+
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should THROW when dataSource is 'csv' and csvName is empty" {
+                $testParams = $baseParams.Clone()
+                $testParams.dataSource = 'csv'
+                $testParams.csvName = ''
+                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
+                $testParams.JumpCloudOrgID = 'TestORGID'
+
+                { Confirm-MigrationParameter @testParams } | Should -Throw "Parameter Validation Failed: When dataSource is 'csv', the 'csvName' parameter cannot be empty."
+            }
+        }
+
+        Context "Data Source: GitHub" {
+            It "Should return TRUE when dataSource is 'github' and all GitHub parameters are valid" {
+                $testParams = $baseParams.Clone()
+                $testParams.dataSource = 'github'
+                $testParams.GitHubUsername = 'testuser'
+                $testParams.GitHubToken = 'MySecretToken'
+                $testParams.GitHubRepoName = 'MyRepo'
+                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
+                $testParams.JumpCloudOrgID = 'TestORGID'
+
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should THROW when dataSource is 'github' and GitHubUsername is empty" {
+                $testParams = $baseParams.Clone()
+                $testParams.dataSource = 'github'
+                $testParams.GitHubUsername = '' # Invalid
+                $testParams.GitHubToken = 'MySecretToken'
+                $testParams.GitHubRepoName = 'MyRepo'
+                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
+                $testParams.JumpCloudOrgID = 'TestORGID'
+
+                { Confirm-MigrationParameter @testParams } | Should -Throw "Parameter Validation Failed: When dataSource is 'github', the 'GitHubUsername' parameter cannot be empty."
+            }
+
+            It "Should THROW when dataSource is 'github' and GitHubToken is empty" {
+                $testParams = $baseParams.Clone()
+                $testParams.dataSource = 'github'
+                $testParams.GitHubUsername = 'testuser'
+                $testParams.GitHubToken = '' # Invalid
+                $testParams.GitHubRepoName = 'MyRepo'
+                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
+                $testParams.JumpCloudOrgID = 'TestORGID'
+
+                { Confirm-MigrationParameter @testParams } | Should -Throw "Parameter Validation Failed: When dataSource is 'github', the 'GitHubToken' parameter cannot be empty."
+            }
+
+            It "Should THROW when dataSource is 'github' and GitHubRepoName is empty" {
+                $testParams = $baseParams.Clone()
+                $testParams.dataSource = 'github'
+                $testParams.GitHubUsername = 'testuser'
+                $testParams.GitHubToken = 'MySecretToken'
+                $testParams.GitHubRepoName = '' # Invalid
+                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
+                $testParams.JumpCloudOrgID = 'TestORGID'
+
+                { Confirm-MigrationParameter @testParams } | Should -Throw "Parameter Validation Failed: When dataSource is 'github', the 'GitHubRepoName' parameter cannot be empty."
+            }
+        }
+
+        Context "JumpCloud API Parameter Validation" {
+            It "Should THROW when systemContextBinding is false and JumpCloudAPIKey is the default placeholder" {
+                # Create a hashtable for splatting
+                $params = @{
+                    JumpCloudAPIKey = ''
+                    JumpCloudOrgID  = 'OrgID' # Default invalid ID
+                }
+                { Confirm-MigrationParameter @params } | Should -Throw "Parameter Validation Failed: 'JumpCloudAPIKey' must be set to a valid key when 'systemContextBinding' is false."
+            }
+
+            It "Should THROW when systemContextBinding is false and JumpCloudOrgID is the default placeholder" {
+                $params = @{
+                    JumpCloudAPIKey = 'MyValidApiKey'
+                    JumpCloudOrgID  = '' # Default invalid ID
+                }
+                { Confirm-MigrationParameter @params } | Should -Throw "Parameter Validation Failed: 'JumpCloudOrgID' must be set to a valid ID when 'systemContextBinding' is false."
+            }
+
+            It "Should THROW when systemContextBinding is false and JumpCloudAPIKey is empty" {
+                $params = @{
+                    JumpCloudAPIKey = '' # Empty Key
+                    JumpCloudOrgID  = 'MyValidOrgId'
+                }
+                { Confirm-MigrationParameter @params } | Should -Throw "Parameter Validation Failed: 'JumpCloudAPIKey' must be set to a valid key when 'systemContextBinding' is false."
+            }
+
+            It "Should return TRUE when systemContextBinding is TRUE, even with default API parameters" {
+                # When systemContextBinding is true, the API key and Org ID checks should be skipped.
+                $params = @{
+                    systemContextBinding = $true
+                    JumpCloudAPIKey      = 'YOURAPIKEY' # This would normally fail
+                    JumpCloudOrgID       = 'YOURORGID'  # This would normally fail
+                }
+                Confirm-MigrationParameter @params | Should -Be $true
+            }
+        }
+        Context "Boolean Parameter Validation" {
+            BeforeEach {
+                $testParams = $baseParams.Clone()
+                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
+                $testParams.JumpCloudOrgID = 'TestORGID'
+            }
+            It "Should return TRUE when LeaveDomain is `$true" {
+                $testParams.LeaveDomain = $true
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should return TRUE when LeaveDomain is `$false" {
+                $testParams.LeaveDomain = $false
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should THROW when LeaveDomain is not a boolean" {
+                $testParams.LeaveDomain = 'not-a-boolean'
+                { Confirm-MigrationParameter @testParams } | Should -Throw
+            }
+
+            It "Should return TRUE when ForceReboot is `$true" {
+                $testParams.ForceReboot = $true
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should return TRUE when ForceReboot is `$false" {
+                $testParams.ForceReboot = $false
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should THROW when ForceReboot is not a boolean" {
+                $testParams.ForceReboot = 'not-a-boolean'
+                { Confirm-MigrationParameter @testParams } | Should -Throw
+            }
+
+            It "Should return TRUE when UpdateHomePath is `$true" {
+                $testParams.UpdateHomePath = $true
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should return TRUE when UpdateHomePath is `$false" {
+                $testParams.UpdateHomePath = $false
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should THROW when UpdateHomePath is not a boolean" {
+                $testParams.UpdateHomePath = 'not-a-boolean'
+                { Confirm-MigrationParameter @testParams } | Should -Throw
+            }
+
+            It "Should return TRUE when AutoBindJCUser is `$true" {
+                $testParams.AutoBindJCUser = $true
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should return TRUE when AutoBindJCUser is `$false" {
+                $testParams.AutoBindJCUser = $false
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should THROW when AutoBindJCUser is not a boolean" {
+                $testParams.AutoBindJCUser = 'not-a-boolean'
+                { Confirm-MigrationParameter @testParams } | Should -Throw
+            }
+
+            It "Should return TRUE when BindAsAdmin is `$true" {
+                $testParams.BindAsAdmin = $true
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should return TRUE when BindAsAdmin is `$false" {
+                $testParams.BindAsAdmin = $false
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should THROW when BindAsAdmin is not a boolean" {
+                $testParams.BindAsAdmin = 'not-a-boolean'
+                { Confirm-MigrationParameter @testParams } | Should -Throw
+            }
+
+            It "Should return TRUE when SetDefaultWindowsUser is `$true" {
+                $testParams.SetDefaultWindowsUser = $true
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should return TRUE when SetDefaultWindowsUser is `$false" {
+                $testParams.SetDefaultWindowsUser = $false
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should THROW when SetDefaultWindowsUser is not a boolean" {
+                $testParams.SetDefaultWindowsUser = 'not-a-boolean'
+                { Confirm-MigrationParameter @testParams } | Should -Throw
+            }
+
+            It "Should return TRUE when removeMDM is `$true" {
+                $testParams.removeMDM = $true
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should return TRUE when removeMDM is `$false" {
+                $testParams.removeMDM = $false
+                Confirm-MigrationParameter @testParams | Should -Be $true
+            }
+
+            It "Should THROW when removeMDM is not a boolean" {
+                $testParams.removeMDM = 'not-a-boolean'
+                { Confirm-MigrationParameter @testParams } | Should -Throw
+            }
         }
     }
-    Context "ADMU Bulk Migration Script Tests" -skip {
 
-        It "Should throw an error if 'SID' is empty" {
-            # Arrange
+
+
+    Context "Get-MigrationUsersFromCsv Function Tests" {
+        # Universal setup for all tests in this context
+        BeforeAll {
+            $csvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
+            # get the "Get-MigrationUsersFromCsv" function from the script
+            $scriptContent = Get-Content -Path $global:scriptToTest -Raw
+
+            $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
+            $functionMatches = [regex]::Matches($scriptContent, $pattern)
+
+            # set the matches.value to a temp file and import the functions
+            $functionMatches.Value | Set-Content -Path (Join-Path $PSScriptRoot 'invokeFunctions.ps1') -Force
+
+            # import the functions from the temp file
+            . (Join-Path $PSScriptRoot 'invokeFunctions.ps1')
+        }
+
+        AfterEach {
+            # Clean up the CSV before each test to ensure test isolation.
+            if (Test-Path -Path $csvPath) {
+                Remove-Item -Path $csvPath -Force
+            }
+        }
+
+        It "Should throw an error if the CSV file does not exist" {
+            # Act & Assert
+            $act = { Get-MigrationUsersFromCsv -csvPath 'C:\Windows\Temp\notAFile.csv' -systemContextBinding $false }
+            $act | Should -Throw "Validation Failed: The CSV file was not found at: 'C:\Windows\Temp\notAFile.csv'."
+        }
+
+        It "Should throw an error if the CSV is missing a required header" {
+            # Arrange: CSV is missing the 'SID' header
             $csvContent = @"
-"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"","C:\Users\j.doe","TEST-PC","j.doe","jane.doe","jcuser123","jcsystem123","TEST-SN-123"
+"LocalPath","LocalComputerName","SerialNumber","JumpCloudUserName"
+"C:\Users\j.doe","TEST-PC","TEST-SN-123","jane.doe"
 "@
-            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-            Set-Content -Path $tempCsvPath -Value $csvContent -Force
+            Set-Content -Path $csvPath -Value $csvContent -Force
 
             # Act & Assert
-            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED: on row 1 : 'SID' cannot be empty. Halting script."
+            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false }
+            $act | Should -Throw "Validation Failed: The CSV is missing the required header: 'SID'."
         }
+
         It "Should throw an error if a SID is duplicated for the same device" {
-            # Arrange: Create a CSV where the same SID appears twice for the same LocalComputerName.
-            # This is the specific condition that should trigger a validation failure.
+            # Arrange: The same SID appears twice for 'TEST-PC-1'.
             $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
 "S-1-5-21-DUPLICATE-SID","C:\Users\j.doe","TEST-PC-1","j.doe","jane.doe","jcuser123","jcsystem123","TEST-SN-123"
 "S-1-5-21-DIFFERENT-SID","C:\Users\b.jones","TEST-PC-2","b.jones","bobby.jones","jcuser456","jcsystem456","TEST-SN-456"
 "S-1-5-21-DUPLICATE-SID","C:\Users\j.doe.new","TEST-PC-1","j.doe.new","john.doe","jcuser789","jcsystem789","TEST-SN-123"
 "@
-            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-            Set-Content -Path $tempCsvPath -Value $csvContent -Force
+            Set-Content -Path $csvPath -Value $csvContent -Force
 
-            # Act & Assert: The script should throw a specific error that identifies
-
-            { & $global:scriptToTest } | Should -Throw
+            # Act & Assert
+            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false }
+            $act | Should -Throw "Validation Failed: Duplicate SID 'S-1-5-21-DUPLICATE-SID' found for LocalComputerName 'TEST-PC-1'."
         }
 
-        It "Should throw an error if 'LocalPath' is empty" {
+        # --- Test Cases for Row-Level Data Validation ---
+
+        It "Should throw an error if 'SID' field is empty" {
+            # Arrange
+            $csvContent = @"
+"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
+"","C:\Users\j.doe","TEST-PC","j.doe","jane.doe","jcuser123","jcsystem123","TEST-SN-123"
+"@
+            Set-Content -Path $csvPath -Value $csvContent -Force
+
+            # Act & Assert
+            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false }
+            $act | Should -Throw "Validation Failed: Row * is missing required data for field 'SID'."
+        }
+
+        It "Should throw an error if 'LocalPath' field is empty" {
             # Arrange
             $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
 "S-1-5-21-XYZ","","TEST-PC","j.doe","jane.doe","jcuser123","jcsystem123","TEST-SN-123"
 "@
-            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-            Set-Content -Path $tempCsvPath -Value $csvContent -Force
+            Set-Content -Path $csvPath -Value $csvContent -Force
 
             # Act & Assert
-            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED: on row 1 : 'LocalPath' cannot be empty. Halting script."
+            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false }
+            $act | Should -Throw "Validation Failed: Row * is missing required data for field 'LocalPath'."
         }
 
-        It "Should throw an error if 'JumpCloudUserName' is empty" {
+        It "Should throw an error if 'JumpCloudUserName' field is empty" {
             # Arrange
             $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
 "S-1-5-21-XYZ","C:\Users\j.doe","TEST-PC","j.doe","","jcuser123","jcsystem123","TEST-SN-123"
 "@
-            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-            Set-Content -Path $tempCsvPath -Value $csvContent -Force
+            Set-Content -Path $csvPath -Value $csvContent -Force
 
             # Act & Assert
-            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED: on row 1 : 'JumpCloudUserName' cannot be empty. Halting script."
+            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false }
+            $act | Should -Throw "Validation Failed: Row * is missing required data for field 'JumpCloudUserName'."
         }
 
-        It "Should throw an error if 'JumpCloudUserID' is empty" {
+        It "Should throw an error if 'JumpCloudUserID' is empty when systemContextBinding is enabled" {
             # Arrange
             $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
 "S-1-5-21-XYZ","C:\Users\j.doe","TEST-PC","j.doe","jane.doe","","jcsystem123","TEST-SN-123"
 "@
-            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-            Set-Content -Path $tempCsvPath -Value $csvContent -Force
-            (Get-Content -Path $global:scriptToTest -Raw) -replace '\$systemContextBinding = \$false', '$systemContextBinding = $true' | Set-Content -Path $global:scriptToTest
+            Set-Content -Path $csvPath -Value $csvContent -Force
+
             # Act & Assert
-            { & $global:scriptToTest } | Should -Throw "VALIDATION FAILED: on row 1 : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
-            # Set systemContextBinding back to false
-            (Get-Content -Path $global:scriptToTest -Raw) -replace '\$systemContextBinding = \$true', '$systemContextBinding = $false' | Set-Content -Path $global:scriptToTest
+            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $true }
+            $act | Should -Throw "*'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
+        }
+
+        # --- Test Cases for Filtering Logic ---
+
+        It "Should throw an error if no users match the current computer's name and serial" {
+            # Arrange
+            $csvContent = @"
+"SID","LocalPath","LocalComputerName","SerialNumber","JumpCloudUserName","JumpCloudUserID"
+"S-1-5-21-XYZ","C:\Users\j.doe","DIFFERENT-PC","DIFFERENT-SN","jane.doe","jcuser123"
+"@
+            Set-Content -Path $csvPath -Value $csvContent -Force
+
+            # Mock environmental dependencies to ensure the test is predictable
+            Mock -CommandName 'Get-WmiObject' -MockWith { [PSCustomObject]@{ SerialNumber = 'MY-TEST-SN' } }
+            $env:COMPUTERNAME = 'MY-TEST-PC'
+
+            # Act & Assert
+            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false }
+            $act | Should -Throw "Validation Failed: No users were found in the CSV matching this computer's name ('MY-TEST-PC') and serial number ('MY-TEST-SN')."
+        }
+
+        It "Should return a filtered list of user objects for the current computer" {
+            # Arrange
+            $csvContent = @"
+"SID","LocalPath","LocalComputerName","SerialNumber","JumpCloudUserName","JumpCloudUserID"
+"S-1-5-21-USER1","C:\Users\user.one","MY-TEST-PC","MY-TEST-SN","user.one.jc","jcuser1"
+"S-1-5-21-USER2","C:\Users\user.two","DIFFERENT-PC","DIFFERENT-SN","user.two.jc","jcuser2"
+"S-1-5-21-USER3","C:\Users\user.three","MY-TEST-PC","MY-TEST-SN","user.three.jc","jcuser3"
+"@
+            Set-Content -Path $csvPath -Value $csvContent -Force
+
+            # Mock environmental dependencies
+            Mock -CommandName 'Get-WmiObject' -MockWith { [PSCustomObject]@{ SerialNumber = 'MY-TEST-SN' } }
+            $env:COMPUTERNAME = 'MY-TEST-PC'
+
+            # Act
+            $result = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
+
+            # Assert
+            $result | Should -Not -BeNullOrEmpty
+            $result.Count | Should -Be 2
+            $result[0].UserSID | Should -Be "S-1-5-21-USER1"
+            $result[0].JumpCloudUserName | Should -Be "user.one.jc"
+            $result[1].UserSID | Should -Be "S-1-5-21-USER3"
+            $result[1].JumpCloudUserID | Should -Be "jcuser3"
         }
     }
+
     Context "Confirm-ExecutionPolicy Function" {
         BeforeAll {
 
