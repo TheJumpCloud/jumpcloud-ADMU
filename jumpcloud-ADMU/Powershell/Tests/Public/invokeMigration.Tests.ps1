@@ -8,6 +8,10 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         if (-not (Test-Path $global:remoteInvoke)) {
             throw "TEST SETUP FAILED: Script not found at the calculated path: $($global:remoteInvoke). Please check the relative path in the BeforeAll block."
         }
+        . "$helpFunctionDir\$fileName"
+
+        # import the init user function:
+        . "$helpFunctionDir\Initialize-TestUser.ps1"
 
     }
 
@@ -681,17 +685,38 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
     Context "Remote Migration Tests" {
         # This block runs once before any tests in this 'Describe' block.
         BeforeAll {
-            # get the function definitions from the script
+            # Get the original script content
             $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
-            $pattern = '\#region variables[\s\S]*\#endregion variables'
-            $functionMatches = [regex]::Matches($scriptContent, $pattern)
 
-            # set the variable config to some valid set of parameters
-            # change forceReboot to false
-            # change autoBindJCUser to false
-            # change the value of JCAPIKEY/ORGID
-            # $env:PESTER_APIKEY
-            # $env:PESTER_ORGID
+            # --- Modify Script Content in Memory ---
+            Change forceReboot to false
+            $scriptContent = $scriptContent -replace '(\$ForceReboot\s*=\s*)\$true', '$1$false'
+
+            # Change autoBindJCUser to false
+            $scriptContent = $scriptContent -replace '(\$AutoBindJCUser\s*=\s*)\$true', '$1$false'
+            # Change forceReboot to false
+            $scriptContent = $scriptContent -replace '(\$ForceReboot\s*=\s*)\$true', '$1$false'
+
+            # Define the new API key
+            $newApiKey = 'YOUR_NEW_API_KEY_HERE'
+
+            # This regex finds the line, captures the variable name and equals sign into group 1,
+            # and matches whatever value is currently inside the single quotes.
+            $regexPattern = '\$JumpCloudAPIKey = ''YOURAPIKEY'' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false'
+            $replaceAPIKEY = '$JumpCloudAPIKey = ''TEST'' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false'
+            $scriptContent = $scriptContent -replace $regexPattern, $replaceAPIKEY
+
+            # Change the JumpCloudOrgID to a test value
+            $regexPattern = '\$JumpCloudOrgID = ''YOURORGID'' # This field is required if you use a MTP API Key'
+            $replaceOrgID = '$JumpCloudOrgID = ''TEST'' # This field is required if you use a MTP API Key'
+            $scriptContent = $scriptContent -replace $regexPattern, $replaceOrgID
+
+            # Save the fully modified script content to a temporary file
+            $scriptContent | Set-Content -Path (Join-Path $PSScriptRoot 'remoteMigration.ps1') -Force
+
+
+            # import the functions from the temp file
+
 
             # write-out jcdiscovery.csv
 
@@ -701,6 +726,39 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
             # Test that the registry profile path for init user 1 is set to domain path
             # test that the registry profile path for init user 2 is set to c:\users\initUser1
+        }
+        # Test Setup
+        BeforeEach {
+            # sample password
+            $tempPassword = "Temp123!"
+            # username to migrate
+            $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # username to migrate to
+            $userToMigrateTo = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+
+            # Initialize-TestUser
+            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            # remove the log
+            $logPath = "C:\Windows\Temp\jcadmu.log"
+            if (Test-Path -Path $logPath) {
+                Remove-Item $logPath
+                New-Item $logPath -Force -ItemType File
+            }
+
+            $userSid = (Get-LocalUser -Name $userToMigrateFrom).SID.Value
+            # Create a CSV file for the user migration, should have these: "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
+            $csvPath = "C:\Windows\Temp\jcdiscovery.csv"
+            $csvContent = @"
+SID,LocalPath,LocalComputerName,LocalUsername,JumpCloudUserName,JumpCloudUserID,JumpCloudSystemID,SerialNumber
+$userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userToMigrateTo,$null,$null,$((Get-WmiObject -Class Win32_BIOS).SerialNumber)
+"@
+            $csvContent | Set-Content -Path $csvPath -Force
+        }
+
+        It "Should migrate the user to JumpCloud" {
+            # Run remoteMigration.ps1 and should return 0
+            & $PSScriptRoot\remoteMigration.ps1
+            $LASTEXITCODE | Should -Be 0
         }
     }
 }

@@ -403,6 +403,10 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # create the user
                     $GeneratedUser = New-JcSdkUser -Email:("$($userToMigrateTo)@jumpcloudadmu.com") -Username:("$($userToMigrateTo)") -Password:("$($user.password)")
                 }
+                It "Migrates using Invoke Bulk ADMU" {
+                    # Create a valid CSV
+
+                }
                 It "Associates a JumpCloud user using 'AutoBindJCUser'" {
                     # set the $testCaseInput
                     $testCaseInput.JumpCloudUserName = $userToMigrateTo
