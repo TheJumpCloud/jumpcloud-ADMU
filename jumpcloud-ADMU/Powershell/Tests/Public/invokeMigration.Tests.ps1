@@ -449,7 +449,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         }
     }
 
-    Context "Confirm-ExecutionPolicy Function" -Skip {
+    Context "Confirm-ExecutionPolicy Function" {
         BeforeAll {
 
             # get the "Confirm-ExecutionPolicy" function from the script
@@ -515,7 +515,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             }
         }
     }
-    Context "Confirm-RequiredModule Function" -Skip {
+    Context "Confirm-RequiredModule Function" {
         BeforeAll {
             # get the "Confirm-RequiredModule" function from the script
             $scriptContent = Get-Content -Path $global:scriptToTest -Raw
