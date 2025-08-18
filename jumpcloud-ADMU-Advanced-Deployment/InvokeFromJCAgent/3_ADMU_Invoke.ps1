@@ -226,20 +226,17 @@ Function Confirm-RequiredModule {
         } else {
             Write-Host "[status] NuGet Module was previously installed, skipping installation."
         }
-        $packageProviders = Get-PackageProvider -Force | Select-Object name
-        if ("nuget" -in $packageProviders.name) {
-            try {
-                write-host "[status] NuGet found. Importing into current session."
-                $importResponse = Import-PackageProvider -Name NuGet -RequiredVersion $nugetRequiredVersion -Force
-                write-host "[status] NuGet version $($ImportResponse.Version.ToString()) successfully imported."
-                $nugetSuccess = $true
-            } catch {
-                Write-Host "[error] Could not import Nuget into the current session."
-                $allSuccess = $false
-            }
-        } else {
+        # import the NuGet module
+        try {
+            write-host "[status] NuGet found. Importing into current session."
+            $importResponse = Import-PackageProvider -Name NuGet -RequiredVersion $nugetRequiredVersion -Force
+            write-host "[status] NuGet version $($ImportResponse.Version.ToString()) successfully imported."
+            $nugetSuccess = $true
+        } catch {
+            Write-Host "[error] Could not import Nuget into the current session."
             $allSuccess = $false
         }
+        # process the required modules
         foreach ($module in $requiredModules) {
             $moduleSuccess = $false
             $latestModule = Find-Module -Name $module -ErrorAction SilentlyContinue
@@ -247,7 +244,7 @@ Function Confirm-RequiredModule {
             if (-NOT $installedModule) {
                 Write-Host "[status] $module module not found, installing..."
                 try {
-                    Install-Module $module -Force
+                    Install-Module -Name $module -Force
                 } catch {
                     Write-Host "[error] Failed to install $module module"
                     $allSuccess = $false
@@ -257,7 +254,7 @@ Function Confirm-RequiredModule {
                     Write-Host "[status] $module module found, updating..."
                     try {
                         Uninstall-Module -Name $module -AllVersions
-                        Install-Module $module -Force
+                        Install-Module -Name $module -Force
                     } catch {
                         Write-Host "[error] Failed to update $module module, exiting..."
                         $allSuccess = $false
@@ -268,8 +265,8 @@ Function Confirm-RequiredModule {
             }
             # Try to import the module
             try {
-                Import-Module $module -Force -ErrorAction Stop
-                $imported = Get-Module $module
+                Import-Module -Name $module -Force -ErrorAction Stop
+                $imported = Get-Module -Name $module
                 if ($null -eq $imported) {
                     Write-Host "[error] Failed to import $module module."
                     $allSuccess = $false
@@ -278,7 +275,7 @@ Function Confirm-RequiredModule {
                     $moduleSuccess = $true
                 }
             } catch {
-                Write-Host "[error] Failed to import $module module."
+                Write-Host "[error] Failed to import $module module, exiting..."
                 $allSuccess = $false
             }
         }
