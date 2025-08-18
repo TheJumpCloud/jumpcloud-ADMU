@@ -464,7 +464,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             # reset the execution policy to Unrestricted for LocalMachine scope
             Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
         }
-        It "Confirm-ExecutionPolicy should return false when MachinePolicy execution policy is Restricted, AllSigned, or RemoteSigned" {
+        It "Confirm-ExecutionPolicy should Throw & return false when MachinePolicy execution policy is Restricted, AllSigned, or RemoteSigned" {
             $executionPolicies = @('Restricted', 'AllSigned', 'RemoteSigned')
             foreach ($policy in $executionPolicies) {
 
@@ -480,7 +480,17 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                     return $returnObj
                 }
                 # If the MachinePolicy is set to Restricted, AllSigned, or RemoteSigned, Confirm-ExecutionPolicy should return false
-                Confirm-ExecutionPolicy | Should -BeFalse
+                $thrown = $false
+                $result = $null
+                try {
+                    $result = Confirm-ExecutionPolicy
+                } catch {
+                    $thrown = $true
+                    write-host "Caught exception: $($_.Exception.Message)"
+                    $_.Exception.Message | Should -match "Machine Policy is set to $policy, this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
+                }
+                $thrown | Should -BeTrue
+                $result | Should -BeFalse
             }
         }
         It "Confirm-ExecutionPolicy should return true when the Process scope is set to Restricted, AllSigned, or RemoteSigned" {
@@ -546,7 +556,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             # Act & Assert: Confirm-RequiredModule should return true
             Confirm-RequiredModule | Should -BeTrue
         }
-        It "Should write error and return false if a required module update fails" {
+        It "Should Throw and return false if a required module update fails" {
             $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
             foreach ($requiredModule in $requiredModules) {
                 Mock Get-InstalledModule -ParameterFilter { $Name -eq $requiredModule } {
@@ -563,35 +573,40 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 }
                 Mock Uninstall-Module -ParameterFilter { $Name -eq $requiredModule } { }
                 Mock Install-Module -ParameterFilter { $Name -eq $requiredModule } { throw "Simulated update failure" }
-                # Mock Import-Module { }
-                Mock Write-Host {}
-
                 # Get the result of Confirm-RequiredModule
-                $result = Confirm-RequiredModule
-
-                # allSuccess should be false
+                $thrown = $false
+                $result = $null
+                try {
+                    $result = Confirm-RequiredModule
+                } catch {
+                    $thrown = $true
+                    $_.Exception.Message | Should -Be "Failed to update $requiredModule module, exiting..."
+                }
+                $thrown | Should -BeTrue
                 $result | Should -BeFalse
-                # within the relevant catch block, Write-Host should be called with the error message
-                Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[error] Failed to update $requiredModule module, exiting..." }
             }
         }
-        It "Should write error and return false if a required module can not be imported" {
+        It "Should Throw and return false if a required module can not be imported" {
             $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
             foreach ($requiredModule in $requiredModules) {
                 Mock Import-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
                 Mock Get-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
-                Mock Write-Host {}
 
                 # Get the result of Confirm-RequiredModule
-                $result = Confirm-RequiredModule
-
-                # allSuccess should be false
+                $thrown = $false
+                $result = $null
+                try {
+                    $result = Confirm-RequiredModule
+                } catch {
+                    $thrown = $true
+                    $_.Exception.Message | Should -Be "Failed to import $requiredModule module, exiting..."
+                }
+                $thrown | Should -BeTrue
                 $result | Should -BeFalse
-                # within the relevant catch block, Write-Host should be called with the error message
-                Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[error] Failed to import $requiredModule module." }
+
             }
         }
-        It "Should write error and return false if Nuget is not installed" {
+        It "Should Throw and return false if Nuget is not installed" {
             # return a null list for Get-PackageProvider to simulate NuGet not being installed
             Mock Get-PackageProvider { return @() } -Verifiable
             # throw an error when trying to install NuGet
@@ -602,18 +617,22 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Mock Invoke-WebRequest {
                 return [PSCustomObject]@{ StatusCode = 404; StatusDescription = 'Not Found' }
             } -Verifiable
-            Mock Write-Host {}
 
             # required nuget version and URL
             $nugetRequiredVersion = "2.8.5.208"
             $nugetURL = "https://onegetcdn.azureedge.net/providers/nuget-$($nugetRequiredVersion).package.swidtag"
 
             # Get the result of Confirm-RequiredModule
-            $result = Confirm-RequiredModule
-            # allSuccess should be false
+            $thrown = $false
+            $result = $null
+            try {
+                $result = Confirm-RequiredModule
+            } catch {
+                $thrown = $true
+                $_.Exception.Message | Should -Be "The NuGet package provider could not be installed from $nugetURL."
+            }
+            $thrown | Should -BeTrue
             $result | Should -BeFalse
-            # within the relevant catch block, Write-Host should be called with the error message
-            Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[error] The NuGet package provider could not be installed from $nugetURL." }
         }
         It "Should install Nuget if it is not installed" {
             # Simulate the absence of NuGet
@@ -627,17 +646,21 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             # within the relevant block, Write-Host should be called with the status message
             Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[status] NuGet Module was successfully installed." }
         }
-        It "Should write error and return false if Nuget can not be imported" {
+        It "Should Throw and return false if Nuget can not be imported" {
             # Simulate the absence of NuGet
             Mock Import-PackageProvider { Throw "Nuget Not Imported" } -Verifiable
-            Mock Write-Host {}
 
             # Get the result of Confirm-RequiredModule
-            $result = Confirm-RequiredModule
-            # allSuccess should be true
+            $thrown = $false
+            $result = $null
+            try {
+                $result = Confirm-RequiredModule
+            } catch {
+                $thrown = $true
+                $_.Exception.Message | Should -Be "Could not import Nuget into the current session."
+            }
+            $thrown | Should -BeTrue
             $result | Should -BeFalse
-            # within the relevant block, Write-Host should be called with the status message
-            Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[error] Could not import Nuget into the current session." }
         }
         It "Should install and import a required module if it was not installed previously" {
             $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')

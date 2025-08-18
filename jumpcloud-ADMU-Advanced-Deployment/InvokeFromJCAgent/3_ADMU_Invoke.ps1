@@ -152,9 +152,10 @@ Function Confirm-ExecutionPolicy {
             If (($policies.MachinePolicy -eq "Restricted") -or
                 ($policies.MachinePolicy -eq "AllSigned") -or
                 ($policies.MachinePolicy -eq "RemoteSigned")) {
-                Write-Host "[status] Machine Policy is set to $($policies.MachinePolicy), this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
+                Throw "Machine Policy is set to $($policies.MachinePolicy), this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
+                # Throw "Machine Policy is set to $($policies.MachinePolicy)"
                 $success = $false
-                return $false
+
             }
             # If the Process policy is set to Restricted, AllSigned or RemoteSigned, we need to change it to Bypass
             if (($policies.Process -eq "Restricted") -or
@@ -165,7 +166,7 @@ Function Confirm-ExecutionPolicy {
                 try {
                     Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
                 } catch {
-                    Write-Host "[error] Failed to set Process execution policy to Bypass."
+                    Throw "Failed to set Process execution policy to Bypass."
                     $success = $false
                 }
             } else {
@@ -180,14 +181,14 @@ Function Confirm-ExecutionPolicy {
                 try {
                     Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
                 } catch {
-                    Write-Host "[error] Failed to set LocalMachine execution policy to Bypass."
+                    Throw "Failed to set LocalMachine execution policy to Bypass."
                     $success = $false
                 }
             } else {
                 Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), no changes made."
             }
         } catch {
-            Write-Host "[error] Exception occurred in Confirm-ExecutionPolicy: $($_.Exception.Message)"
+            Throw "Exception occurred in Confirm-ExecutionPolicy: $($_.Exception.Message)"
             $success = $false
         }
     }
@@ -222,7 +223,7 @@ Function Confirm-RequiredModule {
                 $nugetURL = "https://onegetcdn.azureedge.net/providers/nuget-$($nugetRequiredVersion).package.swidtag"
                 $nugetResponse = Invoke-WebRequest $nugetURL
                 If ($nugetResponse.StatusCode -ne 200) {
-                    Write-Host "[error] The NuGet package provider could not be installed from $nugetURL."
+                    Throw "The NuGet package provider could not be installed from $nugetURL."
                     $allSuccess = $false
                 }
             }
@@ -236,7 +237,7 @@ Function Confirm-RequiredModule {
             write-host "[status] NuGet version $($ImportResponse.Version.ToString()) successfully imported."
             $nugetSuccess = $true
         } catch {
-            Write-Host "[error] Could not import Nuget into the current session."
+            Throw "Could not import Nuget into the current session."
             $allSuccess = $false
         }
         # process the required modules
@@ -249,7 +250,7 @@ Function Confirm-RequiredModule {
                 try {
                     Install-Module -Name $module -Force
                 } catch {
-                    Write-Host "[error] Failed to install $module module"
+                    Throw "Failed to install $module module"
                     $allSuccess = $false
                 }
             } else {
@@ -259,7 +260,7 @@ Function Confirm-RequiredModule {
                         Uninstall-Module -Name $module -AllVersions
                         Install-Module -Name $module -Force
                     } catch {
-                        Write-Host "[error] Failed to update $module module, exiting..."
+                        Throw "Failed to update $module module, exiting..."
                         $allSuccess = $false
                     }
                 } else {
@@ -271,14 +272,14 @@ Function Confirm-RequiredModule {
                 Import-Module -Name $module -Force -ErrorAction Stop
                 $imported = Get-Module -Name $module
                 if ($null -eq $imported) {
-                    Write-Host "[error] Failed to import $module module."
+                    Throw "Failed to import $module module."
                     $allSuccess = $false
                 } else {
                     Write-Host "[status] $module module imported successfully; running version $($imported.Version)"
                     $moduleSuccess = $true
                 }
             } catch {
-                Write-Host "[error] Failed to import $module module, exiting..."
+                Throw "Failed to import $module module, exiting..."
                 $allSuccess = $false
             }
         }
