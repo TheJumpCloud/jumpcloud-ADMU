@@ -304,8 +304,7 @@ Function Get-MigrationUsersFromCsv {
     begin {
         # 1. --- FILE AND HEADER VALIDATION ---
         if (-not (Test-Path -Path $csvPath -PathType Leaf)) {
-            Write-Error "Validation Failed: The CSV file was not found at: '$csvPath'."
-            return $null # Return null on failure
+            Throw "Validation Failed: The CSV file was not found at: '$csvPath'."
         }
         $ImportedCSV = Import-Csv -Path $csvPath -ErrorAction Stop
     }

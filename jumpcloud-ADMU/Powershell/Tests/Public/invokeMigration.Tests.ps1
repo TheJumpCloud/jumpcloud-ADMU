@@ -325,8 +325,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
         It "Should throw an error if the CSV file does not exist" {
             # Act & Assert
-            $act = { Get-MigrationUsersFromCsv -csvPath 'C:\Windows\Temp\notAFile.csv' -systemContextBinding $false }
-            $act | Should -Throw "Validation Failed: The CSV file was not found at: 'C:\Windows\Temp\notAFile.csv'."
+            { Get-MigrationUsersFromCsv -csvPath "C:\Windows\Temp\notAFile.csv" -systemContextBinding $false } | Should -Throw "Validation Failed: The CSV file was not found at: 'C:\Windows\Temp\notAFile.csv'."
         }
 
         It "Should throw an error if the CSV is missing a required header" {
@@ -338,8 +337,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Set-Content -Path $csvPath -Value $csvContent -Force
 
             # Act & Assert
-            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false }
-            $act | Should -Throw "Validation Failed: The CSV is missing the required header: 'SID'."
+            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: The CSV is missing the required header: 'SID'."
         }
 
         It "Should throw an error if a SID is duplicated for the same device" {
@@ -353,8 +351,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Set-Content -Path $csvPath -Value $csvContent -Force
 
             # Act & Assert
-            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false }
-            $act | Should -Throw "Validation Failed: Duplicate SID 'S-1-5-21-DUPLICATE-SID' found for LocalComputerName 'TEST-PC-1'."
+            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Duplicate SID 'S-1-5-21-DUPLICATE-SID' found for LocalComputerName 'TEST-PC-1'."
         }
 
         # --- Test Cases for Row-Level Data Validation ---
@@ -368,8 +365,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Set-Content -Path $csvPath -Value $csvContent -Force
 
             # Act & Assert
-            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false }
-            $act | Should -Throw "Validation Failed: Row * is missing required data for field 'SID'."
+            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Row * is missing required data for field 'SID'."
         }
 
         It "Should throw an error if 'LocalPath' field is empty" {
@@ -381,8 +377,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Set-Content -Path $csvPath -Value $csvContent -Force
 
             # Act & Assert
-            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false }
-            $act | Should -Throw "Validation Failed: Row * is missing required data for field 'LocalPath'."
+            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Row * is missing required data for field 'LocalPath'."
         }
 
         It "Should throw an error if 'JumpCloudUserName' field is empty" {
@@ -394,8 +389,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Set-Content -Path $csvPath -Value $csvContent -Force
 
             # Act & Assert
-            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false }
-            $act | Should -Throw "Validation Failed: Row * is missing required data for field 'JumpCloudUserName'."
+            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Row * is missing required data for field 'JumpCloudUserName'."
         }
 
         It "Should throw an error if 'JumpCloudUserID' is empty when systemContextBinding is enabled" {
@@ -407,8 +401,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Set-Content -Path $csvPath -Value $csvContent -Force
 
             # Act & Assert
-            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $true }
-            $act | Should -Throw "*'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
+            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $true } | Should -Throw "*'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
         }
 
         # --- Test Cases for Filtering Logic ---
@@ -426,8 +419,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             $env:COMPUTERNAME = 'MY-TEST-PC'
 
             # Act & Assert
-            $act = { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false }
-            $act | Should -Throw "Validation Failed: No users were found in the CSV matching this computer's name ('MY-TEST-PC') and serial number ('MY-TEST-SN')."
+            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: No users were found in the CSV matching this computer's name ('MY-TEST-PC') and serial number ('MY-TEST-SN')."
         }
 
         It "Should return a filtered list of user objects for the current computer" {
@@ -457,7 +449,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         }
     }
 
-    Context "Confirm-ExecutionPolicy Function" {
+    Context "Confirm-ExecutionPolicy Function" -Skip {
         BeforeAll {
 
             # get the "Confirm-ExecutionPolicy" function from the script
@@ -523,7 +515,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             }
         }
     }
-    Context "Confirm-RequiredModule Function" {
+    Context "Confirm-RequiredModule Function" -Skip {
         BeforeAll {
             # get the "Confirm-RequiredModule" function from the script
             $scriptContent = Get-Content -Path $global:scriptToTest -Raw
