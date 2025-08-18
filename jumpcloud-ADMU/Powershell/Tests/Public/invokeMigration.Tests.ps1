@@ -523,117 +523,151 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             }
         }
     }
+    Context "Confirm-RequiredModule Function" {
+        BeforeAll {
+            # get the "Confirm-RequiredModule" function from the script
+            $scriptContent = Get-Content -Path $global:scriptToTest -Raw
 
-    Context "Should Throw if Dependencies are Missing" -skip {
-        It "Should throw an error if the NuGet provider cannot be installed" {
-            # Arrange: Set up the test file
-            # Get the required values from the local machine
-            $currentComputerName = $env:COMPUTERNAME
-            $currentSerialNumber = (Get-CimInstance -ClassName Win32_BIOS).SerialNumber
+            $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
+            $functionMatches = [regex]::Matches($scriptContent, $pattern)
 
-            # Populate the CSV string with the machine's actual data
-            $csvContent = @"
-"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-VALID-SID-1001","C:\Users\test.user","${currentComputerName}","test.user","jane.doe","jc-user-123","jc-system-456","${currentSerialNumber}"
-"@
-            $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-            Set-Content -Path $tempCsvPath -Value $csvContent -Force
+            # set the matches.value to a temp file and import the functions
+            $functionMatches.Value | Set-Content -Path (Join-Path $PSScriptRoot 'invokeFunctions.ps1') -Force
+
+            # import the functions from the temp file
+            . (Join-Path $PSScriptRoot 'invokeFunctions.ps1')
+        }
+        It "Confirm-RequiredModule should return true when all required modules are installed" {
+            $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
+            foreach ($requiredModule in $requiredModules) {
+                # get the latest version of the module
+                $module = (Find-Module -Name $requiredModule)
+                # Arrange: Mock Get-InstalledModule to return a list of installed modules
+                Mock Get-InstalledModule -ParameterFilter { $Name -eq 'PowerShellGet' } { return [PSCustomObject]@{
+                        Version     = $module.Version
+                        Name        = $requiredModule
+                        Repository  = 'PSGallery'
+                        Description = $module.Description
+                    }
+                }
+
+            }
+            Mock Get-PackageProvider { return [PSCustomObject]@{
+                    Name    = 'NuGet'
+                    Version = '2.8.5.208'
+                }
+            }
+
+            # Act & Assert: Confirm-RequiredModule should return true
+            Confirm-RequiredModule | Should -BeTrue
+        }
+        It "Should write error and return false if a required module update fails" {
+            $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
+            foreach ($requiredModule in $requiredModules) {
+                Mock Get-InstalledModule -ParameterFilter { $Name -eq $requiredModule } {
+                    return [PSCustomObject]@{
+                        Version = '1.0.0';
+                        Name    = $requiredModule
+                    }
+                }
+                Mock Find-Module -ParameterFilter { $Name -eq $requiredModule } {
+                    return [PSCustomObject]@{
+                        Version = '2.0.0';
+                        Name    = $requiredModule
+                    }
+                }
+                Mock Uninstall-Module -ParameterFilter { $Name -eq $requiredModule } { }
+                Mock Install-Module -ParameterFilter { $Name -eq $requiredModule } { throw "Simulated update failure" }
+                # Mock Import-Module { }
+                Mock Write-Host {}
+
+                # Get the result of Confirm-RequiredModule
+                $result = Confirm-RequiredModule
+
+                # allSuccess should be false
+                $result | Should -BeFalse
+                # within the relevant catch block, Write-Host should be called with the error message
+                Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[error] Failed to update $requiredModule module, exiting..." }
+            }
+        }
+        It "Should write error and return false if a required module can not be imported" {
+            $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
+            foreach ($requiredModule in $requiredModules) {
+                Mock Import-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
+                Mock Get-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
+                Mock Write-Host {}
+
+                # Get the result of Confirm-RequiredModule
+                $result = Confirm-RequiredModule
+
+                # allSuccess should be false
+                $result | Should -BeFalse
+                # within the relevant catch block, Write-Host should be called with the error message
+                Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[error] Failed to import $requiredModule module." }
+            }
+        }
+        It "Should write error and return false if Nuget is not installed" {
+            # return a null list for Get-PackageProvider to simulate NuGet not being installed
             Mock Get-PackageProvider { return @() } -Verifiable
-
-            # Mock Install-PackageProvider to throw an error, simulating a failed installation attempt.
-            # This triggers the 'catch' block in the script.
+            # throw an error when trying to install NuGet
             Mock Install-PackageProvider -ParameterFilter { $Name -eq 'NuGet' } -MockWith {
                 throw "Simulated failure to install package provider."
             } -Verifiable
-
-            # Mock Invoke-WebRequest to return a non-200 status code.
-            # This simulates the failure of the fallback download mechanism in the script's catch block.
+            # This simulates the failure of the test of the nuget url.
             Mock Invoke-WebRequest {
                 return [PSCustomObject]@{ StatusCode = 404; StatusDescription = 'Not Found' }
             } -Verifiable
+            Mock Write-Host {}
 
-            # # Mock Invoke-WebRequest to return a non-200 status code.
-            # # This simulates the failure of the fallback download mechanism in the script's catch block.
-            # Mock Invoke-WebRequest {
-            #     return [PSCustomObject]@{ StatusCode = 404; StatusDescription = 'Not Found' }
-            # } -Verifiable
-
-            # The script defines this variable, so we define it here too for the test to build the expected error string.
-            # The script defines this variable, so we define it here too for the test to build the expected error string.
+            # required nuget version and URL
             $nugetRequiredVersion = "2.8.5.208"
             $nugetURL = "https://onegetcdn.azureedge.net/providers/nuget-$($nugetRequiredVersion).package.swidtag"
 
-            # Define the exact error message expected from the script's final throw statement.
-            $expectedErrorMessage = "The NuGet package provider could not be installed from $nugetURL. Please validate that no firewall or network restrictions are blocking the download. This is required to install the JumpCloud.ADMU and other required modules. This issue must first be resolved before proceeding with the ADMU script."
-
-            # Act & Assert: Execute the script and verify it throws the expected error.
-            { & $global:scriptToTest } | Should -Throw $expectedErrorMessage
+            # Get the result of Confirm-RequiredModule
+            $result = Confirm-RequiredModule
+            # allSuccess should be false
+            $result | Should -BeFalse
+            # within the relevant catch block, Write-Host should be called with the error message
+            Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[error] The NuGet package provider could not be installed from $nugetURL." }
         }
-    }
-    It "Should throw an error if the PowerShellGet module cannot be installed" -skip {
-        # Arrange: Set up the test file
-        # Get the required values from the local machine
-        $currentComputerName = $env:COMPUTERNAME
-        $currentSerialNumber = (Get-CimInstance -ClassName Win32_BIOS).SerialNumber
+        It "Should install Nuget if it is not installed" {
+            # Simulate the absence of NuGet
+            Mock Get-PackageProvider { return @() } -Verifiable
+            Mock Write-Host {}
 
-        # Populate the CSV string with the machine's actual data
-        $csvContent = @"
-"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-VALID-SID-1001","C:\Users\test.user","${currentComputerName}","test.user","jane.doe","jc-user-123","jc-system-456","${currentSerialNumber}"
-"@
-        $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-        Set-Content -Path $tempCsvPath -Value $csvContent -Force
-
-        # --- Mock the environment for THIS test ---
-        # 1. Pretend NuGet is already installed.
-        Mock Get-PackageProvider { return [pscustomobject]@{name = 'nuget' } }
-
-        # 2. Pretend 'PowerShellGet' is MISSING, but other modules are found.
-        Mock Get-InstalledModule -ParameterFilter { $Name -eq 'PowerShellGet' } -MockWith { $null }
-        Mock Get-InstalledModule -ParameterFilter { $Name -ne 'PowerShellGet' } -MockWith { $true }
-
-        # 3. Make Install-Module FAIL specifically when called for 'PowerShellGet'.
-        Mock Install-Module -ParameterFilter { $Name -eq 'PowerShellGet' } -MockWith {
-            throw "Simulated Error: Failed to install PowerShellGet module."
+            # Get the result of Confirm-RequiredModule
+            $result = Confirm-RequiredModule
+            # allSuccess should be true
+            $result | Should -BeTrue
+            # within the relevant block, Write-Host should be called with the status message
+            Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[status] NuGet Module was successfully installed." }
         }
-        # Make other calls to Install-Module do nothing.
-        Mock Install-Module -ParameterFilter { $Name -ne 'PowerShellGet' }
+        It "Should write error and return false if Nuget can not be imported" {
+            # Simulate the absence of NuGet
+            Mock Import-PackageProvider { Throw "Nuget Not Imported" } -Verifiable
+            Mock Write-Host {}
 
-        # Act & Assert: The script should fail when trying to install the missing module.
-        { & $global:scriptToTest } | Should -Throw "*Failed to install PowerShellGet module*"
-    }
-
-    It "Should throw an error if the JumpCloud.ADMU module cannot be installed" -skip {
-        # Arrange: Set up the test file
-        # Get the required values from the local machine
-        $currentComputerName = $env:COMPUTERNAME
-        $currentSerialNumber = (Get-CimInstance -ClassName Win32_BIOS).SerialNumber
-
-        # Populate the CSV string with the machine's actual data
-        $csvContent = @"
-"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-VALID-SID-1001","C:\Users\test.user","${currentComputerName}","test.user","jane.doe","jc-user-123","jc-system-456","${currentSerialNumber}"
-"@
-        $tempCsvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
-        Set-Content -Path $tempCsvPath -Value $csvContent -Force
-
-        # --- Mock the environment for THIS test ---
-        # 1. Pretend NuGet is already installed.
-        Mock Get-PackageProvider { return [pscustomobject]@{name = 'nuget' } }
-
-        # 2. Pretend 'JumpCloud.ADMU' is MISSING, but other modules are found.
-        Mock Get-InstalledModule -ParameterFilter { $Name -eq 'JumpCloud.ADMU' } -MockWith { $null }
-        Mock Get-InstalledModule -ParameterFilter { $Name -ne 'JumpCloud.ADMU' } -MockWith { $true }
-        Mock Find-Module { } # Prevent network call
-
-        # 3. Make Install-Module FAIL specifically when called for 'JumpCloud.ADMU'.
-        Mock Install-Module -ParameterFilter { $Name -eq 'JumpCloud.ADMU' } -MockWith {
-            throw "Simulated Error: Failed to install JumpCloud.ADMU module."
+            # Get the result of Confirm-RequiredModule
+            $result = Confirm-RequiredModule
+            # allSuccess should be true
+            $result | Should -BeFalse
+            # within the relevant block, Write-Host should be called with the status message
+            Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[error] Could not import Nuget into the current session." }
         }
-        # Make other calls to Install-Module do nothing.
-        Mock Install-Module -ParameterFilter { $Name -ne 'JumpCloud.ADMU' }
+        It "Should install and import a required module if it was not installed previously" {
+            $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
+            foreach ($requiredModule in $requiredModules) {
+                # Mock Get-InstalledModule to return null, simulating the module not being installed
+                Mock Get-InstalledModule -ParameterFilter { $Name -eq $requiredModule } { return $null }
+                Mock Write-Host {}
 
-        # Act & Assert: The script should fail when trying to install the missing module.
-        { & $global:scriptToTest } | Should -Throw "*Failed to install JumpCloud.ADMU module*"
+                # Get the result of Confirm-RequiredModule
+                $result = Confirm-RequiredModule
+                # allSuccess should be true
+                $result | Should -BeTrue
+                # within the relevant block, Write-Host should be called with the status message
+                Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[status] $requiredModule module not found, installing..." }
+            }
+        }
     }
 }
