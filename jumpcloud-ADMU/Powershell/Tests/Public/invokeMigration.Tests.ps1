@@ -10,6 +10,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         }
         $currentPath = $PSScriptRoot # Start from the current script's directory.
         $TargetDirectory = "helperFunctions"
+        $FileName = "Import-AllFunctions.ps1"
         while ($currentPath -ne $null) {
             $filePath = Join-Path -Path $currentPath $TargetDirectory
             if (Test-Path $filePath) {
@@ -21,6 +22,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             # Move one directory up.
             $currentPath = Split-Path $currentPath -Parent
         }
+        . "$helpFunctionDir\$fileName"
+
         # import the init user function:
         . "$helpFunctionDir\Initialize-TestUser.ps1"
 
