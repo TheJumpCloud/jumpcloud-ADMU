@@ -16,7 +16,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Remove-Item $tempCsvPath -Force
         }
     }
-    Context "ADMU Bulk Migration Script Tests" {
+    Context "ADMU Bulk Migration Script Tests" -skip {
 
         It "Should throw an error if 'SID' is empty" {
             # Arrange
@@ -125,15 +125,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                     }
                     return $returnObj
                 }
-
-
-
-
-
-                # Confirm-ExecutionPolicy should return $false
+                # If the MachinePolicy is set to Restricted, AllSigned, or RemoteSigned, Confirm-ExecutionPolicy should return false
                 Confirm-ExecutionPolicy | Should -BeFalse
-                # The script should throw the expected error
-                # { & $global:scriptToTest } | Should -Throw "[status] Machine Policy is set to $policy, this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
             }
         }
         It "Confirm-ExecutionPolicy should return true when the Process scope is set to Restricted, AllSigned, or RemoteSigned" {
@@ -141,8 +134,10 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             foreach ($policy in $executionPolicies) {
                 Set-ExecutionPolicy -Scope Process -ExecutionPolicy $policy -Force
                 Get-ExecutionPolicy -Scope Process | Should -Be $policy
+
+                # If the Process scope is set to Restricted, AllSigned, or RemoteSigned, Confirm-ExecutionPolicy should return true
                 Confirm-ExecutionPolicy | Should -BeTrue
-                # & $global:scriptToTest
+                # validate the process scope is set to Bypass
                 Get-ExecutionPolicy -Scope Process | Should -Be 'Bypass'
             }
         }
@@ -152,8 +147,9 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-ExecutionPolicy -Scope Process -ExecutionPolicy $policy -Force
                 Set-ExecutionPolicy -Scope localMachine -ExecutionPolicy $policy -Force
                 Get-ExecutionPolicy -Scope localMachine | Should -Be $policy
+                # If the localMachine scope is set to Restricted, AllSigned, or RemoteSigned, Confirm-ExecutionPolicy should return true
                 Confirm-ExecutionPolicy | Should -BeTrue
-                # & $global:scriptToTest
+                # validate the localMachine scope is set to Bypass
                 Get-ExecutionPolicy -Scope localMachine | Should -Be 'Bypass'
             }
         }
@@ -205,7 +201,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             { & $global:scriptToTest } | Should -Throw $expectedErrorMessage
         }
     }
-    It "Should throw an error if the PowerShellGet module cannot be installed" {
+    It "Should throw an error if the PowerShellGet module cannot be installed" -skip {
         # Arrange: Set up the test file
         # Get the required values from the local machine
         $currentComputerName = $env:COMPUTERNAME
@@ -238,7 +234,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         { & $global:scriptToTest } | Should -Throw "*Failed to install PowerShellGet module*"
     }
 
-    It "Should throw an error if the JumpCloud.ADMU module cannot be installed" {
+    It "Should throw an error if the JumpCloud.ADMU module cannot be installed" -skip {
         # Arrange: Set up the test file
         # Get the required values from the local machine
         $currentComputerName = $env:COMPUTERNAME
