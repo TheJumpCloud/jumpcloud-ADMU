@@ -349,7 +349,7 @@ Function Get-MigrationUsersFromCsv {
                     }
                 }
                 $usersToMigrate += [PSCustomObject]@{
-                    UserSID           = $row.SID
+                    selectedUsername  = $row.SID
                     LocalProfilePath  = $row.LocalPath
                     JumpCloudUserName = $row.JumpCloudUserName
                     JumpCloudUserID   = $row.JumpCloudUserID

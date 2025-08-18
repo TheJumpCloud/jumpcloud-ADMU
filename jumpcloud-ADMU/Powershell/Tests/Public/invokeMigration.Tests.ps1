@@ -29,7 +29,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
     }
 
-    Context 'Confirm-MigrationParameter Function' -Skip {
+    Context 'Confirm-MigrationParameter Function' {
 
         # This block runs once before any tests in this 'Describe' block.
         BeforeAll {
@@ -314,7 +314,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             }
         }
     }
-    Context "Get-MigrationUsersFromCsv Function" -Skip {
+    Context "Get-MigrationUsersFromCsv Function" {
         # Universal setup for all tests in this context
         BeforeAll {
             $csvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
@@ -460,7 +460,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
         }
     }
-    Context "Confirm-ExecutionPolicy Function" -Skip {
+    Context "Confirm-ExecutionPolicy Function" {
         BeforeAll {
 
             # get the "Confirm-ExecutionPolicy" function from the script
@@ -536,7 +536,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             }
         }
     }
-    Context "Confirm-RequiredModule Function" -Skip {
+    Context "Confirm-RequiredModule Function" {
         BeforeAll {
             # get the "Confirm-RequiredModule" function from the script
             $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
@@ -699,11 +699,19 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
     Context "Remote Migration Tests" {
         # This block runs once before any tests in this 'Describe' block.
         BeforeAll {
+
             # Get the original script content
-            $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
+            $admuInvoke = Get-Content -Path $global:remoteInvoke -Raw
+            $pattern = '\#region variables[\s\S]*\#endregion variables'
+            $functionMatches = [regex]::Matches($admuInvoke, $pattern)
+
+            # set the matches.value to a temp file and import the functions
+            $functionMatches.Value | Set-Content -Path (Join-Path $PSScriptRoot 'invokeScript.ps1') -Force
+
+            $scriptContent = Get-Content -Path (Join-Path $PSScriptRoot 'invokeScript.ps1')
 
             # --- Modify Script Content in Memory ---
-            Change forceReboot to false
+            # Change forceReboot to false
             $scriptContent = $scriptContent -replace '(\$ForceReboot\s*=\s*)\$true', '$1$false'
 
             # Change autoBindJCUser to false
@@ -711,40 +719,44 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             # Change forceReboot to false
             $scriptContent = $scriptContent -replace '(\$ForceReboot\s*=\s*)\$true', '$1$false'
 
-            # Define the new API key
-            $newApiKey = 'YOUR_NEW_API_KEY_HERE'
-
-            # This regex finds the line, captures the variable name and equals sign into group 1,
-            # and matches whatever value is currently inside the single quotes.
+            # # This regex finds the line, captures the variable name and equals sign into group 1,
+            # # and matches whatever value is currently inside the single quotes.
             $regexPattern = '\$JumpCloudAPIKey = ''YOURAPIKEY'' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false'
-            $replaceAPIKEY = '$JumpCloudAPIKey = ''TEST'' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false'
+            $replaceAPIKEY = '$JumpCloudAPIKey = ''TESTAPIKEY1234567890'' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false'
             $scriptContent = $scriptContent -replace $regexPattern, $replaceAPIKEY
 
             # Change the JumpCloudOrgID to a test value
             $regexPattern = '\$JumpCloudOrgID = ''YOURORGID'' # This field is required if you use a MTP API Key'
-            $replaceOrgID = '$JumpCloudOrgID = ''TEST'' # This field is required if you use a MTP API Key'
+            $replaceOrgID = '$JumpCloudOrgID = ''TESTORGID123456789012345'' # This field is required if you use a MTP API Key'
             $scriptContent = $scriptContent -replace $regexPattern, $replaceOrgID
 
-            # Save the fully modified script content to a temporary file
-            $scriptContent | Set-Content -Path (Join-Path $PSScriptRoot 'remoteMigration.ps1') -Force
+            # # Save the fully modified script content to a temporary file
+            $scriptContent | Set-Content -Path (Join-Path $PSScriptRoot 'invokeScript.ps1') -Force
 
+            # Add in the functions
+            $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
+            $functionMatches = [regex]::Matches($admuInvoke, $pattern)
 
-            # import the functions from the temp file
+            # set the matches.value to a temp file and import the functions
+            $functionMatches.Value | Add-Content -Path (Join-Path $PSScriptRoot 'invokeScript.ps1') -Force
 
+            # Add in the region validation
+            $pattern = '\#region validation[\s\S]*\#endregion validation'
+            $functionMatches = [regex]::Matches($admuInvoke, $pattern)
+            # set the matches.value to a temp file and import the functions
+            $functionMatches.Value | Add-Content -Path (Join-Path $PSScriptRoot 'invokeScript.ps1') -Force
 
-            # write-out jcdiscovery.csv
-
-            # init two users one to migrate, the other to migrate to
-
-            # dot source the script to load run the migration
-
-            # Test that the registry profile path for init user 1 is set to domain path
+            # Add in the region migration
+            $pattern = '\#region migration[\s\S]*\#endregion migration'
+            $functionMatches = [regex]::Matches($admuInvoke, $pattern)
+            # set the matches.value to a temp file and import the functions
+            $functionMatches.Value | Add-Content -Path (Join-Path $PSScriptRoot 'invokeScript.ps1') -Force
             # test that the registry profile path for init user 2 is set to c:\users\initUser1
         }
         # Test Setup
         BeforeEach {
             # sample password
-            $tempPassword = "Temp123!"
+            $tempPassword = "Temp123!Temp123!"
             # username to migrate
             $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # username to migrate to
@@ -768,11 +780,70 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
 "@
             $csvContent | Set-Content -Path $csvPath -Force
         }
-
+        # Migration with Valid data
         It "Should migrate the user to JumpCloud" {
-            # Run remoteMigration.ps1 and should return 0
-            & $PSScriptRoot\remoteMigration.ps1
+            # Run invokeScript.ps1 and should return 0
+            & $PSScriptRoot\invokeScript.ps1
             $LASTEXITCODE | Should -Be 0
         }
+        # User2 Should have user1 profile
+        It "User2 Should have user1 profile directory" {
+            # Run invokeScript.ps1 and should return 0
+            & $PSScriptRoot\invokeScript.ps1
+            $LASTEXITCODE | Should -Be 0
+
+            # test that the registry profile path for init user 2 is set to c:\users\initUser1
+            $user2Sid = Test-UsernameOrSID -usernameOrSid $userToMigrateTo
+            $user2ProfilePath = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$user2Sid").ProfileImagePath
+            $user2ProfilePath | Should -Be "C:\Users\$userToMigrateFrom"
+        }
+
+        It "Test Remigration" {
+            # Run invokeScript.ps1 and should return 0
+            & $PSScriptRoot\invokeScript.ps1
+            $LASTEXITCODE | Should -Be 0
+
+            # Remigrate. This will fail and will have a User-Profile error due to the domain path added from the previous migration
+            & $PSScriptRoot\invokeScript.ps1
+            $LASTEXITCODE | Should -Not -Be 0
+        }
+        # Test for Init User to have a previousSID value
+        It "Should have a previousSID value for the init user" {
+
+            # Get the SID of the init user
+            # Load the NTUser.dat file
+            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
+                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+            }
+
+            $userSid = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom
+            # Load the registry hive for the user and add _admu after the sid
+            REG LOAD HKU\$($userSid)_admu "C:\Users\$userToMigrateFrom\NTUSER.DAT" *>&1
+            $folderPath = "HKEY_USERS:\$($userSid)_admu\Software\JCADMU"
+            # Create the folder if it doesn't exist
+            New-Item -Path $folderPath -Force | Out-Null
+            Test-Path $folderPath | Should -Be $true
+            # Set the PreviousSID value
+            Set-ItemProperty -Path $folderPath -Name "previousSid" -Value "S-1-5-21-1234567890-1234567890-1234567890-1111" -Force
+
+            # Verify the previousSid value
+            Get-ItemProperty -Path $folderPath -Name "previousSid" | Should -Not -BeNullOrEmpty
+
+            # Unload the NTUser.dat file
+            Reg UNLOAD HKU\$($userSid)_admu *>&1
+            # Run the migration
+            & $PSScriptRoot\invokeScript.ps1
+            $LASTEXITCODE | Should -Be 1
+        }
+        # User path with domain
+        It "Domain path in User directory path" {
+            # Set the domain path to User.JumpCloud.Com
+            $domainPath = "User.JumpCloud.Com"
+            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$userSid" -Name "ProfileImagePath" -Value "C:\Users\$userToMigrateTo.JumpCloud.Com"
+            # Run the migration script and it should throw an error
+            & $PSScriptRoot\invokeScript.ps1
+            $LASTEXITCODE | Should -Be 1
+        }
+
     }
 }
