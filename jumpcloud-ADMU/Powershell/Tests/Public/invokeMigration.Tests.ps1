@@ -416,7 +416,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 "@
                 Set-Content -Path $csvPath -Value $csvContent -Force
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: No users were found in the CSV matching this computer's name ('MY-TEST-PC') and serial number ('MY-TEST-SN')."
+                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: No users were found in the CSV matching this computer's name ('$computerName') and serial number ('$serialNumber')."
             }
 
             It "Should return a filtered list of user objects for the current computer" {
