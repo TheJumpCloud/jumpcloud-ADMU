@@ -3,22 +3,22 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
     # Validate the JumpCloud Agent is installed
     BeforeAll {
 
-        $global:scriptToTest = Join-Path $PSScriptRoot '..\..\..\..\jumpcloud-ADMU-Advanced-Deployment\InvokeFromJCAgent\3_ADMU_Invoke.ps1'
+        $global:remoteInvoke = Join-Path $PSScriptRoot '..\..\..\..\jumpcloud-ADMU-Advanced-Deployment\InvokeFromJCAgent\3_ADMU_Invoke.ps1'
 
-        if (-not (Test-Path $global:scriptToTest)) {
-            throw "TEST SETUP FAILED: Script not found at the calculated path: $($global:scriptToTest). Please check the relative path in the BeforeAll block."
+        if (-not (Test-Path $global:remoteInvoke)) {
+            throw "TEST SETUP FAILED: Script not found at the calculated path: $($global:remoteInvoke). Please check the relative path in the BeforeAll block."
         }
 
     }
 
-    Describe 'Confirm-MigrationParameter' -Tags 'Validation' {
+    Context 'Confirm-MigrationParameter Function' {
 
         # This block runs once before any tests in this 'Describe' block.
         BeforeAll {
             # --- IMPORTANT ---
 
             # get the function definitions from the script
-            $scriptContent = Get-Content -Path $global:scriptToTest -Raw
+            $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
             $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
             $functionMatches = [regex]::Matches($scriptContent, $pattern)
 
@@ -152,8 +152,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             It "Should THROW when systemContextBinding is false and JumpCloudAPIKey is the default placeholder" {
                 # Create a hashtable for splatting
                 $params = @{
-                    JumpCloudAPIKey = ''
-                    JumpCloudOrgID  = 'OrgID' # Default invalid ID
+                    JumpCloudAPIKey = 'YOURAPIKEY' # Default placeholder
+                    JumpCloudOrgID  = 'OrgID'
                 }
                 { Confirm-MigrationParameter @params } | Should -Throw "Parameter Validation Failed: 'JumpCloudAPIKey' must be set to a valid key when 'systemContextBinding' is false."
             }
@@ -161,7 +161,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             It "Should THROW when systemContextBinding is false and JumpCloudOrgID is the default placeholder" {
                 $params = @{
                     JumpCloudAPIKey = 'MyValidApiKey'
-                    JumpCloudOrgID  = '' # Default invalid ID
+                    JumpCloudOrgID  = 'YOURORGID' # Default placeholder
                 }
                 { Confirm-MigrationParameter @params } | Should -Throw "Parameter Validation Failed: 'JumpCloudOrgID' must be set to a valid ID when 'systemContextBinding' is false."
             }
@@ -296,15 +296,12 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             }
         }
     }
-
-
-
-    Context "Get-MigrationUsersFromCsv Function Tests" {
+    Context "Get-MigrationUsersFromCsv Function" {
         # Universal setup for all tests in this context
         BeforeAll {
             $csvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
             # get the "Get-MigrationUsersFromCsv" function from the script
-            $scriptContent = Get-Content -Path $global:scriptToTest -Raw
+            $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
 
             $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
             $functionMatches = [regex]::Matches($scriptContent, $pattern)
@@ -355,105 +352,101 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         }
 
         # --- Test Cases for Row-Level Data Validation ---
+        Context "Run on local computer" {
+            BeforeAll {
+                $computerName = $env:COMPUTERNAME
+                $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+            }
 
-        It "Should throw an error if 'SID' field is empty" {
-            # Arrange
-            $csvContent = @"
+            It "Should throw an error if 'SID' field is empty" {
+                # Arrange
+                $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"","C:\Users\j.doe","TEST-PC","j.doe","jane.doe","jcuser123","jcsystem123","TEST-SN-123"
+"","C:\Users\j.doe",$computerName,"j.doe","jane.doe","jcuser123","jcsystem123",$serialNumber
 "@
-            Set-Content -Path $csvPath -Value $csvContent -Force
+                Set-Content -Path $csvPath -Value $csvContent -Force
 
-            # Act & Assert
-            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Row * is missing required data for field 'SID'."
-        }
+                # Act & Assert
+                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Row * is missing required data for field 'SID'."
+            }
 
-        It "Should throw an error if 'LocalPath' field is empty" {
-            # Arrange
-            $csvContent = @"
+            It "Should throw an error if 'LocalPath' field is empty" {
+                # Arrange
+                $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-XYZ","","TEST-PC","j.doe","jane.doe","jcuser123","jcsystem123","TEST-SN-123"
+"S-1-5-21-XYZ","", $computerName,"j.doe","jane.doe","jcuser123","jcsystem123",$serialNumber
 "@
-            Set-Content -Path $csvPath -Value $csvContent -Force
+                Set-Content -Path $csvPath -Value $csvContent -Force
 
-            # Act & Assert
-            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Row * is missing required data for field 'LocalPath'."
-        }
+                # Act & Assert
+                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Row * is missing required data for field 'LocalPath'."
+            }
 
-        It "Should throw an error if 'JumpCloudUserName' field is empty" {
-            # Arrange
-            $csvContent = @"
+            It "Should throw an error if 'JumpCloudUserName' field is empty" {
+                # Arrange
+                $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-XYZ","C:\Users\j.doe","TEST-PC","j.doe","","jcuser123","jcsystem123","TEST-SN-123"
+"S-1-5-21-XYZ","C:\Users\j.doe",$computerName,"j.doe","","jcuser123","jcsystem123",$serialNumber
 "@
-            Set-Content -Path $csvPath -Value $csvContent -Force
+                Set-Content -Path $csvPath -Value $csvContent -Force
 
-            # Act & Assert
-            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Row * is missing required data for field 'JumpCloudUserName'."
-        }
+                # Act & Assert
+                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Row * is missing required data for field 'JumpCloudUserName'."
+            }
 
-        It "Should throw an error if 'JumpCloudUserID' is empty when systemContextBinding is enabled" {
-            # Arrange
-            $csvContent = @"
+            It "Should throw an error if 'JumpCloudUserID' is empty when systemContextBinding is enabled" {
+                # Arrange
+                $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-XYZ","C:\Users\j.doe","TEST-PC","j.doe","jane.doe","","jcsystem123","TEST-SN-123"
+"S-1-5-21-XYZ","C:\Users\j.doe",$computerName,"j.doe","jane.doe","","jcsystem123",$serialNumber
 "@
-            Set-Content -Path $csvPath -Value $csvContent -Force
+                Set-Content -Path $csvPath -Value $csvContent -Force
 
-            # Act & Assert
-            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $true } | Should -Throw "*'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
-        }
+                # Act & Assert
+                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $true } | Should -Throw "*'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
+            }
 
-        # --- Test Cases for Filtering Logic ---
+            # --- Test Cases for Filtering Logic ---
 
-        It "Should throw an error if no users match the current computer's name and serial" {
-            # Arrange
-            $csvContent = @"
+            It "Should throw an error if no users match the current computer's name and serial" {
+                # Arrange
+                $csvContent = @"
 "SID","LocalPath","LocalComputerName","SerialNumber","JumpCloudUserName","JumpCloudUserID"
 "S-1-5-21-XYZ","C:\Users\j.doe","DIFFERENT-PC","DIFFERENT-SN","jane.doe","jcuser123"
 "@
-            Set-Content -Path $csvPath -Value $csvContent -Force
+                Set-Content -Path $csvPath -Value $csvContent -Force
+                # Act & Assert
+                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: No users were found in the CSV matching this computer's name ('MY-TEST-PC') and serial number ('MY-TEST-SN')."
+            }
 
-            # Mock environmental dependencies to ensure the test is predictable
-            Mock -CommandName 'Get-WmiObject' -MockWith { [PSCustomObject]@{ SerialNumber = 'MY-TEST-SN' } }
-            $env:COMPUTERNAME = 'MY-TEST-PC'
-
-            # Act & Assert
-            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: No users were found in the CSV matching this computer's name ('MY-TEST-PC') and serial number ('MY-TEST-SN')."
-        }
-
-        It "Should return a filtered list of user objects for the current computer" {
-            # Arrange
-            $csvContent = @"
+            It "Should return a filtered list of user objects for the current computer" {
+                # Arrange
+                $csvContent = @"
 "SID","LocalPath","LocalComputerName","SerialNumber","JumpCloudUserName","JumpCloudUserID"
-"S-1-5-21-USER1","C:\Users\user.one","MY-TEST-PC","MY-TEST-SN","user.one.jc","jcuser1"
+"S-1-5-21-USER1","C:\Users\user.one",$computerName,$serialNumber,"user.one.jc","jcuser1"
 "S-1-5-21-USER2","C:\Users\user.two","DIFFERENT-PC","DIFFERENT-SN","user.two.jc","jcuser2"
-"S-1-5-21-USER3","C:\Users\user.three","MY-TEST-PC","MY-TEST-SN","user.three.jc","jcuser3"
+"S-1-5-21-USER3","C:\Users\user.three",$computerName,$serialNumber,"user.three.jc","jcuser3"
 "@
-            Set-Content -Path $csvPath -Value $csvContent -Force
+                Set-Content -Path $csvPath -Value $csvContent -Force
+                # Act
+                $result = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
 
-            # Mock environmental dependencies
-            Mock -CommandName 'Get-WmiObject' -MockWith { [PSCustomObject]@{ SerialNumber = 'MY-TEST-SN' } }
-            $env:COMPUTERNAME = 'MY-TEST-PC'
+                # Assert
+                $result | Should -Not -BeNullOrEmpty
+                $result.Count | Should -Be 2
+                $result[0].UserSID | Should -Be "S-1-5-21-USER1"
+                $result[0].JumpCloudUserName | Should -Be "user.one.jc"
+                $result[1].UserSID | Should -Be "S-1-5-21-USER3"
+                $result[1].JumpCloudUserID | Should -Be "jcuser3"
+            }
 
-            # Act
-            $result = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
-
-            # Assert
-            $result | Should -Not -BeNullOrEmpty
-            $result.Count | Should -Be 2
-            $result[0].UserSID | Should -Be "S-1-5-21-USER1"
-            $result[0].JumpCloudUserName | Should -Be "user.one.jc"
-            $result[1].UserSID | Should -Be "S-1-5-21-USER3"
-            $result[1].JumpCloudUserID | Should -Be "jcuser3"
         }
     }
-
     Context "Confirm-ExecutionPolicy Function" {
         BeforeAll {
 
             # get the "Confirm-ExecutionPolicy" function from the script
-            $scriptContent = Get-Content -Path $global:scriptToTest -Raw
+            $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
 
             $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
             $functionMatches = [regex]::Matches($scriptContent, $pattern)
@@ -518,7 +511,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
     Context "Confirm-RequiredModule Function" {
         BeforeAll {
             # get the "Confirm-RequiredModule" function from the script
-            $scriptContent = Get-Content -Path $global:scriptToTest -Raw
+            $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
 
             $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
             $functionMatches = [regex]::Matches($scriptContent, $pattern)
@@ -660,6 +653,31 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 # within the relevant block, Write-Host should be called with the status message
                 Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[status] $requiredModule module not found, installing..." }
             }
+        }
+    }
+    Context "Remote Migration Tests" {
+        # This block runs once before any tests in this 'Describe' block.
+        BeforeAll {
+            # get the function definitions from the script
+            $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
+            $pattern = '\#region variables[\s\S]*\#endregion variables'
+            $functionMatches = [regex]::Matches($scriptContent, $pattern)
+
+            # set the variable config to some valid set of parameters
+            # change forceReboot to false
+            # change autoBindJCUser to false
+            # change the value of JCAPIKEY/ORGID
+            # $env:PESTER_APIKEY
+            # $env:PESTER_ORGID
+
+            # write-out jcdiscovery.csv
+
+            # init two users one to migrate, the other to migrate to
+
+            # dot source the script to load run the migration
+
+            # Test that the registry profile path for init user 1 is set to domain path
+            # test that the registry profile path for init user 2 is set to c:\users\initUser1
         }
     }
 }

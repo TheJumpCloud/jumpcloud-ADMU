@@ -4,7 +4,7 @@
 ################################################################################
 # Update Variables Below
 ################################################################################
-
+#region variables
 # CSV or Github input
 $dataSource = 'csv' # csv or github
 # CSV variables only required if the dataSource is set to 'csv' this is the name of the CSV uploaded to the JumpCloud command
@@ -40,7 +40,7 @@ $systemContextBinding = $false # Bind using the systemContext API (default False
 # If you want to bind using the systemContext API, set the systemContextBinding to true
 # The systemContextBinding option is only available for devices that have enrolled a device using a JumpCloud Administrators Connect Key
 # for more information, see the JumpCloud documentation: https://docs.jumpcloud.com/api/2.0/index.html#section/System-Context
-
+#endregion variables
 ################################################################################
 # Do not edit below
 ################################################################################
@@ -186,10 +186,6 @@ Function Confirm-ExecutionPolicy {
             } else {
                 Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), no changes made."
             }
-            # Write-Host "[status] Execution Policies:"
-            # foreach ($policy in $policies.PSObject.Properties) {
-            #     Write-Host "$($policy.Name): $($policy.Value)"
-            # }
         } catch {
             Write-Host "[error] Exception occurred in Confirm-ExecutionPolicy: $($_.Exception.Message)"
             $success = $false
@@ -200,11 +196,18 @@ Function Confirm-ExecutionPolicy {
     }
 }
 Function Confirm-RequiredModule {
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [system.string[]]
+        $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
+    )
     # this checks the installed modules
     # returns True/False
+    # set the security protocol to TLS 1.2
     begin {
+        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $nugetRequiredVersion = "2.8.5.208"
-        $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
         $allSuccess = $true
     }
     process {
@@ -289,7 +292,6 @@ Function Confirm-RequiredModule {
         }
     }
 }
-
 Function Get-MigrationUsersFromCsv {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
@@ -332,20 +334,19 @@ Function Get-MigrationUsersFromCsv {
         $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
 
         foreach ($row in $ImportedCSV) {
-            # Validate if JumpCloudUserID is not null or empty
-            if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
-                throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
-            }
-            # --- Row content validation ---
-            $requiredFields = "LocalPath", "SID", "JumpCloudUserName"
-            foreach ($field in $requiredFields) {
-                if ([string]::IsNullOrWhiteSpace($row.$field)) {
-                    throw "Validation Failed: Row $($foreach.CurrentIndex + 1) is missing required data for field '$field'."
-                }
-            }
-
             # --- Filter for this machine and create the custom object ---
             if (($row.LocalComputerName -eq $computerName) -and ($row.SerialNumber -eq $serialNumber)) {
+                # Validate if JumpCloudUserID is not null or empty
+                if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
+                    throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
+                }
+                # --- Row content validation ---
+                $requiredFields = "LocalPath", "SID", "JumpCloudUserName"
+                foreach ($field in $requiredFields) {
+                    if ([string]::IsNullOrWhiteSpace($row.$field)) {
+                        throw "Validation Failed: Row $($foreach.CurrentIndex + 1) is missing required data for field '$field'."
+                    }
+                }
                 $usersToMigrate += [PSCustomObject]@{
                     UserSID           = $row.SID
                     LocalProfilePath  = $row.LocalPath
@@ -367,6 +368,7 @@ Function Get-MigrationUsersFromCsv {
 }
 #endregion functionDefinitions
 
+#region validation
 # validate dataSource
 $confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource `
     -csvName $csvName `
@@ -388,6 +390,10 @@ $confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource
 if ($confirmMigrationParameters) {
     Write-Host "[STATUS] Migration parameters validated successfully."
 }
+
+Confirm-ExecutionPolicy
+
+Confirm-RequiredModule -requiredModules @('PowerShellForGitHub', 'JumpCloud.ADMU')
 #endregion validation
 #region dataImport
 switch ($dataSource) {
@@ -425,13 +431,7 @@ switch ($dataSource) {
         $workingDir = $windowsTemp
         $discoveryCSVLocation = $workingDir + '\jcdiscovery.csv'
 
-        # Set security protocol
-        [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-        Install-PackageProvider -Name NuGet -Force
-        # Install Module PowerShellForGitHub
-        if ($null -eq (Get-InstalledModule -Name "PowerShellForGitHub" -ErrorAction SilentlyContinue)) {
-            Install-Module PowerShellForGitHub -Force
-        }
+        Confirm-RequiredModule -requiredModules @('PowerShellForGitHub')
 
         # Auth to github
         Set-GitHubAuthentication -Credential $cred
@@ -447,23 +447,10 @@ switch ($dataSource) {
 
 
 # Call the function and store the result (which is either an array of users or $null)
-$users = Get-MigrationUsersFromCsv -CsvPath $discoveryCSVLocation -systemContextBinding $systemContextBinding
-
-# The 'if' statement automatically treats $null as false and a populated array as true
-if ($users) {
-    Write-Host "[Status] CSV: Validation successful. Proceeding with user migration..."
-}
-# You can now proceed using the fully validated $UsersToMigrate array.
-
-Write-Host "`nProceeding with user migration..."
+$UsersToMigrate = Get-MigrationUsersFromCsv -CsvPath $discoveryCSVLocation -systemContextBinding $systemContextBinding
+#endregion validation
 #### End CSV Validation ####
 
-#region installADMU and required modules
-# Install the latest ADMU from PSGallery
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-
-
-#endregion installADMU
 # Run ADMU
 
 # If multiple users are planned to be migrated: set the force reboot / leave domain options to false:
@@ -604,6 +591,8 @@ try {
     Write-Error "An unexpected error occurred: $_"
 }
 #endregion migration
+
+#region removeMDM
 # Un-manage the device from Intune:
 # Remove the existing MDM
 if ($removeMDM) {
@@ -616,6 +605,7 @@ if ($removeMDM) {
     # Execute the script
     & $scriptPath
 }
+#endregion removeMDM
 
 #region restart/shutdown
 # If force restart was specified, we kick off a command to initiate the restart
