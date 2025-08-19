@@ -1,4 +1,4 @@
-Describe "UserDirectoryPath Acceptance Tests" -Tag "Acceptance" {
+Describe "Test-UserDirectoryPath Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
@@ -32,25 +32,22 @@ Describe "UserDirectoryPath Acceptance Tests" -Tag "Acceptance" {
             $result = Test-UserDirectoryPath -SelectedUserSID 'S-1-5-VALID'
 
             # Assert: The result should be true.
-            $result | Should -Be $true
+            $result | Should -BeTrue
         }
 
-        It "Should return FALSE for profile paths with a domain or WORKGROUP suffix" {
-            # Arrange: Define different invalid paths to test.
-            $invalidPaths = @{
-                'C:\Users\test.user.MYDOMAIN'  = 'a domain suffix'
-                'C:\Users\test.user.WORKGROUP' = 'a WORKGROUP suffix'
-            }
-            $invalidPaths.GetEnumerator() | ForEach-Object {
-                # Mock the registry call to return the current invalid path.
-                Mock Get-ItemPropertyValue -MockWith { return $_.Name }
+        It 'should return $false for a path ending in .WORKGROUP' {
+            Mock Get-ItemPropertyValue -MockWith { return 'C:\Users\testuser.WORKGROUP' }
 
-                # Act: Run the function.
-                $result = Test-UserDirectoryPath -SelectedUserSID 'S-1-5-INVALID'
+            $result = Test-UserDirectoryPath -SelectedUserSID 'S-1-5-DUMMY'
 
-                # Assert: The result should be false for each invalid path.
-                $result | Should -Be $false -Because "the path had $($_.Value)"
-            }
+            $result | Should -BeFalse
+        }
+        It 'should return $false for a path ending in .ADMU' {
+            Mock Get-ItemPropertyValue -MockWith { return 'C:\Users\another.user.ADMU' }
+
+            $result = Test-UserDirectoryPath -SelectedUserSID 'S-1-5-DUMMY'
+
+            $result | Should -BeFalse
         }
 
         It "Should return FALSE if the registry key does not exist" {
@@ -62,7 +59,7 @@ Describe "UserDirectoryPath Acceptance Tests" -Tag "Acceptance" {
             $result = Test-UserDirectoryPath -SelectedUserSID 'S-1-5-NONEXISTENT'
 
             # Assert: The result should be false.
-            $result | Should -Be $false
+            $result | Should -BeFalse
         }
     }
 
