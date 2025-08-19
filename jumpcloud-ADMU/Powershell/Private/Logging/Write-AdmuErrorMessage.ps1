@@ -38,7 +38,7 @@ function Write-AdmuErrorMessage {
             $Script:ErrorMessage = "User Folder Redirection Error. Click the link below for troubleshooting information."
         }
         "user_profile_folder_name_error" {
-            Write-ToLog -Message:("User Profile Folder Name Error: The user profile folder name contains a .WORKGROUP or .domain suffix, which is not allowed. This indicates that the user has been migrated previously.") -Level Warn
+            Write-ToLog -Message:("User Profile Folder Name Error: The user profile folder name contains a .WORKGROUP or .ADMU suffix, which is not allowed. This indicates that the user has been migrated previously.") -Level Warn
 
             $Script:ErrorMessage = "User Profile Folder Name Error. Click the link below for troubleshooting information."
         }
