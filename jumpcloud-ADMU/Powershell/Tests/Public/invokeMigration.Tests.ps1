@@ -452,9 +452,9 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 # Assert
                 $result | Should -Not -BeNullOrEmpty
                 $result.Count | Should -Be 2
-                $result[0].UserSID | Should -Be "S-1-5-21-USER1"
+                $result[0].SelectedUserName | Should -Be "S-1-5-21-USER1"
                 $result[0].JumpCloudUserName | Should -Be "user.one.jc"
-                $result[1].UserSID | Should -Be "S-1-5-21-USER3"
+                $result[1].SelectedUserName | Should -Be "S-1-5-21-USER3"
                 $result[1].JumpCloudUserID | Should -Be "jcuser3"
             }
 
@@ -771,7 +771,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 New-Item $logPath -Force -ItemType File
             }
 
-            $userSid = (Get-LocalUser -Name $userToMigrateFrom).SID.Value
+            $userSid = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom
             # Create a CSV file for the user migration, should have these: "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
             $csvPath = "C:\Windows\Temp\jcdiscovery.csv"
             $csvContent = @"
@@ -783,14 +783,13 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
         # Migration with Valid data
         It "Should migrate the user to JumpCloud" {
             # Run invokeScript.ps1 and should return 0
-            & $PSScriptRoot\invokeScript.ps1
-            $LASTEXITCODE | Should -Be 0
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Not -Throw
+
         }
         # User2 Should have user1 profile
         It "User2 Should have user1 profile directory" {
             # Run invokeScript.ps1 and should return 0
-            & $PSScriptRoot\invokeScript.ps1
-            $LASTEXITCODE | Should -Be 0
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Not -Throw
 
             # test that the registry profile path for init user 2 is set to c:\users\initUser1
             $user2Sid = Test-UsernameOrSID -usernameOrSid $userToMigrateTo
@@ -800,50 +799,83 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
 
         It "Test Remigration" {
             # Run invokeScript.ps1 and should return 0
-            & $PSScriptRoot\invokeScript.ps1
-            $LASTEXITCODE | Should -Be 0
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Not -Throw
+
 
             # Remigrate. This will fail and will have a User-Profile error due to the domain path added from the previous migration
-            & $PSScriptRoot\invokeScript.ps1
-            $LASTEXITCODE | Should -Not -Be 0
+            . $PSScriptRoot\invokeScript.ps1
+
+            # Read the log
+            $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
+            $logs | Should -Not -BeNullOrEmpty
+            Write-Host $logs
+            $logs | Should -Match "User Profile Folder Name Error"
         }
         # Test for Init User to have a previousSID value
-        It "Should have a previousSID value for the init user" {
-
+        It "Should have a previousSID value for the init user and unload the hive" {
             # Get the SID of the init user
             # Load the NTUser.dat file
-            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
+            if (-not (Get-PSDrive HKEY_USERS -ErrorAction SilentlyContinue)) {
+                New-PSDrive -Name "HKEY_USERS" -PSProvider "Registry" -Root "HKEY_USERS"
             }
 
             $userSid = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom
-            # Load the registry hive for the user and add _admu after the sid
-            REG LOAD HKU\$($userSid)_admu "C:\Users\$userToMigrateFrom\NTUSER.DAT" *>&1
-            $folderPath = "HKEY_USERS:\$($userSid)_admu\Software\JCADMU"
-            # Create the folder if it doesn't exist
-            New-Item -Path $folderPath -Force | Out-Null
-            Test-Path $folderPath | Should -Be $true
-            # Set the PreviousSID value
-            Set-ItemProperty -Path $folderPath -Name "previousSid" -Value "S-1-5-21-1234567890-1234567890-1234567890-1111" -Force
+            $hivePath = "HKU\$($userSid)_admu"
+            $providerPath = "HKEY_USERS:\$($userSid)_admu"
 
-            # Verify the previousSid value
-            Get-ItemProperty -Path $folderPath -Name "previousSid" | Should -Not -BeNullOrEmpty
+            try {
+                # Load the registry hive for the user and add _admu after the sid
+                REG LOAD $hivePath "C:\Users\$userToMigrateFrom\NTUSER.DAT" *>&1
 
-            # Unload the NTUser.dat file
-            Reg UNLOAD HKU\$($userSid)_admu *>&1
-            # Run the migration
-            & $PSScriptRoot\invokeScript.ps1
-            $LASTEXITCODE | Should -Be 1
+                $folderPath = "$providerPath\Software\JCADMU"
+
+                # Create the folder if it doesn't exist
+                New-Item -Path $folderPath -Force | Out-Null
+                Test-Path $folderPath | Should -Be $true
+
+                # Set the PreviousSID value
+                $expectedSid = "S-1-5-21-1234567890-1234567890-1234567890-1111"
+                Set-ItemProperty -Path $folderPath -Name "previousSid" -Value $expectedSid -Force
+
+                # Verify the previousSid value
+                $actualSid = (Get-ItemProperty -Path $folderPath -Name "previousSid").previousSid
+                $actualSid | Should -Be $expectedSid
+
+                # Force garbage collection to release handles to the registry hive
+                [GC]::Collect()
+                [GC]::WaitForPendingFinalizers()
+
+            } finally {
+                # Unload the NTUser.dat file
+                # This now runs in a 'finally' block to ensure cleanup happens even if an assertion fails
+                Reg UNLOAD $hivePath *>&1
+            }
+
+            . $PSScriptRoot\invokeScript.ps1
+
+            # Read the log
+            $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
+            $logs | Should -Not -BeNullOrEmpty
+            Write-Host $logs
+            $logs | Should -Match "Found previous SID"
+
         }
         # User path with domain
         It "Domain path in User directory path" {
             # Set the domain path to User.JumpCloud.Com
             $domainPath = "User.JumpCloud.Com"
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$userSid" -Name "ProfileImagePath" -Value "C:\Users\$userToMigrateTo.JumpCloud.Com"
-            # Run the migration script and it should throw an error
-            & $PSScriptRoot\invokeScript.ps1
-            $LASTEXITCODE | Should -Be 1
+            Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$userSid" -Name "ProfileImagePath" | Should -Not -BeNullOrEmpty
+
+            . $PSScriptRoot\invokeScript.ps1
+
+            # Read the log
+            $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
+            $logs | Should -Not -BeNullOrEmpty
+            Write-Host $logs
+            $logs | Should -Match "User Profile Folder Name Error"
         }
 
     }
+
 }
