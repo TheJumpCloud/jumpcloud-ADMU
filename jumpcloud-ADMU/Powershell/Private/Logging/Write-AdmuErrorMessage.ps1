@@ -45,7 +45,7 @@ function Write-AdmuErrorMessage {
         "user_profile_previous_sid_error" {
             Write-ToLog -Message:("User Profile Previous SID Error: The user profile has a PreviousSID key. The user may have been migrated previously.") -Level Warn
 
-            $Script:ErrorMessage = "User Profile Previous SID Error. Click the link below for troubleshooting information."
+            $Script:ErrorMessage = "User Profile Previously Migrated Error. Click the link below for troubleshooting information."
         }
         Default {
             Write-ToLog -Message:("Error occurred, please refer to this link for more information: https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/troubleshooting-errors") -Level Warn
