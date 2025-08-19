@@ -345,7 +345,7 @@ Function Get-MigrationUsersFromCsv {
                 $requiredFields = "LocalPath", "SID", "JumpCloudUserName"
                 foreach ($field in $requiredFields) {
                     if ([string]::IsNullOrWhiteSpace($row.$field)) {
-                        throw "Validation Failed: Row $($foreach.CurrentIndex + 1) is missing required data for field '$field'."
+                        throw "Validation Failed: Missing required data for field '$field'."
                     }
                 }
                 $usersToMigrate += [PSCustomObject]@{

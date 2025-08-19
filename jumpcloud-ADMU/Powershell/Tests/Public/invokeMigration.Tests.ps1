@@ -385,7 +385,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Row * is missing required data for field 'SID'."
+                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Missing required data for field 'SID'."
             }
 
             It "Should throw an error if 'LocalPath' field is empty" {
@@ -397,7 +397,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Row * is missing required data for field 'LocalPath'."
+                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Missing required data for field 'LocalPath'."
             }
 
             It "Should throw an error if 'JumpCloudUserName' field is empty" {
@@ -409,7 +409,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Row * is missing required data for field 'JumpCloudUserName'."
+                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Missing required data for field 'JumpCloudUserName'."
             }
 
             It "Should throw an error if 'JumpCloudUserID' is empty when systemContextBinding is enabled" {
