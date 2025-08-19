@@ -862,9 +862,8 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
         }
         # User path with domain
         It "Domain path in User directory path" {
-            # Set the domain path to User.JumpCloud.Com
-            $domainPath = "User.JumpCloud.Com"
-            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$userSid" -Name "ProfileImagePath" -Value "C:\Users\$userToMigrateTo.JumpCloud.Com"
+            # Set the domain path to .ADMU
+            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$userSid" -Name "ProfileImagePath" -Value "C:\Users\$userToMigrateTo.ADMU"
             Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$userSid" -Name "ProfileImagePath" | Should -Not -BeNullOrEmpty
 
             . $PSScriptRoot\invokeScript.ps1
