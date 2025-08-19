@@ -49,6 +49,27 @@ Describe "Test-UserDirectoryPath Acceptance Tests" -Tag "Acceptance" {
 
             $result | Should -BeFalse
         }
+        It 'should return $false for a path ending in .admu' {
+            Mock Get-ItemPropertyValue -MockWith { return 'C:\Users\another.user.admu' }
+
+            $result = Test-UserDirectoryPath -SelectedUserSID 'S-1-5-DUMMY'
+
+            $result | Should -BeFalse
+        }
+        It 'should return $true for a path containing but not ending in .ADMU' {
+            Mock Get-ItemPropertyValue -MockWith { return 'C:\Users\firstname.ADMUffins' }
+
+            $result = Test-UserDirectoryPath -SelectedUserSID 'S-1-5-DUMMY'
+
+            $result | Should -BeTrue
+        }
+        It 'should return $true for a path containing but AND ending in .ADMU' {
+            Mock Get-ItemPropertyValue -MockWith { return 'C:\Users\firstname.ADMUffins.ADMU' }
+
+            $result = Test-UserDirectoryPath -SelectedUserSID 'S-1-5-DUMMY'
+
+            $result | Should -BeFalse
+        }
 
         It "Should return FALSE if the registry key does not exist" {
             # Arrange: Mock the registry call to throw an error, simulating a missing key.
