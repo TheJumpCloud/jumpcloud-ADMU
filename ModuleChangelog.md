@@ -1,6 +1,21 @@
+## 2.8.8
+
+Release Date: August 19, 2025
+
+#### RELEASE NOTES
+
+```
+Added informational validation and logging messages for the bulk ADMU script. Improved performance for setting NTFS permissions on the user's profile directory. When a user is migrated in this version of the tool, their profileImagePath will now be appended with a ".ADMU" string to ensure that the profileImagePath is unique and does not conflict with existing user profiles. Accounts that have been previously migrated with the ADMU will not be affected by this change. Accounts migrated with this and future versions of the ADMU will have a unique profileImagePath and the tool will prevent these users from being accidentally migrated twice.
+```
+
+#### IMPROVEMENTS:
+
+- Added CI tests for bulk ADMU
+- Improved performance for setting NTFS permissions on the user's profile directory
+
 ## 2.8.7
 
-Release Date: July 25, 2025
+Release Date: May 29, 2025
 
 #### RELEASE NOTES
 
