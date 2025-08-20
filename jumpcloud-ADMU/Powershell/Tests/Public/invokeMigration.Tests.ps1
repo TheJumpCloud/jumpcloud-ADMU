@@ -535,6 +535,29 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Get-ExecutionPolicy -Scope localMachine | Should -Be 'Bypass'
             }
         }
+        # Mock Unrestricted
+        It "Confirm-ExecutionPolicy should return true when the MachinePolicy scope is set to Unrestricted" {
+            Mock Get-ExecutionPolicy -ParameterFilter { $List -eq $true } {
+                $scopes = @('MachinePolicy', 'UserPolicy', 'Process', 'CurrentUser', 'LocalMachine')
+                $returnObj = New-Object System.Collections.ArrayList
+                foreach ($scope in $scopes) {
+                    $returnObj.Add([PSCustomObject]@{
+                            Scope           = $scope
+                            ExecutionPolicy = If ($scope -eq 'MachinePolicy') { 'Unrestricted' }
+                        }) | Out-Null
+                }
+                return $returnObj
+            }
+            $thrown = $false
+            $result = $null
+            try {
+                $result = Confirm-ExecutionPolicy
+            } catch {
+                $thrown = $true
+            }
+            $thrown | Should -BeFalse
+            $result | Should -BeTrue
+        }
     }
     Context "Confirm-RequiredModule Function" {
         BeforeAll {
