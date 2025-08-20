@@ -8,3 +8,5 @@ Deploy/ADMU.ps1
 Deploy/admuTemplate.ps1
 *.exe
 *jcdiscovery.csv
+*invokeFunctions.ps1
+*invokeScript.ps1

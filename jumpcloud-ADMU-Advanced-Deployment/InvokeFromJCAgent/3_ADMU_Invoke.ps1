@@ -157,6 +157,11 @@ Function Confirm-ExecutionPolicy {
                 $success = $false
 
             }
+            If ($policies.MachinePolicy -eq "Unrestricted") {
+                Write-Host "[status] Machine Policy is set to Unrestricted, no changes made."
+                $success = $true
+                return
+            }
             # If the Process policy is set to Restricted, AllSigned or RemoteSigned, we need to change it to Bypass
             if (($policies.Process -eq "Restricted") -or
                 ($policies.Process -eq "AllSigned") -or
