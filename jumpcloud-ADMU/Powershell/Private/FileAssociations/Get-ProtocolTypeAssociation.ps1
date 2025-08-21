@@ -45,6 +45,7 @@ function Get-ProtocolTypeAssociation {
             $fullPath = "$($basePath)$($pathSuffix)"
         }
         # Validate file permissions on registry item
+        # TODO: replace with Set-HKEYUsersMount
         if ("HKEY_USERS" -notin (Get-PSDrive | Select-Object name).Name) {
             New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
         }

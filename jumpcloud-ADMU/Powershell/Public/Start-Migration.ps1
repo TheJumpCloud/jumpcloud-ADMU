@@ -646,6 +646,7 @@ Function Start-Migration {
                 }
             }
             # Validate file permissions on registry item
+            # TODO: replace with Set-HKEYUsersMount
             if ("HKEY_USERS" -notin (Get-PSDrive | select-object name).Name) {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
@@ -709,6 +710,7 @@ Function Start-Migration {
 
             # SelectedUserSid
             # Validate file permissions on registry item
+            # TODO: replace with Set-HKEYUsersMount
             if ("HKEY_USERS" -notin (Get-PSDrive | select-object name).Name) {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
@@ -932,8 +934,8 @@ Function Start-Migration {
             }
             $admuTracker.renameBackupFiles.pass = $true
             Report-MigrationProgress -Status "Backup registry files renamed" -Percent "60%"
+            #region Process Home Path Permission
             if ($UpdateHomePath) {
-
                 Write-ToLog -Message:("Parameter to Update Home Path was set.")
                 Write-ToLog -Message:("Attempting to rename $oldUserProfileImagePath to: $($windowsDrive)\Users\$JumpCloudUsername.") -Level Verbose
                 # Test Condition for same names
@@ -1014,7 +1016,9 @@ Function Start-Migration {
             # logging
             Write-ToLog -Message:('New User Profile Path: ' + $newUserProfileImagePath + ' New User SID: ' + $NewUserSID)
             Write-ToLog -Message:('Old User Profile Path: ' + $oldUserProfileImagePath + ' Old User SID: ' + $SelectedUserSID)
+            #endRegion Process Home Path Permission
 
+            #region NTFS Permissions
             Write-ToLog "Attempting to set owner to NTFS Permissions from: ($NewUserSID) to: $SelectedUserSID for path: $newUserProfileImagePath"
             $regPermStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
             $progressCallback = {
@@ -1030,6 +1034,9 @@ Function Start-Migration {
             $regPermStopwatch.Stop()
             Write-ToLog "Set-RegPermission completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
 
+            #endRegion NTFS Permissions
+
+            #region Validate Hive Permissions
             # Validate if .DAT has correct permissions
             $validateNTUserDatPermissions, $validateNTUserDatPermissionsResults = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'
 
@@ -1046,9 +1053,10 @@ Function Start-Migration {
             } else {
                 Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control `n$($validateUsrClassDatPermissionsResults | Out-String)") -Level Warn
             }
-            ## End RegEdit Block ##
+            #endRegion Validate Hive Permissions
 
             ### Active Setup Registry Entry ###
+            #region Set UWP Registry Keys
             Write-ToProgress -ProgressBar $ProgressBar -Status "CreateRegEntries" -form $isForm
             Report-MigrationProgress -Status "Creating registry entries" -Percent "80%"
 
@@ -1084,8 +1092,10 @@ Function Start-Migration {
                     }
                 }
             }
+            #endRegion Set UWP Registry Keys
             # $admuTracker.activeSetupHKLM = $true
             ### End Active Setup Registry Entry Region ###
+            #region Init WUP Apps
             Write-ToProgress -ProgressBar $ProgressBar -Status "DownloadUWPApps" -form $isForm
             Report-MigrationProgress -Status "Downloading UWP apps" -Percent "85%"
 
@@ -1110,7 +1120,9 @@ Function Start-Migration {
             } else {
                 Write-ToLog -Message:('No Appx Packages found for user: ' + $SelectedUserName + ' Appx packages will not be restored.') -Level Warn
             }
+            #endRegion Init WUP Apps
 
+            #region Download UWP App
 
             # TODO: Test and return non terminating error here if failure
             # $admuTracker.uwpAppXPackages = $true
@@ -1128,6 +1140,9 @@ Function Start-Migration {
                 # TODO: Get the checksum
                 # $admuTracker.uwpDownloadExe = $true
             }
+            #endRegion Download UWP App
+
+            # TODO: This progress message occurs before autobind, leave domain, scheduled tasks, can we reword this or change it's location?
             Write-ToProgress -ProgressBar $ProgressBar -Status "ConversionComplete" -form $isForm
             Report-MigrationProgress -Status "Conversion complete" -Percent "90%"
             Write-ToLog -Message:('Profile Conversion Completed') -Level Verbose
@@ -1157,7 +1172,6 @@ Function Start-Migration {
             #endregion AutoBindUserToJCSystem
 
             #region Leave Domain or AzureAD
-
             $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
             if ($LeaveDomain -eq $true) {
                 Report-MigrationProgress -Status "Leaving domain" -Percent "97%"
@@ -1256,6 +1270,7 @@ Function Start-Migration {
                     Write-ToLog -Message:('Device is not joined to a domain, skipping leave domain step')
                 }
             }
+            #endRegion Leave Domain or AzureAD
 
             # re-enable scheduled tasks if they were disabled
             if ($ScheduledTasks) {

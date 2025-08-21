@@ -16,6 +16,7 @@ Describe "Get-UserFileTypeAssociation Acceptance Tests" -Tag "Acceptance" {
             $currentPath = Split-Path $currentPath -Parent
         }
         . "$helpFunctionDir\$fileName"
+        # TODO: replace with Set-HKEYUsersMount
         if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
             Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
             New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
