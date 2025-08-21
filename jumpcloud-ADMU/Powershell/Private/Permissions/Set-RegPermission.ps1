@@ -5,7 +5,9 @@ function Set-RegPermission {
         [Parameter(Mandatory)]
         [string]$TargetSID,
         [Parameter(Mandatory)]
-        [string]$FilePath
+        [string]$FilePath,
+        [Parameter(Mandatory = $false)]
+        [scriptblock]$progressCallback
     )
 
     # Create SecurityIdentifier objects
@@ -29,6 +31,9 @@ function Set-RegPermission {
 
     # Get all files and folders recursively, including hidden/system
     $items = Get-ChildItem -Path $FilePath -Recurse -Force -ErrorAction SilentlyContinue
+    $total = $items.Count
+    $count = 0
+    $lastPercent = -1
     foreach ($item in $items) {
         try {
             $acl = Get-Acl -Path $item.FullName
@@ -60,6 +65,17 @@ function Set-RegPermission {
             if ($_.Exception.Message -notmatch "because it is null") {
                 Write-ToLog "Failed to update $($item.FullName): $($_.Exception.Message)"
             }
+        }
+        $count++
+        if ($total -eq 0) {
+            $percent = 100
+        } else {
+            $percent = [math]::Round(($count / $total) * 100)
+        }
+        # $percent = ($total -eq 0) ? 100 : [math]::Round(($count / $total) * 100)
+        if ($ProgressCallback -and ($percent -ge $lastPercent + 5 -or $count -eq $total)) {
+            & $ProgressCallback $count $total
+            $lastPercent = $percent
         }
     }
 }
