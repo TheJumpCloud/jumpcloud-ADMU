@@ -1,3 +1,21 @@
+## 2.9.0
+
+Release Date: August 27, 2025
+
+#### RELEASE NOTES
+
+```
+{{FILL IN}}
+```
+
+#### IMPROVEMENTS:
+
+- {{FILL IN}}
+
+#### BUG FIXES:
+
+- Fixed an issue where the tool would not properly handle certain edge cases during the migration process.
+
 ## 2.8.8
 
 Release Date: August 19, 2025
