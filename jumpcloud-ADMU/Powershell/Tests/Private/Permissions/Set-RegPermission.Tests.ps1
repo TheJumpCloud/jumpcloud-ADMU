@@ -21,6 +21,35 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
         $userSid = Test-UsernameOrSID -usernameOrSid $testUsername
 
     }
+
+    Context "SID Translation Tests" {
+        It "Falls back to SID string and logs a warning if SID cannot be translated" {
+            # Arrange
+            $fakeSID = 'S-1-5-21-0000000000-0000000000-0000000000-1234'
+            $targetSID = 'S-1-5-21-0000000000-0000000000-0000000000-5678'
+            $testPath = "$env:TEMP\testfile.txt"
+            New-Item -Path $testPath -ItemType File -Force | Out-Null
+
+            # Mock the Translate method to throw
+            Mock -CommandName ([System.Security.Principal.SecurityIdentifier].GetMethod('Translate')) {
+                throw [System.Security.Principal.IdentityNotMappedException]::new("Some or all identity references could not be translated.")
+            } -Verifiable
+
+            # Mock Write-ToLog to capture the warning
+            Mock Write-ToLog {}
+
+            # Act
+            Set-RegPermission -SourceSID $fakeSID -TargetSID $targetSID -FilePath $testPath
+
+            # Assert
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Message -like "Warning: Could not translate SourceSID*"
+            } -Exactly 1
+
+            # Cleanup
+            Remove-Item $testPath -Force
+        }
+    }
     Context "Permission tests" {
         BeforeEach {
             $testDir = Join-Path $HOME "SetRegPermissionTest"

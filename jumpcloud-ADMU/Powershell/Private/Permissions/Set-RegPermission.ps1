@@ -15,8 +15,18 @@ function Set-RegPermission {
     $TargetSIDObj = New-Object System.Security.Principal.SecurityIdentifier($TargetSID)
 
     # Get NTAccount names for logging and ACLs
-    $SourceAccount = $SourceSIDObj.Translate([System.Security.Principal.NTAccount]).Value
-    $TargetAccount = $TargetSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+    try {
+        $SourceAccount = $SourceSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+    } catch {
+        Write-ToLog "Warning: Could not translate SourceSID $SourceSID to NTAccount. Using SID string instead."
+        $SourceAccount = $SourceSID
+    }
+    try {
+        $TargetAccount = $TargetSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+    } catch {
+        Write-ToLog "Warning: Could not translate TargetSID $TargetSID to NTAccount. Using SID string instead."
+        $TargetAccount = $TargetSID
+    }
 
     # Add the targetAccount to the ACL if it doesn't already exist
     $acl = Get-Acl -Path $FilePath
