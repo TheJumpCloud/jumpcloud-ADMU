@@ -16,7 +16,9 @@ function Write-ToProgress {
         [Parameter(Mandatory = $false)]
         $profileSize,
         [Parameter(Mandatory = $false)]
-        $LocalPath
+        $LocalPath,
+        [Parameter(Mandatory = $false)]
+        $SystemDescription
 
     )
     # Create a hashtable of all status messages
@@ -40,6 +42,7 @@ function Write-ToProgress {
         "ConversionComplete"      = "Profile conversion complete"
         "MigrationComplete"       = "Migration completed successfully"
     }
+
     # If status is error message, write to log
     if ($logLevel -eq "Error") {
         $statusMessage = $Status
@@ -55,6 +58,7 @@ function Write-ToProgress {
         $PercentComplete = ($statusIndex / ($statusCount - 1)) * 100
     }
     if ($form) {
+        # TODO: Need to add a reportStatus checkbox? For the moment, system reporting only for CLI
         if ($username -or $newLocalUsername -or $profileSize -or $LocalPath) {
             # Pass in the migration details to the progress bar
             Update-ProgressForm -progressBar $progressBar -percentComplete $PercentComplete -Status $statusMessage -username $username -newLocalUsername $newLocalUsername -profileSize $profileSize -localPath $LocalPath
@@ -63,5 +67,25 @@ function Write-ToProgress {
         }
     } else {
         Write-Progress -Activity "Migration Progress" -percentComplete $percentComplete -status $statusMessage
+        if ($SystemDescription.reportStatus) {
+            #Send-MigrationProgress -Status $status -Percent $percentComplete -SystemDescription $systemDescription
+            $description = [PSCustomObject]@{
+                MigrationStatus     = $status
+                MigrationPercentage = $percentComplete
+                UserSID             = $SystemDescription.UserSID
+                MigrationUsername   = $SystemDescription.MigrationUsername
+                UserID              = $SystemDescription.UserID
+                DeviceID            = $SystemDescription.DeviceID
+            }
+            if ($SystemDescription.ValidatedSystemContextAPI) {
+                Invoke-SystemContextAPI -Method PUT -Endpoint 'Systems' -Body @{'description' = ($description | ConvertTo-Json -Compress) } | Out-Null
+            } elseif ($SystemDescription.ValidatedApiKey) {
+                Write-ToLog -Message "Using API Key to report migration progress to API" -Level Warn
+                Invoke-SystemPut -JumpCloudAPIKey $SystemDescription.JumpCloudAPIKey -JumpCloudOrgID $SystemDescription.JumpCloudOrgID -systemId $SystemDescription.DeviceID -Body @{'description' = ($description | ConvertTo-Json -Compress) }
+            } else {
+                Write-ToLog -Message "No valid method to report migration progress to API" -Level Warn
+            }
+        }
+
     }
 }
