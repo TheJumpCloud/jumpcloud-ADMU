@@ -43,4 +43,3 @@ function Invoke-SystemPut {
         Write-ToLog "Failed to update system. Status: $($_.Exception.Response.StatusCode.value__) - $($_.Exception.Response.StatusDescription)" -Level Error
     }
 }
-#Invoke-SystemPut -ApiKey "" -Body @{ description = "Updated via ADMU" } -systemId "6894eaab354d2a9865a44c74"

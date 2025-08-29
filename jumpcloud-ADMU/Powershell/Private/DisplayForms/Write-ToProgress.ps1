@@ -18,7 +18,9 @@ function Write-ToProgress {
         [Parameter(Mandatory = $false)]
         $LocalPath,
         [Parameter(Mandatory = $false)]
-        $SystemDescription
+        $SystemDescription,
+        [Parameter(Mandatory = $false)]
+        $statusNTFS
 
     )
     # Create a hashtable of all status messages
@@ -35,6 +37,7 @@ function Write-ToProgress {
         "CopyUserRegFiles"        = "Copying user registry files"
         "CopyMergedProfile"       = "Copying merged profiles to destination profile path"
         "CopyDefaultProtocols"    = "Copying default protocol associations"
+        "NTFS"                    = "Setting NTFS permissions: $($statusNTFS.Current) of $( $statusNTFS.Total ) items processed. $( $statusNTFS.Percent )% complete."
         "ValidateUserPermissions" = "Validating user permissions"
         "CreateRegEntries"        = "Creating registry entries"
         "DownloadUWPApps"         = "Downloading UWP Apps"
@@ -69,9 +72,15 @@ function Write-ToProgress {
         Write-Progress -Activity "Migration Progress" -percentComplete $percentComplete -status $statusMessage
         if ($SystemDescription.reportStatus) {
             #Send-MigrationProgress -Status $status -Percent $percentComplete -SystemDescription $systemDescription
+            if ($status -eq "NTFS") {
+                Write-Host "NTFS status detected"
+                Write-ToLog -Message "Percent complete for NTFS status: $($statusNTFS.Percent) - Total: $($statusNTFS.Total) - Current: $($statusNTFS.Current)" -level Warn
+            }
+            $statusMessage = $statusMessages.$status
+            Write-ToLog -Message "Migration status updated: $statusMessage" -level Info
             $description = [PSCustomObject]@{
-                MigrationStatus     = $status
-                MigrationPercentage = $percentComplete
+                MigrationStatus     = $statusMessage
+                MigrationPercentage = [math]::Round($PercentComplete)
                 UserSID             = $SystemDescription.UserSID
                 MigrationUsername   = $SystemDescription.MigrationUsername
                 UserID              = $SystemDescription.UserID

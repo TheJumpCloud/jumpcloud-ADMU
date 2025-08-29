@@ -382,6 +382,7 @@ Function Start-Migration {
                 Write-ToLog -Message:("Could not validate API Key or SystemContext API, please check your parameters and try again.") -Level Warn
                 Write-ToProgress -ProgressBar $ProgressBar -Status "Could not validate API Key or SystemContext API" -form $isForm -logLevel Error
             }
+            # TODO: JumpcloudApiKey with diff name
             $systemDescription = [PSCustomObject]@{
                 UserSID                   = $SelectedUserSID
                 MigrationUsername         = $JumpCloudUserName
@@ -1024,6 +1025,12 @@ Function Start-Migration {
                 } else {
                     $percent = [math]::Round(($current / $total) * 100)
                 }
+                $statusNTFS = [PSCustomObject]@{
+                    Current = $current
+                    Total   = $total
+                    Percent = $percent
+                }
+                Write-ToProgress -ProgressBar $ProgressBar -Status "NTFS" -form $isForm -SystemDescription $systemDescription -statusNtfs $statusNTFS
             }
             Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath -progressCallback $progressCallback
             $regPermStopwatch.Stop()
