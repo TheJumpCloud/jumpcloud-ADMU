@@ -28,14 +28,15 @@ function Invoke-SystemPut {
         [Parameter(Mandatory = $true)]
         [object]$Body
     )
-    # TODO: Test for MTP Org
     $uri = "https://console.jumpcloud.com/api/systems/$systemId"
 
     $Headers = @{
         'Accept'       = 'application/json';
         'Content-Type' = 'application/json';
         'x-api-key'    = $JumpCloudApiKey;
-        'x-org-id'     = $JumpCloudOrgID;
+    }
+    if ($JumpCloudOrgID) {
+        $Headers['x-org-id'] = $JumpCloudOrgID;
     }
     try {
         $response = Invoke-RestMethod -Uri $uri -Method Put -Headers $Headers -Body ($Body | ConvertTo-Json)
