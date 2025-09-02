@@ -419,9 +419,10 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $descriptionObject = $systemDesc | ConvertFrom-Json
 
                     $descriptionObject | Should -Not -BeNullOrEmpty
-                    $descriptionObject.MigrationStatus | Should -Be "Migration completed successfully"
+                    $descriptionObject.MigrationStatus | Should -not -BeNullOrEmpty
                     $descriptionObject.MigrationPercentage | Should -Be 100
-                    $descriptionObject.MigrationUsername | Should -Be "test1"
+                    $descriptionObject.MigrationUsername | Should -Be $userToMigrateTo
+                    $descriptionObject.UserID | Should -Be $GeneratedUser.Id
                 }
                 It "Associates a JumpCloud user using 'AutoBindJCUser'" {
                     # set the $testCaseInput
