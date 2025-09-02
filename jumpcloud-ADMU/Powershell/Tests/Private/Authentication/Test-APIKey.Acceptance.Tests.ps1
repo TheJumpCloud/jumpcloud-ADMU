@@ -1,4 +1,4 @@
-Describe "Confirm API Key Acceptance Tests" -Tag "InstallJC" {
+Describe "Test API Key Acceptance Tests" -Tag "InstallJC" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
