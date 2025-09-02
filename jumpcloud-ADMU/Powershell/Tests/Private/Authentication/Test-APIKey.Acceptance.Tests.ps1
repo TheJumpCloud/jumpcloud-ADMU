@@ -1,7 +1,5 @@
 Describe "Confirm API Key Acceptance Tests" -Tag "InstallJC" {
     BeforeAll {
-        $env:PESTER_APIKEY = "jca_8Ndq2u7BCUtxarcdWCeFKrdaG6h4GcAQavnJ"
-        $env:PESTER_ORGID = "61e9dca26172a32c8a77c5b3"
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
         $TargetDirectory = "helperFunctions"
@@ -19,7 +17,33 @@ Describe "Confirm API Key Acceptance Tests" -Tag "InstallJC" {
         }
         . "$helpFunctionDir\$fileName"
 
-        $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
+        # for these tests, the jumpCloud agent needs to be installed:
+        $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
+        If (-Not $AgentService) {
+            # set install variables
+            $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
+            $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
+            $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
+            $AGENT_INSTALLER_PATH = "C:\Windows\Temp\jcagent-msi-signed.msi"
+            $AGENT_BINARY_NAME = "jumpcloud-agent.exe"
+            $CONNECT_KEY = $env:PESTER_CONNECTKEY
+
+            # now go install the agent
+            Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($CONNECT_KEY) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
+        }
+
+        Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
+
+        # mock windows Drive in CI to reflect install location
+        if ($env:CI) {
+            Mock Get-WindowsDrive { return "C:" }
+        }
+        # get the org details
+        $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
+        $OrgName = "$($OrgSelection[1])"
+        $OrgID = "$($OrgSelection[0])"
+        # get the system key
+        $config = get-content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
         $regex = 'systemKey\":\"(\w+)\"'
         $systemKey = [regex]::Match($config, $regex).Groups[1].Value
     }
