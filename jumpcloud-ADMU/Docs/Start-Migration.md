@@ -19,7 +19,8 @@ Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPass
  [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
  [-AutoBindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-SetDefaultWindowsUser <Boolean>]
  [-AdminDebug <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>]
- [-ValidateUserShellFolder <Boolean>] [<CommonParameters>]
+ [-ValidateUserShellFolder <Boolean>] [-reportStatus <Boolean>]
+ [<CommonParameters>]
 ```
 
 ### form
@@ -330,6 +331,21 @@ Accept wildcard characters: False
 ### -AutoBindJCUser
 
 This parameter will bind the username specified in the \`JumpCloudUserName\` field to the current system after Migration.
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -reportStatus
+When set to true, the ADMU will report the migration status to the system description. This is set to false by default.
 
 ```yaml
 Type: System.Boolean

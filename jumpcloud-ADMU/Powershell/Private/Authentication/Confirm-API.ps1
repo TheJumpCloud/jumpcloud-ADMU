@@ -5,8 +5,7 @@ function Confirm-API {
     Determines if the system is eligible for SystemContextAPI or standard API updates.
 
     .DESCRIPTION
-    This function first checks if the JumpCloud agent is installed on the system, as it is a prerequisite for any API interaction.
-    It then checks for SystemContext API eligibility. If the system is eligible, it returns a success status for that type.
+    Checks for SystemContext API eligibility. If the system is eligible, it returns a success status for that type.
     If the system is not eligible for SystemContext and an API key is provided, it validates the API key.
     The function returns an object indicating the validation type ('SystemContext', 'API', or 'None') and a boolean status.
 
@@ -35,6 +34,7 @@ function Confirm-API {
         [string]$JumpCloudApiKey,
         [Parameter(Mandatory = $false)]
         [string]$JumpCloudOrgID,
+        [Parameter(Mandatory = $false)]
         [bool]$SystemContextBinding
     )
 
@@ -53,25 +53,21 @@ function Confirm-API {
     }
 
     # If not eligible for SystemContext, check for a provided API key.
-    Write-ToLog "System is not eligible for SystemContext API. Checking for API Key" -level Warn
+    Write-ToLog "System is not eligible for SystemContext API. Checking for API Key" -Level Warn
     if (-not [string]::IsNullOrEmpty($jumpCloudApiKey)) {
         # Validate the provided API key.
-        $isApiKeyValid = Test-APIKey -ApiKey $JumpCloudApiKey -JumpCloudOrgID $JumpCloudOrgID
-        $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
+        # Get the systemId from the jcconfig file then pass to test-ApiKey
+        $isApiKeyValid, $validatedSystemID = Test-APIKey -ApiKey $JumpCloudApiKey -orgId $JumpCloudOrgID
         if ($isApiKeyValid) {
-            if ($AgentService) {
-                $systemContextCheck = Invoke-SystemContextAPI -method 'GET' -endpoint 'systems'
-                Write-ToLog "Provided API key is valid."
-                $validatedSystemID = $systemContextCheck.id
-                return @{ type = 'API'; valid = $true; validatedSystemID = $validatedSystemID }
-            }
+            Write-ToLog "Provided API key is valid."
+            return @{ type = 'API'; valid = $true; validatedSystemID = $validatedSystemID }
         } else {
-            Write-ToLog "Provided API key is not valid." -Level Warn
+            Write-ToLog "Provided API key is not valid." -level Warn
             return @{ type = 'API'; valid = $false }
         }
     }
 
     # If not SystemContext eligible and no valid API key is provided, return false.
-    Write-Warning "System is not eligible for SystemContext and no valid API key was provided."
+    Write-ToLog "System is not eligible for SystemContext and no valid API key was provided." -level Warn
     return @{ type = 'API'; valid = $false }
 }
