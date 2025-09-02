@@ -195,18 +195,6 @@
           </dev:type>
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>reportStatus</maml:name>
-          <maml:description>
-            <maml:para>When set to true, the ADMU will report the migration status to the system description. This is set to false by default.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
       </command:syntaxItem>
       <command:syntaxItem>
         <maml:name>Start-Migration</maml:name>
@@ -409,18 +397,6 @@
         <maml:name>AutoBindJCUser</maml:name>
         <maml:description>
           <maml:para>This parameter will bind the username specified in the `JumpCloudUserName` field to the current system after Migration.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>reportStatus</maml:name>
-        <maml:description>
-          <maml:para>When set to true, the ADMU will report the migration status to the system description. This is set to false by default.</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>
