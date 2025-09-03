@@ -73,13 +73,13 @@ function Write-ToProgress {
             #Send-MigrationProgress -Status $status -Percent $percentComplete -SystemDescription $systemDescription
             if ($status -eq "NTFS") {
                 Write-Host "NTFS status detected"
-                Write-ToLog -Message "Percent complete for NTFS status: $($statusNTFS.Percent) - Total: $($statusNTFS.Total) - Current: $($statusNTFS.Current)" -level Warn
+                Write-ToLog -Message "Percent complete for NTFS status: $($statusNTFS.Percent)% - Total: $($statusNTFS.Total) - Current: $($statusNTFS.Current)" -level Warn
             }
             $statusMessage = $statusMessages.$status
             Write-ToLog -Message "Migration status updated: $statusMessage" -level Info
             $description = [PSCustomObject]@{
                 MigrationStatus     = $statusMessage
-                MigrationPercentage = [math]::Round($PercentComplete)
+                MigrationPercentage = [math]::Round($PercentComplete) + '%'
                 UserSID             = $SystemDescription.UserSID
                 MigrationUsername   = $SystemDescription.MigrationUsername
                 UserID              = $SystemDescription.UserID
