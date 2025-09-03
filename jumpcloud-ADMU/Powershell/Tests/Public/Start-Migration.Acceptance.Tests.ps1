@@ -380,6 +380,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                 JumpCloudOrgID          = $env:PESTER_ORGID
                 ValidateUserShellFolder = $true
                 SystemContextBinding    = $false
+                ReportStatus            = $false
                 # JumpCloudUserID         = $null
             }
             # remove the log
@@ -402,6 +403,21 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     }
                     # create the user
                     $GeneratedUser = New-JcSdkUser -Email:("$($userToMigrateTo)@jumpcloudadmu.com") -Username:("$($userToMigrateTo)") -Password:("$($user.password)")
+                }
+                It "Report Status to JumpCloud Description" {
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.ReportStatus = $true
+                    # Migrate the initialized user to the second username
+                    { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                    # get the system description
+                    $systemDesc = Get-JcSdkSystem -id $systemKey | Select-Object -ExpandProperty Description
+                    # Should have this value: {"MigrationStatus":"Migration completed successfully","MigrationPercentage":100,"UserSID":"S-1-12-1-3466645622-1152519358-2404555438-459629385","MigrationUsername":"test1","UserID":"61e9de2fac31c01519042fe1","DeviceID":"6894eaab354d2a9865a44c74"}
+                    $systemDesc | Should -Not -BeNullOrEmpty
+                    Write-Host $systemDesc
                 }
                 It "Associates a JumpCloud user using 'AutoBindJCUser'" {
                     # set the $testCaseInput

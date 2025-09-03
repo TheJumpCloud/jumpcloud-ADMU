@@ -25,6 +25,7 @@ $BindAsAdmin = $false # Bind user as admin (default False)
 $JumpCloudAPIKey = 'YOURAPIKEY' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
 $JumpCloudOrgID = 'YOURORGID' # This field is required if you use a MTP API Key
 $SetDefaultWindowsUser = $true # Set the default last logged on windows user to the JumpCloud user (default True)
+$ReportStatus = $false # Report status back to JumpCloud Description (default False)
 
 # Option to shutdown or restart
 # Restarting the system is the default behavior
@@ -70,6 +71,7 @@ Function Confirm-MigrationParameter {
         [bool]$systemContextBinding = $false,
         [string]$JumpCloudAPIKey = 'YOURAPIKEY',
         [string]$JumpCloudOrgID = 'YOURORGID',
+        [bool]$ReportStatus = $false,
 
         # --- Post-Migration Behavior ---
         [ValidateSet('Restart', 'Shutdown')]
@@ -392,7 +394,8 @@ $confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource
     -JumpCloudAPIKey $JumpCloudAPIKey `
     -JumpCloudOrgID $JumpCloudOrgID `
     -postMigrationBehavior $postMigrationBehavior `
-    -removeMDM $removeMDM
+    -removeMDM $removeMDM `
+    -ReportStatus $ReportStatus
 if ($confirmMigrationParameters) {
     Write-Host "[STATUS] Migration parameters validated successfully."
 }
@@ -536,6 +539,7 @@ try {
             SetDefaultWindowsUser = $SetDefaultWindowsUser
             LeaveDomain           = $leaveDomainParam
             adminDebug            = $true
+            ReportStatus          = $ReportStatus
         }
 
         # Add JumpCloudOrgID if it's not null or empty
