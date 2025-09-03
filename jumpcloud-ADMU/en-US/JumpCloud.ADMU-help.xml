@@ -196,7 +196,7 @@
           <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>reportStatus</maml:name>
+          <maml:name>ReportStatus</maml:name>
           <maml:description>
             <maml:para>When set to true, the ADMU will report the migration status to the system description. This is set to false by default.</maml:para>
           </maml:description>
@@ -418,7 +418,7 @@
         <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>reportStatus</maml:name>
+        <maml:name>ReportStatus</maml:name>
         <maml:description>
           <maml:para>When set to true, the ADMU will report the migration status to the system description. This is set to false by default.</maml:para>
         </maml:description>
