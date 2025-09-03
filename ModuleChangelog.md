@@ -5,16 +5,16 @@ Release Date: September 3, 2025
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Added migration status reporting using the JumpCloud system description field (CLI only).
 ```
 
 #### FEATURES:
 
-{{Fill in the Features}}
+Migration Status Reporting in JumpCloud: The migration tool now updates the System Description field for a device in the JumpCloud console with its real-time migration status. This allows administrators to remotely monitor the progress of a migration directly from the JumpCloud UI without skimming through JumpCloud Commands results. (Note: This is currently available for migrations initiated via the CLI only.)
 
 #### IMPROVEMENTS:
 
-{{Fill in the Improvements}}
+Enhanced visibility into the migration process by providing real-time status updates directly within the JumpCloud console, reducing the need for administrators to check local logs or have direct access to the machine.
 
 #### BUG FIXES:
 
