@@ -77,9 +77,10 @@ function Write-ToProgress {
             }
             $statusMessage = $statusMessages.$status
             Write-ToLog -Message "Migration status updated: $statusMessage" -level Info
+            $percent = [math]::Round($PercentComplete)
             $description = [PSCustomObject]@{
                 MigrationStatus     = $statusMessage
-                MigrationPercentage = [math]::Round($PercentComplete) + '%'
+                MigrationPercentage = "$percent%"
                 UserSID             = $SystemDescription.UserSID
                 MigrationUsername   = $SystemDescription.MigrationUsername
                 UserID              = $SystemDescription.UserID
