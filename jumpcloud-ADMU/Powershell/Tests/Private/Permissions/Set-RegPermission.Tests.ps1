@@ -23,31 +23,75 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
     }
 
     Context "SID Translation Tests" {
-        It "Falls back to SID string and logs a warning if SID cannot be translated" {
+        It "Falls back to SID string and throws if SID cannot be translated" {
+            # This test expects that addAccessRule will throw if the SID does not exist on some system
             # Arrange
             $fakeSID = 'S-1-5-21-0000000000-0000000000-0000000000-1234'
             $targetSID = 'S-1-5-21-0000000000-0000000000-0000000000-5678'
             $testPath = "$env:TEMP\testfile.txt"
             New-Item -Path $testPath -ItemType File -Force | Out-Null
-
-            # Mock the Translate method to throw
-            Mock -CommandName ([System.Security.Principal.SecurityIdentifier].GetMethod('Translate')) {
-                throw [System.Security.Principal.IdentityNotMappedException]::new("Some or all identity references could not be translated.")
-            } -Verifiable
-
-            # Mock Write-ToLog to capture the warning
-            Mock Write-ToLog {}
-
             # Act
-            Set-RegPermission -SourceSID $fakeSID -TargetSID $targetSID -FilePath $testPath
-
-            # Assert
-            Assert-MockCalled Write-ToLog -ParameterFilter {
-                $Message -like "Warning: Could not translate SourceSID*"
-            } -Exactly 1
-
+            { Set-RegPermission -SourceSID $fakeSID -TargetSID $targetSID -FilePath $testPath } | Should -Throw 'Exception calling "AddAccessRule" with "1" argument(s): "Some or all identity references could not be translated."'
             # Cleanup
             Remove-Item $testPath -Force
+        }
+        It "Create a fake domain profile and it should still copy ACLs while off the domain" {
+            # set some fake domain profile SID:
+            $domainSID = "S-1-12-1-1616384916-1297768490-51239584-3993624738"
+            $profileImagePath = "C:\Users\FakeDomainUser"
+            # create a new entry in the registry for the fake domain profile
+            $regPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$domainSID"
+            New-Item -Path $regPath -Force | Out-Null
+            Set-ItemProperty -Path $regPath -Name "ProfileImagePath" -Value $profileImagePath
+            # convert the SID to bytes and set as the "Sid" property in the profile:
+            $Bytes = [System.Text.Encoding]::Unicode.GetBytes($domainSID)
+            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$domainSID" -Name "Sid" -Type Binary -Value $Bytes
+            # set the Flags, FullProfile, State properties
+            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$domainSID" -Name "Flags" -Type DWord -Value 0
+            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$domainSID" -Name "FullProfile" -Type DWord -Value 1
+            Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$domainSID" -Name "State" -Type DWord -Value 0
+
+            # create the ProfileImagePath if it does not exist:
+            # Create test directory and files
+            if (Test-Path $profileImagePath) { Remove-Item $profileImagePath -Recurse -Force }
+            New-Item -ItemType Directory -Path $profileImagePath | Out-Null
+            New-Item -ItemType File -Path (Join-Path $profileImagePath "testfile.txt") | Out-Null
+            New-Item -ItemType Directory -Path (Join-Path $profileImagePath "subdir") | Out-Null
+            New-Item -ItemType File -Path (Join-Path $profileImagePath "subdir\subfile.txt") | Out-Null
+
+            # Set a new acl rule for each testfile, subdir and subdir\subfile.txt
+            $items = Get-ChildItem -Path $profileImagePath -Recurse -Force -ErrorAction SilentlyContinue
+            foreach ($item in $items) {
+                $acl = Get-Acl -Path $item.FullName
+                $acl.SetOwner((New-Object System.Security.Principal.SecurityIdentifier($domainSID)))
+                $sid = New-Object System.Security.Principal.SecurityIdentifier($domainSID)
+                $accessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($sid, "FullControl", "Allow")
+                $acl.AddAccessRule($accessRule)
+                Set-Acl -Path $item.FullName -AclObject $acl
+            }
+
+            # init some new user:
+            $testUsername = "sidTranslate3"
+            Initialize-TestUser -Username $testUsername -password "Temp123!Temp123!"
+            $targetSID = Test-UsernameOrSID -usernameOrSid $testUsername
+
+
+            Write-Host "####################"
+            Write-Host "Test Directory: $profileImagePath"
+            Write-Host "Source SID: $domainSID"
+            Write-Host "Target SID: $targetSID"
+            Write-Host "Current Owner: $((Get-Acl $profileImagePath).Owner)"
+            Write-Host "####################"
+            # Run SetRegPermission:
+            Set-RegPermission -SourceSID $domainSID -TargetSID $targetSID -FilePath $profileImagePath
+
+            $items = Get-ChildItem -Path $profileImagePath -Recurse -Force
+            foreach ($item in $items) {
+                $acl = Get-Acl -Path $item.FullName
+                $acl.Owner | Should -Be ((New-Object System.Security.Principal.SecurityIdentifier($targetSID)).Translate([System.Security.Principal.NTAccount]).Value)
+                $acl.Access.IdentityReference | Should -Contain ((New-Object System.Security.Principal.SecurityIdentifier($targetSID)).Translate([System.Security.Principal.NTAccount]).Value)
+
+            }
         }
     }
     Context "Permission tests" {

@@ -53,6 +53,9 @@ function Set-RegPermission {
             if (($acl.Owner -ne $TargetAccount) -and ($acl.Owner -eq $SourceAccount)) {
                 $acl.SetOwner($TargetSIDObj)
                 $aclChanged = $true
+            } elseif ($acl.Owner -eq "O:$SourceSID") {
+                $acl.SetOwner($TargetSIDObj)
+                $aclChanged = $true
             }
             # Copy SourceSID permissions to TargetSID
             foreach ($access in $acl.Access) {
