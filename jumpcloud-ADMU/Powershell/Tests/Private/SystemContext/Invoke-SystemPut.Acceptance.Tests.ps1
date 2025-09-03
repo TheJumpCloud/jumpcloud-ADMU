@@ -1,4 +1,4 @@
-Describe 'Invoke-SystemPut' -Tags 'Acceptance' {
+Describe 'Invoke-SystemPut' -Tags 'InstallJC' {
 
     BeforeAll {
         # import all functions
