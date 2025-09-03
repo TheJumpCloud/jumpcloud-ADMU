@@ -112,7 +112,7 @@ Function Start-Migration {
             Mandatory = $false,
             HelpMessage = "When set to true, the ADMU will report the migration status to the system description. This is set to false by default.")]
         [bool]
-        $reportStatus = $false,
+        $ReportStatus = $false,
         [Parameter(
             ParameterSetName = "form")]
         [Object]
@@ -362,7 +362,7 @@ Function Start-Migration {
             Write-ToLog -Message:('JumpCloud agent is already installed on the system.') -Level Verbose
         }
 
-        # TODO: Confirm API key or SystemContext
+        # TODO:  API key or SystemContext
         Write-ToLog -Message:("Validating JumpCloud Connectivity...") -Level Warn
         if ($AgentService -and $reportStatus) {
             # Object to pass in to the Write-

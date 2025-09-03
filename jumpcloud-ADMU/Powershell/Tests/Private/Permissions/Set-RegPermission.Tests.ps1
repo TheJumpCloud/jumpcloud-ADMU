@@ -29,6 +29,8 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $targetSID = 'S-1-5-21-0000000000-0000000000-0000000000-5678'
             $testPath = "$env:TEMP\testfile.txt"
             New-Item -Path $testPath -ItemType File -Force | Out-Null
+            Add-Type -AssemblyName System.Security.Principal
+
 
             # Mock the Translate method to throw
             Mock -CommandName ([System.Security.Principal.SecurityIdentifier].GetMethod('Translate')) {

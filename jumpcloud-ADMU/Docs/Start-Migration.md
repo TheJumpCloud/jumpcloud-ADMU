@@ -19,7 +19,8 @@ Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPass
  [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
  [-AutoBindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-SetDefaultWindowsUser <Boolean>]
  [-AdminDebug <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>]
- [-ValidateUserShellFolder <Boolean>] [<CommonParameters>]
+ [-ValidateUserShellFolder <Boolean>] [-ReportStatus <Boolean>]
+ [<CommonParameters>]
 ```
 
 ### form
@@ -343,6 +344,22 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
+### -ReportStatus
+
+When set to true, the ADMU will report the migration status to the system description. This is set to false by default.
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### CommonParameters
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
@@ -357,4 +374,3 @@ This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable
 ## RELATED LINKS
 
 [https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration)
-
