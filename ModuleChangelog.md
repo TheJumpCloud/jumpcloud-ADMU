@@ -1,16 +1,20 @@
-## 2.9.0
+## 2.8.9
 
-Release Date: August 27, 2025
+Release Date: September 3, 2025
 
 #### RELEASE NOTES
 
 ```
-{{FILL IN}}
+{{Fill in the Release Notes}}
 ```
+
+#### FEATURES:
+
+{{Fill in the Features}}
 
 #### IMPROVEMENTS:
 
-- {{FILL IN}}
+{{Fill in the Improvements}}
 
 #### BUG FIXES:
 
