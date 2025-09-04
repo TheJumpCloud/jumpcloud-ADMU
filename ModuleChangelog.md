@@ -19,7 +19,7 @@ Enhanced visibility into the migration process by providing real-time status upd
 
 #### BUG FIXES:
 
-- Fixed an issue where the tool would not properly handle certain edge cases during the migration process.
+- Resolves an issue with migration where a device that had left a domain was unable to successfully migrate a domain user due to account name resolution. This release matches on a user's SID opposed to account name to accommodate scenarios where account migration occurs and the device is no longer joined to the domain.
 
 ## 2.8.8
 
