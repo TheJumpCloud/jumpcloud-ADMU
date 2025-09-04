@@ -6,6 +6,7 @@ Release Date: September 3, 2025
 
 ```
 Added migration status reporting using the JumpCloud system description field (CLI only).
+This release addresses an issue with setting permissions on the migrated account
 ```
 
 #### FEATURES:
