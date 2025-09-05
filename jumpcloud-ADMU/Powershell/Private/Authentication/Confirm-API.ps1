@@ -47,11 +47,6 @@ function Confirm-API {
                 return
             }
         }
-        # 3. If no other method worked, this is the final failure case.
-        $confirmAPIResults.Type = 'None'
-        $confirmAPIResults.IsValid = $false
-        $confirmAPIResults.ValidatedID = $null
-        return
     }
     end {
         return $confirmAPIResults

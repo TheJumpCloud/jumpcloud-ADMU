@@ -75,20 +75,9 @@ Describe "Confirm API Key Acceptance Tests" -Tag "InstallJC" {
         }
         It "Should fail with null API KEY" {
             $results = Confirm-API -jcApiKey $null -jcOrgId $env:PESTER_ORGID -SystemContextBinding $false
-            $results.type | Should -Be "None"
+            $results.type | Should -Be $null
             $results.IsValid | Should -Be $false
             $results.ValidatedID | Should -Be $null
         }
-
-        AfterAll {
-            # for local testing this can be enabled:
-            # $usersToRemove = Get-JCSdkUser | Where-Object { $_.email -match "@jumpcloudadmu.com" }
-            # foreach ($user in $usersToRemove) {
-            #     # If User Exists, remove from the org
-            #     Remove-JcSdkUser -Id $user.Id | Out-Null
-            # }
-        }
     }
-
-    # Add more acceptance tests as needed
 }
