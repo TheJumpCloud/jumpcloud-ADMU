@@ -41,7 +41,7 @@ Describe 'Invoke-SystemPut' -Tags 'InstallJC' {
         }
         It 'should call the JumpCloud API with the correct parameters without an Org ID' {
 
-            { Invoke-SystemPut -JumpCloudAPIKey $env:PESTER_APIKEY -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Not -Throw
+            { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Not -Throw
 
             # Get the description
             $systemDesc = Get-JcSdkSystem -id $systemId | Select-Object -ExpandProperty Description
@@ -61,7 +61,7 @@ Describe 'Invoke-SystemPut' -Tags 'InstallJC' {
 
         It 'should include the x-org-id header when a JumpCloudOrgID is provided' {
 
-            { Invoke-SystemPut -JumpCloudAPIKey $env:PESTER_APIKEY -JumpCloudOrgID $env:PESTER_ORGID -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Not -Throw
+            { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID $env:PESTER_ORGID -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Not -Throw
             $systemDesc = Get-JcSdkSystem -id $systemId | Select-Object -ExpandProperty Description
 
             $systemDesc | Should -Not -BeNullOrEmpty
@@ -83,18 +83,18 @@ Describe 'Invoke-SystemPut' -Tags 'InstallJC' {
 Context 'When the API call fails' {
 
     It 'should catch the exception with invalid api key' {
-        { Invoke-SystemPut -JumpCloudAPIKey 'key' -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Throw
+        { Invoke-SystemPut -JcApiKey 'key' -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Throw
     }
 
     It 'Should throw when providing invalid ORGID' {
-        { Invoke-SystemPut -JumpCloudAPIKey $env:PESTER_APIKEY -JumpCloudOrgID 'invalid-org-id' -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Throw
+        { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID 'invalid-org-id' -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Throw
     }
 
     It 'Should throw when passing invalid body' {
-        { Invoke-SystemPut -JumpCloudAPIKey $env:PESTER_APIKEY -JumpCloudOrgID $env:PESTER_ORGID -systemId $systemId -Body 'Invalid' | Should -Throw
+        { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID $env:PESTER_ORGID -systemId $systemId -Body 'Invalid' | Should -Throw
         }
     }
     It 'Should throw when passing invalid systemId' {
-        { Invoke-SystemPut -JumpCloudAPIKey $env:PESTER_APIKEY -JumpCloudOrgID $env:PESTER_ORGID -systemId 'Invalid' -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Throw
+        { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID $env:PESTER_ORGID -systemId 'Invalid' -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Throw
     }
 }
