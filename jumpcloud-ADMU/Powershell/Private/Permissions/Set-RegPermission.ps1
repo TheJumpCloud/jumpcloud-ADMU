@@ -85,7 +85,6 @@ function Set-RegPermission {
         } else {
             $percent = [math]::Round(($count / $total) * 100)
         }
-        # $percent = ($total -eq 0) ? 100 : [math]::Round(($count / $total) * 100)
         if ($ProgressCallback -and ($percent -ge $lastPercent + 5 -or $count -eq $total)) {
             & $ProgressCallback $count $total
             $lastPercent = $percent

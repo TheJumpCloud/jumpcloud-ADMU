@@ -110,7 +110,7 @@ Function Start-Migration {
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
-            HelpMessage = "When set to true, the ADMU will report the migration status to the system description. This is set to false by default.")]
+            HelpMessage = "When set to true, the ADMU will attempt to set the migration status to the system description. This parameter requires that the JumpCloud agent be installed. This parameter requires either access to the SystemContext API or a valid Administrator's API Key. This is set to false by default.")]
         [bool]
         $ReportStatus = $false,
         [Parameter(
