@@ -367,17 +367,17 @@ Function Start-Migration {
         if ($AgentService -and $reportStatus) {
             # Object to pass in to the Write-
             Write-ToLog -Message:("JumpCloud Agent is installed, confirming connectivity to JumpCloud...") -Level Warn
-            $confirmApiResultList = Confirm-API -JcApiKey $JumpCloudAPIKey -JcOrgId $JumpCloudOrgID -SystemContextBinding $systemContextBinding
+            $confirmAPIResult = Confirm-API -JcApiKey $JumpCloudAPIKey -JcOrgId $JumpCloudOrgID -SystemContextBinding $systemContextBinding
 
-            Write-ToLog -Message:("Confirm-API Results:`nType: $($confirmApiResultList.type)`nValid: $($confirmApiResultList.isValid)`nSystemID: $($confirmApiResultList.ValidatedID)")
-            if ($confirmApiResultList.type -eq 'SystemContext' -and $confirmApiResultList.isValid -and $confirmApiResultList.ValidatedID) {
-                Write-ToLog -Message:("Validated SystemContext API with ID: $($confirmApiResultList.ValidatedID)") -Level Verbose
-                $validatedSystemID = $confirmApiResultList.ValidatedID
+            Write-ToLog -Message:("Confirm-API Results:`nType: $($confirmAPIResult.type)`nValid: $($confirmAPIResult.isValid)`nSystemID: $($confirmAPIResult.ValidatedID)")
+            if ($confirmAPIResult.type -eq 'SystemContext' -and $confirmAPIResult.isValid -and $confirmAPIResult.ValidatedID) {
+                Write-ToLog -Message:("Validated SystemContext API with ID: $($confirmAPIResult.ValidatedID)") -Level Verbose
+                $validatedSystemID = $confirmAPIResult.ValidatedID
                 $validatedSystemContextAPI = $true
-            } elseif ($confirmApiResultList.type -eq 'API' -and $confirmApiResultList.isValid -and $confirmApiResultList.ValidatedID) {
+            } elseif ($confirmAPIResult.type -eq 'API' -and $confirmAPIResult.isValid -and $confirmAPIResult.ValidatedID) {
                 Write-ToLog -Message:("Validated JC API Key") -Level Verbose
                 $validatedApiKey = $true
-                $validatedSystemID = $confirmApiResultList.ValidatedID
+                $validatedSystemID = $confirmAPIResult.ValidatedID
             } else {
                 Write-ToLog -Message:("Could not validate API Key or SystemContext API, please check your parameters and try again.") -Level Warn
                 Write-ToProgress -ProgressBar $ProgressBar -Status "Could not validate API Key or SystemContext API" -form $isForm -logLevel Error

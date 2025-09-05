@@ -8,58 +8,52 @@ function Confirm-API {
         [Parameter(Mandatory = $false)]
         [bool]$SystemContextBinding
     )
-
     begin {
-        $results = [System.Collections.Generic.List[object]]::new()
+        # this function will return the following object
+        $confirmAPIResults = [PSCustomObject]@{
+            Type        = $null
+            IsValid     = $false
+            ValidatedID = $null
+        }
     }
-
     process {
-        # This block determines the result and stores it in the $confirmAPIResults variable.
-
         # 1. Check for SystemContext API eligibility first if requested.
         if ($SystemContextBinding) {
             $systemContextCheck = Invoke-SystemContextAPI -method 'GET' -endpoint 'systems'
             if ($systemContextCheck -and $systemContextCheck.id) {
-                $confirmAPIResults = [PSCustomObject]@{
-                    Type        = 'SystemContext'
-                    IsValid     = $true
-                    ValidatedID = $systemContextCheck.id
-                }
-            }
-        } else {
-            if (-not [string]::IsNullOrEmpty($jcApiKey)) {
-                $testAPIResult = Test-APIKey -jcApiKey $jcApiKey -jcOrgId $jcOrgID
-                Write-toLog -Message "Test-APIKey result: IsValid=$($testAPIResult.IsValid), ID=$($testAPIResult.ID)" -Level Verbose
-                if ($testAPIResult.IsValid) {
-                    # API key is valid
-                    $confirmAPIResults = [PSCustomObject]@{
-                        Type        = 'API'
-                        IsValid     = $true
-                        ValidatedID = $testAPIResult.ID
-                    }
-                } else {
-                    # API key was provided but was not valid
-                    $confirmAPIResults = [PSCustomObject]@{
-                        Type        = 'API'
-                        IsValid     = $false
-                        ValidatedID = $null
-                    }
-                }
-            } else {
-                # 3. If no other method worked, this is the final failure case.
-                $confirmAPIResults = [PSCustomObject]@{
-                    Type        = 'None'
-                    IsValid     = $false
-                    ValidatedID = $null
-                }
+                # set the return object
+                $confirmAPIResults.Type = 'SystemContext'
+                $confirmAPIResults.IsValid = $true
+                $confirmAPIResults.ValidatedID = $systemContextCheck.id
+                return
             }
         }
-
-        $results.Add($confirmAPIResults)
+        # 2. Next, if an API key was provided, test it.
+        if (-not [string]::IsNullOrEmpty($jcApiKey)) {
+            $testAPIResult = Test-APIKey -jcApiKey $jcApiKey -jcOrgId $jcOrgID
+            Write-toLog -Message "Test-APIKey result: IsValid=$($testAPIResult.IsValid), ID=$($testAPIResult.ID)" -Level Verbose
+            if ($testAPIResult.IsValid) {
+                # API key is valid
+                # set the return object
+                $confirmAPIResults.Type = 'API'
+                $confirmAPIResults.IsValid = $true
+                $confirmAPIResults.ValidatedID = $testAPIResult.ID
+                return
+            }
+        } else {
+            # API key was provided but was not valid
+            $confirmAPIResults.Type = 'API'
+            $confirmAPIResults.IsValid = $false
+            $confirmAPIResults.ValidatedID = $null
+            return
+        }
+        # 3. If no other method worked, this is the final failure case.
+        $confirmAPIResults.Type = 'None'
+        $confirmAPIResults.IsValid = $false
+        $confirmAPIResults.ValidatedID = $null
+        return
     }
-
     end {
-        # The end block's only job is to output the final result.
-        return $results
+        return $confirmAPIResults
     }
 }

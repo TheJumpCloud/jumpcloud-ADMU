@@ -4,15 +4,18 @@ function Test-ApiKey {
         # This parameter now accepts multiple values from the pipeline
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [string]$jcApiKey,
-
         # This parameter is optional and applies to all tests
+        [Parameter(Mandatory = $false)]
         [string]$jcOrgId
     )
 
     begin {
         # Initialize a list to hold the results for each API key.
         # A generic list is more performant than a standard PowerShell array for this.
-        $results = [System.Collections.Generic.List[object]]::new()
+        $resultObject = [PSCustomObject]@{
+            IsValid = $false
+            ID      = $null
+        }
 
         # Perform one-time setup that applies to all items.
         try {
@@ -45,31 +48,22 @@ function Test-ApiKey {
             # Create a simplified result object.
             if ($response.id -eq $systemKey) {
                 # SUCCESS: Key is valid and matches.
-                $resultObject = [PSCustomObject]@{
-                    IsValid = $true
-                    ID      = $response.id
-                }
+                $resultObject.IsValid = $true
+                $resultObject.ID = $response.id
             } else {
                 # FAILURE: Key is valid, but for a different system.
-                $resultObject = [PSCustomObject]@{
-                    IsValid = $false
-                    ID      = $response.id
-                }
+                $resultObject.IsValid = $false
+                $resultObject.ID = $response.id
             }
         } catch {
             # FAILURE: The API call failed (e.g., 401 Unauthorized).
-            $resultObject = [PSCustomObject]@{
-                IsValid = $false
-                ID      = $null
-            }
+            $resultObject.IsValid = $false
+            $resultObject.ID = $null
         }
-
-        # Add the result for this key to the master list.
-        $results.Add($resultObject)
     }
 
     end {
         # Return the entire collection of simplified results.
-        return $results
+        return $resultObject
     }
 }
