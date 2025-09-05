@@ -55,7 +55,7 @@ Describe "Test API Key Acceptance Tests" -Tag "InstallJC" {
             $testResults.IsValid | Should -Be $true
             $testResults.ID | Should -Be $systemKey
         }
-        It "Should return $false and systemId with valid API key and Agent" {
+        It "Should return $false and systemId with invalid API key and Agent" {
             $testResults = Test-ApiKey -jcApiKey "Invalid" -jcOrgId $env:PESTER_ORGID
             $testResults.IsValid | Should -Be $false
             $testResults.ID | Should -Be $null
