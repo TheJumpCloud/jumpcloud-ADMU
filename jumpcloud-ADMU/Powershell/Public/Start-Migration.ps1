@@ -367,22 +367,21 @@ Function Start-Migration {
         if ($AgentService -and $reportStatus) {
             # Object to pass in to the Write-
             Write-ToLog -Message:("JumpCloud Agent is installed, confirming connectivity to JumpCloud...") -Level Warn
-            $confirmApiResultList = Confirm-API -JumpCloudAPIKey $JumpCloudAPIKey -SystemContextBinding $systemContextBinding
+            $confirmApiResultList = Confirm-API -JcApiKey $JumpCloudAPIKey -JcOrgId $JumpCloudOrgID -SystemContextBinding $systemContextBinding
 
-            Write-ToLog -Message:("Confirm-API Results:`nType: $($confirmApiResultList.type)`nValid: $($confirmApiResultList.valid)`nSystemID: $($confirmApiResultList.validatedSystemID)")
-            if ($confirmApiResultList.type -eq 'SystemContext' -and $confirmApiResultList.valid -and $confirmApiResultList.validatedSystemID) {
-                Write-ToLog -Message:("Validated SystemContext API with ID: $($confirmApiResultList.validatedSystemID)") -Level Verbose
-                $validatedSystemID = $confirmApiResultList.validatedSystemID
+            Write-ToLog -Message:("Confirm-API Results:`nType: $($confirmApiResultList.type)`nValid: $($confirmApiResultList.isValid)`nSystemID: $($confirmApiResultList.ValidatedID)")
+            if ($confirmApiResultList.type -eq 'SystemContext' -and $confirmApiResultList.isValid -and $confirmApiResultList.ValidatedID) {
+                Write-ToLog -Message:("Validated SystemContext API with ID: $($confirmApiResultList.ValidatedID)") -Level Verbose
+                $validatedSystemID = $confirmApiResultList.ValidatedID
                 $validatedSystemContextAPI = $true
-            } elseif ($confirmApiResultList.type -eq 'API' -and $confirmApiResultList.valid -and $confirmApiResultList.validatedSystemID) {
+            } elseif ($confirmApiResultList.type -eq 'API' -and $confirmApiResultList.isValid -and $confirmApiResultList.ValidatedID) {
                 Write-ToLog -Message:("Validated JC API Key") -Level Verbose
                 $validatedApiKey = $true
-                $validatedSystemID = $confirmApiResultList.validatedSystemID
+                $validatedSystemID = $confirmApiResultList.ValidatedID
             } else {
                 Write-ToLog -Message:("Could not validate API Key or SystemContext API, please check your parameters and try again.") -Level Warn
                 Write-ToProgress -ProgressBar $ProgressBar -Status "Could not validate API Key or SystemContext API" -form $isForm -logLevel Error
             }
-            # TODO: JumpcloudApiKey with diff name
             $systemDescription = [PSCustomObject]@{
                 UserSID                   = $SelectedUserSID
                 MigrationUsername         = $JumpCloudUserName
@@ -390,7 +389,7 @@ Function Start-Migration {
                 DeviceID                  = $validatedSystemID
                 ValidatedSystemContextAPI = $validatedSystemContextAPI
                 ValidatedApiKey           = $validatedApiKey
-                JumpCloudAPIKey           = $JumpCloudAPIKey
+                JCApiKey                  = $JumpCloudAPIKey
                 OrgID                     = $JumpCloudOrgID
                 reportStatus              = $reportStatus
             }

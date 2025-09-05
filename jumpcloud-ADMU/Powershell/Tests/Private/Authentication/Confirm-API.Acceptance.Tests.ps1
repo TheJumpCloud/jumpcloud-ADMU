@@ -57,21 +57,27 @@ Describe "Confirm API Key Acceptance Tests" -Tag "InstallJC" {
         It "Should return valid system key and should be valid if systemContextBinding is true" {
             $results = Confirm-API -SystemContextBinding $true
             $results.type | Should -Be "SystemContext"
-            $results.valid | Should -Be $true
-            $results.validatedSystemID | Should -Be $systemKey
+            $results.IsValid | Should -Be $true
+            $results.ValidatedID | Should -Be $systemKey
         }
 
         It "Should return valid system key and should be valid when API key is present and systemContextBinding is false" {
-            $results = Confirm-API -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -SystemContextBinding $false
+            $results = Confirm-API -jcApiKey $env:PESTER_APIKEY -jcOrgId $env:PESTER_ORGID -SystemContextBinding $false
             $results.type | Should -Be "API"
-            $results.valid | Should -Be $true
-            $results.validatedSystemID | Should -Be $systemKey
+            $results.IsValid | Should -Be $true
+            $results.ValidatedID | Should -Be $systemKey
         }
         It "Should fail with invalid API KEY" {
-            $results = Confirm-API -JumpCloudApiKey "invalid_key" -JumpCloudOrgId $env:PESTER_ORGID -SystemContextBinding $false
+            $results = Confirm-API -jcApiKey "invalid_key" -jcOrgId $env:PESTER_ORGID -SystemContextBinding $false
             $results.type | Should -Be "API"
-            $results.valid | Should -Be $false
-            $results.validatedSystemID | Should -Be $null
+            $results.IsValid | Should -Be $false
+            $results.ValidatedID | Should -Be $null
+        }
+        It "Should fail with null API KEY" {
+            $results = Confirm-API -jcApiKey $null -jcOrgId $env:PESTER_ORGID -SystemContextBinding $false
+            $results.type | Should -Be "None"
+            $results.IsValid | Should -Be $false
+            $results.ValidatedID | Should -Be $null
         }
 
         AfterAll {

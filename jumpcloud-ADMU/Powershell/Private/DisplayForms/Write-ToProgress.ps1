@@ -17,7 +17,7 @@ function Write-ToProgress {
         $profileSize,
         [Parameter(Mandatory = $false)]
         $LocalPath,
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false)] # TODO: Eventually change this for the V2 update CUT-4862
         $SystemDescription,
         [Parameter(Mandatory = $false)]
         $statusNTFS
@@ -86,7 +86,7 @@ function Write-ToProgress {
             } elseif ($SystemDescription.ValidatedApiKey) {
                 Write-ToLog -Message "Using API Key to report migration progress to API" -Level Warn
                 try {
-                    Invoke-SystemPut -JumpCloudAPIKey $SystemDescription.JumpCloudAPIKey -JumpCloudOrgID $SystemDescription.JumpCloudOrgID -systemId $SystemDescription.DeviceID -Body @{'description' = ($description | ConvertTo-Json -Compress) }
+                    Invoke-SystemPut -JcApiKey $SystemDescription.JCApiKey -JumpCloudOrgID $SystemDescription.JumpCloudOrgID -systemId $SystemDescription.DeviceID -Body @{'description' = ($description | ConvertTo-Json -Compress) }
                 } catch {
                     Write-ToLog -Message "Error occurred while reporting migration progress to API: $_" -Level Error
                 }

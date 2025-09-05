@@ -51,14 +51,14 @@ Describe "Test API Key Acceptance Tests" -Tag "InstallJC" {
     Context "Function tests" {
 
         It "Should return $true and systemId with valid API key and Agent" {
-            $isValid, $systemId = Test-ApiKey -ApiKey $env:PESTER_APIKEY -OrgId $env:PESTER_ORGID
-            $isValid | Should -Be $true
-            $systemId | Should -Be $systemKey
+            $testResults = Test-ApiKey -jcApiKey $env:PESTER_APIKEY -jcOrgId $env:PESTER_ORGID
+            $testResults.IsValid | Should -Be $true
+            $testResults.ID | Should -Be $systemKey
         }
         It "Should return $false and systemId with valid API key and Agent" {
-            $isValid, $systemId = Test-ApiKey -ApiKey "Invalid" -OrgId $env:PESTER_ORGID
-            $isValid | Should -Be $false
-            $systemId | Should -Be $null
+            $testResults = Test-ApiKey -jcApiKey "Invalid" -jcOrgId $env:PESTER_ORGID
+            $testResults.IsValid | Should -Be $false
+            $testResults.ID | Should -Be $null
         }
         AfterAll {
             # for local testing this can be enabled:

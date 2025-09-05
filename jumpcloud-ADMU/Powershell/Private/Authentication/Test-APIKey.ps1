@@ -1,47 +1,75 @@
-function Test-APIKey {
+function Test-ApiKey {
+    [CmdletBinding()]
     param (
-        [string]$apiKey,
-        [string]$OrgID
+        # This parameter now accepts multiple values from the pipeline
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [string]$jcApiKey,
+
+        # This parameter is optional and applies to all tests
+        [string]$jcOrgId
     )
+
     begin {
+        # Initialize a list to hold the results for each API key.
+        # A generic list is more performant than a standard PowerShell array for this.
+        $results = [System.Collections.Generic.List[object]]::new()
+
+        # Perform one-time setup that applies to all items.
         try {
-            # Ensure the config file actually exists before trying to read it
             $confPath = 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
             if (-not (Test-Path $confPath)) {
-                throw "Configuration file not found at '$confPath'"
+                Write-ToLog "Configuration file not found at '$confPath'."
             }
-            $config = get-content $confPath
+            $config = Get-Content $confPath
             $regex = 'systemKey\":\"(\w+)\"'
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+
+            if (-not $systemKey) {
+                Write-ToLog "Could not find a systemKey in the configuration file." -level Error
+            }
         } catch {
-            throw "Failed to get systemKey from jcagent.conf. Reason: $($_.Exception.Message)"
+            # If setup fails, the whole command fails. This is a terminating error.
+            Write-ToLog "Failed to initialize function. Reason: $($_.Exception.Message)" -level Error
         }
     }
+
     process {
         try {
             $headers = @{}
-            $headers.Add("x-api-key", $apiKey)
-            if ($OrgID) {
-                $headers.Add("x-org-id", $OrgID)
+            $headers.Add("x-api-key", $jcApiKey)
+            if ($jcOrgId) {
+                $headers.Add("x-org-id", $jcOrgId)
             }
             $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systems/$systemKey" -Method GET -Headers $headers
 
-            # If response id is eq to systemKey, the API key is valid
+            # Create a simplified result object.
             if ($response.id -eq $systemKey) {
-                Write-Host "API key is valid."
-                return $true, $response.id
+                # SUCCESS: Key is valid and matches.
+                $resultObject = [PSCustomObject]@{
+                    IsValid = $true
+                    ID      = $response.id
+                }
             } else {
-                # This case is unlikely if the API call succeeds, but included for completeness
-                Write-ToLog "API key is invalid. The returned ID did not match the systemKey." -Level Warn
-                return $false
+                # FAILURE: Key is valid, but for a different system.
+                $resultObject = [PSCustomObject]@{
+                    IsValid = $false
+                    ID      = $response.id
+                }
             }
         } catch {
-            # Catch errors from Invoke-RestMethod (e.g., 401 Unauthorized)
-            Write-ToLog "API call failed. The key is likely invalid or there was a network issue." -Level Warn
-            Write-ToLog "Error details: $($_.Exception.Message)" -Level Warn
-            return $false
+            # FAILURE: The API call failed (e.g., 401 Unauthorized).
+            $resultObject = [PSCustomObject]@{
+                IsValid = $false
+                ID      = $null
+            }
         }
 
+        # Add the result for this key to the master list.
+        $results.Add($resultObject)
+    }
 
+    end {
+        # Return the entire collection of simplified results.
+        return $results
     }
 }
