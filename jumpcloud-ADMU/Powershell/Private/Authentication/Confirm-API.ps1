@@ -39,13 +39,13 @@ function Confirm-API {
                 $confirmAPIResults.IsValid = $true
                 $confirmAPIResults.ValidatedID = $testAPIResult.ID
                 return
+            } else {
+                # API key was provided but was not valid
+                $confirmAPIResults.Type = 'API'
+                $confirmAPIResults.IsValid = $false
+                $confirmAPIResults.ValidatedID = $null
+                return
             }
-        } else {
-            # API key was provided but was not valid
-            $confirmAPIResults.Type = 'API'
-            $confirmAPIResults.IsValid = $false
-            $confirmAPIResults.ValidatedID = $null
-            return
         }
         # 3. If no other method worked, this is the final failure case.
         $confirmAPIResults.Type = 'None'
