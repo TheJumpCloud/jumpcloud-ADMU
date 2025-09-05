@@ -840,6 +840,7 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
         It "Should have a previousSID value for the init user and unload the hive" {
             # Get the SID of the init user
             # Load the NTUser.dat file
+            # TODO: CUT-4890 Replace PSDrive with private function
             if (-not (Get-PSDrive HKEY_USERS -ErrorAction SilentlyContinue)) {
                 New-PSDrive -Name "HKEY_USERS" -PSProvider "Registry" -Root "HKEY_USERS"
             }

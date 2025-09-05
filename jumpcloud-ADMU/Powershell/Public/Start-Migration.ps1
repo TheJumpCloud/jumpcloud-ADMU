@@ -647,6 +647,7 @@ Function Start-Migration {
             }
             # Validate file permissions on registry item
             # TODO: replace with Set-HKEYUsersMount
+            # TODO: CUT-4890 Replace PSDrive with private function
             if ("HKEY_USERS" -notin (Get-PSDrive | select-object name).Name) {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
@@ -710,6 +711,7 @@ Function Start-Migration {
             # SelectedUserSid
             # Validate file permissions on registry item
             # TODO: replace with Set-HKEYUsersMount
+            # TODO: CUT-4890 Replace PSDrive with private function
             if ("HKEY_USERS" -notin (Get-PSDrive | select-object name).Name) {
                 Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
