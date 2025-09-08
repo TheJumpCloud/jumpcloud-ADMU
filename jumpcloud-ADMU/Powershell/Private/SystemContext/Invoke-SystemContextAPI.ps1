@@ -15,6 +15,9 @@ Function Invoke-SystemContextAPI {
         [validateSet('add', 'remove', 'update')]
         $op,
         [Parameter(Mandatory = $false)]
+        [System.Object]
+        $body,
+        [Parameter(Mandatory = $false)]
         [Parameter(ParameterSetName = "association")]
         [string]
         [validateSet('user', 'systemgroup')]
@@ -30,6 +33,10 @@ Function Invoke-SystemContextAPI {
 
     )
     begin {
+        # validate body
+        if ($PSBoundParameters.ContainsKey('body') -and $endpoint -ne 'systems') {
+            throw "The 'body' parameter can only be used with the 'systems' endpoint."
+        }
         try {
             $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
             $regex = 'systemKey\":\"(\w+)\"'
@@ -37,7 +44,6 @@ Function Invoke-SystemContextAPI {
         } catch {
             throw "Could not get systemKey from jcagent.conf"
         }
-        # TODO: for pwsh 5.1 we need to load the library for PWSH 7+ we can use the native RSA
         # Referenced Library for RSA
         Switch ($PSVersionTable.PSVersion.Major) {
             '5' {
@@ -403,6 +409,11 @@ Function Invoke-SystemContextAPI {
                 Default {}
             }
         }
+        # convert body to JSON
+        if ($body) {
+            $form = $body | ConvertTo-Json -Depth 10
+        }
+
     }
     process {
         # Format and create the signature request

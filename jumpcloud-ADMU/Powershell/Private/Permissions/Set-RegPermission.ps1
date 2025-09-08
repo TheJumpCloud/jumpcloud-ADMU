@@ -5,7 +5,9 @@ function Set-RegPermission {
         [Parameter(Mandatory)]
         [string]$TargetSID,
         [Parameter(Mandatory)]
-        [string]$FilePath
+        [string]$FilePath,
+        [Parameter(Mandatory = $false)]
+        [scriptblock]$progressCallback
     )
 
     # Create SecurityIdentifier objects
@@ -13,8 +15,18 @@ function Set-RegPermission {
     $TargetSIDObj = New-Object System.Security.Principal.SecurityIdentifier($TargetSID)
 
     # Get NTAccount names for logging and ACLs
-    $SourceAccount = $SourceSIDObj.Translate([System.Security.Principal.NTAccount]).Value
-    $TargetAccount = $TargetSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+    try {
+        $SourceAccount = $SourceSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+    } catch {
+        Write-ToLog "Warning: Could not translate SourceSID $SourceSID to NTAccount. Using SID string instead."
+        $SourceAccount = $SourceSID
+    }
+    try {
+        $TargetAccount = $TargetSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+    } catch {
+        Write-ToLog "Warning: Could not translate TargetSID $TargetSID to NTAccount. Using SID string instead."
+        $TargetAccount = $TargetSID
+    }
 
     # Add the targetAccount to the ACL if it doesn't already exist
     $acl = Get-Acl -Path $FilePath
@@ -29,6 +41,9 @@ function Set-RegPermission {
 
     # Get all files and folders recursively, including hidden/system
     $items = Get-ChildItem -Path $FilePath -Recurse -Force -ErrorAction SilentlyContinue
+    $total = $items.Count
+    $count = 0
+    $lastPercent = -1
     foreach ($item in $items) {
         try {
             $acl = Get-Acl -Path $item.FullName
@@ -36,6 +51,9 @@ function Set-RegPermission {
             $aclChanged = $false
             # Change owner if SourceSID is current owner
             if (($acl.Owner -ne $TargetAccount) -and ($acl.Owner -eq $SourceAccount)) {
+                $acl.SetOwner($TargetSIDObj)
+                $aclChanged = $true
+            } elseif ($acl.Owner -eq "O:$SourceSID") {
                 $acl.SetOwner($TargetSIDObj)
                 $aclChanged = $true
             }
@@ -60,6 +78,16 @@ function Set-RegPermission {
             if ($_.Exception.Message -notmatch "because it is null") {
                 Write-ToLog "Failed to update $($item.FullName): $($_.Exception.Message)"
             }
+        }
+        $count++
+        if ($total -eq 0) {
+            $percent = 100
+        } else {
+            $percent = [math]::Round(($count / $total) * 100)
+        }
+        if ($ProgressCallback -and ($percent -ge $lastPercent + 5 -or $count -eq $total)) {
+            & $ProgressCallback $count $total
+            $lastPercent = $percent
         }
     }
 }

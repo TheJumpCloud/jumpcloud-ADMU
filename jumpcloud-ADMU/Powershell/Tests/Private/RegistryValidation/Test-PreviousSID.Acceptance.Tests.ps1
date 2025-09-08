@@ -23,6 +23,7 @@ Describe "Test-PreviousSID Acceptance Tests" -Tag "Acceptance" {
     }
     Context "Validate previousSid" {
         It 'Validates the function Test-PreviousSID returns $false if PreviousSID is not present' {
+            # TODO: CUT-4890 Replace PSDrive with private function
             if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }
@@ -41,6 +42,7 @@ Describe "Test-PreviousSID Acceptance Tests" -Tag "Acceptance" {
         }
 
         It "Validates the function Test-PreviousSID returns $true if PreviousSID is present" {
+            # TODO: CUT-4890 Replace PSDrive with private function
             if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }

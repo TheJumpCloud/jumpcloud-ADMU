@@ -33,6 +33,7 @@ Describe "Test-DATFilePermission Acceptance Tests" -Tag "Acceptance" {
             $NTUser | Should -Be $true
             $UsrClass | Should -Be $true
             # load file into memory + test registry permissions
+            # TODO: CUT-4890 Replace PSDrive with private function
             if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }
@@ -97,6 +98,7 @@ Describe "Test-DATFilePermission Acceptance Tests" -Tag "Acceptance" {
             }
             # Registry Validations:
             # load file into memory + test registry permissions
+            # TODO: CUT-4890 Replace PSDrive with private function
             if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }

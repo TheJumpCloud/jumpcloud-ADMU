@@ -27,6 +27,7 @@ function Test-PreviousSID {
     )
 
     # Ensure the HKEY_USERS drive is available for registry queries.
+    # TODO: CUT-4890 Replace PSDrive with private function
     if (-not (Get-PSDrive -Name 'HKEY_USERS' -ErrorAction SilentlyContinue)) {
         New-PSDrive -Name 'HKEY_USERS' -PSProvider 'Registry' -Root 'HKEY_USERS' | Out-Null
     }

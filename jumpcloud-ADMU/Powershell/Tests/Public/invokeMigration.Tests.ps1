@@ -65,6 +65,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 AutoBindJCUser        = $true
                 BindAsAdmin           = $false
                 SetDefaultWindowsUser = $true
+                ReportStatus          = $false
                 # JumpCloud API Parameters - Using valid keys for the base case
                 JumpCloudAPIKey       = ''
                 JumpCloudOrgID        = ''
@@ -310,6 +311,11 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
             It "Should THROW when removeMDM is not a boolean" {
                 $testParams.removeMDM = 'not-a-boolean'
+                { Confirm-MigrationParameter @testParams } | Should -Throw
+            }
+
+            It "Should THROW when ReportStatus is not a boolean" {
+                $testParams.ReportStatus = 'not-a-boolean'
                 { Confirm-MigrationParameter @testParams } | Should -Throw
             }
         }
@@ -736,11 +742,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             # --- Modify Script Content in Memory ---
             # Change forceReboot to false
             $scriptContent = $scriptContent -replace '(\$ForceReboot\s*=\s*)\$true', '$1$false'
-
             # Change autoBindJCUser to false
             $scriptContent = $scriptContent -replace '(\$AutoBindJCUser\s*=\s*)\$true', '$1$false'
-            # Change forceReboot to false
-            $scriptContent = $scriptContent -replace '(\$ForceReboot\s*=\s*)\$true', '$1$false'
 
             # # This regex finds the line, captures the variable name and equals sign into group 1,
             # # and matches whatever value is currently inside the single quotes.
@@ -807,7 +810,6 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
         It "Should migrate the user to JumpCloud" {
             # Run invokeScript.ps1 and should return 0
             { . $PSScriptRoot\invokeScript.ps1 } | Should -Not -Throw
-
         }
         # User2 Should have user1 profile
         It "User2 Should have user1 profile directory" {
@@ -838,6 +840,7 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
         It "Should have a previousSID value for the init user and unload the hive" {
             # Get the SID of the init user
             # Load the NTUser.dat file
+            # TODO: CUT-4890 Replace PSDrive with private function
             if (-not (Get-PSDrive HKEY_USERS -ErrorAction SilentlyContinue)) {
                 New-PSDrive -Name "HKEY_USERS" -PSProvider "Registry" -Root "HKEY_USERS"
             }

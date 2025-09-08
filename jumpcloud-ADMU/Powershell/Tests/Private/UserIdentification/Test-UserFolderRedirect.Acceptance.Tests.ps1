@@ -30,6 +30,7 @@ Describe "Test-UserFolderRedirect and Set-WallpaperPolicy Acceptance Tests" -Tag
 
     Context 'Validates that the User shell folder for default values' {
         BeforeAll {
+            # TODO: CUT-4890 Replace PSDrive with private function
             if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }
@@ -122,6 +123,7 @@ Describe "Test-UserFolderRedirect and Set-WallpaperPolicy Acceptance Tests" -Tag
 
     Context 'Validates Wallpaper Policy Removal' {
         BeforeAll {
+            # TODO: CUT-4890 Replace PSDrive with private function
             if ((Get-psdrive | Select-Object -ExpandProperty Name) -notmatch "HKEY_USERS") {
                 New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
             }

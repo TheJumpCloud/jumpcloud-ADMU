@@ -1,3 +1,26 @@
+## 2.8.9
+
+Release Date: September 5, 2025
+
+#### RELEASE NOTES
+
+```
+Added migration status reporting using the JumpCloud system description field (CLI only).
+This release addresses an issue with setting permissions on the migrated account
+```
+
+#### FEATURES:
+
+Migration Status Reporting in JumpCloud: The migration tool now updates the System Description field for a device in the JumpCloud console with its real-time migration status. This allows administrators to remotely monitor the progress of a migration directly from the JumpCloud UI without skimming through JumpCloud Commands results. (Note: This is currently available for migrations initiated via the CLI only.)
+
+#### IMPROVEMENTS:
+
+Enhanced visibility into the migration process by providing real-time status updates directly within the JumpCloud console, reducing the need for administrators to check local logs or have direct access to the machine.
+
+#### BUG FIXES:
+
+- Resolves an issue with migration where a device that had left a domain was unable to successfully migrate a domain user due to account name resolution. This release matches on a user's SID opposed to account name to accommodate scenarios where account migration occurs and the device is no longer joined to the domain.
+
 ## 2.8.8
 
 Release Date: August 19, 2025
