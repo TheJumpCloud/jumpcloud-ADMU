@@ -78,23 +78,54 @@ Describe 'Invoke-SystemPut' -Tags 'InstallJC' {
         }
 
     }
-}
+    Context 'When the API call fails' {
 
-Context 'When the API call fails' {
+        It 'should catch the exception with invalid api key' {
+            { Invoke-SystemPut -JcApiKey 'key' -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Not -Throw
+            $lastLogLine = Get-Content C:\Windows\Temp\jcadmu.log -tail 1
+            $lastLogLine | Should -Match "401"
+            $lastLogLine | Should -Match "Unauthorized"
+        }
 
-    It 'should catch the exception with invalid api key' {
-        { Invoke-SystemPut -JcApiKey 'key' -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Throw
-    }
+        It 'Should throw when providing invalid ORGID' {
+            { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID 'invalid-org-id' -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Not -Throw
+            $lastLogLine = Get-Content C:\Windows\Temp\jcadmu.log -tail 1
+            $lastLogLine | Should -Match "400"
+            $lastLogLine | Should -Match "Bad Request"
+        }
 
-    It 'Should throw when providing invalid ORGID' {
-        { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID 'invalid-org-id' -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Throw
-    }
-
-    It 'Should throw when passing invalid body' {
-        { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID $env:PESTER_ORGID -systemId $systemId -Body 'Invalid' | Should -Throw
+        It 'Should throw when passing invalid body' {
+            { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID $env:PESTER_ORGID -systemId $systemId -Body 'Invalid' | Should -Not -Throw }
+            $lastLogLine = Get-Content C:\Windows\Temp\jcadmu.log -tail 1
+            $lastLogLine | Should -Match "400"
+            $lastLogLine | Should -Match "Bad Request"
+        }
+        It 'Should throw when passing invalid systemId' {
+            { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID $env:PESTER_ORGID -systemId 'Invalid' -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Not -Throw
+            $lastLogLine = Get-Content C:\Windows\Temp\jcadmu.log -tail 1
+            $lastLogLine | Should -Match "400"
+            $lastLogLine | Should -Match "Bad Request"
         }
     }
-    It 'Should throw when passing invalid systemId' {
-        { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID $env:PESTER_ORGID -systemId 'Invalid' -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Throw
+    Context "When the API endpoint is unreachable" {
+        It "Should attempt to retry the Invoke-SystemPut call if the first call fails" {
+            for ($i = 0; $i -lt 10; $i++) {
+                Write-Host "Iteration $i"
+                if ($i -eq 5) {
+                    if ($i -eq 5) {
+                        # on the 5th attempt, mock a network name resolution failure
+                        Mock -CommandName Invoke-RestMethod -MockWith {
+                            throw [System.Net.WebException]::new("The remote name could not be resolved")
+                        } -Verifiable
+                    }
+                    { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -systemId $systemId -body @{description = "helloWorld$($i)" } } | Should -Not -Throw
+                    # remove the mock to invoke-RestMethod for subsequent calls
+                    Remove-Item Alias:\Invoke-RestMethod
+                } else {
+                    # subsequent calls should succeed
+                    { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -systemId $systemId -body @{description = "helloWorld$($i)" } } | Should -Not -Throw
+                }
+            }
+        }
     }
 }

@@ -1,3 +1,17 @@
+## 2.8.10
+
+Release Date: September 9, 2025
+
+#### RELEASE NOTES
+
+```
+Added additional validation for API calls to the JumpCloud API. Updated the remove Invoke Commands for remotely calling ADMU from JumpCloud Commands.
+```
+
+#### BUG FIXES:
+
+- Resolves an issue where the ADMU would not successfully migrate a user if the console.jumpcloud.com could not be accessed. The ADMU will now retry API calls up to 3 times and will not throw a terminating error if the API is unreachable.
+
 ## 2.8.9
 
 Release Date: September 5, 2025

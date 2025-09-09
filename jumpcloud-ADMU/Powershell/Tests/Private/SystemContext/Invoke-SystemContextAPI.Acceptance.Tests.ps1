@@ -50,6 +50,32 @@ Describe "Invoke-SystemContextAPI Acceptance Tests" -Tag "InstallJC" {
         $response = Invoke-SystemContextAPI -method "GET" -endpoint "systems"
         $response.id | Should -Not -BeNullOrEmpty
     }
+    Context "Set System Attributes" {
+        It "Should set a system attribute without throwing an error" {
+            { Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{description = "helloWorld" } } | Should -Not -Throw
+            $response = Invoke-SystemContextAPI -method "GET" -endpoint "systems"
+            $response.description | Should -Be "helloWorld"
+        }
+        It "Should attempt to retry the Invoke-SystemContextAPI call if the first call fails" {
+            for ($i = 0; $i -lt 10; $i++) {
+                Write-Host "Iteration $i"
+                if ($i -eq 5) {
+                    if ($i -eq 5) {
+                        # on the 5th attempt, mock a network name resolution failure
+                        Mock -CommandName Invoke-RestMethod -MockWith {
+                            throw [System.Net.WebException]::new("The remote name could not be resolved")
+                        } -Verifiable
+                    }
+                    { Invoke-SystemContextAPI -method PUT -endpoint "systems" -body @{description = "helloWorld$($i)" } } | Should -Not -Throw
+                    # remove the mock to invoke-RestMethod for subsequent calls
+                    Remove-Item Alias:\Invoke-RestMethod
+                } else {
+                    # subsequent calls should succeed
+                    { Invoke-SystemContextAPI -method PUT -endpoint "systems" -body @{description = "helloWorld$($i)" } } | Should -Not -Throw
+                }
+            }
+        }
+    }
 
     Context "User Association" {
         BeforeEach {
@@ -96,6 +122,4 @@ Describe "Invoke-SystemContextAPI Acceptance Tests" -Tag "InstallJC" {
             # }
         }
     }
-
-    # Add more acceptance tests as needed
 }

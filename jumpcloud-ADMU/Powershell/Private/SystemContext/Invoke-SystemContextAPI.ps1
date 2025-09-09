@@ -456,16 +456,100 @@ Function Invoke-SystemContextAPI {
 
         switch ($method) {
             'GET' {
-                $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers
+                $maxRetries = 3
+                $retryCount = 0
+                do {
+                    try {
+                        $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers
+                        $success = $true
+                    } catch {
+                        if ($_.Exception.Message -like "*The remote name could not be resolved*") {
+                            $retryCount++
+                            Start-Sleep -Seconds 2
+                            # add to retry counter and continue loop
+                            $success = $false
+                        } else {
+                            Write-ToLog "Failed to get system: $($_.Exception.Message)" -Level Warn
+                            # set success to true & exit the loop
+                            $success = $true
+                        }
+                    }
+                } while (-not $success -and $retryCount -lt $maxRetries)
+                if (-not $success) {
+                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts."
+                }
             }
             'PUT' {
-                $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
+                $maxRetries = 3
+                $retryCount = 0
+                do {
+                    try {
+                        $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
+                        $success = $true
+                    } catch {
+                        if ($_.Exception.Message -like "*The remote name could not be resolved*") {
+                            $retryCount++
+                            Start-Sleep -Seconds 2
+                            # add to retry counter and continue loop
+                            $success = $false
+                        } else {
+                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warn
+                            # set success to true & exit the loop
+                            $success = $true
+                        }
+                    }
+                } while (-not $success -and $retryCount -lt $maxRetries)
+                if (-not $success) {
+                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts."
+                }
             }
             'POST' {
-                $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
+                $maxRetries = 3
+                $retryCount = 0
+                do {
+                    try {
+                        $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
+                        $success = $true
+                    } catch {
+                        if ($_.Exception.Message -like "*The remote name could not be resolved*") {
+                            $retryCount++
+                            Start-Sleep -Seconds 2
+                            # add to retry counter and continue loop
+                            $success = $false
+                        } else {
+                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warn
+                            # set success to true & exit the loop
+                            $success = $true
+                        }
+                    }
+                } while (-not $success -and $retryCount -lt $maxRetries)
+                if (-not $success) {
+                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts."
+                }
             }
             'DELETE' {
-                $request = Invoke-RestMethod -Method DELETE -Uri "https://console.jumpcloud.com/$requestURL" -ContentType 'application/json' -Headers $headers
+                $maxRetries = 3
+                $retryCount = 0
+                do {
+                    try {
+                        $request = Invoke-RestMethod -Method DELETE -Uri "https://console.jumpcloud.com/$requestURL" -ContentType 'application/json' -Headers $headers
+                        $success = $true
+                    } catch {
+                        if ($_.Exception.Message -like "*The remote name could not be resolved*") {
+                            $retryCount++
+                            Start-Sleep -Seconds 2
+                            # add to retry counter and continue loop
+                            $success = $false
+                        } else {
+                            Write-ToLog "Failed to delete system: $($_.Exception.Message)" -Level warn
+                            # set success to true & exit the loop
+                            $success = $true
+                        }
+                    }
+                } while (-not $success -and $retryCount -lt $maxRetries)
+                if (-not $success) {
+                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts."
+                }
             }
             Default {
                 'Invalid method specified. Valid methods are: GET, PUT, POST, DELETE.'

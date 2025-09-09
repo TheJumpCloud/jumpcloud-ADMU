@@ -828,7 +828,7 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
 
 
             # Remigrate. This will fail and will have a User-Profile error due to the domain path added from the previous migration
-            . $PSScriptRoot\invokeScript.ps1
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Throw
 
             # Read the log
             $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
@@ -877,7 +877,7 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
                 Reg UNLOAD $hivePath *>&1
             }
 
-            . $PSScriptRoot\invokeScript.ps1
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Throw
 
             # Read the log
             $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
@@ -892,7 +892,7 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$userSid" -Name "ProfileImagePath" -Value "C:\Users\$userToMigrateTo.ADMU"
             Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$userSid" -Name "ProfileImagePath" | Should -Not -BeNullOrEmpty
 
-            . $PSScriptRoot\invokeScript.ps1
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Throw
 
             # Read the log
             $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
