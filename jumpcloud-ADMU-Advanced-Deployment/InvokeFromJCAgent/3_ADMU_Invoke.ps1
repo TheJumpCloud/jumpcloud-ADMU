@@ -561,11 +561,8 @@ try {
             $migrationParams.Add('JumpCloudUserID', $user.JumpCloudUserID)
         }
 
-        # Start the migration
-        Write-Host "[status] Begin Migration for JumpCloudUser: $($user.JumpCloudUserName)"
-
+        # Write output for AzureAD and LocalDomain status
         try {
-
             $ADStatus = dsregcmd.exe /status
             foreach ($line in $ADStatus) {
                 if ($line -match "AzureADJoined : ") {
@@ -575,27 +572,21 @@ try {
                     $LocalDomainStatus = ($line.TrimStart('DomainJoined : '))
                 }
             }
-            # Write output for AzureAD and LocalDomain status
-            Write-Host "Domain status before migration:"
-            Write-Host "[status] Azure/EntraID status: $AzureADStatus"
-            Write-Host "[status] Local domain status: $LocalDomainStatus"
-            # --- Script continues execution from this point ---
-            # Start the migration. Ensure the 'Start-Migration' function is available.
-            Start-Migration @migrationParams
-            Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)"
-            #region post-migration
-            # Add any addition code here to modify the user post-migration
-            # The migrated user home directory should be set to the $user.userPath variable
-            #endregion post-migration
         } catch {
-            Write-Host "[status] Migration failed for user: $($user.JumpCloudUserName), exiting..."
             Write-Host "[status] Error: $($_.Exception.Message)"
-            Write-Host "[status] Full Exception: $($_ | Format-List * | Out-String)"
-            Write-host "[status] StackTrace: $($_.ScriptStackTrace)"
-            exit 1
         }
+        Write-Host "Domain status before migration:"
+        Write-Host "[status] Azure/EntraID status: $AzureADStatus"
+        Write-Host "[status] Local domain status: $LocalDomainStatus"
+        # Start the migration
+        Write-Host "[status] Begin Migration for JumpCloudUser: $($user.JumpCloudUserName)"
+        Start-Migration @migrationParams
+        Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)"
+        #region post-migration
+        # Add any addition code here to modify the user post-migration
+        # The migrated user home directory should be set to the $user.userPath variable
+        #endregion post-migration
     }
-
     Write-Host "`nAll user migrations have been processed."
 } catch {
     Write-Error "An unexpected error occurred: $_"
