@@ -468,7 +468,7 @@ Function Invoke-SystemContextAPI {
                             Start-Sleep -Seconds 2
                             $success = $false
                         } else {
-                            Write-ToLog $_.Exception.Message
+                            Write-ToLog "Failed to get system: $($_.Exception.Message)" -Level Warning
                         }
                     }
                 } while (-not $success -and $retryCount -lt $maxRetries)
@@ -487,10 +487,10 @@ Function Invoke-SystemContextAPI {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
                             $retryCount++
                             Start-Sleep -Seconds 2
-                            $success = $false
                         } else {
-                            Write-ToLog $_.Exception.Message
+                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning
                         }
+                        $success = $false
                     }
                 } while (-not $success -and $retryCount -lt $maxRetries)
                 if (-not $success) {
@@ -508,10 +508,10 @@ Function Invoke-SystemContextAPI {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
                             $retryCount++
                             Start-Sleep -Seconds 2
-                            $success = $false
                         } else {
-                            Write-ToLog $_.Exception.Message
+                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning
                         }
+                        $success = $false
                     }
                 } while (-not $success -and $retryCount -lt $maxRetries)
                 if (-not $success) {
@@ -529,10 +529,10 @@ Function Invoke-SystemContextAPI {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
                             $retryCount++
                             Start-Sleep -Seconds 2
-                            $success = $false
                         } else {
-                            Write-ToLog $_.Exception.Message
+                            Write-ToLog "Failed to delete system: $($_.Exception.Message)" -Level Warning
                         }
+                        $success = $false
                     }
                 } while (-not $success -and $retryCount -lt $maxRetries)
                 if (-not $success) {

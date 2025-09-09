@@ -19,9 +19,23 @@ function Invoke-SystemPut {
     if ($jcOrgID) {
         $Headers['x-org-id'] = $jcOrgID;
     }
-    try {
-        $response = Invoke-RestMethod -Uri $uri -Method Put -Headers $Headers -Body ($Body | ConvertTo-Json)
-    } catch {
-        Write-ToLog "Failed to update system. Status: $($_.Exception.Response.StatusCode.value__) - $($_.Exception.Response.StatusDescription)" -Level Error
+    $maxRetries = 3
+    $retryCount = 0
+    do {
+        try {
+            $response = Invoke-RestMethod -Uri $uri -Method Put -Headers $Headers -Body ($Body | ConvertTo-Json)
+            $success = $true
+        } catch {
+            if ($_.Exception.Message -like "*The remote name could not be resolved*") {
+                $retryCount++
+                Start-Sleep -Seconds 2
+            } else {
+                Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning
+            }
+            $success = $false
+        }
+    } while (-not $success -and $retryCount -lt $maxRetries)
+    if (-not $success) {
+        Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Warning
     }
 }
