@@ -468,7 +468,7 @@ Function Invoke-SystemContextAPI {
                             Start-Sleep -Seconds 2
                             $success = $false
                         } else {
-                            Write-ToLog "Failed to get system: $($_.Exception.Message)" -Level Warning
+                            Write-ToLog "Failed to get system: $($_.Exception.Message)" -Level Warn
                         }
                     }
                 } while (-not $success -and $retryCount -lt $maxRetries)
@@ -488,7 +488,7 @@ Function Invoke-SystemContextAPI {
                             $retryCount++
                             Start-Sleep -Seconds 2
                         } else {
-                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning
+                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warn
                         }
                         $success = $false
                     }
@@ -509,7 +509,7 @@ Function Invoke-SystemContextAPI {
                             $retryCount++
                             Start-Sleep -Seconds 2
                         } else {
-                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning
+                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warn
                         }
                         $success = $false
                     }
@@ -530,7 +530,7 @@ Function Invoke-SystemContextAPI {
                             $retryCount++
                             Start-Sleep -Seconds 2
                         } else {
-                            Write-ToLog "Failed to delete system: $($_.Exception.Message)" -Level Warning
+                            Write-ToLog "Failed to delete system: $($_.Exception.Message)" -Level warn
                         }
                         $success = $false
                     }
