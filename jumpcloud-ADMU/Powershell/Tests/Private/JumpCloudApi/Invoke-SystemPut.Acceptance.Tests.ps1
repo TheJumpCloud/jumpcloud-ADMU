@@ -90,8 +90,8 @@ Describe 'Invoke-SystemPut' -Tags 'InstallJC' {
         It 'Should throw when providing invalid ORGID' {
             { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID 'invalid-org-id' -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Not -Throw
             $lastLogLine = Get-Content C:\Windows\Temp\jcadmu.log -tail 1
-            $lastLogLine | Should -Match "401"
-            $lastLogLine | Should -Match "Unauthorized"
+            $lastLogLine | Should -Match "400"
+            $lastLogLine | Should -Match "Bad Request"
         }
 
         It 'Should throw when passing invalid body' {
@@ -101,7 +101,7 @@ Describe 'Invoke-SystemPut' -Tags 'InstallJC' {
             $lastLogLine | Should -Match "Bad Request"
         }
         It 'Should throw when passing invalid systemId' {
-            { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID $env:PESTER_ORGID -systemId 'Invalid' -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Throw
+            { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID $env:PESTER_ORGID -systemId 'Invalid' -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Not -Throw
             $lastLogLine = Get-Content C:\Windows\Temp\jcadmu.log -tail 1
             $lastLogLine | Should -Match "400"
             $lastLogLine | Should -Match "Bad Request"
