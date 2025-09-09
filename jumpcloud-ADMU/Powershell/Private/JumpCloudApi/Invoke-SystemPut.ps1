@@ -30,7 +30,7 @@ function Invoke-SystemPut {
                 $retryCount++
                 Start-Sleep -Seconds 2
             } else {
-                Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning
+                Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warn
             }
             $success = $false
         }
