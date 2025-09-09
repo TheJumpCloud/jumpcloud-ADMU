@@ -29,10 +29,13 @@ function Invoke-SystemPut {
             if ($_.Exception.Message -like "*The remote name could not be resolved*") {
                 $retryCount++
                 Start-Sleep -Seconds 2
+                # add to retry counter and continue loop
+                $success = $false
             } else {
                 Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warn
+                # exit the loop
+                $success = $true
             }
-            $success = $false
         }
     } while (-not $success -and $retryCount -lt $maxRetries)
     if (-not $success) {

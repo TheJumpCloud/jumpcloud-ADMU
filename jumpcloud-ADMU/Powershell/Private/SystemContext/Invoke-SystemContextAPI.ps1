@@ -466,9 +466,12 @@ Function Invoke-SystemContextAPI {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
                             $retryCount++
                             Start-Sleep -Seconds 2
+                            # add to retry counter and continue loop
                             $success = $false
                         } else {
                             Write-ToLog "Failed to get system: $($_.Exception.Message)" -Level Warn
+                            # set success to true & exit the loop
+                            $success = $true
                         }
                     }
                 } while (-not $success -and $retryCount -lt $maxRetries)
@@ -487,10 +490,13 @@ Function Invoke-SystemContextAPI {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
                             $retryCount++
                             Start-Sleep -Seconds 2
+                            # add to retry counter and continue loop
+                            $success = $false
                         } else {
                             Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warn
+                            # set success to true & exit the loop
+                            $success = $true
                         }
-                        $success = $false
                     }
                 } while (-not $success -and $retryCount -lt $maxRetries)
                 if (-not $success) {
@@ -508,10 +514,13 @@ Function Invoke-SystemContextAPI {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
                             $retryCount++
                             Start-Sleep -Seconds 2
+                            # add to retry counter and continue loop
+                            $success = $false
                         } else {
                             Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warn
+                            # set success to true & exit the loop
+                            $success = $true
                         }
-                        $success = $false
                     }
                 } while (-not $success -and $retryCount -lt $maxRetries)
                 if (-not $success) {
@@ -529,10 +538,13 @@ Function Invoke-SystemContextAPI {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
                             $retryCount++
                             Start-Sleep -Seconds 2
+                            # add to retry counter and continue loop
+                            $success = $false
                         } else {
                             Write-ToLog "Failed to delete system: $($_.Exception.Message)" -Level warn
+                            # set success to true & exit the loop
+                            $success = $true
                         }
-                        $success = $false
                     }
                 } while (-not $success -and $retryCount -lt $maxRetries)
                 if (-not $success) {
