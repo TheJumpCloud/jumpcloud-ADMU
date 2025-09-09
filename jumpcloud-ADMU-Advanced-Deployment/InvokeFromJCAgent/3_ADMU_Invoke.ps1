@@ -512,85 +512,79 @@ if ($UsersToMigrate) {
 $lastUser = $($UsersToMigrate | Select-Object -Last 1)
 
 Write-Host "Starting validation for file: $CsvPath"
-try {
 
-    # --- START OF MIGRATION LOGIC ---
+# Get the last user from the list to handle the LeaveDomain parameter correctly.
+$lastUser = $UsersToMigrate | Select-Object -Last 1
 
-    # Get the last user from the list to handle the LeaveDomain parameter correctly.
-    $lastUser = $UsersToMigrate | Select-Object -Last 1
+# Loop through each user from the validated CSV and perform the migration.
+foreach ($user in $UsersToMigrate) {
+    # Check if the user is the last user in the list
+    $isLastUser = ($user -eq $lastUser)
+    # The domain should only be left for the last user or the only user if there is only one
+    $leaveDomainParam = if ($isLastUser -and $LeaveDomainAfterMigration) { $true } else { $false }
 
-    # Loop through each user from the validated CSV and perform the migration.
-    foreach ($user in $UsersToMigrate) {
-        # Check if the user is the last user in the list
-        $isLastUser = ($user -eq $lastUser)
-        # The domain should only be left for the last user or the only user if there is only one
-        $leaveDomainParam = if ($isLastUser -and $LeaveDomainAfterMigration) { $true } else { $false }
-
-        # Create a hashtable for the migration parameters.
-        # NOTE: This assumes the CSV column 'LocalUsername' corresponds to the needed 'SelectedUserName'.
-        $migrationParams = @{
-            JumpCloudUserName     = $user.JumpCloudUserName
-            SelectedUserName      = $user.selectedUsername
-            TempPassword          = $TempPassword
-            UpdateHomePath        = $UpdateHomePath
-            AutoBindJCUser        = $AutoBindJCUser
-            JumpCloudAPIKey       = $JumpCloudAPIKey
-            BindAsAdmin           = $BindAsAdmin
-            SetDefaultWindowsUser = $SetDefaultWindowsUser
-            LeaveDomain           = $leaveDomainParam
-            adminDebug            = $true
-            ReportStatus          = $ReportStatus
-        }
-
-        # Add JumpCloudOrgID if it's not null or empty
-        # This is required if you are using a MTP API Key
-        If ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
-            $migrationParams.Remove('JumpCloudOrgID')
-        } else {
-            $migrationParams.Add('JumpCloudOrgID', $JumpCloudOrgID)
-        }
-
-        # if the systemContextAPI has been validated, remove the binding parameters from the $migrationParams
-        If ($systemContextBinding -eq $true) {
-            # remove the binding parameters from the $migrationParams
-            $migrationParams.Remove('AutoBindJCUser')
-            $migrationParams.Remove('JumpCloudAPIKey')
-            $migrationParams.Remove('JumpCloudOrgID')
-            # add the systemContextAPI parameters to the $migrationParams
-            $migrationParams.Add('systemContextBinding', $true)
-            $migrationParams.Add('JumpCloudUserID', $user.JumpCloudUserID)
-        }
-
-        # Write output for AzureAD and LocalDomain status
-        try {
-            $ADStatus = dsregcmd.exe /status
-            foreach ($line in $ADStatus) {
-                if ($line -match "AzureADJoined : ") {
-                    $AzureADStatus = ($line.TrimStart('AzureADJoined : '))
-                }
-                if ($line -match "DomainJoined : ") {
-                    $LocalDomainStatus = ($line.TrimStart('DomainJoined : '))
-                }
-            }
-        } catch {
-            Write-Host "[status] Error: $($_.Exception.Message)"
-        }
-        Write-Host "Domain status before migration:"
-        Write-Host "[status] Azure/EntraID status: $AzureADStatus"
-        Write-Host "[status] Local domain status: $LocalDomainStatus"
-        # Start the migration
-        Write-Host "[status] Begin Migration for JumpCloudUser: $($user.JumpCloudUserName)"
-        Start-Migration @migrationParams
-        Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)"
-        #region post-migration
-        # Add any addition code here to modify the user post-migration
-        # The migrated user home directory should be set to the $user.userPath variable
-        #endregion post-migration
+    # Create a hashtable for the migration parameters.
+    # NOTE: This assumes the CSV column 'LocalUsername' corresponds to the needed 'SelectedUserName'.
+    $migrationParams = @{
+        JumpCloudUserName     = $user.JumpCloudUserName
+        SelectedUserName      = $user.selectedUsername
+        TempPassword          = $TempPassword
+        UpdateHomePath        = $UpdateHomePath
+        AutoBindJCUser        = $AutoBindJCUser
+        JumpCloudAPIKey       = $JumpCloudAPIKey
+        BindAsAdmin           = $BindAsAdmin
+        SetDefaultWindowsUser = $SetDefaultWindowsUser
+        LeaveDomain           = $leaveDomainParam
+        adminDebug            = $true
+        ReportStatus          = $ReportStatus
     }
-    Write-Host "`nAll user migrations have been processed."
-} catch {
-    Write-Error "An unexpected error occurred: $_"
+
+    # Add JumpCloudOrgID if it's not null or empty
+    # This is required if you are using a MTP API Key
+    If ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
+        $migrationParams.Remove('JumpCloudOrgID')
+    } else {
+        $migrationParams.Add('JumpCloudOrgID', $JumpCloudOrgID)
+    }
+
+    # if the systemContextAPI has been validated, remove the binding parameters from the $migrationParams
+    If ($systemContextBinding -eq $true) {
+        # remove the binding parameters from the $migrationParams
+        $migrationParams.Remove('AutoBindJCUser')
+        $migrationParams.Remove('JumpCloudAPIKey')
+        $migrationParams.Remove('JumpCloudOrgID')
+        # add the systemContextAPI parameters to the $migrationParams
+        $migrationParams.Add('systemContextBinding', $true)
+        $migrationParams.Add('JumpCloudUserID', $user.JumpCloudUserID)
+    }
+
+    # Write output for AzureAD and LocalDomain status
+    try {
+        $ADStatus = dsregcmd.exe /status
+        foreach ($line in $ADStatus) {
+            if ($line -match "AzureADJoined : ") {
+                $AzureADStatus = ($line.TrimStart('AzureADJoined : '))
+            }
+            if ($line -match "DomainJoined : ") {
+                $LocalDomainStatus = ($line.TrimStart('DomainJoined : '))
+            }
+        }
+    } catch {
+        Write-Host "[status] Error: $($_.Exception.Message)"
+    }
+    Write-Host "Domain status before migration:"
+    Write-Host "[status] Azure/EntraID status: $AzureADStatus"
+    Write-Host "[status] Local domain status: $LocalDomainStatus"
+    # Start the migration
+    Write-Host "[status] Begin Migration for JumpCloudUser: $($user.JumpCloudUserName)"
+    Start-Migration @migrationParams
+    Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)"
+    #region post-migration
+    # Add any addition code here to modify the user post-migration
+    # The migrated user home directory should be set to the $user.userPath variable
+    #endregion post-migration
 }
+Write-Host "`nAll user migrations have been processed."
 #endregion migration
 
 #region removeMDM
