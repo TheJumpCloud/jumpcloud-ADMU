@@ -36,6 +36,6 @@ function Invoke-SystemPut {
         }
     } while (-not $success -and $retryCount -lt $maxRetries)
     if (-not $success) {
-        Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Warning
+        Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Warn
     }
 }
