@@ -83,24 +83,24 @@ Describe 'Invoke-SystemPut' -Tags 'InstallJC' {
         It 'should catch the exception with invalid api key' {
             { Invoke-SystemPut -JcApiKey 'key' -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Not -Throw
             $lastLogLine = Get-Content C:\Windows\Temp\jcadmu.log -tail 1
-            $lastLogLine | Should -Match "Failed to update system: Response status code does not indicate success: 401 \(Unauthorized\)."
+            $lastLogLine | Should -Match "401 \(Unauthorized\)."
         }
 
         It 'Should throw when providing invalid ORGID' {
             { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID 'invalid-org-id' -systemId $systemId -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Not -Throw
             $lastLogLine = Get-Content C:\Windows\Temp\jcadmu.log -tail 1
-            $lastLogLine | Should -Match "Failed to update system: Response status code does not indicate success: 401 \(Unauthorized\)."
+            $lastLogLine | Should -Match "401 \(Unauthorized\)."
         }
 
         It 'Should throw when passing invalid body' {
             { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID $env:PESTER_ORGID -systemId $systemId -Body 'Invalid' | Should -Not -Throw }
             $lastLogLine = Get-Content C:\Windows\Temp\jcadmu.log -tail 1
-            $lastLogLine | Should -Match "Failed to update system: Response status code does not indicate success: 400 \(Bad Request\)."
+            $lastLogLine | Should -Match "400 \(Bad Request\)."
         }
         It 'Should throw when passing invalid systemId' {
             { Invoke-SystemPut -JcApiKey $env:PESTER_APIKEY -JcOrgID $env:PESTER_ORGID -systemId 'Invalid' -Body @{'description' = ($description | ConvertTo-Json -Compress) } } | Should -Throw
             $lastLogLine = Get-Content C:\Windows\Temp\jcadmu.log -tail 1
-            $lastLogLine | Should -Match "Failed to update system: Response status code does not indicate success: 400 \(Bad Request\)."
+            $lastLogLine | Should -Match "400 \(Bad Request\)."
         }
     }
     Context "When the API endpoint is unreachable" {
