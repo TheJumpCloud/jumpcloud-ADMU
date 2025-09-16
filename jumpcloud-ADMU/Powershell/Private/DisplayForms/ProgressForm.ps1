@@ -22,7 +22,7 @@ function New-ProgressForm {
     <Window
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    Name="Window" Title="JumpCloud ADMU 2.8.10"
+    Name="Window" Title="JumpCloud ADMU 2.8.11"
     WindowStyle="SingleBorderWindow"
     ResizeMode="NoResize"
     Background="White" Width="720" Height="550  ">

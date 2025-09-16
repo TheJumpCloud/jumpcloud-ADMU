@@ -1,6 +1,28 @@
+## 2.8.11
+
+Release Date: September 16, 2025
+
+#### RELEASE NOTES
+
+```
+{{Fill in the Release Notes}}
+```
+
+#### FEATURES:
+
+{{Fill in the Features}}
+
+#### IMPROVEMENTS:
+
+{{Fill in the Improvements}}
+
+#### BUG FIXES:
+
+{{Fill in the Bug Fixes}}
+
 ## 2.8.10
 
-Release Date: September 9, 2025
+Release Date: September 16, 2025
 
 #### RELEASE NOTES
 
