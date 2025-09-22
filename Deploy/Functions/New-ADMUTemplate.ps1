@@ -245,4 +245,3 @@ if (`$PSBoundParameters.Count -eq 0) {
         $templateString | Out-File $ExportPath -Force
     }
 }
-New-ADMUTemplate -ExportPath "$PSScriptRoot/admuTemplate.ps1" -hidePowerShellWindow $false
