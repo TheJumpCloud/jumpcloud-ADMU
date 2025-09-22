@@ -1,6 +1,6 @@
 ## 2.8.11
 
-Release Date: September 16, 2025
+Release Date: September 22, 2025
 
 #### RELEASE NOTES
 

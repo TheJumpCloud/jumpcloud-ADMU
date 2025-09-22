@@ -212,22 +212,13 @@ $formsContent
             $templateString += "$($functionContent)" + [Environment]::NewLine
         }
 
+        #TODO: Check for auto param
         $executableRegion = @"
-# Check if the core parameters for command-line execution were passed.
-# This is a more reliable way to detect if the script should run non-interactively.
-if (`$PSBoundParameters.ContainsKey('JumpCloudUserName') -and `$PSBoundParameters.ContainsKey('SelectedUserName') -and `$PSBoundParameters.ContainsKey('TempPassword')) {
-
-    # --- COMMAND-LINE MODE ---
-    # The required parameters were found. Run the migration directly.
-    # Use splatting (@) to pass the parameters correctly from the script to the function.
-    Write-ToLog "Command-line parameters detected. Running in non-interactive mode."
-    Start-Migration @PSBoundParameters
-
-} else {
+# Check if any parameters were passed. If not, launch the GUI.
+if (`$PSBoundParameters.Count -eq 0) {
 
     # --- GUI MODE ---
-    # The required command-line parameters were NOT found. Launch the GUI.
-    Write-ToLog "Required command-line parameters not found. Launching graphical user interface."
+    Write-ToLog "No command-line parameters found. Launching graphical user interface."
     `$formResults = Show-SelectionForm
 
     If (`$formResults) {
@@ -237,6 +228,13 @@ if (`$PSBoundParameters.ContainsKey('JumpCloudUserName') -and `$PSBoundParameter
         # The user closed the form without migrating.
         Write-Output 'Exiting ADMU process.'
     }
+} else {
+
+    # --- COMMAND-LINE MODE ---
+    # If any parameters are present, assume non-interactive command-line execution.
+    Write-ToLog "Command-line parameters detected. Running in non-interactive mode."
+    Start-Migration @PSBoundParameters
+
 }
 "@
         # add executable region to the template

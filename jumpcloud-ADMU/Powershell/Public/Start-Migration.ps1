@@ -125,8 +125,8 @@ Function Start-Migration {
         if ($systemContextBinding -eq $true) {
             $invalidStringParams = @('JumpCloudAPIKey', 'JumpCloudOrgID', 'InstallJCAgent', 'JumpCloudConnectKey') | Where-Object { $PSBoundParameters.ContainsKey($_) }
             $invalidBoolParams = @('InstallJCAgent', 'AutoBindJCUser') | Where-Object { $PSBoundParameters.ContainsKey($_) }
-            if ($invalidParams -or ($invalidBoolParams | Where-Object { $PSBoundParameters[$_] -eq $true })) {
-                Throw "The 'SystemContextBinding' parameter cannot be used with the following parameters: $($invalidParams -join ', ')."
+            if ($invalidStringParams -or ($invalidBoolParams | Where-Object { $PSBoundParameters[$_] -eq $true })) {
+                Throw "The 'SystemContextBinding' parameter cannot be used with the following parameters: $($invalidStringParams -join ', ')."
                 break
             }
             if (-not $PSBoundParameters.ContainsKey('JumpCloudUserID')) {
