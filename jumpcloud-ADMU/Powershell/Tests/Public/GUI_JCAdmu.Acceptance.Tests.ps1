@@ -316,7 +316,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
 
                 {
                     Invoke-Expression "$command 2>&1"
-                } | Should -Throw -ExpectedMessage "ERROR: User $($userToMigrateFrom) already exists."
+                } | Should -Throw -ExpectedMessage "ERROR: The variable cannot be validated because the value  is not a valid value for the JumpCloudUserID variable."
                 $testFailureExpected = $true
             }
 
