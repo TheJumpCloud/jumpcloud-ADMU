@@ -82,8 +82,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
             Write-Host "Executing command: $command"
-            $result = Invoke-Expression $command
-            Write-Host "Result: $result"
+            $result = Invoke-Expression "$command 2>&1"
             # Convert the result to a string for easier matching
             $result = $result | Out-String
             $result | Should -Match "ERROR: The 'SystemContextBinding' parameter requires the 'JumpCloudUserID' parameter to be set."
