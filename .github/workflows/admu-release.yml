@@ -52,7 +52,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   Setup-Build-Dependencies:
     needs: ["Filter-Branch", "Check-PR-Labels"]
-    runs-on: windows-latest
+    runs-on: Windows-2022
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -99,7 +99,7 @@ jobs:
               }
           }
   Build-Sign-ADMU:
-    runs-on: windows-latest
+    runs-on: Windows-2022
     needs: ["Setup-Build-Dependencies", "Check-PR-Labels"]
     environment: Production
     steps:

@@ -59,7 +59,7 @@ jobs:
           $env:RELEASE_TYPE |  Should -BeIn @('major','minor','patch','manual')
   Setup-Build-Dependencies:
     needs: ["Filter-Branch", "Check-PR-Labels", "Validate-Env-Variables"]
-    runs-on: windows-latest
+    runs-on: Windows-2022
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -107,7 +107,7 @@ jobs:
           }
   Build-Module:
     needs: ["Setup-Build-Dependencies", "Check-PR-Labels"]
-    runs-on: windows-latest
+    runs-on: Windows-2022
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
@@ -137,7 +137,7 @@ jobs:
           retention-days: 1
   Test-Module:
     needs: ["Setup-Build-Dependencies", "Check-PR-Labels", "Build-Module"]
-    runs-on: windows-latest
+    runs-on: Windows-2022
     timeout-minutes: 75
     strategy:
       fail-fast: false

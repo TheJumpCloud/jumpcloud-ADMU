@@ -87,7 +87,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
 
         }
 
-        It "Tests that the the start-migration function throws for 'systemContextBinding' parameters when the JumpCloudUserID is set and the APIKey/ ORGId is set"  -skip {
+        It "Tests that the the start-migration function throws for 'systemContextBinding' parameters when the JumpCloudUserID is set and the APIKey/ ORGId is set" {
             # set the JumpCloudUserID to a 24 char string
             $testCaseInput.JumpCloudUserID = "123456789012345678901234"
             $testCaseInput.Add('JumpCloudAPIKey', "123456789012345678901234")
