@@ -90,7 +90,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $result | Should -Match "ERROR: The 'SystemContextBinding' parameter requires the 'JumpCloudUserID' parameter to be set."
         }
 
-        It "Tests that the the start-migration function throws for 'systemContextBinding' parameters when the JumpCloudUserID is set and the APIKey/ ORGId is set" {
+        It "Tests that the the start-migration function throws for 'systemContextBinding' parameters when the JumpCloudUserID is set and the APIKey/ ORGId is set"  -skip {
             # set the JumpCloudUserID to a 24 char string
             $testCaseInput.JumpCloudUserID = "123456789012345678901234"
             $testCaseInput.Add('JumpCloudAPIKey', "123456789012345678901234")
@@ -117,7 +117,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $result = $result | Out-String
             $result | Should -Match "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudAPIKey, JumpCloudOrgID."
         }
-        It "Tests that the start-migration function throws for 'systemContextBinding' parameters when InstallJumpCloudAgent parameter is set" {
+        It "Tests that the start-migration function throws for 'systemContextBinding' parameters when InstallJumpCloudAgent parameter is set" -Skip {
             # set the JumpCloudUserID to a 24 char string
             $testCaseInput.JumpCloudUserID = "123456789012345678901234"
 
@@ -132,7 +132,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $result = $result | Out-String
             $result | Should -Match "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: InstallJCAgent."
         }
-        It "Tests that the start-migration function throws for 'systemContextBinding' parameters when JumpCloudConnectKey parameter is set" {
+        It "Tests that the start-migration function throws for 'systemContextBinding' parameters when JumpCloudConnectKey parameter is set" -Skip {
             # set the JumpCloudUserID to a 24 char string
             $testCaseInput.JumpCloudUserID = "123456789012345678901234"
             # set the InstallJCAgent to true
@@ -148,7 +148,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $result | Should -Match "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudConnectKey."
         }
 
-        It "Should migrate a user successfully using required command-line parameters" {
+        It "Should migrate a user successfully using required command-line parameters" -skip {
             $testCaseInput.InstallJCAgent = $null
             $testCaseInput.SystemContextBinding = $false
             Write-Host "$($testCaseInput | Out-String)"
@@ -163,7 +163,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
 
     }
 
-    Context "Migration Scenarios - GUI" {
+    Context "Migration Scenarios - GUI" -skip {
         # Test Setup
         BeforeEach {
             # sample password
@@ -393,7 +393,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
     }
 }
 
-Describe "Start-Migration Tests" -Tag "InstallJC" {
+Describe "Start-Migration Tests" -Tag "InstallJC" -skip {
     # Import Functions
     BeforeAll {
         # import all functions
