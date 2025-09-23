@@ -21,7 +21,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
         . "$helpFunctionDir\Initialize-TestUser.ps1"
 
         # Define the path to the GUI executable.
-        $global:guiPath = Join-Path $PSScriptRoot '..\..\..\..\jumpCloud-Admu\Exe\gui_jcadmu.exe'
+        $global:guiPath = "D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\exe\gui_jcadmu.exe"
         if (-Not (Test-Path -Path $guiPath)) {
             throw "GUI executable not found at path: $($guiPath)"
         }
@@ -82,8 +82,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
             Write-Host "Executing command: $command"
-            $result = Invoke-Expression $command -Verbose
-
+            $result = Invoke-Expression $command
             Write-Host "Result: $result"
             # Convert the result to a string for easier matching
             $result = $result | Out-String
