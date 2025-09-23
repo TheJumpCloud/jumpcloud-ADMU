@@ -608,7 +608,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $command = "$guiPath $argumentList"
                     {
                         Invoke-Expression "$command 2>&1"
-                    } | Should -Throw -ExpectedMessage "ERROR: The specified JumpCloudUsername does not exist"
+                    } | Should -Throw -ExpectedMessage "ERROR: The variable cannot be validated because the value  is not a valid value for the JumpCloudUserID variable."
 
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
