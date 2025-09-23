@@ -82,7 +82,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
             {
-                Invoke-Expression "$command 2>&1" -Verbose
+                Invoke-Expression "$command 2>&1"
             } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter requires the 'JumpCloudUserID' parameter to be set."
 
         }
@@ -94,27 +94,20 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             # Remove install JC Agent and autobind JC User if they exist
             $testCaseInput.InstallJCAgent = $null
             $testCaseInput.AutoBindJCUser = $null
-            $var = ConvertTo-ArgumentList -InputHashtable $testCaseInput
-            $command = "$guiPath $var"
-            Write-Host "Executing command: $command"
-            $result = Invoke-Expression $command
-
-            Write-Host "Result: $result"
-            # Convert the result to a string for easier matching
-            $result = $result | Out-String
-            $result | Should -Match "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudAPIKey."
+            $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
+            $command = "$guiPath $argumentList"
+            {
+                Invoke-Expression "$command 2>&1"
+            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudAPIKey."
 
             $testCaseInput.Add('JumpCloudOrgID', "123456789012345678901234")
-            $var = ConvertTo-ArgumentList -InputHashtable $testCaseInput
-            $command = "$guiPath $var"
-            Write-Host "Executing command: $command"
-            $result = Invoke-Expression $command
-            Write-Host "Result: $result"
-            # Convert the result to a string for easier matching
-            $result = $result | Out-String
-            $result | Should -Match "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudAPIKey, JumpCloudOrgID."
+            $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
+            $command = "$guiPath $argumentList"
+            {
+                Invoke-Expression "$command 2>&1"
+            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudAPIKey, JumpCloudOrgID."
         }
-        It "Tests that the start-migration function throws for 'systemContextBinding' parameters when InstallJumpCloudAgent parameter is set" -Skip {
+        It "Tests that the start-migration function throws for 'systemContextBinding' parameters when InstallJumpCloudAgent parameter is set" {
             # set the JumpCloudUserID to a 24 char string
             $testCaseInput.JumpCloudUserID = "123456789012345678901234"
 
@@ -122,14 +115,11 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $testCaseInput.InstallJCAgent = $true
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
-            Write-Host "Executing command: $command"
-            $result = Invoke-Expression $command
-            Write-Host "Result: $result"
-            # Convert the result to a string for easier matching
-            $result = $result | Out-String
-            $result | Should -Match "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: InstallJCAgent."
+            {
+                Invoke-Expression "$command 2>&1"
+            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: InstallJCAgent."
         }
-        It "Tests that the start-migration function throws for 'systemContextBinding' parameters when JumpCloudConnectKey parameter is set" -Skip {
+        It "Tests that the start-migration function throws for 'systemContextBinding' parameters when JumpCloudConnectKey parameter is set" {
             # set the JumpCloudUserID to a 24 char string
             $testCaseInput.JumpCloudUserID = "123456789012345678901234"
             # set the InstallJCAgent to true
@@ -137,21 +127,16 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $testCaseInput.Add('JumpCloudConnectKey', "123456789012345678901234")
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
-            Write-Host "Executing command: $command"
-            $result = Invoke-Expression $command
-            Write-Host "Result: $result"
-            # Convert the result to a string for easier matching
-            $result = $result | Out-String
-            $result | Should -Match "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudConnectKey."
+            {
+                Invoke-Expression "$command 2>&1"
+            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudConnectKey."
         }
 
-        It "Should migrate a user successfully using required command-line parameters" -skip {
+        It "Should migrate a user successfully using required command-line parameters" {
             $testCaseInput.InstallJCAgent = $null
             $testCaseInput.SystemContextBinding = $false
-            Write-Host "$($testCaseInput | Out-String)"
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
-            Write-Host "Executing command: $command"
             $result = Invoke-Expression $command
             $result = $result | Out-String
             $result | Should -Match "Script finished successfully"
@@ -160,7 +145,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
 
     }
 
-    Context "Migration Scenarios - GUI" -skip {
+    Context "Migration Scenarios - GUI" {
         # Test Setup
         BeforeEach {
             # sample password
@@ -209,7 +194,6 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
                 Register-ScheduledTask $taskName -InputObject $task
                 $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                 $command = "$guiPath $argumentList"
-                Write-Host "Executing command: $command"
                 { Invoke-Expression $command } | Should -Not -Throw
 
                 # Get the scheduled task
@@ -231,7 +215,6 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
 
                 $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                 $command = "$guiPath $argumentList"
-                Write-Host "Executing command: $command"
                 { Invoke-Expression $command } | Should -Not -Throw
 
                 # Get the scheduled task
@@ -248,7 +231,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
                 $testCaseInput.SetDefaultWindowsUser = $true
                 $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                 $command = "$guiPath $argumentList"
-                Write-Host "Executing command: $command"
+
                 { Invoke-Expression $command } | Should -Not -Throw
 
                 # Get the registry for LogonUI
@@ -270,7 +253,6 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
 
                 $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                 $command = "$guiPath $argumentList"
-                Write-Host "Executing command: $command"
                 { Invoke-Expression $command } | Should -Not -Throw
 
                 # Get the registry for LogonUI
@@ -293,7 +275,6 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
 
                 $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                 $command = "$guiPath $argumentList"
-                Write-Host "Executing command: $command"
                 { Invoke-Expression $command } | Should -Not -Throw
 
             }
@@ -304,7 +285,6 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
 
                 $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                 $command = "$guiPath $argumentList"
-                Write-Host "Executing command: $command"
                 { Invoke-Expression $command } | Should -Not -Throw
             }
         }
@@ -313,7 +293,6 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
                 # set the $testCaseInput
                 $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                 $command = "$guiPath $argumentList"
-                Write-Host "Executing command: $command"
                 { Invoke-Expression $command } | Should -Not -Throw
                 # Get the user profile subdirectory
                 $userProfilePath = "C:\Users\$($userToMigrateFrom)"
@@ -334,11 +313,10 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
                 # set the $testCaseInput
                 $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                 $command = "$guiPath $argumentList"
-                Write-Host "Executing command: $command"
-                $result = Invoke-Expression $command
-                # Convert the result to a string for easier matching
-                $result = $result | Out-String
-                $result | Should -Match "ERROR: User $($userToMigrateFrom) already exists."
+
+                {
+                    Invoke-Expression "$command 2>&1"
+                } | Should -Throw -ExpectedMessage "ERROR: User $($userToMigrateFrom) already exists."
                 $testFailureExpected = $true
             }
 
@@ -390,7 +368,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
     }
 }
 
-Describe "Start-Migration Tests" -Tag "InstallJC" -skip {
+Describe "Start-Migration Tests" -Tag "InstallJC" {
     # Import Functions
     BeforeAll {
         # import all functions
@@ -511,7 +489,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" -skip {
                     # Migrate the initialized user to the second username
                     $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                     $command = "$guiPath $argumentList"
-                    Write-Host "Executing command: $command"
+
                     { Invoke-Expression $command } | Should -Not -Throw
 
                     # get the system description
@@ -529,7 +507,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" -skip {
                     # Migrate the initialized user to the second username
                     $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                     $command = "$guiPath $argumentList"
-                    Write-Host "Executing command: $command"
+
                     { Invoke-Expression $command } | Should -Not -Throw
 
                     # get the system association:
@@ -551,7 +529,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" -skip {
                     # Migrate the initialized user to the second username
                     $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                     $command = "$guiPath $argumentList"
-                    Write-Host "Executing command: $command"
+
                     { Invoke-Expression $command } | Should -Not -Throw
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
@@ -576,7 +554,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" -skip {
                     # Migrate the initialized user to the second username
                     $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                     $command = "$guiPath $argumentList"
-                    Write-Host "Executing command: $command"
+
                     { Invoke-Expression $command } | Should -Not -Throw
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
@@ -603,7 +581,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" -skip {
                     # Migrate the initialized user to the second username
                     $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                     $command = "$guiPath $argumentList"
-                    Write-Host "Executing command: $command"
+
                     { Invoke-Expression $command } | Should -Not -Throw
 
                     # get the system association:
@@ -628,11 +606,9 @@ Describe "Start-Migration Tests" -Tag "InstallJC" -skip {
                     # Migrate the initialized user to the second username
                     $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                     $command = "$guiPath $argumentList"
-                    Write-Host "Executing command: $command"
-                    $result = Invoke-Expression $command
-                    # Convert the result to a string for easier matching
-                    $result = $result | Out-String
-                    $result | Should -Match "ERROR: The specified JumpCloudUsername does not exist"
+                    {
+                        Invoke-Expression "$command 2>&1"
+                    } | Should -Throw -ExpectedMessage "ERROR: The specified JumpCloudUsername does not exist"
 
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
