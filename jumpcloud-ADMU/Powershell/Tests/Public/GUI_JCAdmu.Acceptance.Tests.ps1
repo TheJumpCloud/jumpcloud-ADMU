@@ -21,7 +21,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
         . "$helpFunctionDir\Initialize-TestUser.ps1"
 
         # Define the path to the GUI executable.
-        $global:guiPath = "D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\exe\gui_jcadmu.exe"
+        $global:guiPath = "C:\Users\kmaranion\Desktop\jumpcloud-ADMU\jumpcloud-ADMU\Exe\gui_jcadmu.exe"
         if (-Not (Test-Path -Path $guiPath)) {
             throw "GUI executable not found at path: $($guiPath)"
         }
@@ -82,8 +82,8 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
             {
-                Invoke-Expression "$command 2>&1"
-            } | Should -Throw
+                Invoke-Expression "$command 2>&1" -Verbose
+            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter requires the 'JumpCloudUserID' parameter to be set."
 
         }
 
