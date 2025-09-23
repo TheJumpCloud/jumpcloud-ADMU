@@ -82,7 +82,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
             Write-Host "Executing command: $command"
-            $result = Invoke-Expression $command
+            $result = Invoke-Expression $command -Verbose
 
             Write-Host "Result: $result"
             # Convert the result to a string for easier matching
