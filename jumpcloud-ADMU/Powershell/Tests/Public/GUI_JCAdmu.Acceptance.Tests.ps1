@@ -478,7 +478,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                         Remove-JcSdkUser -Id $existing.Id
                     }
                     # create the user
-                    $GeneratedUser = New-JcSdkUser -Email:("$($userToMigrateTo)@jumpcloudadmu.com") -Username:("$($userToMigrateTo)")
+                    $GeneratedUser = New-JcSdkUser -Email:("$($userToMigrateTo)@jumpcloudadmu.com") -Username:("$($userToMigrateTo)") -Password:($tempPassword)
                 }
                 It "Report Status to JumpCloud Description" {
                     # set the $testCaseInput
