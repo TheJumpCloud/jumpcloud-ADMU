@@ -43,7 +43,6 @@ Describe "ConvertTo-ArgumentList Tests" -Tag "Acceptance" {
             $result = ConvertTo-ArgumentList -InputHashtable $testParams
 
             $result = $result -join ' '
-
             $expectedArguments = "-JumpCloudOrgID:123456789012345678901234 -SetDefaultWindowsUser:`$true -systemContextBinding:`$true -UpdateHomePath:`$true -JumpCloudUserName:reid.sullivan -AutoBindJCUser:`$true -ForceReboot:`$true -TempPassword:P@ssw0rd123! -SelectedUserName:mycorpsoft/reid.sullivan -ReportStatus:`$true -InstallJCAgent:`$true -LeaveDomain:`$true"
 
 

@@ -98,14 +98,14 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $command = "$guiPath $argumentList"
             {
                 Invoke-Expression "$command 2>&1"
-            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudAPIKey."
+            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudAPIKey. Please remove these parameters when running SystemContextBinding and try again."
 
             $testCaseInput.Add('JumpCloudOrgID', "123456789012345678901234")
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
             {
                 Invoke-Expression "$command 2>&1"
-            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudAPIKey, JumpCloudOrgID."
+            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudAPIKey, JumpCloudOrgID. Please remove these parameters when running SystemContextBinding and try again."
         }
         It "Tests that the start-migration function throws for 'systemContextBinding' parameters when InstallJumpCloudAgent parameter is set" {
             # set the JumpCloudUserID to a 24 char string
@@ -117,7 +117,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $command = "$guiPath $argumentList"
             {
                 Invoke-Expression "$command 2>&1"
-            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: InstallJCAgent."
+            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: InstallJCAgent. Please remove these parameters when running SystemContextBinding and try again."
         }
         It "Tests that the start-migration function throws for 'systemContextBinding' parameters when JumpCloudConnectKey parameter is set" {
             # set the JumpCloudUserID to a 24 char string
@@ -129,7 +129,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $command = "$guiPath $argumentList"
             {
                 Invoke-Expression "$command 2>&1"
-            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudConnectKey."
+            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: JumpCloudConnectKey. Please remove these parameters when running SystemContextBinding and try again."
         }
 
         It "Should migrate a user successfully using required command-line parameters" {
@@ -608,7 +608,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $command = "$guiPath $argumentList"
                     {
                         Invoke-Expression "$command 2>&1"
-                    } | Should -Throw -ExpectedMessage "ERROR: The variable cannot be validated because the value  is not a valid value for the JumpCloudUserID variable."
+                    } | Should -Throw -ExpectedMessage "ERROR: The specified JumpCloudUsername does not exist"
 
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
