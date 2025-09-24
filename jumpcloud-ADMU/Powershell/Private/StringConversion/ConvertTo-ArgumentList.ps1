@@ -12,19 +12,6 @@ function ConvertTo-ArgumentList {
     .PARAMETER InputHashtable
         The hashtable to be converted into an argument list. This parameter is mandatory.
 
-    .EXAMPLE
-        PS C:\> $myParams = @{
-            Name = "Test"
-            Verbose = $true
-            Count = 100
-            OutputPath = $null
-            EmptyParam = ""
-        }
-        PS C:\> ConvertTo-ArgumentList -InputHashtable $myParams
-
-        -Name:Test
-        -Verbose:$true
-        -Count:100
 
     .OUTPUTS
         [System.Collections.Generic.List[string]]

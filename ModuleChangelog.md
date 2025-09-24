@@ -1,24 +1,26 @@
-## 2.8.11
+## 2.9.0
 
-Release Date: September 23, 2025
+Release Date: September 24, 2025
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Updated gui_jcadmu.exe to handle parameters for bulk ADMU migration
 ```
 
 #### FEATURES:
 
-{{Fill in the Features}}
+Command-Line Parameter Support for gui_jcadmu.exe
+- The ADMU GUI executable can now be invoked with command-line arguments to automate and script user migrations.
 
 #### IMPROVEMENTS:
 
-{{Fill in the Improvements}}
+- The ADMU Template Build script has been updated to accept and process parameter inputs, embedding them directly into the template file.
+- The build process for gui_jcadmu.exe was enhanced to create a mapping of string and boolean parameters, ensuring proper handling of command-line arguments.
 
 #### BUG FIXES:
 
-{{Fill in the Bug Fixes}}
+No bug fixes in this release.
 
 ## 2.8.10
 
