@@ -117,7 +117,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             $command = "$guiPath $argumentList"
             {
                 Invoke-Expression "$command 2>&1"
-            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: InstallJCAgent. Please remove these parameters when running SystemContextBinding and try again."
+            } | Should -Throw -ExpectedMessage "ERROR: The 'SystemContextBinding' parameter cannot be used with the following parameters: InstallJCAgent, AutoBindJCUser. Please remove these parameters when running SystemContextBinding and try again."
         }
         It "Tests that the start-migration function throws for 'systemContextBinding' parameters when JumpCloudConnectKey parameter is set" {
             # set the JumpCloudUserID to a 24 char string
@@ -316,7 +316,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
 
                 {
                     Invoke-Expression "$command 2>&1"
-                } | Should -Throw -ExpectedMessage "ERROR: User ADMU_WQEBG already exists.."
+                } | Should -Throw -ExpectedMessage "ERROR: User $userToMigrateFrom already exists.."
                 $testFailureExpected = $true
             }
 

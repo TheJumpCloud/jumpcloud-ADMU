@@ -128,13 +128,16 @@ Function Start-Migration {
             if ($invalidStringParams -or ($invalidBoolParams | Where-Object { $PSBoundParameters[$_] -eq $true })) {
                 if ($invalidStringParams) {
                     Throw "The 'SystemContextBinding' parameter cannot be used with the following parameters: $($invalidStringParams -join ', '). Please remove these parameters when running SystemContextBinding and try again."
+                    break
                 } elseif ($invalidBoolParams) {
                     Throw "The 'SystemContextBinding' parameter cannot be used with the following parameters: $($invalidBoolParams -join ', '). Please remove these parameters when running SystemContextBinding and try again."
+                    break
                 } else {
                     Throw "The 'SystemContextBinding' parameter cannot be used with the following parameters: $($invalidStringParams + $invalidBoolParams -join ', '). Please remove these parameters when running SystemContextBinding and try again."
+                    break
                 }
 
-                break
+
             }
             if (-not $PSBoundParameters.ContainsKey('JumpCloudUserID')) {
                 Throw "The 'SystemContextBinding' parameter requires the 'JumpCloudUserID' parameter to be set."
