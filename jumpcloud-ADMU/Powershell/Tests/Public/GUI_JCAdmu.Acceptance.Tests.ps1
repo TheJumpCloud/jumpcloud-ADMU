@@ -316,7 +316,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
 
                 {
                     Invoke-Expression "$command 2>&1"
-                } | Should -Throw -ExpectedMessage "ERROR: User $userToMigrateFrom already exists.."
+                } | Should -Throw -ExpectedMessage "ERROR: User $userToMigrateFrom already exists."
                 $testFailureExpected = $true
             }
 
