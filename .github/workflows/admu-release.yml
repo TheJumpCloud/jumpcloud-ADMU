@@ -52,7 +52,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   Setup-Build-Dependencies:
     needs: ["Filter-Branch", "Check-PR-Labels"]
-    runs-on: Windows-2022
+    runs-on: Windows-2022 #Note: Using Windows-2022 for now due to stuck tests and slow build from Windows-Latest(2025). Windows-2022 is currently compatible with our current dependencies, we can create a new card to track updating to Windows-2025/latest when our dependencies are compatible after testing. Windows 2022 have 3 year of support. Ref: https://github.com/actions/runner-images/issues/12647
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
