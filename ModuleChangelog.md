@@ -24,7 +24,7 @@ No bug fixes in this release.
 
 ## 2.8.10
 
-Release Date: September 16, 2025
+Release Date: September 9, 2025
 
 #### RELEASE NOTES
 
