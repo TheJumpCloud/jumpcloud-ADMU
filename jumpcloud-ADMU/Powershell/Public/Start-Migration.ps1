@@ -127,9 +127,7 @@ Function Start-Migration {
             $invalidBoolParams = @('InstallJCAgent', 'AutoBindJCUser') | Where-Object { $PSBoundParameters.ContainsKey($_) }
             $trueBoolParams = $invalidBoolParams | Where-Object { $PSBoundParameters[$_] -eq $true }
             if ($invalidStringParams -or $trueBoolParams) {
-                $allInvalidParams = @()
-                if ($invalidStringParams) { $allInvalidParams += $invalidStringParams }
-                if ($trueBoolParams) { $allInvalidParams += $trueBoolParams }
+                $allInvalidParams = $invalidStringParams + $trueBoolParams
                 Throw "The 'SystemContextBinding' parameter cannot be used with the following parameters: $($allInvalidParams -join ', '). Please remove these parameters when running SystemContextBinding and try again."
 
 
