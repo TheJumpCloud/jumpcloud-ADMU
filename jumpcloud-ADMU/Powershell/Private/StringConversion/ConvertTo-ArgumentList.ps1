@@ -30,7 +30,7 @@ function ConvertTo-ArgumentList {
     # Iterate through each key-value pair in the input hashtable.
     foreach ($entry in $InputHashtable.GetEnumerator()) {
         # Only process entries where the value is not null or an empty string.
-        if ($null -ne $entry.Value -and ($entry.Value -ne '' -or $entry.Value -isnot [string])) {
+        if ($null -ne $entry.Value -and (-not ($entry.Value -is [string]) -or $entry.Value -ne '')) {
             $key = $entry.Key
             $value = $entry.Value
 
