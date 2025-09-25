@@ -22,9 +22,9 @@ Describe "ConvertTo-ArgumentList Tests" -Tag "Acceptance" {
         It "should produce correctly formatted arguments for strings and booleans, and skip null/empty values" {
             # 1. Define a sample hashtable using your parameters with various values
             $testParams = @{
-                JumpCloudUserName     = "reid.sullivan"
+                JumpCloudUserName     = "some.user"
                 SelectedUserName      = "mycorpsoft/reid.sullivan"
-                TempPassword          = "P@ssw0rd123!"
+                TempPassword          = "Temp123!"
                 LeaveDomain           = $true
                 ForceReboot           = $true
                 UpdateHomePath        = $true
@@ -43,11 +43,10 @@ Describe "ConvertTo-ArgumentList Tests" -Tag "Acceptance" {
             $result = ConvertTo-ArgumentList -InputHashtable $testParams
 
             $result = $result -join ' '
-            $expectedArguments = "-JumpCloudOrgID:123456789012345678901234 -SetDefaultWindowsUser:`$true -systemContextBinding:`$true -UpdateHomePath:`$true -JumpCloudUserName:some.user -AutoBindJCUser:`$true -ForceReboot:`$true -TempPassword:Temp123!Temp123! -SelectedUserName:mycorpsoft/reid.sullivan -ReportStatus:`$true -InstallJCAgent:`$true -LeaveDomain:`$true"
 
+            $expectedArguments = "-JumpCloudOrgID:123456789012345678901234 -SetDefaultWindowsUser:`$true -systemContextBinding:`$true -UpdateHomePath:`$true -JumpCloudUserName:some.user -AutoBindJCUser:`$true -ForceReboot:`$true -TempPassword:Temp123! -SelectedUserName:mycorpsoft/reid.sullivan -ReportStatus:`$true -InstallJCAgent:`$true -LeaveDomain:`$true"
 
             $escapedExpectedArguments = [System.Text.RegularExpressions.Regex]::Escape($expectedArguments)
-
             $result | Should -Match $escapedExpectedArguments
         }
     }

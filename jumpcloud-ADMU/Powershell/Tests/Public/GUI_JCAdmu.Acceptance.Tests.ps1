@@ -75,9 +75,6 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             #$argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $testCaseInput.SystemContextBinding = $true
             $testCaseInput.JumpCloudUserID = $null
-            # Remove install JC Agent and autobind JC User if they exist
-            $testCaseInput.InstallJCAgent = $null
-            $testCaseInput.AutoBindJCUser = $null
             # Convert to argument list
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
@@ -91,9 +88,6 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             # set the JumpCloudUserID to a 24 char string
             $testCaseInput.JumpCloudUserID = "123456789012345678901234"
             $testCaseInput.Add('JumpCloudAPIKey', "123456789012345678901234")
-            # Remove install JC Agent and autobind JC User if they exist
-            $testCaseInput.InstallJCAgent = $null
-            $testCaseInput.AutoBindJCUser = $null
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
             {
@@ -113,6 +107,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
 
             # set the InstallJCAgent to true
             $testCaseInput.InstallJCAgent = $true
+            $testCaseInput.AutoBindJCUser = $true
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
             {
@@ -123,7 +118,6 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
             # set the JumpCloudUserID to a 24 char string
             $testCaseInput.JumpCloudUserID = "123456789012345678901234"
             # set the InstallJCAgent to true
-            $testCaseInput.InstallJCAgent = $null
             $testCaseInput.Add('JumpCloudConnectKey', "123456789012345678901234")
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
@@ -133,7 +127,6 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
         }
 
         It "Should migrate a user successfully using required command-line parameters" {
-            $testCaseInput.InstallJCAgent = $null
             $testCaseInput.SystemContextBinding = $false
             $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
             $command = "$guiPath $argumentList"
