@@ -284,7 +284,7 @@ function Get-LatestADMUGUIExe {
             $latestRelease = Invoke-RestMethod -Uri $apiUrl -ErrorAction Stop
 
             # Find the specific GUI executable asset
-            $exeAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' } # <-- MODIFIED LINE
+            $exeAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
 
             if ($exeAsset) {
                 $downloadUrl = $exeAsset.browser_download_url
