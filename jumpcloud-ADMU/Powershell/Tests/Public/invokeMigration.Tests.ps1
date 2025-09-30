@@ -567,7 +567,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
     }
     Context "Get-LatestADMUGUIExe Function" {
         BeforeAll {
-            # get the "Confirm-RequiredModule" function from the script
+            # Import function definitions required for Get-LatestADMUGUIExe tests from the script
             $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
 
             $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
