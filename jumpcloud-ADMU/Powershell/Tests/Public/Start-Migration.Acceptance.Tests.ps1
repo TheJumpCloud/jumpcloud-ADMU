@@ -1,4 +1,4 @@
-Describe "Start-Migration Tests" -Tag "Migration Parameters" -skip {
+Describe "Start-Migration Tests" -Tag "Migration Parameters" {
     # Import Functions
     BeforeAll {
         # import all functions
@@ -298,7 +298,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" -skip {
         }
     }
 }
-Describe "Start-Migration Tests" -Tag "InstallJC" -skip{
+Describe "Start-Migration Tests" -Tag "InstallJC" {
     # Import Functions
     BeforeAll {
         # import all functions
