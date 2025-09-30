@@ -580,7 +580,7 @@ if ($UsersToMigrate) {
 $guiJcadmuPath = "C:\Windows\Temp\gui_jcadmu.exe" # Exe path
 
 # Download the latest ADMU GUI executable
-Get-LatestADMUGUIExe #Download the latest ADMU GUI executable
+Get-LatestADMUGUIExe # Download the latest ADMU GUI executable
 
 # Validate the downloaded file against the official release hash
 Test-ExeSHA -filePath $guiJcadmuPath

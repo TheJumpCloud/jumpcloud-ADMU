@@ -686,8 +686,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
             # Remove this line Get-LatestADMUGUIExe # Download the latest ADMU GUI executable
             $scriptContent = Get-Content -Path (Join-Path $PSScriptRoot 'invokeScript.ps1')
-            $regexPattern = 'Get-LatestADMUGUIExe #Download the latest ADMU GUI executable'
-            $replaceExeLine = '#Get-LatestADMUGUIExe #Download the latest ADMU GUI executable'
+            $regexPattern = 'Get-LatestADMUGUIExe # Download the latest ADMU GUI executable'
+            $replaceExeLine = '#Get-LatestADMUGUIExe # Download the latest ADMU GUI executable'
             $scriptContent = $scriptContent -replace $regexPattern, $replaceExeLine
 
             # Remove the Test-Hash function call
