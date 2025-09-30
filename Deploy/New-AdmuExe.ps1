@@ -77,6 +77,8 @@ If (-not [System.String]::IsNullOrEmpty($PSD1Version)) {
     Write-Host "Size (bytes): $($guiExeFile.Length)"
     Write-Host "SHA256 Hash: $guiHash"
     Write-Host "gui_jcadmu.exe was generated successfully"
+    # Copy the generated exe to the C:Windows\Temp folder for testing purposes
+    Copy-Item -Path $guiOutputPath -Destination "C:\Windows\Temp\gui_jcadmu.exe" -Force
 } Else {
     Write-Error ('Unable to find version number in "' + $PSD1Path + '" using regex "' + $VersionPsd1Regex + '"')
     throw "gui_jcadmu.exe was not generated"
