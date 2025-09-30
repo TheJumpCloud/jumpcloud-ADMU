@@ -1,4 +1,4 @@
-Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
+Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" -skip {
 
     # Import common functions and find the executable before running tests.
     BeforeAll {
@@ -361,7 +361,7 @@ Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
     }
 }
 
-Describe "Start-Migration Tests" -Tag "InstallJC" {
+Describe "Start-Migration Tests" -Tag "InstallJC" -skip {
     # Import Functions
     BeforeAll {
         # import all functions

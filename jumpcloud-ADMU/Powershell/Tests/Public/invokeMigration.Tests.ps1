@@ -631,6 +631,10 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
     Context "Remote Migration Tests" {
         # This block runs once before any tests in this 'Describe' block.
         BeforeAll {
+            # Copy the exe file from D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\exe\gui_jcadmu.exe to C:\Windows\Temp
+            $guiPath = Join-Path $PSScriptRoot '..\..\..\..\jumpCloud-Admu\Exe\gui_jcadmu.exe'
+            $destinationPath = Join-Path -Path 'C:\Windows\Temp' -ChildPath 'gui_jcadmu.exe'
+            Copy-Item -Path $guiPath -Destination $destinationPath -Force
             # Get the original script content
             $admuInvoke = Get-Content -Path $global:remoteInvoke -Raw
             $pattern = '\#region variables[\s\S]*\#endregion variables'
