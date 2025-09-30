@@ -427,11 +427,8 @@ function Test-ExeSHA {
         if (-not (Test-Path -Path $filePath)) {
             Throw "The gui_jcadmu.exe file was not found at: '$filePath'."
         }
-        # TODO: Uncomment this to get the official SHA256 from GitHub. Will need to test after release
-        # $releaseSHA256 = Get-JcadmuGuiSha256
-        # $releaseSHA256 = $releaseSHA256.SHA256
-        # TODO: Remove this hardcoded value when using the live function above.
-        $releaseSHA256 = '353318daf345dd03b5c37788b6ecda6a5124501aaca9afe5ae4efa4689d8f907'
+        $releaseSHA256 = Get-JcadmuGuiSha256
+        $releaseSHA256 = $releaseSHA256.SHA256
 
         # Get the SHA256 of the local file
         $localFileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash.ToLower()
@@ -440,7 +437,6 @@ function Test-ExeSHA {
         Write-Host "[status] Local File SHA256:  $localFileHash"
         Write-Host "`nValidating the downloaded file against the official release hash..."
 
-        # --- FIX: Compare the local hash against the string variable ---
         if ($localFileHash -eq $releaseSHA256.ToLower()) {
             Write-Host "[status] SUCCESS: Hash validation passed! The local file matches the official release."
         } else {
@@ -665,9 +661,9 @@ foreach ($user in $UsersToMigrate) {
     if (-not (Test-Path -Path $guiJcadmuPath)) {
         Throw "The gui_jcadmu.exe file was not found at: '$guiJcadmuPath'. Please ensure the file is present before running the migration."
     }
-    # Do invoke Expression to call the ADMU command with the parameters 2>&1
+    # Do invoke Expression to call the ADMU command with the parameters
     Write-Host "[status] Executing migration command..."
-    & $guiJcadmuPath $convertedParams 2>&1
+    & $guiJcadmuPath $convertedParams
 
 
     Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)"
