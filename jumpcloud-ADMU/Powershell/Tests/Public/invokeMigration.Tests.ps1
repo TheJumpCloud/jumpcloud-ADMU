@@ -481,91 +481,87 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             . (Join-Path $PSScriptRoot 'invokeFunctions.ps1')
         }
         It "Confirm-RequiredModule should return true when all required modules are installed" {
-            $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
-            foreach ($requiredModule in $requiredModules) {
-                # get the latest version of the module
-                $module = (Find-Module -Name $requiredModule)
-                # Arrange: Mock Get-InstalledModule to return a list of installed modules
-                Mock Get-InstalledModule -ParameterFilter { $Name -eq 'PowerShellGet' } { return [PSCustomObject]@{
-                        Version     = $module.Version
-                        Name        = $requiredModule
-                        Repository  = 'PSGallery'
-                        Description = $module.Description
-                    }
+            $requiredModule = 'PowerShellForGitHub'
+            # get the latest version of the module
+            $module = (Find-Module -Name $requiredModule)
+            # Arrange: Mock Get-InstalledModule to return a list of installed modules
+            Mock Get-InstalledModule -ParameterFilter { $Name -eq 'PowerShellForGitHub' } { return [PSCustomObject]@{
+                    Version     = $module.Version
+                    Name        = $requiredModule
+                    Repository  = 'PSGallery'
+                    Description = $module.Description
                 }
-
             }
+
+
             # Act & Assert: Confirm-RequiredModule should return true
-            Confirm-RequiredModule | Should -BeTrue
+            Confirm-RequiredModule -requiredModule $requiredModule | Should -BeTrue
         }
         It "Should Throw and return false if a required module update fails" {
-            $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
-            foreach ($requiredModule in $requiredModules) {
-                Mock Get-InstalledModule -ParameterFilter { $Name -eq $requiredModule } {
-                    return [PSCustomObject]@{
-                        Version = '1.0.0';
-                        Name    = $requiredModule
-                    }
+            $requiredModule = 'PowerShellForGitHub'
+            Mock Get-InstalledModule -ParameterFilter { $Name -eq $requiredModule } {
+                return [PSCustomObject]@{
+                    Version = '1.0.0';
+                    Name    = $requiredModule
                 }
-                Mock Find-Module -ParameterFilter { $Name -eq $requiredModule } {
-                    return [PSCustomObject]@{
-                        Version = '2.0.0';
-                        Name    = $requiredModule
-                    }
-                }
-                Mock Uninstall-Module -ParameterFilter { $Name -eq $requiredModule } { }
-                Mock Install-Module -ParameterFilter { $Name -eq $requiredModule } { throw "Simulated update failure" }
-                # Get the result of Confirm-RequiredModule
-                $thrown = $false
-                $result = $null
-                try {
-                    $result = Confirm-RequiredModule
-                } catch {
-                    $thrown = $true
-                    $_.Exception.Message | Should -Be "Failed to update $requiredModule module, exiting..."
-                }
-                $thrown | Should -BeTrue
-                $result | Should -BeFalse
             }
+            Mock Find-Module -ParameterFilter { $Name -eq $requiredModule } {
+                return [PSCustomObject]@{
+                    Version = '2.0.0';
+                    Name    = $requiredModule
+                }
+            }
+            Mock Uninstall-Module -ParameterFilter { $Name -eq $requiredModule } { }
+            Mock Install-Module -ParameterFilter { $Name -eq $requiredModule } { throw "Simulated update failure" }
+            # Get the result of Confirm-RequiredModule
+            $thrown = $false
+            $result = $null
+            try {
+                $result = Confirm-RequiredModule -requiredModules $requiredModule
+            } catch {
+                $thrown = $true
+                $_.Exception.Message | Should -Be "Failed to update $requiredModule module, exiting..."
+            }
+            $thrown | Should -BeTrue
+            $result | Should -BeFalse
+
         }
         It "Should Throw and return false if a required module can not be imported" {
-            $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
-            foreach ($requiredModule in $requiredModules) {
-                Mock Import-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
-                Mock Get-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
+            $requiredModule = 'PowerShellForGitHub'
+            Mock Import-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
+            Mock Get-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
 
-                # Get the result of Confirm-RequiredModule
-                $thrown = $false
-                $result = $null
-                try {
-                    $result = Confirm-RequiredModule
-                } catch {
-                    $thrown = $true
-                    $_.Exception.Message | Should -Be "Failed to import $requiredModule module, exiting..."
-                }
-                $thrown | Should -BeTrue
-                $result | Should -BeFalse
-
+            # Get the result of Confirm-RequiredModule
+            $thrown = $false
+            $result = $null
+            try {
+                $result = Confirm-RequiredModule -requiredModules $requiredModule
+            } catch {
+                $thrown = $true
+                $_.Exception.Message | Should -Be "Failed to import $requiredModule module, exiting..."
             }
+            $thrown | Should -BeTrue
+            $result | Should -BeFalse
+
+
         }
 
         It "Should install and import a required module if it was not installed previously" {
-            $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
-            foreach ($requiredModule in $requiredModules) {
-                # Mock Get-InstalledModule to return null, simulating the module not being installed
-                Mock Get-InstalledModule -ParameterFilter { $Name -eq $requiredModule } { return $null }
-                Mock Write-Host {}
+            $requiredModule = 'PowerShellForGitHub'
+            # Mock Get-InstalledModule to return null, simulating the module not being installed
+            Mock Get-InstalledModule -ParameterFilter { $Name -eq $requiredModule } { return $null }
+            Mock Write-Host {}
 
-                # Get the result of Confirm-RequiredModule
-                $result = Confirm-RequiredModule
-                # allSuccess should be true
-                $result | Should -BeTrue
-                # within the relevant block, Write-Host should be called with the status message
-                Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[status] $requiredModule module not found, installing..." }
-            }
+            # Get the result of Confirm-RequiredModule
+            $result = Confirm-RequiredModule -requiredModules $requiredModule
+            # allSuccess should be true
+            $result | Should -BeTrue
+            # within the relevant block, Write-Host should be called with the status message
+            Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[status] $requiredModule module not found, installing..." }
+
         }
     }
-    Context "Get-LatestADMUGUIExe Function" {
+    Context "Get-LatestADMUGUIExe Function"  {
         BeforeAll {
             # Import function definitions required for Get-LatestADMUGUIExe tests from the script
             $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
@@ -628,7 +624,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             $hash | Should -Not -BeNullOrEmpty
         }
     }
-    Context "Remote Migration Tests" {
+    Context "Remote Migration Tests"  {
         # This block runs once before any tests in this 'Describe' block.
         BeforeAll {
             # Copy the exe file from D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\exe\gui_jcadmu.exe to C:\Windows\Temp
