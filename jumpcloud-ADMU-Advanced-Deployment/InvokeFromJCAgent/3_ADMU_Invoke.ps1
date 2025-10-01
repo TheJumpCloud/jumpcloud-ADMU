@@ -121,9 +121,9 @@ Function Confirm-MigrationParameter {
 Function Confirm-RequiredModule {
     [CmdletBinding()]
     param (
-        [Parameter()]
+        [Parameter(Mandatory = $true)]
         [system.string[]]
-        $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
+        $requiredModules
     )
     # this checks the installed modules
     # returns True/False
@@ -656,7 +656,6 @@ foreach ($user in $UsersToMigrate) {
     Write-Host "[status] Begin Migration for JumpCloudUser: $($user.JumpCloudUserName)"
     # Convert Migration Parameters to Argument List
     $convertedParams = ConvertTo-ArgumentList -InputHashtable $migrationParams
-    Write-Host "[status] Converted Parameters: $($convertedParams -join ' ')"
     # Get the Gui_jcadmu.exe path
     if (-not (Test-Path -Path $guiJcadmuPath)) {
         Throw "The gui_jcadmu.exe file was not found at: '$guiJcadmuPath'. Please ensure the file is present before running the migration."
@@ -712,6 +711,7 @@ if ($ForceRebootAfterMigration) {
         $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
         $regex = 'systemKey\":\"(\w+)\"'
         $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+        $postMigrationBehavior = $postMigrationBehavior.ToLower() # Restart or Shutdown endpoint is case sensitive
         if ([string]::IsNullOrEmpty($systemKey)) {
             Write-Host "JumpCloud SystemID could not be verified, exiting..."
             exit 1
@@ -738,4 +738,3 @@ if ($ForceRebootAfterMigration) {
 }
 #endregion restart/shutdown
 exit 0
-

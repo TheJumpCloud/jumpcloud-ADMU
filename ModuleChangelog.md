@@ -11,16 +11,16 @@ Updated gui_jcadmu.exe to handle parameters for bulk ADMU migration
 #### FEATURES:
 
 Command-Line Parameter Support for gui_jcadmu.exe
-- The ADMU GUI executable can now be invoked with command-line arguments to automate and script user migrations.
+- The ADMU GUI executable can now be invoked with command-line arguments to automate and script user migrations
 
 #### IMPROVEMENTS:
 
-- The ADMU Template Build script has been updated to accept and process parameter inputs, embedding them directly into the template file.
-- The build process for gui_jcadmu.exe was enhanced to create a mapping of string and boolean parameters, ensuring proper handling of command-line arguments.
+- The ADMU Template Build script has been updated to accept and process parameter inputs, embedding them directly into the template file
+- The build process for gui_jcadmu.exe was enhanced to create a mapping of string and boolean parameters, ensuring proper handling of command-line arguments
 
 #### BUG FIXES:
 
-No bug fixes in this release.
+Added a fix for Shutdown or Restart not working when using the API key
 
 ## 2.8.10
 
