@@ -87,6 +87,7 @@ jobs:
           # define dependencies for this ci workflow:
           $PSDependencies = @{
               'PowerShellGet'                         = @{Repository = 'PSGallery'; RequiredVersion = '3.0.12-beta' }
+              'PowershellForGitHub'                  = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
               'ps2exe'                                = @{Repository = 'PSGallery'; RequiredVersion = '1.0.13' }
               'PlatyPS'                               = @{Repository = 'PSGallery'; RequiredVersion = '0.14.2' }
               'JumpCloud.SDK.V1'                      = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
