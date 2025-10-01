@@ -1,6 +1,6 @@
 ## 2.9.0
 
-Release Date: October 01, 2025
+Release Date: October 1, 2025
 
 #### RELEASE NOTES
 

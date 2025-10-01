@@ -482,6 +482,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         }
         It "Confirm-RequiredModule should return true when all required modules are installed" {
             $requiredModule = 'PowerShellForGitHub'
+            Install-Module -Name $requiredModule -Force
             # get the latest version of the module
             $module = (Find-Module -Name $requiredModule)
             # Arrange: Mock Get-InstalledModule to return a list of installed modules
@@ -561,7 +562,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
         }
     }
-    Context "Get-LatestADMUGUIExe Function"  {
+    Context "Get-LatestADMUGUIExe Function" {
         BeforeAll {
             # Import function definitions required for Get-LatestADMUGUIExe tests from the script
             $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
@@ -624,7 +625,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             $hash | Should -Not -BeNullOrEmpty
         }
     }
-    Context "Remote Migration Tests"  {
+    Context "Remote Migration Tests" {
         # This block runs once before any tests in this 'Describe' block.
         BeforeAll {
             # Copy the exe file from D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\exe\gui_jcadmu.exe to C:\Windows\Temp
