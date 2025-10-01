@@ -123,11 +123,15 @@ Function Start-Migration {
         # parameter combination validation:
         # Validate parameter combinations when $systemContextBinding is set to $true
         if ($systemContextBinding -eq $true) {
-            $invalidStringParams = @('JumpCloudAPIKey', 'JumpCloudOrgID', 'InstallJCAgent', 'JumpCloudConnectKey') | Where-Object { $PSBoundParameters.ContainsKey($_) }
+            $invalidStringParams = @('JumpCloudAPIKey', 'JumpCloudOrgID', 'JumpCloudConnectKey') | Where-Object { $PSBoundParameters.ContainsKey($_) }
             $invalidBoolParams = @('InstallJCAgent', 'AutoBindJCUser') | Where-Object { $PSBoundParameters.ContainsKey($_) }
-            if ($invalidParams -or ($invalidBoolParams | Where-Object { $PSBoundParameters[$_] -eq $true })) {
-                Throw "The 'SystemContextBinding' parameter cannot be used with the following parameters: $($invalidParams -join ', ')."
-                break
+            $trueBoolParams = $invalidBoolParams | Where-Object { $PSBoundParameters[$_] -eq $true }
+            # Validate params
+            if ($invalidStringParams -or $trueBoolParams) {
+                $allInvalidParams = $invalidStringParams + $trueBoolParams
+                Throw "The 'SystemContextBinding' parameter cannot be used with the following parameters: $($allInvalidParams -join ', '). Please remove these parameters when running SystemContextBinding and try again."
+
+
             }
             if (-not $PSBoundParameters.ContainsKey('JumpCloudUserID')) {
                 Throw "The 'SystemContextBinding' parameter requires the 'JumpCloudUserID' parameter to be set."
@@ -151,7 +155,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.8.10'
+        $admuVersion = '2.9.0'
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
         $script:JumpCloudUserID = $JumpCloudUserID

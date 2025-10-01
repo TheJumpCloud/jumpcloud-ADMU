@@ -33,6 +33,89 @@ Function New-ADMUTemplate {
         $Private = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/*.ps1" -Recurse | Where-Object { ($_.fullname -notmatch "DisplayForms") -AND ($_.fullname -notmatch "DisplayAssets") } )
     }
     process {
+
+        # Define the parameter block for the top of the script
+        $paramBlockString = @"
+ Param (
+        [Parameter()]
+        [string]
+        `$JumpCloudUserName,
+
+        [Parameter()]
+        [string]
+        `$SelectedUserName,
+
+        [Parameter()]
+        [ValidateNotNullOrEmpty()]
+        [string]
+        `$TempPassword,
+
+        [Parameter()]
+        [bool]
+        `$LeaveDomain,
+
+        [Parameter()]
+        [bool]
+        `$ForceReboot,
+
+        [Parameter()]
+        [bool]
+        `$UpdateHomePath,
+
+        [Parameter()]
+        [bool]
+        `$InstallJCAgent,
+
+        [Parameter()]
+        [bool]
+        `$AutoBindJCUser,
+
+        [Parameter()]
+        [bool]
+        `$BindAsAdmin,
+
+        [Parameter()]
+        [bool]
+        `$SetDefaultWindowsUser,
+
+        [Parameter()]
+        [bool]
+        `$AdminDebug,
+
+        [Parameter()]
+        [string]
+        `$JumpCloudConnectKey,
+
+        [Parameter()]
+        [string]
+        `$JumpCloudAPIKey,
+
+        [Parameter()]
+        [string]
+        `$JumpCloudOrgID,
+
+        [Parameter()]
+        [bool]
+        `$ValidateUserShellFolder,
+
+        [Parameter(
+            DontShow)]
+        [bool]
+        `$systemContextBinding,
+
+        [Parameter(
+            DontShow)]
+        [string]
+        `$JumpCloudUserID,
+
+        [Parameter()]
+        [bool]
+        `$ReportStatus
+    )
+"@
+        # Add the param block to the top of the template string
+        $templateString = $paramBlockString + [Environment]::NewLine
+
         #define Run As Admin block
         $adminString = @"
 # Validate the user is an administrator
@@ -109,14 +192,29 @@ $formsContent
             $templateString += "$($functionContent)" + [Environment]::NewLine
         }
 
-        # Define executable region
-        # endRegion
+        #TODO: Check for auto param
         $executableRegion = @"
-`$formResults = Show-SelectionForm
-If (`$formResults) {
-    Start-Migration -inputObject:(`$formResults)
-} Else {
-    Write-Output ('Exiting ADMU process')
+if (`$PSBoundParameters.Count -eq 0) {
+
+    # --- GUI MODE ---
+    Write-ToLog "No command-line parameters found. Launching graphical user interface."
+    `$formResults = Show-SelectionForm
+
+    If (`$formResults) {
+        # The user clicked "Migrate" in the form.
+        Start-Migration -inputObject `$formResults
+    } Else {
+        # The user closed the form without migrating.
+        Write-Output 'Exiting ADMU process.'
+    }
+} else {
+
+    # --- COMMAND-LINE MODE ---
+    # If any parameters are present, assume non-interactive command-line execution.
+    Write-ToLog "Command-line parameters detected. Running in non-interactive mode."
+
+    Start-Migration @PSBoundParameters
+
 }
 "@
         # add executable region to the template
