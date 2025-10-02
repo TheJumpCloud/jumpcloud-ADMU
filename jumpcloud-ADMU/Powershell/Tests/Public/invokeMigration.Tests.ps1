@@ -727,7 +727,7 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
         # Migration with Valid data
         It "Should migrate the user to JumpCloud" {
             # Run invokeScript.ps1 and should return 0
-            . $PSScriptRoot\invokeScript.ps1
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Throw
 
             $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
             $logs | Should -Not -BeNullOrEmpty
@@ -737,7 +737,7 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
         # User2 Should have user1 profile
         It "User2 Should have user1 profile directory" {
             # Run invokeScript.ps1 and should return 0
-            . $PSScriptRoot\invokeScript.ps1
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Throw
 
             # test that the registry profile path for init user 2 is set to c:\users\initUser1
             $user2Sid = Test-UsernameOrSID -usernameOrSid $userToMigrateTo
@@ -752,7 +752,7 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
 
         It "Test Remigration" {
             # Run invokeScript.ps1 and should return 0
-            . $PSScriptRoot\invokeScript.ps1
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Throw
 
             $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
             $logs | Should -Not -BeNullOrEmpty
@@ -809,7 +809,7 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
                 Reg UNLOAD $hivePath *>&1
             }
 
-            . $PSScriptRoot\invokeScript.ps1
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Throw
 
             # Read the log
             $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
@@ -824,7 +824,7 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
             Set-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$userSid" -Name "ProfileImagePath" -Value "C:\Users\$userToMigrateTo.ADMU"
             Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$userSid" -Name "ProfileImagePath" | Should -Not -BeNullOrEmpty
 
-            . $PSScriptRoot\invokeScript.ps1
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Throw
 
             # Read the log
             $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
