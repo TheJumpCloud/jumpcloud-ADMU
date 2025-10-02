@@ -662,8 +662,17 @@ foreach ($user in $UsersToMigrate) {
     }
     # Do invoke Expression to call the ADMU command with the parameters
     Write-Host "[status] Executing migration command..."
-    & $guiJcadmuPath $convertedParams
 
+    $migrationOutput = & $guiJcadmuPath $convertedParams 2>&1 # Exe does not return exit codes, we capture the output instead
+
+    if ($migrationOutput -match "Script finished successfully") {
+        Write-Host "[status] Script finished successfully"
+        Write-Host $migrationOutput
+    } else {
+        Write-Host "[status] Migration encountered an issue"
+        Write-Host $migrationOutput
+        exit 1
+    }
 
     Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)"
     #region post-migration
