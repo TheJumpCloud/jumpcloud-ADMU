@@ -71,7 +71,7 @@ function Write-ToProgress {
         Write-Progress -Activity "Migration Progress" -percentComplete $percentComplete -status $statusMessage
         if ($SystemDescription.reportStatus) {
             if ($logLevel -eq "Error") {
-                $statusMessage = "Error occured during migration. Please check (C:\Windows\Temp\jcadmu.log) for more information."
+                $statusMessage = "Error occurred during migration. Please check (C:\Windows\Temp\jcadmu.log) for more information."
                 $Percent = "ERROR"
             } else {
                 $statusMessage = $statusMessages.$status
