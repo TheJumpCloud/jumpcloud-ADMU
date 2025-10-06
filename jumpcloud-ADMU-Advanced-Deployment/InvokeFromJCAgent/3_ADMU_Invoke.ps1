@@ -118,22 +118,135 @@ Function Confirm-MigrationParameter {
     # If all validation checks pass, return true.
     return $true
 }
+Function Confirm-ExecutionPolicy {
+    # this checks the execution policy
+    # returns True/False
+    begin {
+        $success = $true
+        $curExecutionPolicy = Get-ExecutionPolicy -List
+        $lines = $curExecutionPolicy -split "`n" | Where-Object { $_.Trim() -ne "" -and $_ -notmatch '^-{5}' -and $_ -notmatch 'Scope ExecutionPolicy' }
+        $policies = [PSCustomObject]@{
+            MachinePolicy = ""
+            UserPolicy    = ""
+            Process       = ""
+            CurrentUser   = ""
+            LocalMachine  = ""
+        }
+
+        $regex = '@\{Scope=(.+?); ExecutionPolicy=(.+?)\}'
+    }
+    process {
+        try {
+            foreach ($line in $lines) {
+                if ($line -match $regex) {
+                    $scope = $matches[1]
+                    $executionPolicy = $matches[2].Trim()
+                    switch ($scope) {
+                        "MachinePolicy" { $policies.MachinePolicy = $executionPolicy }
+                        "UserPolicy" { $policies.UserPolicy = $executionPolicy }
+                        "Process" { $policies.Process = $executionPolicy }
+                        "CurrentUser" { $policies.CurrentUser = $executionPolicy }
+                        "LocalMachine" { $policies.LocalMachine = $executionPolicy }
+                    }
+                }
+            }
+            # if the machinePolicy is set to Restricted, AllSigned or RemoteSigned, the ADMU script can not run
+            If (($policies.MachinePolicy -eq "Restricted") -or
+                ($policies.MachinePolicy -eq "AllSigned") -or
+                ($policies.MachinePolicy -eq "RemoteSigned")) {
+                Throw "Machine Policy is set to $($policies.MachinePolicy), this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
+                # Throw "Machine Policy is set to $($policies.MachinePolicy)"
+                $success = $false
+
+            }
+            If ($policies.MachinePolicy -eq "Unrestricted") {
+                Write-Host "[status] Machine Policy is set to Unrestricted, no changes made."
+                $success = $true
+                return
+            }
+            # If the Process policy is set to Restricted, AllSigned or RemoteSigned, we need to change it to Bypass
+            if (($policies.Process -eq "Restricted") -or
+                ($policies.Process -eq "AllSigned") -or
+                ($policies.Process -eq "RemoteSigned") -or
+                ($policies.Process -eq "Undefined")) {
+                Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), setting to Bypass"
+                try {
+                    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+                } catch {
+                    Throw "Failed to set Process execution policy to Bypass."
+                    $success = $false
+                }
+            } else {
+                Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), no changes made."
+            }
+            # If the localMachine policy is set to Restricted, AllSigned or RemoteSigned, we need to change it to Bypass
+            if (($policies.LocalMachine -eq "Restricted") -or
+                ($policies.LocalMachine -eq "AllSigned") -or
+                ($policies.LocalMachine -eq "RemoteSigned") -or
+                ($policies.LocalMachine -eq "Undefined")) {
+                Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), setting to Bypass"
+                try {
+                    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
+                } catch {
+                    Throw "Failed to set LocalMachine execution policy to Bypass."
+                    $success = $false
+                }
+            } else {
+                Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), no changes made."
+            }
+        } catch {
+            Throw "Exception occurred in Confirm-ExecutionPolicy: $($_.Exception.Message)"
+            $success = $false
+        }
+    }
+    end {
+        return $success
+    }
+}
 Function Confirm-RequiredModule {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)]
+        [Parameter()]
         [system.string[]]
-        $requiredModules
+        $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
     )
     # this checks the installed modules
     # returns True/False
     # set the security protocol to TLS 1.2
     begin {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+        $nugetRequiredVersion = "2.8.5.208"
         $allSuccess = $true
     }
     process {
-
+        $nugetSuccess = $false
+        $packageProviders = Get-PackageProvider -Force | Select-Object name
+        if (!($packageProviders.name -contains "nuget")) {
+            Write-Host "[status] NuGet not Found. Installing Package Provider"
+            try {
+                $installResponse = Install-PackageProvider -Name NuGet -RequiredVersion $nugetRequiredVersion -Force
+                Write-Host "[status] NuGet Module was successfully installed."
+            } catch {
+                $nugetURL = "https://onegetcdn.azureedge.net/providers/nuget-$($nugetRequiredVersion).package.swidtag"
+                $nugetResponse = Invoke-WebRequest $nugetURL
+                If ($nugetResponse.StatusCode -ne 200) {
+                    Throw "The NuGet package provider could not be installed from $nugetURL."
+                    $allSuccess = $false
+                }
+            }
+        } else {
+            Write-Host "[status] NuGet Module was previously installed, skipping installation."
+        }
+        # import the NuGet module
+        try {
+            write-host "[status] NuGet found. Importing into current session."
+            $importResponse = Import-PackageProvider -Name NuGet -RequiredVersion $nugetRequiredVersion -Force
+            write-host "[status] NuGet version $($ImportResponse.Version.ToString()) successfully imported."
+            $nugetSuccess = $true
+        } catch {
+            Throw "Could not import Nuget into the current session."
+            $allSuccess = $false
+        }
         # process the required modules
         foreach ($module in $requiredModules) {
             $moduleSuccess = $false
@@ -179,8 +292,8 @@ Function Confirm-RequiredModule {
         }
     }
     end {
-        # Return true if all required modules were installed/imported successfully
-        if ($allSuccess) {
+        # Return true if all required modules and NuGet were installed/imported successfully
+        if ($allSuccess -and $nugetSuccess) {
             return $true
         } else {
             return $false
@@ -261,190 +374,6 @@ Function Get-MigrationUsersFromCsv {
     }
 
 }
-function Get-LatestADMUGUIExe {
-    [CmdletBinding()]
-    [OutputType([PSCustomObject[]])]
-    param(
-        # The full path to the discovery CSV file.
-        [Parameter(Mandatory = $false)]
-        [string]$destinationPath = "C:\Windows\Temp"
-    )
-
-    begin {
-        $owner = "TheJumpCloud"
-        $repo = "jumpcloud-ADMU"
-        $apiUrl = "https://api.github.com/repos/$owner/$repo/releases/latest"
-    }
-
-    process {
-        try {
-            Write-Host "Querying GitHub API for the latest '$repo' release..." -ForegroundColor Yellow
-
-            # Get latest release data from the GitHub API
-            $latestRelease = Invoke-RestMethod -Uri $apiUrl -ErrorAction Stop
-
-            # Find the specific GUI executable asset
-            $exeAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
-
-            if ($exeAsset) {
-                $downloadUrl = $exeAsset.browser_download_url
-                $fileName = $exeAsset.name
-                $fullPath = Join-Path -Path $destinationPath -ChildPath $fileName
-
-                Write-Host "Downloading '$fileName' (Version $($latestRelease.tag_name))..." -ForegroundColor Yellow
-
-                Invoke-WebRequest -Uri $downloadUrl -OutFile $fullPath -ErrorAction Stop
-
-                Write-Host "Download complete! File saved to '$fullPath'." -ForegroundColor Green
-            } else {
-                Throw "Could not find 'gui_jcadmu.exe' in the latest release."
-            }
-        } catch {
-            Throw "Operation failed. The error was: $_"
-        }
-    }
-
-
-}
-function ConvertTo-ArgumentList {
-    <#
-    .SYNOPSIS
-        Converts a hashtable into a list of command-line arguments.
-
-    .DESCRIPTION
-        This function iterates through a given hashtable and converts each key-value pair
-        into a string formatted as "-Key:Value". It specifically handles boolean values
-        by converting them to lowercase string literals (e.g., '$true', '$false') and
-        skips any entries where the value is null or an empty string.
-
-    .PARAMETER InputHashtable
-        The hashtable to be converted into an argument list. This parameter is mandatory.
-
-
-    .OUTPUTS
-        [System.Collections.Generic.List[string]]
-        A list of strings, where each string is a formatted command-line argument.
-    #>
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [hashtable]
-        $InputHashtable
-    )
-
-    # Initialize a generic list to hold the formatted arguments.
-    $argumentList = [System.Collections.Generic.List[string]]::new()
-
-    # Iterate through each key-value pair in the input hashtable.
-    foreach ($entry in $InputHashtable.GetEnumerator()) {
-        # Only process entries where the value is not null or an empty string.
-        if ($null -ne $entry.Value -and (-not ($entry.Value -is [string]) -or $entry.Value -ne '')) {
-            $key = $entry.Key
-            $value = $entry.Value
-
-            # Format the value. Booleans are converted to lowercase string literals like '$true'.
-            # Other types are used as-is (they will be converted to strings automatically).
-            $formattedValue = if ($value -is [bool]) {
-                '$' + $value.ToString().ToLower()
-            } else {
-                $value
-            }
-
-            # Construct the argument string in the format -Key:Value and add it to the list.
-            $argument = "-{0}:{1}" -f $key, $formattedValue
-            $argumentList.Add($argument)
-        }
-    }
-
-    # Return the completed list of arguments.
-    return $argumentList
-}
-function Get-JcadmuGuiSha256 {
-    <#
-    .SYNOPSIS
-        Dynamically finds the latest JumpCloud ADMU release and retrieves the SHA256 hash from the asset's digest.
-
-    .DESCRIPTION
-        This function calls the GitHub API to find the most recent release for the TheJumpCloud/jumpcloud-ADMU repository.
-        It then iterates through the release's assets to find 'gui_jcadmu.exe' and extracts the official SHA256 hash
-        directly from the asset's 'digest' field. This is the most robust method as it relies on structured API data.
-
-    .EXAMPLE
-        PS C:\> Get-JcadmuGuiSha256
-
-        TagName  SHA256
-        -------  ------
-        v2.8.10  e132d7942b3429b1993e016d977d66f0a398fd31625b0f90507cb1273f362ac6
-
-    .OUTPUTS
-        [PSCustomObject] An object containing the release tag name and the corresponding SHA256 hash.
-    #>
-    [CmdletBinding()]
-    param()
-    begin {
-        $apiUrl = "https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/releases"
-        $releases = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers @{ "Accept" = "application/vnd.github.v3+json" }
-    }
-    process {
-        try {
-            if ($null -eq $releases -or $releases.Count -eq 0) {
-                throw "No releases were found for the repository."
-                return
-            }
-
-            $latestRelease = $releases[0]
-            $latestTag = $latestRelease.tag_name
-
-            # Find the specific asset within the 'assets' array
-            $targetAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
-
-            if ($targetAsset) {
-                $digest = $targetAsset.digest
-
-                if ($digest -and $digest.StartsWith('sha256:')) {
-                    $sha256 = $digest.Split(':')[1]
-                    return [PSCustomObject]@{
-                        TagName = $latestTag
-                        SHA256  = $sha256
-                    }
-                }
-            } else {
-                throw "Asset 'gui_jcadmu.exe' not found in the latest release (Tag: $latestTag)."
-            }
-        } catch {
-            throw "An API error or network issue occurred: $_"
-        }
-    }
-
-
-}
-function Test-ExeSHA {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$filePath
-    )
-    process {
-        if (-not (Test-Path -Path $filePath)) {
-            Throw "The gui_jcadmu.exe file was not found at: '$filePath'."
-        }
-        $releaseSHA256 = Get-JcadmuGuiSha256
-        $releaseSHA256 = $releaseSHA256.SHA256
-
-        # Get the SHA256 of the local file
-        $localFileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash.ToLower()
-
-        Write-Host "[status] Official SHA256: $releaseSHA256"
-        Write-Host "[status] Local File SHA256:  $localFileHash"
-        Write-Host "`nValidating the downloaded file against the official release hash..."
-
-        if ($localFileHash -eq $releaseSHA256.ToLower()) {
-            Write-Host "[status] SUCCESS: Hash validation passed! The local file matches the official release."
-        } else {
-            throw "[status] WARNING: HASH MISMATCH! The local file is different from the official release."
-        }
-    }
-}
-
 #endregion functionDefinitions
 
 #region validation
@@ -471,6 +400,9 @@ if ($confirmMigrationParameters) {
     Write-Host "[STATUS] Migration parameters validated successfully."
 }
 
+Confirm-ExecutionPolicy
+
+Confirm-RequiredModule -requiredModules @('PowerShellForGitHub', 'JumpCloud.ADMU')
 #endregion validation
 #region dataImport
 switch ($dataSource) {
@@ -576,15 +508,6 @@ if ($UsersToMigrate) {
 }
 
 #region migration
-
-$guiJcadmuPath = "C:\Windows\Temp\gui_jcadmu.exe" # Exe path
-
-# Download the latest ADMU GUI executable
-Get-LatestADMUGUIExe # Download the latest ADMU GUI executable
-
-# Validate the downloaded file against the official release hash
-Test-ExeSHA -filePath $guiJcadmuPath
-
 # Get the last user in the migration list
 $lastUser = $($UsersToMigrate | Select-Object -Last 1)
 
@@ -654,17 +577,7 @@ foreach ($user in $UsersToMigrate) {
     Write-Host "[status] Local domain status: $LocalDomainStatus"
     # Start the migration
     Write-Host "[status] Begin Migration for JumpCloudUser: $($user.JumpCloudUserName)"
-    # Convert Migration Parameters to Argument List
-    $convertedParams = ConvertTo-ArgumentList -InputHashtable $migrationParams
-    # Get the Gui_jcadmu.exe path
-    if (-not (Test-Path -Path $guiJcadmuPath)) {
-        Throw "The gui_jcadmu.exe file was not found at: '$guiJcadmuPath'. Please ensure the file is present before running the migration."
-    }
-    # Do invoke Expression to call the ADMU command with the parameters
-    Write-Host "[status] Executing migration command..."
-    & $guiJcadmuPath $convertedParams
-
-
+    Start-Migration @migrationParams
     Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)"
     #region post-migration
     # Add any addition code here to modify the user post-migration
@@ -711,7 +624,6 @@ if ($ForceRebootAfterMigration) {
         $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
         $regex = 'systemKey\":\"(\w+)\"'
         $systemKey = [regex]::Match($config, $regex).Groups[1].Value
-        $postMigrationBehavior = $postMigrationBehavior.ToLower() # Restart or Shutdown endpoint is case sensitive
         if ([string]::IsNullOrEmpty($systemKey)) {
             Write-Host "JumpCloud SystemID could not be verified, exiting..."
             exit 1
