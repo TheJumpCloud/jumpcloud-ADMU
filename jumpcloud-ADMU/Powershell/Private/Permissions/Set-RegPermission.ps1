@@ -53,10 +53,35 @@ function Set-RegPermission {
 
     # Step 1: Grant target user full control inheritance on root folder
     Write-ToLog "Granting permissions to: $TargetAccountIcacls"
-    $icaclsGrantResult = & icacls.exe $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /C /Q 2>&1
+
+    # # First verify the path exists
+    # if (-not (Test-Path $FilePath)) {
+    #     Write-ToLog "Warning: Path $FilePath does not exist. Skipping permission operation."
+    #     return
+    # }
+
+    # Use /L flag to exclude junction points and symbolic links to avoid circular references
+    $icaclsGrantResult = & icacls.exe $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /L /C /Q 2>&1
+
+    # Filter out common expected "Access is denied" messages for system junction points
+    $filteredErrors = $icaclsGrantResult | Where-Object {
+        $_ -notmatch "Application Data.*Access is denied" -and
+        $_ -notmatch "My Documents.*Access is denied" -and
+        $_ -notmatch "Start Menu.*Access is denied" -and
+        $_ -notmatch "Templates.*Access is denied" -and
+        $_ -notmatch "NetHood.*Access is denied" -and
+        $_ -notmatch "PrintHood.*Access is denied" -and
+        $_ -notmatch "Recent.*Access is denied"
+    }
+
     if ($LASTEXITCODE -ne 0) {
-        Write-ToLog "Warning: icacls grant operation had issues. Exit code: $LASTEXITCODE"
-        Write-ToLog "icacls output: $($icaclsGrantResult -join ' ')"
+        # Only log if there are non-filtered errors
+        if ($filteredErrors.Count -gt 0) {
+            Write-ToLog "Warning: icacls grant operation had issues. Exit code: $LASTEXITCODE"
+            Write-ToLog "icacls output: $($filteredErrors -join '; ')"
+        } else {
+            Write-ToLog "icacls completed with expected junction point access denials (normal behavior)"
+        }
     } else {
         Write-ToLog "Successfully granted permissions to $TargetAccountIcacls"
     }
@@ -73,10 +98,29 @@ function Set-RegPermission {
 
     # Step 3: Change ownership from source to target user
     Write-ToLog "Setting owner to $TargetAccountIcacls"
-    $icaclsOwnerResult = & icacls.exe $FilePath /setowner "$TargetAccountIcacls" /T /C /Q 2>&1
+
+    # Use /L flag to exclude junction points and symbolic links
+    $icaclsOwnerResult = & icacls.exe $FilePath /setowner "$TargetAccountIcacls" /T /L /C /Q 2>&1
+
+    # Filter out common expected "Access is denied" messages for system junction points
+    $filteredOwnerErrors = $icaclsOwnerResult | Where-Object {
+        $_ -notmatch "Application Data.*Access is denied" -and
+        $_ -notmatch "My Documents.*Access is denied" -and
+        $_ -notmatch "Start Menu.*Access is denied" -and
+        $_ -notmatch "Templates.*Access is denied" -and
+        $_ -notmatch "NetHood.*Access is denied" -and
+        $_ -notmatch "PrintHood.*Access is denied" -and
+        $_ -notmatch "Recent.*Access is denied"
+    }
+
     if ($LASTEXITCODE -ne 0) {
-        Write-ToLog "Warning: icacls setowner operation had issues. Exit code: $LASTEXITCODE"
-        Write-ToLog "icacls setowner output: $($icaclsOwnerResult -join ' ')"
+        # Only log if there are non-filtered errors
+        if ($filteredOwnerErrors.Count -gt 0) {
+            Write-ToLog "Warning: icacls setowner operation had issues. Exit code: $LASTEXITCODE"
+            Write-ToLog "icacls setowner output: $($filteredOwnerErrors -join '; ')"
+        } else {
+            Write-ToLog "icacls setowner completed with expected junction point access denials (normal behavior)"
+        }
     } else {
         Write-ToLog "Successfully set owner to $TargetAccountIcacls"
     }
