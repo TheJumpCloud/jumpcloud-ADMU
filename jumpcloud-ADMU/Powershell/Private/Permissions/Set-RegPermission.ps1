@@ -53,7 +53,7 @@ function Set-RegPermission {
 
     # Step 1: Grant target user full control inheritance on root folder
     Write-ToLog "Granting permissions to: $TargetAccountIcacls"
-    $icaclsGrantResult = icacls.exe $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /C /Q
+    $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /C /Q
 
     if ($LASTEXITCODE -ne 0) {
         # Only log if there are non-filtered errors
@@ -74,7 +74,7 @@ function Set-RegPermission {
 
     # Step 3: Change ownership from source to target user
     Write-ToLog "Setting owner to $TargetAccountIcacls"
-    $icaclsOwnerResult = icacls.exe $FilePath /setowner "$TargetAccountIcacls" /T /C /Q
+    $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /T /C /Q
 
     if ($LASTEXITCODE -ne 0) {
         # Only log if there are non-filtered errors
