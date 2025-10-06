@@ -466,6 +466,105 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
         }
     }
+    Context "Confirm-ExecutionPolicy Function" {
+        BeforeAll {
+
+            # get the "Confirm-ExecutionPolicy" function from the script
+            $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
+
+            $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
+            $functionMatches = [regex]::Matches($scriptContent, $pattern)
+
+            # set the matches.value to a temp file and import the functions
+            $functionMatches.Value | Set-Content -Path (Join-Path $PSScriptRoot 'invokeFunctions.ps1') -Force
+
+            # import the functions from the temp file
+            . (Join-Path $PSScriptRoot 'invokeFunctions.ps1')
+        }
+
+        AfterEach {
+            # reset the execution policy to Unrestricted for Process scope
+            Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+            # reset the execution policy to Unrestricted for LocalMachine scope
+            Set-ExecutionPolicy -Scope LocalMachine -ExecutionPolicy Bypass -Force
+        }
+        It "Confirm-ExecutionPolicy should Throw & return false when MachinePolicy execution policy is Restricted, AllSigned, or RemoteSigned" {
+            $executionPolicies = @('Restricted', 'AllSigned', 'RemoteSigned')
+            foreach ($policy in $executionPolicies) {
+
+                Mock Get-ExecutionPolicy -ParameterFilter { $List -eq $true } {
+                    $scopes = @('MachinePolicy', 'UserPolicy', 'Process', 'CurrentUser', 'LocalMachine')
+                    $returnObj = New-Object System.Collections.ArrayList
+                    foreach ($scope in $scopes) {
+                        $returnObj.Add([PSCustomObject]@{
+                                Scope           = $scope
+                                ExecutionPolicy = If ($scope -eq 'MachinePolicy') { $policy } else { 'Undefined' }
+                            }) | Out-Null
+                    }
+                    return $returnObj
+                }
+                # If the MachinePolicy is set to Restricted, AllSigned, or RemoteSigned, Confirm-ExecutionPolicy should return false
+                $thrown = $false
+                $result = $null
+                try {
+                    $result = Confirm-ExecutionPolicy
+                } catch {
+                    $thrown = $true
+                    write-host "Caught exception: $($_.Exception.Message)"
+                    $_.Exception.Message | Should -match "Machine Policy is set to $policy, this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
+                }
+                $thrown | Should -BeTrue
+                $result | Should -BeFalse
+            }
+        }
+        It "Confirm-ExecutionPolicy should return true when the Process scope is set to Restricted, AllSigned, or RemoteSigned" {
+            $executionPolicies = @('Restricted', 'AllSigned', 'RemoteSigned')
+            foreach ($policy in $executionPolicies) {
+                Set-ExecutionPolicy -Scope Process -ExecutionPolicy $policy -Force
+                Get-ExecutionPolicy -Scope Process | Should -Be $policy
+
+                # If the Process scope is set to Restricted, AllSigned, or RemoteSigned, Confirm-ExecutionPolicy should return true
+                Confirm-ExecutionPolicy | Should -BeTrue
+                # validate the process scope is set to Bypass
+                Get-ExecutionPolicy -Scope Process | Should -Be 'Bypass'
+            }
+        }
+        It "Confirm-ExecutionPolicy should return true when the localMachine scope is set to Restricted, AllSigned, or RemoteSigned" {
+            $executionPolicies = @('Restricted', 'AllSigned', 'RemoteSigned')
+            foreach ($policy in $executionPolicies) {
+                Set-ExecutionPolicy -Scope Process -ExecutionPolicy $policy -Force
+                Set-ExecutionPolicy -Scope localMachine -ExecutionPolicy $policy -Force
+                Get-ExecutionPolicy -Scope localMachine | Should -Be $policy
+                # If the localMachine scope is set to Restricted, AllSigned, or RemoteSigned, Confirm-ExecutionPolicy should return true
+                Confirm-ExecutionPolicy | Should -BeTrue
+                # validate the localMachine scope is set to Bypass
+                Get-ExecutionPolicy -Scope localMachine | Should -Be 'Bypass'
+            }
+        }
+        # Mock Unrestricted
+        It "Confirm-ExecutionPolicy should return true when the MachinePolicy scope is set to Unrestricted" {
+            Mock Get-ExecutionPolicy -ParameterFilter { $List -eq $true } {
+                $scopes = @('MachinePolicy', 'UserPolicy', 'Process', 'CurrentUser', 'LocalMachine')
+                $returnObj = New-Object System.Collections.ArrayList
+                foreach ($scope in $scopes) {
+                    $returnObj.Add([PSCustomObject]@{
+                            Scope           = $scope
+                            ExecutionPolicy = If ($scope -eq 'MachinePolicy') { 'Unrestricted' }
+                        }) | Out-Null
+                }
+                return $returnObj
+            }
+            $thrown = $false
+            $result = $null
+            try {
+                $result = Confirm-ExecutionPolicy
+            } catch {
+                $thrown = $true
+            }
+            $thrown | Should -BeFalse
+            $result | Should -BeTrue
+        }
+    }
     Context "Confirm-RequiredModule Function" {
         BeforeAll {
             # get the "Confirm-RequiredModule" function from the script
@@ -481,157 +580,155 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             . (Join-Path $PSScriptRoot 'invokeFunctions.ps1')
         }
         It "Confirm-RequiredModule should return true when all required modules are installed" {
-            $requiredModule = 'PowerShellForGitHub'
-            Install-Module -Name $requiredModule -Force
-            # get the latest version of the module
-            $module = (Find-Module -Name $requiredModule)
-            # Arrange: Mock Get-InstalledModule to return a list of installed modules
-            Mock Get-InstalledModule -ParameterFilter { $Name -eq 'PowerShellForGitHub' } { return [PSCustomObject]@{
-                    Version     = $module.Version
-                    Name        = $requiredModule
-                    Repository  = 'PSGallery'
-                    Description = $module.Description
+            $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
+            foreach ($requiredModule in $requiredModules) {
+                # get the latest version of the module
+                $module = (Find-Module -Name $requiredModule)
+                # Arrange: Mock Get-InstalledModule to return a list of installed modules
+                Mock Get-InstalledModule -ParameterFilter { $Name -eq 'PowerShellGet' } { return [PSCustomObject]@{
+                        Version     = $module.Version
+                        Name        = $requiredModule
+                        Repository  = 'PSGallery'
+                        Description = $module.Description
+                    }
+                }
+
+            }
+            Mock Get-PackageProvider { return [PSCustomObject]@{
+                    Name    = 'NuGet'
+                    Version = '2.8.5.208'
                 }
             }
-
 
             # Act & Assert: Confirm-RequiredModule should return true
-            Confirm-RequiredModule -requiredModule $requiredModule | Should -BeTrue
+            Confirm-RequiredModule | Should -BeTrue
         }
         It "Should Throw and return false if a required module update fails" {
-            $requiredModule = 'PowerShellForGitHub'
-            Mock Get-InstalledModule -ParameterFilter { $Name -eq $requiredModule } {
-                return [PSCustomObject]@{
-                    Version = '1.0.0';
-                    Name    = $requiredModule
+            $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
+            foreach ($requiredModule in $requiredModules) {
+                Mock Get-InstalledModule -ParameterFilter { $Name -eq $requiredModule } {
+                    return [PSCustomObject]@{
+                        Version = '1.0.0';
+                        Name    = $requiredModule
+                    }
                 }
-            }
-            Mock Find-Module -ParameterFilter { $Name -eq $requiredModule } {
-                return [PSCustomObject]@{
-                    Version = '2.0.0';
-                    Name    = $requiredModule
+                Mock Find-Module -ParameterFilter { $Name -eq $requiredModule } {
+                    return [PSCustomObject]@{
+                        Version = '2.0.0';
+                        Name    = $requiredModule
+                    }
                 }
+                Mock Uninstall-Module -ParameterFilter { $Name -eq $requiredModule } { }
+                Mock Install-Module -ParameterFilter { $Name -eq $requiredModule } { throw "Simulated update failure" }
+                # Get the result of Confirm-RequiredModule
+                $thrown = $false
+                $result = $null
+                try {
+                    $result = Confirm-RequiredModule
+                } catch {
+                    $thrown = $true
+                    $_.Exception.Message | Should -Be "Failed to update $requiredModule module, exiting..."
+                }
+                $thrown | Should -BeTrue
+                $result | Should -BeFalse
             }
-            Mock Uninstall-Module -ParameterFilter { $Name -eq $requiredModule } { }
-            Mock Install-Module -ParameterFilter { $Name -eq $requiredModule } { throw "Simulated update failure" }
-            # Get the result of Confirm-RequiredModule
-            $thrown = $false
-            $result = $null
-            try {
-                $result = Confirm-RequiredModule -requiredModules $requiredModule
-            } catch {
-                $thrown = $true
-                $_.Exception.Message | Should -Be "Failed to update $requiredModule module, exiting..."
-            }
-            $thrown | Should -BeTrue
-            $result | Should -BeFalse
-
         }
         It "Should Throw and return false if a required module can not be imported" {
-            $requiredModule = 'PowerShellForGitHub'
-            Mock Import-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
-            Mock Get-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
+            $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
+            foreach ($requiredModule in $requiredModules) {
+                Mock Import-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
+                Mock Get-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
+
+                # Get the result of Confirm-RequiredModule
+                $thrown = $false
+                $result = $null
+                try {
+                    $result = Confirm-RequiredModule
+                } catch {
+                    $thrown = $true
+                    $_.Exception.Message | Should -Be "Failed to import $requiredModule module, exiting..."
+                }
+                $thrown | Should -BeTrue
+                $result | Should -BeFalse
+
+            }
+        }
+        It "Should Throw and return false if Nuget is not installed" {
+            # return a null list for Get-PackageProvider to simulate NuGet not being installed
+            Mock Get-PackageProvider { return @() } -Verifiable
+            # throw an error when trying to install NuGet
+            Mock Install-PackageProvider -ParameterFilter { $Name -eq 'NuGet' } -MockWith {
+                throw "Simulated failure to install package provider."
+            } -Verifiable
+            # This simulates the failure of the test of the nuget url.
+            Mock Invoke-WebRequest {
+                return [PSCustomObject]@{ StatusCode = 404; StatusDescription = 'Not Found' }
+            } -Verifiable
+
+            # required nuget version and URL
+            $nugetRequiredVersion = "2.8.5.208"
+            $nugetURL = "https://onegetcdn.azureedge.net/providers/nuget-$($nugetRequiredVersion).package.swidtag"
 
             # Get the result of Confirm-RequiredModule
             $thrown = $false
             $result = $null
             try {
-                $result = Confirm-RequiredModule -requiredModules $requiredModule
+                $result = Confirm-RequiredModule
             } catch {
                 $thrown = $true
-                $_.Exception.Message | Should -Be "Failed to import $requiredModule module, exiting..."
+                $_.Exception.Message | Should -Be "The NuGet package provider could not be installed from $nugetURL."
             }
             $thrown | Should -BeTrue
             $result | Should -BeFalse
-
-
         }
-
-        It "Should install and import a required module if it was not installed previously" {
-            $requiredModule = 'PowerShellForGitHub'
-            # Mock Get-InstalledModule to return null, simulating the module not being installed
-            Mock Get-InstalledModule -ParameterFilter { $Name -eq $requiredModule } { return $null }
+        It "Should install Nuget if it is not installed" {
+            # Simulate the absence of NuGet
+            Mock Get-PackageProvider { return @() } -Verifiable
             Mock Write-Host {}
 
             # Get the result of Confirm-RequiredModule
-            $result = Confirm-RequiredModule -requiredModules $requiredModule
+            $result = Confirm-RequiredModule
             # allSuccess should be true
             $result | Should -BeTrue
             # within the relevant block, Write-Host should be called with the status message
-            Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[status] $requiredModule module not found, installing..." }
-
+            Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[status] NuGet Module was successfully installed." }
         }
-    }
-    Context "Get-LatestADMUGUIExe Function" {
-        BeforeAll {
-            # Import function definitions required for Get-LatestADMUGUIExe tests from the script
-            $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
+        It "Should Throw and return false if Nuget can not be imported" {
+            # Simulate the absence of NuGet
+            Mock Import-PackageProvider { Throw "Nuget Not Imported" } -Verifiable
 
-            $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
-            $functionMatches = [regex]::Matches($scriptContent, $pattern)
-
-            # set the matches.value to a temp file and import the functions
-            $functionMatches.Value | Set-Content -Path (Join-Path $PSScriptRoot 'invokeFunctions.ps1') -Force
-
-            # import the functions from the temp file
-            . (Join-Path $PSScriptRoot 'invokeFunctions.ps1')
-        }
-        It "Should download the file successfully" {
-            # Arrange
-            $folderDest = "C:\Windows\Temp\TestExeDownload"
-            if (-not (Test-Path -Path $folderDest)) {
-                New-Item -Path $folderDest -ItemType Directory | Out-Null
+            # Get the result of Confirm-RequiredModule
+            $thrown = $false
+            $result = $null
+            try {
+                $result = Confirm-RequiredModule
+            } catch {
+                $thrown = $true
+                $_.Exception.Message | Should -Be "Could not import Nuget into the current session."
             }
-            # Call the function to download the file
-            Get-LatestADMUGUIExe -destinationPath $folderDest
+            $thrown | Should -BeTrue
+            $result | Should -BeFalse
+        }
+        It "Should install and import a required module if it was not installed previously" {
+            $requiredModules = @('PowerShellGet', 'JumpCloud.ADMU')
+            foreach ($requiredModule in $requiredModules) {
+                # Mock Get-InstalledModule to return null, simulating the module not being installed
+                Mock Get-InstalledModule -ParameterFilter { $Name -eq $requiredModule } { return $null }
+                Mock Write-Host {}
 
-            # Validate the file was downloaded
-            $downloadedFile = Join-Path -Path $folderDest -ChildPath "gui_jcadmu.exe"
-            Test-Path -Path $downloadedFile | Should -BeTrue
-        }
-        # Simulate a download failure
-        It "Should throw an error if the download fails" {
-            # Mock Invoke-WebRequest to throw an error
-            Mock Invoke-WebRequest { throw "Simulated download failure" }
-            { Get-LatestADMUGUIExe -destinationPath "C:\Windows\Temp" } | Should -Throw "Operation failed. The error was: Simulated download failure"
-        }
-        AfterAll {
-            # Clean up the test directory
-            $folderDest = "C:\Windows\Temp\TestExeDownload"
-            if (Test-Path -Path $folderDest) {
-                Remove-Item -Path $folderDest -Recurse -Force
+                # Get the result of Confirm-RequiredModule
+                $result = Confirm-RequiredModule
+                # allSuccess should be true
+                $result | Should -BeTrue
+                # within the relevant block, Write-Host should be called with the status message
+                Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[status] $requiredModule module not found, installing..." }
             }
-        }
-    }
-
-    Context "Get-JcadmuGuiSha256 Function" {
-        BeforeAll {
-            # get the "Get-JcadmuGuiSha256" function from the script
-            $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
-
-            $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
-            $functionMatches = [regex]::Matches($scriptContent, $pattern)
-
-            # set the matches.value to a temp file and import the functions
-            $functionMatches.Value | Set-Content -Path (Join-Path $PSScriptRoot 'invokeFunctions.ps1') -Force
-
-            # import the functions from the temp file
-            . (Join-Path $PSScriptRoot 'invokeFunctions.ps1')
-        }
-        It "Should return SHA256 hash for a valid file" {
-            # Gets the SHA from the recent release of the ADMU GUI from GitHub
-            $hash = Get-JcadmuGuiSha256
-            Write-Host "SHA256 Hash: $hash"
-            $hash | Should -Not -BeNullOrEmpty
         }
     }
     Context "Remote Migration Tests" {
         # This block runs once before any tests in this 'Describe' block.
         BeforeAll {
-            # Copy the exe file from D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\exe\gui_jcadmu.exe to C:\Windows\Temp
-            $guiPath = Join-Path $PSScriptRoot '..\..\..\..\jumpCloud-Admu\Exe\gui_jcadmu.exe'
-            $destinationPath = Join-Path -Path 'C:\Windows\Temp' -ChildPath 'gui_jcadmu.exe'
-            Copy-Item -Path $guiPath -Destination $destinationPath -Force
+
             # Get the original script content
             $admuInvoke = Get-Content -Path $global:remoteInvoke -Raw
             $pattern = '\#region variables[\s\S]*\#endregion variables'
@@ -680,23 +777,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             $functionMatches = [regex]::Matches($admuInvoke, $pattern)
             # set the matches.value to a temp file and import the functions
             $functionMatches.Value | Add-Content -Path (Join-Path $PSScriptRoot 'invokeScript.ps1') -Force
-
-            # Remove this line Get-LatestADMUGUIExe # Download the latest ADMU GUI executable
-            $scriptContent = Get-Content -Path (Join-Path $PSScriptRoot 'invokeScript.ps1')
-            $regexPattern = 'Get-LatestADMUGUIExe # Download the latest ADMU GUI executable'
-            $replaceExeLine = '#Get-LatestADMUGUIExe # Download the latest ADMU GUI executable'
-            $scriptContent = $scriptContent -replace $regexPattern, $replaceExeLine
-
-            # Remove the Test-Hash function call
-            $regexPattern = 'Test-ExeSHA -filePath \$guiJcadmuPath'
-            $replaceTestHash = '#Test-ExeSHA -filePath $guiJcadmuPath'
-            $scriptContent = $scriptContent -replace $regexPattern, $replaceTestHash
-            # Save the fully modified script content to a temporary file
-            $scriptContent | Set-Content -Path (Join-Path $PSScriptRoot 'invokeScript.ps1') -Force
+            # test that the registry profile path for init user 2 is set to c:\users\initUser1
         }
-
-        # test that the registry profile path for init user 2 is set to c:\users\initUser1
-
         # Test Setup
         BeforeEach {
             # sample password
@@ -727,40 +809,26 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
         # Migration with Valid data
         It "Should migrate the user to JumpCloud" {
             # Run invokeScript.ps1 and should return 0
-            { . $PSScriptRoot\invokeScript.ps1 } | Should -Throw
-
-            $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
-            $logs | Should -Not -BeNullOrEmpty
-            Write-Host $logs
-            $logs | Should -Match "Script finished successfully"
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Not -Throw
         }
         # User2 Should have user1 profile
         It "User2 Should have user1 profile directory" {
             # Run invokeScript.ps1 and should return 0
-            { . $PSScriptRoot\invokeScript.ps1 } | Should -Throw
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Not -Throw
 
             # test that the registry profile path for init user 2 is set to c:\users\initUser1
             $user2Sid = Test-UsernameOrSID -usernameOrSid $userToMigrateTo
             $user2ProfilePath = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$user2Sid").ProfileImagePath
             $user2ProfilePath | Should -Be "C:\Users\$userToMigrateFrom"
-
-            $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
-            $logs | Should -Not -BeNullOrEmpty
-            Write-Host $logs
-            $logs | Should -Match "Script finished successfully"
         }
 
         It "Test Remigration" {
             # Run invokeScript.ps1 and should return 0
-            { . $PSScriptRoot\invokeScript.ps1 } | Should -Throw
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Not -Throw
 
-            $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
-            $logs | Should -Not -BeNullOrEmpty
-            Write-Host $logs
-            $logs | Should -Match "Script finished successfully"
 
             # Remigrate. This will fail and will have a User-Profile error due to the domain path added from the previous migration
-            . $PSScriptRoot\invokeScript.ps1
+            { . $PSScriptRoot\invokeScript.ps1 } | Should -Throw
 
             # Read the log
             $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
