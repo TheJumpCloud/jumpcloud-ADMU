@@ -5,7 +5,7 @@ Release Date: October 6, 2025
 #### RELEASE NOTES
 
 ```
-Fixes an issue with device description null report status on a failed migration
+Addresses an issue where failed migrations were never reported back to the JumpCloud console if using the `$reportStatus` parameter. Addresses an issue with slow performance when setting file permissions.
 ```
 
 #### FEATURES:
@@ -14,13 +14,11 @@ N/A
 
 #### IMPROVEMENTS:
 
-- The ADMU Template Build script has been updated to accept and process parameter inputs, embedding them directly into the template file
-- The build process for gui_jcadmu.exe was enhanced to create a mapping of string and boolean parameters, ensuring proper handling of command-line arguments
+- Migrations, specifically setting NTFS permissions should be much faster on large directories with many files. The ADMU will now use `icacls.exe` to set file permissions which has shown to be significantly faster on large directories with many files.
 
 #### BUG FIXES:
 
-- Corrected error handling to ensure the migration script exits with code 1 when an error is encountered
-- Added fix for description field report status showing null when migration fails
+- The ADMU will now report failed migrations back to the JumpCloud console if the `$reportStatus` parameter is used. Previously only successful migrations were logged correctly to the console.
 
 ## 2.9.0
 
