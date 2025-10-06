@@ -1,3 +1,27 @@
+## 2.9.1
+
+Release Date: October 6, 2025
+
+#### RELEASE NOTES
+
+```
+Fixes an issue with device description null report status on a failed migration
+```
+
+#### FEATURES:
+
+N/A
+
+#### IMPROVEMENTS:
+
+- The ADMU Template Build script has been updated to accept and process parameter inputs, embedding them directly into the template file
+- The build process for gui_jcadmu.exe was enhanced to create a mapping of string and boolean parameters, ensuring proper handling of command-line arguments
+
+#### BUG FIXES:
+
+- Corrected error handling to ensure the migration script exits with code 1 when an error is encountered
+- Added fix for description field report status showing null when migration fails
+
 ## 2.9.0
 
 Release Date: October 1, 2025
@@ -11,6 +35,7 @@ Updated gui_jcadmu.exe to handle parameters for bulk ADMU migration
 #### FEATURES:
 
 Command-Line Parameter Support for gui_jcadmu.exe
+
 - The ADMU GUI executable can now be invoked with command-line arguments to automate and script user migrations
 
 #### IMPROVEMENTS:

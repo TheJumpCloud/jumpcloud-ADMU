@@ -173,7 +173,9 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $acl.Access | Where-Object { $_.IdentityReference -eq $targetAccount -and $_.FileSystemRights -eq "FullControl" } | Should -Not -BeNullOrEmpty
         }
 
-        It "Should not change ownership if file is not owned by SourceSID" {
+        # Skipping because the behavior is set to change in 2.9.1 in favor of using icacls only for performance reasons
+        # TODO: revisit and attempt to see if a save/ restore/ substitute approach can be used to migrate permission sets
+        It "Should not change ownership if file is not owned by SourceSID" -Skip {
             $otherSID = "S-1-5-18" # Local System
             $otherAccount = (New-Object System.Security.Principal.SecurityIdentifier($otherSID)).Translate([System.Security.Principal.NTAccount]).Value
             $filePath = Join-Path $testDir "testfile.txt"
