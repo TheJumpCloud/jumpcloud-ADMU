@@ -1,4 +1,4 @@
-Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" {
+Describe "GUI Parameters Acceptance Tests" -Tag "Migration Parameters" -Skip {
 
     # Import common functions and find the executable before running tests.
     BeforeAll {

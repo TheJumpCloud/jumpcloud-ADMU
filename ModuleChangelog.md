@@ -1,3 +1,25 @@
+## 2.9.1
+
+Release Date: October 6, 2025
+
+#### RELEASE NOTES
+
+```
+Addresses an issue where failed migrations were never reported back to the JumpCloud console if using the `$reportStatus` parameter. Addresses an issue with slow performance when setting file permissions.
+```
+
+#### FEATURES:
+
+N/A
+
+#### IMPROVEMENTS:
+
+- Migrations, specifically setting NTFS permissions should be much faster on large directories with many files. The ADMU will now use `icacls.exe` to set file permissions which has shown to be significantly faster on large directories with many files.
+
+#### BUG FIXES:
+
+- The ADMU will now report failed migrations back to the JumpCloud console if the `$reportStatus` parameter is used. Previously only successful migrations were logged correctly to the console.
+
 ## 2.9.0
 
 Release Date: October 1, 2025
@@ -11,6 +33,7 @@ Updated gui_jcadmu.exe to handle parameters for bulk ADMU migration
 #### FEATURES:
 
 Command-Line Parameter Support for gui_jcadmu.exe
+
 - The ADMU GUI executable can now be invoked with command-line arguments to automate and script user migrations
 
 #### IMPROVEMENTS:
