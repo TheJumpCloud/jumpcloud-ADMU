@@ -30,6 +30,9 @@ New-ADMUTemplate -ExportPath "$PSScriptRoot/admuTemplate.ps1" -hidePowerShellWin
 if ([System.Environment]::OSVersion.Platform -eq "Win32NT") {
     . $PSScriptRoot\New-ADMUExe.ps1
 }
+# Generate tests for functions:
+. $PSScriptRoot\Build-PesterTestFile.ps1
+Build-PesterTestFile -TestType "Acceptance"
 # Run Build-HelpFiles
 . $PSScriptRoot\Build-HelpFiles.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 # Run Build-NuspecFromPsd1
