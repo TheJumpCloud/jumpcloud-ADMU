@@ -1,3 +1,17 @@
+## 2.9.2
+
+Release Date: October 08, 2025
+
+#### RELEASE NOTES
+
+```
+Patch release of the ADMU module, several non-functional change improvements and new tests added to the module.
+```
+
+#### IMPROVEMENTS:
+
+Update deploy build process to generate pester tests for private functions. New private functions created to reduce duplicated code.
+
 ## 2.9.1
 
 Release Date: October 6, 2025
