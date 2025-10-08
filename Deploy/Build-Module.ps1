@@ -51,7 +51,8 @@ New-ModuleManifest -Path:($FilePath_psd1) `
     -Author:('JumpCloud Customer Tools Team') `
     -CompanyName:('JumpCloud') `
     -Copyright:('(c) JumpCloud. All rights reserved.') `
-    -Description:('Powershell Module to run JumpCloud Active Directory Migration Utility.')
+    -Description:('Powershell Module to run JumpCloud Active Directory Migration Utility.') `
+    -Guid:('8354fb8a-af52-4db9-9882-a903063751a5')
 
 # Update ModuleChangelog.md File:
 If ($ModuleChangelogVersion -ne $PSD1Version) {
