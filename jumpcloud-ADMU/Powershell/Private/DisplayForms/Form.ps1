@@ -609,8 +609,7 @@ Function Show-SelectionForm {
     # Change button when profile selected
     $lvProfileList.Add_SelectionChanged( {
             $SelectedUserName = $($lvProfileList.SelectedItem.username)
-            # TODO: CUT-4890 Replace PSDrive with private function
-            New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS
+            Set-HKEYUserMount
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
             try {
                 $SelectedUserSID = ((New-Object System.Security.Principal.NTAccount($SelectedUserName)).Translate( [System.Security.Principal.SecurityIdentifier]).Value)
