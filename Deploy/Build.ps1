@@ -31,8 +31,11 @@ if ([System.Environment]::OSVersion.Platform -eq "Win32NT") {
     . $PSScriptRoot\New-ADMUExe.ps1
 }
 # Generate tests for functions:
-. $PSScriptRoot\Build-PesterTestFile.ps1
-Build-PesterTestFile -TestType "Acceptance" -ProjectRoot "$FolderPath_ModuleRootPath/jumpcloud-ADMU"
+if (-Not $env:GITHUB_ACTIONS) {
+    # update tests locally, not working in CI
+    . $PSScriptRoot\Build-PesterTestFile.ps1
+    Build-PesterTestFile -TestType "Acceptance" -ProjectRoot "$FolderPath_ModuleRootPath/jumpcloud-ADMU"
+}
 # Run Build-HelpFiles
 . $PSScriptRoot\Build-HelpFiles.ps1 -ModuleVersionType:($ModuleVersionType) -ModuleName:($ModuleName)
 # Run Build-NuspecFromPsd1
