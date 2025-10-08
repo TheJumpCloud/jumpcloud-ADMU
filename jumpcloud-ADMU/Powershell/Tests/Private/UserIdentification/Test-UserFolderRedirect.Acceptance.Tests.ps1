@@ -30,10 +30,7 @@ Describe "Test-UserFolderRedirect and Set-WallpaperPolicy Acceptance Tests" -Tag
 
     Context 'Validates that the User shell folder for default values' {
         BeforeAll {
-            # TODO: CUT-4890 Replace PSDrive with private function
-            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
-            }
+            Set-HKEYUserMount
             #$currentSID = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
             $newUser = "ADMU_User" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $password = '$T#st1234'
@@ -123,10 +120,7 @@ Describe "Test-UserFolderRedirect and Set-WallpaperPolicy Acceptance Tests" -Tag
 
     Context 'Validates Wallpaper Policy Removal' {
         BeforeAll {
-            # TODO: CUT-4890 Replace PSDrive with private function
-            if ((Get-psdrive | Select-Object -ExpandProperty Name) -notmatch "HKEY_USERS") {
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
-            }
+            Set-HKEYUserMount
 
             #$currentSID = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
             $newUser = "ADMU_User" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })

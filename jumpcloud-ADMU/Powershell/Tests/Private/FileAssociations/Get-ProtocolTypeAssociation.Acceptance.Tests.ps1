@@ -16,11 +16,7 @@ Describe "Get-ProtocolTypeAssociation Acceptance Tests" -Tag "Acceptance" {
             $currentPath = Split-Path $currentPath -Parent
         }
         . "$helpFunctionDir\$fileName"
-        # TODO: replace with Set-HKEYUsersMount
-        # TODO: CUT-4890 Replace PSDrive with private function
-        if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
-            New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
-        }
+        Set-HKEYUserMount
     }
     It "Should Get the Protocol Type Associations" {
         $currentUserSID = (Get-LocalUser -Name $env:USERNAME | Select-Object SID).SID
