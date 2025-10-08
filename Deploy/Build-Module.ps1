@@ -1,12 +1,12 @@
 [CmdletBinding()]
 param (
-    [Parameter()]
+    [Parameter(Mandatory)]
     [System.string]
     $ModuleVersionType,
-    [Parameter()]
+    [Parameter(Mandatory)]
     [System.string]
-    $ModuleName,
-    [Parameter()]
+    $ModuleName = "jumpcloud.ADMU",
+    [Parameter(Mandatory = $false)]
     [Boolean]
     $ManualModuleVersion
 )
@@ -72,6 +72,38 @@ If ($ModuleChangelogVersion -ne $PSD1Version) {
         write-host "[Status] Updating Changelog date: $ReleaseDate to: $todaysDate)"
         $ModuleChangelog.Replace($ReleaseDate, $todaysDate) | Set-Content $FilePath_ModuleChangelog
     }
+}
+
+# Set the version in the functions where it is referenced:
+$matchArray = @(
+    [PSCustomObject]@{
+        Name         = "Form.ps1"
+        Path         = "$FolderPath_ModuleRootPath\jumpcloud-ADMU\PowerShell\Private\DisplayForms\Form.ps1"
+        RegexPattern = 'Title\=\"JumpCloud\sADMU\s([0-9]+.[0-9]+.[0-9]+)\"'
+    },
+    [PSCustomObject]@{
+        Name         = "ProgressForm.ps1"
+        Path         = "$FolderPath_ModuleRootPath\jumpcloud-ADMU\PowerShell\Private\DisplayForms\ProgressForm.ps1"
+        RegexPattern = 'Title\=\"JumpCloud\sADMU\s([0-9]+.[0-9]+.[0-9]+)\"'
+    },
+    [PSCustomObject]@{
+        Name         = "Start-Migration.ps1"
+        Path         = "$FolderPath_ModuleRootPath\jumpcloud-ADMU\PowerShell\Public\Start-Migration.ps1"
+        RegexPattern = '\$admuVersion\s=\s\"([0-9]+.[0-9]+.[0-9]+)\"'
+    }
+)
+
+foreach ($match in $matchArray) {
+    $matchRegex = [regex]$($match.RegexPattern)
+    $contentMatch = Select-String -Path:($match.Path) -Pattern:($matchRegex)
+    # if the first group was found, replace it with the new version
+    if ($contentMatch.matches.groups[1].value) {
+        (Get-Content -Path:($match.Path)) -replace $contentMatch.matches.groups[1].value, $ModuleVersion | Set-Content -Path:($match.Path)
+    } else {
+        Write-Host "[Status] No version match found in file: $($match.Name). Skipping update."
+        continue
+    }
+    Write-Host "[Status] Updated version in file: $($match.Name) to version: $ModuleVersion"
 }
 
 # EndRegion Building New-JCModuleManifest
