@@ -31,75 +31,40 @@
 # Set a global parameter for debug logging
 
 Function Write-ToLog {
-    [CmdletBinding()]
-    Param
-    (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
-        , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
-        , [Parameter(Mandatory = $false)][ValidateSet("Error", "Warn", "Info", "Verbose")][string]$Level = "Info"
-        # Log all messages if $VerbosePreference is set to
-    )
-    Begin {
-        # Set VerbosePreference to Continue so that verbose messages are displayed.
-        $VerbosePreference = 'Continue'
-    }
-    Process {
-        # If attempting to write to a log file in a folder/path that doesn't exist create the file including the path.
-        If (!(Test-Path $Path)) {
-            Write-Verbose "Creating $Path."
-            New-Item $Path -Force -ItemType File | Out-Null
-        }
-        # Format Date for our Log File
-        $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        # Write message to error, warning, or verbose pipeline and specify $LevelText
-        if ($Script:AdminDebug) {
-            Switch ($Level) {
-                'Error' {
-                    Write-Error $Message
-                    $LevelText = 'ERROR:'
-                }
-                'Warn' {
-                    Write-Warning $Message
-                    $LevelText = 'WARNING:'
-                }
-                'Info' {
-                    Write-Verbose $Message
-                    $LevelText = 'INFO:'
-                }
-                'Verbose' {
-                    Write-Verbose $Message
-                    $LevelText = 'INFO:'
-                }
-            }
-        } else {
-            Switch ($Level) {
-                'Error' {
-                    Write-Error $Message
-                    $LevelText = 'ERROR:'
-                }
-                'Warn' {
-                    $LevelText = 'WARNING:'
-                }
-                'Info' {
-                    $LevelText = 'INFO:'
-                }
-                'Verbose' {
-                    Write-Verbose $Message
-                    $LevelText = 'INFO:'
-                }
-            }
-        }
+   [CmdletBinding()]
+   Param
+   (
+      [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message,
+      [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log",
+      [Parameter(Mandatory = $false)][ValidateSet("Error", "Warning", "Info", "Verbose")][string]$Level = "Info",
+      [Parameter(Mandatory = $false)][string]$Step
+   )
+   Begin {
+      $VerbosePreference = 'Continue'
+   }
+   Process {
+      if (!(Test-Path $Path)) {
+         Write-Verbose "Creating $Path."
+         New-Item $Path -Force -ItemType File | Out-Null
+      }
+      $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+      $levelText = $Level.ToUpper()
+      $stepText = if ($Step) { "[$Step]" } else { "" }
+      $logMessage = "[$timestamp] [$levelText] $stepText $Message"
 
-        # Add the message to the log messages and space down
-        $logMessage = "$FormattedDate $LevelText $Message" + "`r`n"
-        if ($Script:ProgressBar) {
-            Update-LogTextBlock -LogText $logMessage -ProgressBar $Script:ProgressBar
-        }
-        # Write log entry to $Path
-        Add-Content -Value "$FormattedDate $LevelText $Message" -Path $Path -Encoding utf8
-        # "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append -Encoding utf8
-    }
-    End {
+      # Write to appropriate pipeline and optionally to console
+      switch ($Level) {
+         'Error' { Write-Error $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
+         'Warn' { Write-Warning $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
+         'Info' { if ($Script:AdminDebug) { Write-Host $logMessage } }
+         'Verbose' { Write-Verbose $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
+      }
 
-    }
+      if ($Script:ProgressBar) {
+         # add a new line to each of the log messages in the UI log stream
+         Update-LogTextBlock -LogText "$logMessage`r`n" -ProgressBar $Script:ProgressBar
+      }
+      Add-Content -Value $logMessage -Path $Path -Encoding utf8
+   }
+   End {}
 }

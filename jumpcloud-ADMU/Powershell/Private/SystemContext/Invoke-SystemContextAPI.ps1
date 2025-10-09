@@ -469,7 +469,7 @@ Function Invoke-SystemContextAPI {
                             # add to retry counter and continue loop
                             $success = $false
                         } else {
-                            Write-ToLog "Failed to get system: $($_.Exception.Message)" -Level Warn
+                            Write-ToLog "Failed to get system: $($_.Exception.Message)" -Level Warning
                             # set success to true & exit the loop
                             $success = $true
                         }
@@ -493,7 +493,7 @@ Function Invoke-SystemContextAPI {
                             # add to retry counter and continue loop
                             $success = $false
                         } else {
-                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warn
+                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning
                             # set success to true & exit the loop
                             $success = $true
                         }
@@ -517,7 +517,7 @@ Function Invoke-SystemContextAPI {
                             # add to retry counter and continue loop
                             $success = $false
                         } else {
-                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warn
+                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning
                             # set success to true & exit the loop
                             $success = $true
                         }
@@ -541,7 +541,7 @@ Function Invoke-SystemContextAPI {
                             # add to retry counter and continue loop
                             $success = $false
                         } else {
-                            Write-ToLog "Failed to delete system: $($_.Exception.Message)" -Level warn
+                            Write-ToLog "Failed to delete system: $($_.Exception.Message)" -Level Warning
                             # set success to true & exit the loop
                             $success = $true
                         }

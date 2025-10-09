@@ -18,7 +18,7 @@ function Set-UserRegistryLoadState {
         [System.Int32]$counter = 0
     )
     begin {
-        Write-ToLog -Message:("## Begin Registry $op $UserSid ##")
+        # Write-ToLog -Message:("---- Begin Registry $op $UserSid ----") -Level Verbose -Step "Set-UserRegistryLoadState"
         switch ($hive) {
             "classes" {
                 $key = "HKU\$($UserSid)_Classes_admu"
@@ -46,28 +46,28 @@ function Set-UserRegistryLoadState {
                         [gc]::collect()
                         $results = Set-RegistryExe -op Load -hive root -UserSid $UserSid -ProfilePath $ProfilePath
                         if ($results) {
-                            Write-ToLog "Load Successful $results"
+                            Write-ToLog "Load Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
                         } else {
                             $processList = Get-ProcessByOwner -username $username
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
                                 # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                             }
-                            Set-UserRegistryLoadstate -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
+                            Set-UserRegistryLoadState -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
                         }
                     }
                     "classes" {
                         [gc]::collect()
                         $results = Set-RegistryExe -op Load -hive classes -UserSid $UserSid -ProfilePath $ProfilePath
                         if ($results) {
-                            Write-ToLog "Load Successful $results"
+                            Write-ToLog "Load Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
                         } else {
                             $processList = Get-ProcessByOwner -username $username
                             if ($processList) {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
                                 # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                             }
-                            Set-UserRegistryLoadstate -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
+                            Set-UserRegistryLoadState -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
                         }
                     }
                 }
@@ -81,7 +81,7 @@ function Set-UserRegistryLoadState {
 
                         $results = Set-RegistryExe -op Unload -hive root -UserSid $UserSid -ProfilePath $ProfilePath
                         if ($results) {
-                            Write-ToLog "Unload Successful $results"
+                            Write-ToLog "Unload Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
 
                         } else {
                             $processList = Get-ProcessByOwner -username $username
@@ -89,7 +89,7 @@ function Set-UserRegistryLoadState {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
                                 # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                             }
-                            Set-UserRegistryLoadstate -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
+                            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
                         }
                     }
                     "classes" {
@@ -97,7 +97,7 @@ function Set-UserRegistryLoadState {
 
                         $results = Set-RegistryExe -op Unload -hive classes -UserSid $UserSid -ProfilePath $ProfilePath
                         if ($results) {
-                            Write-ToLog "Unload Successful $results"
+                            Write-ToLog "Unload Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
 
                         } else {
                             $processList = Get-ProcessByOwner -username $username
@@ -105,7 +105,7 @@ function Set-UserRegistryLoadState {
                                 Show-ProcessListResult -ProcessList $processList -domainUsername $username
                                 # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                             }
-                            Set-UserRegistryLoadstate -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
+                            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
                         }
                     }
                 }
@@ -113,7 +113,6 @@ function Set-UserRegistryLoadState {
         }
     }
     end {
-        Write-ToLog -Message:("## End Registry $op $UserSid ##")
-
+        # Write-ToLog -Message:("---- End Registry $op $UserSid ----") -Level Verbose -Step "Set-UserRegistryLoadState"
     }
 }

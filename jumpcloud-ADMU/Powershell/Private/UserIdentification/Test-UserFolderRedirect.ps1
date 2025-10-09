@@ -20,7 +20,7 @@ function Test-UserFolderRedirect {
         } else {
             $fullPath = "$($basePath)$($pathSuffix)"
         }
-        Write-ToLog -Message:("Checking User Shell Folders for USERSID: $($UserSid)")
+        Write-ToLog -Message:("Checking User Shell Folders for USERSID: $($UserSid)") -Level Verbose -Step "Test-UserFolderRedirect"
     }
     process {
 
@@ -57,15 +57,15 @@ function Test-UserFolderRedirect {
                 # If the registry value does not match the default path, set redirectedDirectory to true and log the error
                 $regex = '^\\\\[a-zA-Z0-9.-]+\\[a-zA-Z0-9._-]+(\\[a-zA-Z0-9._-]+)*$' # regex for network paths ie \\server\share\folder, \\server.example.com\share\folder
                 if ($folderRegKeyValue -match $regex) {
-                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue) is a network path (IP or Domain). Migration NOT allowed.") -Level warn
+                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue) is a network path (IP or Domain). Migration NOT allowed.") -Level Warning -Step "Test-UserFolderRedirect"
                     $redirectedDirectory = $true
                 } else {
-                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue). Migration allowed.")
+                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue). Migration allowed.") -level Verbose -step "Test-UserFolderRedirect"
                 }
             }
         } else {
             # If the registry path does not exist, set redirectedDirectory to true and log the error
-            Write-ToLog -Message:("User Shell registry folders not found in registry") -Level warn
+            Write-ToLog -Message:("User Shell registry folders not found in registry") -Level Warning -Step "Test-UserFolderRedirect"
             $redirectedDirectory = $true
         }
     }
