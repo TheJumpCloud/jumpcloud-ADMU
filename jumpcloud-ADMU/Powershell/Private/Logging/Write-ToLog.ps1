@@ -29,9 +29,19 @@ Function Write-ToLog {
          $paddingLeft = "=" * $paddingEach
          $paddingRight = "=" * ($availableWidth - $paddingEach)
          $formattedMessage = "$paddingLeft $messageText $paddingRight"
-         $logMessage = "[$timestamp] [$levelText] $stepText $formattedMessage"
+         # remove stepText if empty
+         if ([string]::IsNullOrEmpty($stepText)) {
+            $logMessage = "[$timestamp] [$levelText] $formattedMessage"
+         } else {
+            $logMessage = "[$timestamp] [$levelText] $stepText $formattedMessage"
+         }
       } else {
-         $logMessage = "[$timestamp] [$levelText] $stepText $Message"
+         # remove stepText if empty
+         if ([string]::IsNullOrEmpty($stepText)) {
+            $logMessage = "[$timestamp] [$levelText] $Message"
+         } else {
+            $logMessage = "[$timestamp] [$levelText] $stepText $Message"
+         }
       }
 
       # Write to appropriate pipeline and optionally to console
