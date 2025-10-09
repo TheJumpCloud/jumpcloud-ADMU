@@ -34,7 +34,7 @@ Function Start-Migration {
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
-            HelpMessage = "When set to true, the ADMU will rename the user's home directory to match the new local username. In most cases this is not needed and will likely cause issues with applications expecting settings to be found using the old username profileImagePath. This is set to false by default and is not not recommended to be used generally.")]
+            HelpMessage = "When set to true, the ADMU will rename the user's home directory to match the new local username. In most cases this is not needed and will likely cause issues with applications expecting settings to be found using the source username profileImagePath. This is set to false by default and is not not recommended to be used generally.")]
         [bool]
         $UpdateHomePath = $false,
         [Parameter(
@@ -89,7 +89,7 @@ Function Start-Migration {
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
-            HelpMessage = "When set to true, the ADMU will validate that the user profile does not have any redirected directories. If a user profile has a directory redirected to some remote server or location, the ADMU will not be able to migrate the user profile correctly. This is set to true by default. If this is set to false, the ADMU will not validate the user profile and will attempt to migrate the user profile regardless of any redirected directories. In this case, if some user had their documents redirected to some remote server additional configuration would be required in the new user profile to access the remote files.")]
+            HelpMessage = "When set to true, the ADMU will validate that the user profile does not have any redirected directories. If a user profile has a directory redirected to some remote server or location, the ADMU will not be able to migrate the user profile correctly. This is set to true by default. If this is set to false, the ADMU will not validate the user profile and will attempt to migrate the user profile regardless of any redirected directories. In this case, if some user had their documents redirected to some remote server additional configuration would be required in the target user profile to access the remote files.")]
         [bool]
         $ValidateUserShellFolder = $true,
         [Parameter(
@@ -293,7 +293,7 @@ Function Start-Migration {
         $admuTracker = [Ordered]@{
             backupOldUserReg              = @{
                 step     = "Backup Source User Registry"
-                desc     = "Backing up the old user's registry hive to ensure that no data is lost during the migration process."
+                desc     = "Backing up the source user's registry hive to ensure that no data is lost during the migration process."
                 required = $true
                 pass     = $false
                 fail     = $false
@@ -391,28 +391,28 @@ Function Start-Migration {
             }
             activeSetupHKLM               = @{
                 step     = "Configuring UWP Settings (HKLM)"
-                desc     = "Configuring UWP Settings for the new user (HKLM)."
+                desc     = "Configuring UWP Settings for the target user (HKLM)."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             activeSetupHKU                = @{
                 step     = "Configuring UWP Settings (HKU)"
-                desc     = "Configuring UWP Settings for the new user (HKU)."
+                desc     = "Configuring UWP Settings for the target user (HKU)."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             uwpAppXPackages               = @{
                 step     = "Setting UWP AppX Manifest"
-                desc     = "Setting UWP AppX Manifest for the new user."
+                desc     = "Setting UWP AppX Manifest for the target user."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             uwpDownloadExe                = @{
                 step     = "Downloading UWP AppX Executable"
-                desc     = "Downloading the UWP AppX executable. This is used when the new local user first logs into their account. It registers the UWP applications for the new user."
+                desc     = "Downloading the UWP AppX executable. This is used when the new local user first logs into their account. It registers the UWP applications for the target user."
                 required = $true
                 pass     = $false
                 fail     = $false
@@ -459,8 +459,8 @@ Function Start-Migration {
     Process {
         # Start Of Console Output
         Write-ToLog -Message "Migration Details" -MigrationStep
-        Write-ToLog "Account To Migrate From: $SelectedUserName"
-        Write-ToLog "Account To Migrate To: $JumpCloudUserName"
+        Write-ToLog "Source Account To Migrate From: $SelectedUserName"
+        Write-ToLog "Target Account To Migrate To: $JumpCloudUserName"
 
         $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
         Write-ToProgress -ProgressBar $ProgressBar -Status "Install" -form $isForm
@@ -529,7 +529,7 @@ Function Start-Migration {
 
             #region backupOldUserReg
             Write-ToLog -Message $admuTracker.backupOldUserReg.step -MigrationStep
-            ### Begin Backup Registry for Selected User ###
+            ### Begin Backup Registry for source user ###
 
             # Validate UserDirectory for Domain path
             if (-not (Test-UserDirectoryPath -SelectedUserSID $SelectedUserSID)) {
@@ -559,14 +559,14 @@ Function Start-Migration {
                 break
             }
             $admuTracker.backupOldUserReg.pass = $true
-            ### End Backup Registry for Selected User ###
+            ### End Backup Registry for source user ###
             #endregion backupOldUserReg
 
             #region newUserCreate
             Write-ToLog -Message $admuTracker.newUserCreate.step -MigrationStep
-            ### Begin Create New User Region ###
+            ### Begin Create target user Region ###
             Write-ToLog -Message ('Creating New Local User ' + $localComputerName + '\' + $JumpCloudUsername)
-            # Create New User
+            # Create target user
             $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
 
             New-localUser -Name $JumpCloudUsername -password $newUserPassword -Description "Created By JumpCloud ADMU" -ErrorVariable userExitCode | Out-Null
@@ -595,24 +595,26 @@ Function Start-Migration {
                 break
             } else {
                 Write-ToLog -Message ('Getting new profile image path')
-                # Get profile image path for new user
+                # Get profile image path for target user
                 $newUserProfileImagePath = Get-ProfileImagePath -UserSid $NewUserSID
                 if ([System.String]::IsNullOrEmpty($newUserProfileImagePath)) {
                     Write-ToLog -Message ("Could not get the profile path for $JumpCloudUsername exiting...") -Level Warning
                     $admuTracker.newUserInit.fail = $true
                     break
                 } else {
-                    Write-ToLog -Message ('New User Profile Path: ' + $newUserProfileImagePath + ' New User SID: ' + $NewUserSID)
-                    Write-ToLog -Message ('Old User Profile Path: ' + $oldUserProfileImagePath + ' Old User SID: ' + $SelectedUserSID)
+                    Write-ToLog -Message ('Target User Profile Path: ' + $newUserProfileImagePath)
+                    Write-ToLog -Message ('Target User SID: ' + $NewUserSID)
+                    Write-ToLog -Message ('Source User Profile Path: ' + $oldUserProfileImagePath)
+                    Write-ToLog -Message ('Source User SID: ' + $SelectedUserSID)
                 }
             }
             $admuTracker.newUserInit.pass = $true
-            ### End Create New User Region ###
+            ### End Create target user Region ###
             #endregion newUserInit
 
             #region backupNewUserReg
             Write-ToLog -Message $admuTracker.backupNewUserReg.step -MigrationStep
-            ### Begin backup user registry for new user
+            ### Begin backup user registry for target user
             try {
                 Write-ToProgress -ProgressBar $ProgressBar -Status "BackupRegHive" -form $isForm -SystemDescription $systemDescription
 
@@ -624,7 +626,7 @@ Function Start-Migration {
                 break
             }
             $admuTracker.backupNewUserReg.pass = $true
-            ### End backup user registry for new user
+            ### End backup user registry for target user
             #endregion backupNewUserReg
 
             ### Begin Test Registry Steps
@@ -690,10 +692,10 @@ Function Start-Migration {
             #region loadBeforeCopyRegistry
             Write-ToLog -Message $admuTracker.loadBeforeCopyRegistry.step -MigrationStep
             try {
-                # Load New User Profile Registry Keys
+                # Load target user Profile Registry Keys
                 Set-UserRegistryLoadState -op "Load" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID -hive root
                 Set-UserRegistryLoadState -op "Load" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID -hive classes
-                # Load Selected User Profile Keys
+                # Load source user Profile Keys
                 Set-UserRegistryLoadState -op "Load" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID -hive root
                 Set-UserRegistryLoadState -op "Load" -ProfilePath $oldUserProfileImagePath -UserSid $SelectedUserSID -hive classes
                 # Copy from "SelectedUser" to "NewUser"
@@ -709,7 +711,7 @@ Function Start-Migration {
 
             #region copyRegistry
             Write-ToLog -Message $admuTracker.copyRegistry.step -MigrationStep
-            ### Merge Selected User Profile to New User Profile
+            ### Merge source user Profile to target user Profile
             reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
             if ($?) {
                 Write-ToLog -Message ('Copy Profile: ' + "$newUserProfileImagePath/NTUSER.DAT.BAK" + ' To: ' + "$oldUserProfileImagePath/NTUSER.DAT.BAK")
@@ -766,7 +768,7 @@ Function Start-Migration {
             } else {
                 Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
                 # attempt to recover:
-                # list processes for new user
+                # list processes for target user
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
@@ -798,14 +800,14 @@ Function Start-Migration {
             $validateRegistryPermissionClasses, $validateRegistryPermissionClassesResult = Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_Classes_admu" -username $jumpcloudUsername -type 'registry'
 
             if ($validateRegistryPermission) {
-                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are correct `n$($validateRegistryPermissionResult | Out-String)")
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are correct")
             } else {
-                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and selected user have have Full Control `n$($validateRegistryPermissionResult | Out-String)") -Level Warning
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and source user have have Full Control `n$($validateRegistryPermissionResult | Out-String)") -Level Warning
             }
             if ($validateRegistryPermissionClasses) {
-                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are correct `n$($validateRegistryPermissionClassesResult | out-string)")
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are correct ")
             } else {
-                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and selected user have have Full Control `n$($validateRegistryPermissionClassesResult | Out-String)") -Level Warning
+                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and source user have have Full Control `n$($validateRegistryPermissionClassesResult | Out-String)") -Level Warning
             }
 
             $admuTracker.copyRegistry.pass = $true
@@ -816,7 +818,7 @@ Function Start-Migration {
             Write-ToProgress -ProgressBar $ProgressBar -Status "CopyMergedProfile" -form $isForm -SystemDescription $systemDescription
             Write-ToLog -Message:('Copying merged profiles to destination profile path')
 
-            # Set Registry Check Key for New User
+            # Set Registry Check Key for target user
             # Check that the installed components key does not exist
             $ADMU_PackageKey = "HKEY_USERS:\$($newUserSID)_admu\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
             if (Get-Item $ADMU_PackageKey -ErrorAction SilentlyContinue) {
@@ -846,7 +848,7 @@ Function Start-Migration {
                 Set-ValueToKey -registryRoot Users -keyPath "$($newUserSID)_admu\SOFTWARE\JCADMU" -Name "previousSID" -value "$SelectedUserSID" -regValueKind String
                 Set-ValueToKey -registryRoot Users -keyPath "$($newUserSID)_admu\SOFTWARE\JCADMU" -Name "previousProfilePath" -value "$oldUserProfileImagePath" -regValueKind String
             }
-            ### End reg key check for new user
+            ### End reg key check for target user
             $path = Join-Path $oldUserProfileImagePath '\AppData\Local\JumpCloudADMU'
             If (!(test-path $path)) {
                 New-Item -ItemType Directory -Force -Path $path | Out-Null
@@ -891,7 +893,7 @@ Function Start-Migration {
             } catch {
                 Write-ToLog -Message($_.Exception.Message)
                 # attempt to recover:
-                # list processes for new user
+                # list processes for target user
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
@@ -937,7 +939,7 @@ Function Start-Migration {
                 }
             } catch {
                 # attempt to recover:
-                # list processes for new user
+                # list processes for target user
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
@@ -999,7 +1001,7 @@ Function Start-Migration {
                 }
             } catch {
                 # attempt to recover:
-                # list processes for new user
+                # list processes for target user
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
                 if ($processList) {
                     Show-ProcessListResult -ProcessList $processList -domainUsername $JumpCloudUserName
@@ -1092,11 +1094,11 @@ Function Start-Migration {
                 Write-ToLog -Message:("Parameter to Update Home Path was set.")
                 Write-ToLog -Message:("Attempting to rename $oldUserProfileImagePath to: $($windowsDrive)\Users\$JumpCloudUsername.")
                 # Test Condition for same names
-                # Check if the new user is named username.HOSTNAME or username.000, .001 etc.
+                # Check if the target user is named username.HOSTNAME or username.000, .001 etc.
                 $userCompare = $oldUserProfileImagePath.Replace("$($windowsDrive)\Users\", "")
                 if ($userCompare -eq $JumpCloudUsername) {
-                    Write-ToLog -Message:("Selected User Path and New User Path Match")
-                    # Remove the New User Profile Path, we want to just use the old Path
+                    Write-ToLog -Message:("Source and target user path match")
+                    # Remove the target user Profile Path, we want to just use the old Path
                     try {
                         Write-ToLog -Message:("Attempting to remove newly created $newUserProfileImagePath")
                         start-sleep 1
@@ -1109,10 +1111,10 @@ Function Start-Migration {
                         Write-ToLog -Message:("Remove $newUserProfileImagePath failed, renaming to ADMU_unusedProfile_$JumpCloudUserName")
                         Rename-Item -Path $newUserProfileImagePath -NewName "ADMU_unusedProfile_$JumpCloudUsername" -ErrorAction Stop
                     }
-                    # Set the New User Profile Image Path to Old User Profile Path (they are the same)
+                    # Set the target user Profile Image Path to Source User Profile Path (they are the same)
                     $newUserProfileImagePath = $oldUserProfileImagePath
                 } else {
-                    Write-ToLog -Message:("Selected User Path and New User Path Differ")
+                    Write-ToLog -Message:("Source and target User Path Differ")
                     try {
                         Write-ToLog -Message:("Attempting to remove newly created $newUserProfileImagePath")
                         # start-sleep 1
@@ -1131,7 +1133,7 @@ Function Start-Migration {
                     }
                     try {
                         Write-ToLog -Message:("Attempting to rename newly $oldUserProfileImagePath to $JumpcloudUserName")
-                        # Rename the old user profile path to the new name
+                        # Rename the Source User profile path to the new name
                         # -ErrorAction Stop; Rename-Item doesn't throw terminating errors
                         Rename-Item -Path $oldUserProfileImagePath -NewName $JumpCloudUserName -ErrorAction Stop
                         $datPath = "$($windowsDrive)\Users\$JumpCloudUserName"
@@ -1159,7 +1161,7 @@ Function Start-Migration {
                     Write-ToLog -Message:("Remove $newUserProfileImagePath failed, renaming to ADMU_unusedProfile_$JumpCloudUserName")
                     Rename-Item -Path $newUserProfileImagePath -NewName "ADMU_unusedProfile_$JumpCloudUserName" -ErrorAction Stop
                 }
-                # Set the New User Profile Image Path to Old User Profile Path (they are the same)
+                # Set the target user Profile Image Path to Source user Profile Path (they are the same)
                 $newUserProfileImagePath = $oldUserProfileImagePath
                 # TODO: Validate this should be here:
                 # $admuTracker.renameHomeDirectory.pass = $true
@@ -1170,12 +1172,14 @@ Function Start-Migration {
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
             $trackAccountMerge = $true
             # logging
-            Write-ToLog -Message:('New User Profile Path: ' + $newUserProfileImagePath + ' New User SID: ' + $NewUserSID)
-            Write-ToLog -Message:('Old User Profile Path: ' + $oldUserProfileImagePath + ' Old User SID: ' + $SelectedUserSID)
+            Write-ToLog -Message:('Target User Profile Path: ' + $newUserProfileImagePath)
+            Write-ToLog -Message:('Target User SID: ' + $NewUserSID)
+            Write-ToLog -Message:('Source User Profile Path: ' + $oldUserProfileImagePath)
+            Write-ToLog -Message:('Source User SID: ' + $SelectedUserSID)
             #endRegion Process Home Path Permission
 
             #region NTFS Permissions
-            Write-ToLog "Attempting to set owner to NTFS Permissions from: ($NewUserSID) to: $SelectedUserSID for path: $newUserProfileImagePath"
+            Write-ToLog -Message:("Attempting to set owner to NTFS Permissions from: ($NewUserSID) to: $SelectedUserSID for path: $newUserProfileImagePath")
             $regPermStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
             $progressCallback = {
                 param($current, $total)
@@ -1207,12 +1211,12 @@ Function Start-Migration {
             if ($validateNTUserDatPermissions ) {
                 Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath)")
             } else {
-                Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($datPath)\NTUSER.DAT to ensure Administrators, System, and selected user have have Full Control `n$($validateNTUserDatPermissionsResults | Out-String)") -Level Warning
+                Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($datPath)\NTUSER.DAT to ensure Administrators, System, and source user have have Full Control `n$($validateNTUserDatPermissionsResults | Out-String)") -Level Warning
             }
             if ($validateUsrClassDatPermissions) {
                 Write-ToLog -Message:("UsrClass.dat Permissions are correct $($datPath)")
             } else {
-                Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and selected user have have Full Control `n$($validateUsrClassDatPermissionsResults | Out-String)") -Level Warning
+                Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and source user have have Full Control `n$($validateUsrClassDatPermissionsResults | Out-String)") -Level Warning
             }
             #endRegion Validate Hive Permissions
 
@@ -1258,7 +1262,7 @@ Function Start-Migration {
             #region Init WUP Apps
             Write-ToProgress -ProgressBar $ProgressBar -Status "DownloadUWPApps" -form $isForm -SystemDescription $systemDescription
 
-            Write-ToLog -Message:('Updating UWP Apps for new user')
+            Write-ToLog -Message:('Updating UWP Apps for target user')
             $newUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $newUserSID) -Name 'ProfileImagePath'
             # IF windows 10 remove the windows.search then it will be recreated on login
             if ($systemVersion.OSName -match "Windows 10") {
@@ -1444,7 +1448,7 @@ Function Start-Migration {
                 Write-ToLog -Message:('Failed to remove Temp Files & Folders.' + $jcAdmuTempPath)
             }
 
-            # Set the last logged on user to the new user
+            # Set the last logged on user to the target user
             if ($SetDefaultWindowsUser -eq $true) {
                 $registryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI"
                 Write-ToLog -Message:('Setting Last Logged on Windows User to ' + $JumpCloudUsername)
