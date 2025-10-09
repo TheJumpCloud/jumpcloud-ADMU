@@ -57,10 +57,8 @@ function Test-UserFolderRedirect {
                 # If the registry value does not match the default path, set redirectedDirectory to true and log the error
                 $regex = '^\\\\[a-zA-Z0-9.-]+\\[a-zA-Z0-9._-]+(\\[a-zA-Z0-9._-]+)*$' # regex for network paths ie \\server\share\folder, \\server.example.com\share\folder
                 if ($folderRegKeyValue -match $regex) {
-                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue) is a network path (IP or Domain). Migration NOT allowed.") -Level Warning -Step "Test-UserFolderRedirect"
+                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue) is a network path (IP or Domain). Users can be migrated in this state but be aware that they might not be able to access their files if the location is unavailable post-migration. If you encounter this issue and would like to migrate this user anyways, please use the ValidateUserShellFolder parameter and set the value to false") -Level Warning -Step "Test-UserFolderRedirect"
                     $redirectedDirectory = $true
-                } else {
-                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue). Migration allowed.") -level Verbose -step "Test-UserFolderRedirect"
                 }
             }
         } else {
