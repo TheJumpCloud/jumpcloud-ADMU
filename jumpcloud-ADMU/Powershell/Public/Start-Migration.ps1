@@ -420,22 +420,18 @@ Function Start-Migration {
             leaveDomain                   = @{
                 step     = "Setting Domain Status"
                 desc     = "Setting the domain status/ leaving the domain if specified."
-                required = $true
+                required = $false
                 pass     = $false
                 fail     = $false
             }
             autoBind                      = @{
                 step     = "User Association"
                 desc     = "Associating the new local user account with the corresponding JumpCloud user account if specified."
-                required = $true
+                required = $false
                 pass     = $false
                 fail     = $false
             }
         }
-        # Write-ToLog "================ Migration Details ================="
-        # Write-ToLog "Local username to be created: $SelectedUserName"
-        # Write-ToLog "Account SID to be migrated From: $"
-        # Write-ToLog -Message ("The Selected Migration user is: $JumpCloudUsername")
 
         Write-ToLog -Message ('Creating JCADMU Temporary Path in ' + $jcAdmuTempPath)
         if (!(Test-path $jcAdmuTempPath)) {
@@ -1512,6 +1508,8 @@ Function Start-Migration {
         Write-ToLog -Message "Migration Summary" -MigrationStep
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) {
             Write-ToLog -Message ('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
+            Write-ToLog -Message "User $selectedUserName was migrated to $JumpCloudUserName"
+            Write-ToLog -Message "Please login as $JumpCloudUserName to complete the migration and initialize the windows built in app setup."
             Write-ToProgress -ProgressBar $ProgressBar -Status "MigrationComplete" -form $isForm -SystemDescription $systemDescription
         } else {
             Write-ToLog -Message ("ADMU encountered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warning
