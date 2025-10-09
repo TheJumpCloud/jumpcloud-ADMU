@@ -31,7 +31,7 @@ function Confirm-API {
         # 2. Next, if an API key was provided, test it.
         if (-not [string]::IsNullOrEmpty($jcApiKey)) {
             $testAPIResult = Test-APIKey -jcApiKey $jcApiKey -jcOrgId $jcOrgID
-            Write-toLog -Message "Test-APIKey result: IsValid=$($testAPIResult.IsValid), ID=$($testAPIResult.ID)" -Level Verbose
+            Write-toLog -Message "Test-APIKey result: IsValid=$($testAPIResult.IsValid), ID=$($testAPIResult.ID)" -Level Verbose -Step "Confirm-API"
             if ($testAPIResult.IsValid) {
                 # API key is valid
                 # set the return object

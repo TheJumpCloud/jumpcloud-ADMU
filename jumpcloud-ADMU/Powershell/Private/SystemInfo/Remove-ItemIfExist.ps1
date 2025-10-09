@@ -11,7 +11,7 @@ Function Remove-ItemIfExist {
                 Remove-Item -Path:($Path) -Recurse:($Recurse)
             }
         } Catch {
-            Write-ToLog -Message ('Removal Of Temp Files & Folders Failed') -Level Warning
+            Write-ToLog -Message ('Removal Of Temp Files & Folders Failed') -Level Warning -Step "Remove-ItemIfExist"
         }
     }
 }

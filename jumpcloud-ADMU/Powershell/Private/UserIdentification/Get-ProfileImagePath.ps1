@@ -9,7 +9,7 @@ Function Get-ProfileImagePath {
     )
     $profileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $UserSid) -Name 'ProfileImagePath'
     if ([System.String]::IsNullOrEmpty($profileImagePath)) {
-        Write-ToLog -Message("Could not get the profile path for $UserSid exiting...") -Level Warning
+        Write-ToLog -Message("Could not get the profile path for $UserSid exiting...") -Level Warning -Step "Get-ProfileImagePath"
         throw "Could not get the profile path for $UserSid exiting..."
     } else {
         return $profileImagePath

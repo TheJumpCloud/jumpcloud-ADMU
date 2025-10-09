@@ -469,14 +469,14 @@ Function Invoke-SystemContextAPI {
                             # add to retry counter and continue loop
                             $success = $false
                         } else {
-                            Write-ToLog "Failed to get system: $($_.Exception.Message)" -Level Warning
+                            Write-ToLog "Failed to get system: $($_.Exception.Message)" -Level Warning -Step "Invoke-SystemContextAPI"
                             # set success to true & exit the loop
                             $success = $true
                         }
                     }
                 } while (-not $success -and $retryCount -lt $maxRetries)
                 if (-not $success) {
-                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts."
+                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Verbose -Step "Invoke-SystemContextAPI"
                 }
             }
             'PUT' {
@@ -493,14 +493,14 @@ Function Invoke-SystemContextAPI {
                             # add to retry counter and continue loop
                             $success = $false
                         } else {
-                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning
+                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning -Step "Invoke-SystemContextAPI"
                             # set success to true & exit the loop
                             $success = $true
                         }
                     }
                 } while (-not $success -and $retryCount -lt $maxRetries)
                 if (-not $success) {
-                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts."
+                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Verbose -Step "Invoke-SystemContextAPI"
                 }
             }
             'POST' {
@@ -517,14 +517,14 @@ Function Invoke-SystemContextAPI {
                             # add to retry counter and continue loop
                             $success = $false
                         } else {
-                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning
+                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning -Step "Invoke-SystemContextAPI"
                             # set success to true & exit the loop
                             $success = $true
                         }
                     }
                 } while (-not $success -and $retryCount -lt $maxRetries)
                 if (-not $success) {
-                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts."
+                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Verbose -Step "Invoke-SystemContextAPI"
                 }
             }
             'DELETE' {
@@ -541,14 +541,14 @@ Function Invoke-SystemContextAPI {
                             # add to retry counter and continue loop
                             $success = $false
                         } else {
-                            Write-ToLog "Failed to delete system: $($_.Exception.Message)" -Level Warning
+                            Write-ToLog "Failed to delete system: $($_.Exception.Message)" -Level Warning -Step "Invoke-SystemContextAPI"
                             # set success to true & exit the loop
                             $success = $true
                         }
                     }
                 } while (-not $success -and $retryCount -lt $maxRetries)
                 if (-not $success) {
-                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts."
+                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Verbose -Step "Invoke-SystemContextAPI"
                 }
             }
             Default {

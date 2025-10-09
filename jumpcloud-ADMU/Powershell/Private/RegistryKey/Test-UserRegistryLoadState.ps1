@@ -15,7 +15,7 @@ Function Test-UserRegistryLoadState {
         $results = REG QUERY HKU *>&1
         # Tests to check that the reg items are not loaded
         If ($results -match $UserSid) {
-            Write-ToLog "REG Keys are loaded, attempting to unload"
+            Write-ToLog "REG Keys are loaded, attempting to unload" -Level Verbose -Step "Test-UserRegistryLoadState"
             try {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
@@ -38,7 +38,7 @@ Function Test-UserRegistryLoadState {
             # return boolean for redirected user directories
             $isFolderRedirect = Test-UserFolderRedirect -UserSid $UserSid
         } else {
-            Write-ToLog "Skipping User Shell Folder Validation..."
+            Write-ToLog "Skipping User Shell Folder Validation..." -Level Verbose -Step "Test-UserRegistryLoadState"
         }
 
         # Check for previousSid from \Software\JCADMU
@@ -62,7 +62,7 @@ Function Test-UserRegistryLoadState {
         $results = REG QUERY HKU *>&1
         # Tests to check that the reg items are not loaded
         If ($results -match $UserSid) {
-            Write-ToLog "REG Keys are loaded, attempting to unload"
+            Write-ToLog "REG Keys are loaded, attempting to unload" -Level Verbose -Step "Test-UserRegistryLoadState"
             try {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
@@ -76,9 +76,9 @@ Function Test-UserRegistryLoadState {
             Write-AdmuErrorMessage -Error:("user_folder_redirection_error")
             throw "Main user folders are redirected, exiting..."
         } elseif ($ValidateDirectory -eq $false) {
-            Write-ToLog "Skipping User Shell Folder Validation..."
+            Write-ToLog "Skipping User Shell Folder Validation..." -Level Verbose -Step "Test-UserRegistryLoadState"
         } else {
-            Write-ToLog "Main user folders are default for Usersid: $($UserSid), continuing..."
+            Write-ToLog "Main user folders are default for Usersid: $($UserSid), continuing..." -Level Verbose -Step "Test-UserRegistryLoadState"
         }
     }
 }

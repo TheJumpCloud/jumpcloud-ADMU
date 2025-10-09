@@ -57,8 +57,8 @@ function Get-ProcessByOwner {
     }
 
     end {
-        Write-ToLog -Message:("Getting Processes for: $domainUsername")
-        Write-ToLog -Message:("Processes found: $($processList.count)")
+        Write-ToLog -Message:("Getting Processes for: $domainUsername") -Level Verbose -Step "Get-ProcessByOwner"
+        Write-ToLog -Message:("Processes found: $($processList.count)") -Level Verbose -Step "Get-ProcessByOwner"
         return $processList
     }
 }

@@ -44,20 +44,20 @@ function Test-JumpCloudUsername {
             $StatusCode = $Response.StatusCode
         } catch {
             $StatusCode = $_.Exception.Response.StatusCode.value__
-            Write-ToLog -Message "Status Code $($StatusCode)"
+            Write-ToLog -Message "Status Code $($StatusCode)" -Level Verbose -Step "Test-JumpCloudUsername"
         }
     }
     End {
         # Search User should return 200 success
         If ($StatusCode -ne 200) {
-            Write-ToLog -Message "JumpCloud username could not be found"
+            Write-ToLog -Message "JumpCloud username could not be found" -Level Verbose -Step "Test-JumpCloudUsername"
             Return $false, $null, $null
         }
         If ($Results.totalCount -eq 1 -and $($Results.results[0].username) -eq $Username) {
             # write-host $Results.results[0]._id
-            Write-ToLog -Message "Identified JumpCloud User`nUsername: $($Results.results[0].username)`nID: $($Results.results[0]._id)"
+            Write-ToLog -Message "Identified JumpCloud User`nUsername: $($Results.results[0].username)`nID: $($Results.results[0]._id)" -Level Verbose -Step "Test-JumpCloudUsername"
             if ($Results.results[0].SystemUsername) {
-                Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].SystemUsername)"
+                Write-ToLog -Message "JumpCloud User have a Local Account User set: $($Results.results[0].SystemUsername)" -Level Verbose -Step "Test-JumpCloudUsername"
                 return $true, $Results.results[0]._id, $Results.results[0].SystemUsername
             } else {
                 return $true, $Results.results[0]._id, $null

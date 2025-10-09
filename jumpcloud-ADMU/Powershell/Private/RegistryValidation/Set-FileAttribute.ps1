@@ -24,7 +24,7 @@ function Set-FileAttribute {
     }
 
     process {
-        Write-ToLog "$profilePath attributes before: $($attributesBefore)"
+        Write-ToLog "$profilePath attributes before: $($attributesBefore)" -Level Verbose -Step "Set-FileAttribute"
         # remove item with bitwise operators, keeping what was set but removing the $attribute
         switch ($Operation) {
             "Remove" {
@@ -39,7 +39,7 @@ function Set-FileAttribute {
     end {
         $profilePropertiesAfter = Get-ItemProperty -Path $ProfilePath
         $attributesAfter = $($profilePropertiesBefore.Attributes)
-        Write-ToLog "$profilePath attributes after: $($attributesAfter)"
+        Write-ToLog "$profilePath attributes after: $($attributesAfter)" -Level Verbose -Step "Set-FileAttribute"
 
         if ($attributeTest) {
             return $true

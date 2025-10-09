@@ -5,7 +5,7 @@ function Set-ValueToKey([Microsoft.Win32.RegistryHive]$registryRoot, [string]$ke
     $regRights = [System.Security.AccessControl.RegistryRights]::SetValue
     $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
     $Key = [Microsoft.Win32.Registry]::$registryRoot.OpenSubKey($keyPath, $permCheck, $regRights)
-    Write-ToLog -Message:("Setting value with properties [name:$name, value:$value, value type:$regValueKind]")
+    Write-ToLog -Message:("Setting value with properties [name:$name, value:$value, value type:$regValueKind]") -Level Verbose -Step "Set-ValueToKey"
     $Key.SetValue($name, $value, $regValueKind)
     $key.Close()
 }

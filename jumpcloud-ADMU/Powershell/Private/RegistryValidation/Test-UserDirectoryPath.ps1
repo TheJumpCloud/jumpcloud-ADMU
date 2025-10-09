@@ -31,7 +31,7 @@ function Test-UserDirectoryPath {
         $userProfilePath = Get-ItemPropertyValue -Path $registryPath -Name 'ProfileImagePath' -ErrorAction Stop
         $profileFolderName = Split-Path -Path $userProfilePath -Leaf
         if ($profileFolderName -match '\.WORKGROUP$|\.ADMU$') {
-            Write-ToLog "Validation Failed: Profile folder name '$profileFolderName' contains a domain or WORKGROUP suffix." -level Error
+            Write-ToLog "Validation Failed: Profile folder name '$profileFolderName' contains a domain or WORKGROUP suffix." -level Error -Step "Test-UserDirectoryPath"
             return $false
         } else {
             return $true
