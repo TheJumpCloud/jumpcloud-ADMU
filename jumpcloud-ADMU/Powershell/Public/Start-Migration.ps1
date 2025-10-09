@@ -1317,7 +1317,7 @@ Function Start-Migration {
                     Write-ToLog -Message:('JumpCloud automatic bind step succeeded for user ' + $JumpCloudUserName)
                     $admuTracker.autoBind.pass = $true
                 } else {
-                    Write-ToLog -Message:('JumpCloud automatic bind step failed, Api Key or JumpCloud username is incorrect.') -Level:('Warn')
+                    Write-ToLog -Message:('JumpCloud automatic bind step failed, Api Key or JumpCloud username is incorrect.') -Level Warning
                     # $admuTracker.autoBind.fail = $true
                 }
             }
@@ -1384,7 +1384,7 @@ Function Start-Migration {
                                 Write-ToLog -Message:('The hybrid joined device has unjoined from the domain successfully') -Level:('Info')
                                 $admuTracker.leaveDomain.pass = $true
                             } else {
-                                Write-ToLog -Message:('Unable to leave Hybrid Domain') -Level:('Warn')
+                                Write-ToLog -Message:('Unable to leave Hybrid Domain') -Level Warning
                                 # here we would typically fail migration but doing so would remove the system account
                             }
                         }
@@ -1395,7 +1395,7 @@ Function Start-Migration {
                                 Write-ToLog -Message:('Left local domain successfully') -Level:('Info')
                                 $admuTracker.leaveDomain.pass = $true
                             } else {
-                                Write-ToLog -Message:('Unable to leave local domain') -Level:('Warn')
+                                Write-ToLog -Message:('Unable to leave local domain') -Level Warning
                                 # here we would typically fail migration but doing so would remove the system account
                             }
                         }
@@ -1408,7 +1408,7 @@ Function Start-Migration {
                                 Write-ToLog -message "Left Azure AD domain successfully. Device Domain State, AzureADJoined : $AzureADStatus"
                                 $admuTracker.leaveDomain.pass = $true
                             } else {
-                                Write-ToLog -Message:('Unable to leave Azure Domain. Re-running DSRegCmd.exe /leave') -Level:('Warn')
+                                Write-ToLog -Message:('Unable to leave Azure Domain. Re-running DSRegCmd.exe /leave') -Level Warning
                                 DSRegCmd.exe /leave # Leave Azure AD
 
                                 $AzureADStatus = Get-DomainStatus
@@ -1416,7 +1416,7 @@ Function Start-Migration {
                                     Write-ToLog -Message:('Left Azure AD domain successfully') -Level:('Info')
                                     $admuTracker.leaveDomain.pass = $true
                                 } else {
-                                    Write-ToLog -Message:('Unable to leave Azure AD domain') -Level:('Warn')
+                                    Write-ToLog -Message:('Unable to leave Azure AD domain') -Level Warning
                                     # here we would typically fail migration but doing so would remove the system account
                                 }
 

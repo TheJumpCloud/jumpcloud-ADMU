@@ -14,7 +14,7 @@ function Set-JCUserToSystemAssociation {
         $systemKey = [regex]::Match($config, $regex).Groups[1].Value
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         If (!$systemKey) {
-            Write-ToLog -Message:("Could not find systemKey, aborting bind step") -Level:('Warn') -Step "Set-JCUserToSystemAssociation"
+            Write-ToLog -Message:("Could not find systemKey, aborting bind step") -Level Warning -Step "Set-JCUserToSystemAssociation"
         }
     }
     Process {
@@ -50,17 +50,17 @@ function Set-JCUserToSystemAssociation {
         } catch {
             $errorMsg = $_.Exception.Message
             $StatusCode = $_.Exception.Response.StatusCode.value__
-            Write-ToLog -Message:("Could not bind user to system") -Level:('Warn') -Step "Set-JCUserToSystemAssociation"
+            Write-ToLog -Message:("Could not bind user to system") -Level Warning -Step "Set-JCUserToSystemAssociation"
         }
 
     }
     End {
         # Associations post should return 204 success no content
         if ($StatusCode -eq 204) {
-            Write-ToLog -Message:("Associations Endpoint returned statusCode $statusCode [success]") -Level:('Warn') -Step "Set-JCUserToSystemAssociation"
+            Write-ToLog -Message:("Associations Endpoint returned statusCode $statusCode [success]") -Level Warning -Step "Set-JCUserToSystemAssociation"
             return $true
         } else {
-            Write-ToLog -Message:("Associations Endpoint returned statusCode $statusCode | $errorMsg") -Level:('Warn') -Step "Set-JCUserToSystemAssociation"
+            Write-ToLog -Message:("Associations Endpoint returned statusCode $statusCode | $errorMsg") -Level Warning -Step "Set-JCUserToSystemAssociation"
             return $false
         }
     }
