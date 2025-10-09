@@ -74,11 +74,11 @@ Function Test-UserRegistryLoadState {
         # If isFolderRedirect is false throw error
         if ($isFolderRedirect -and $ValidateDirectory) {
             Write-AdmuErrorMessage -Error:("user_folder_redirection_error")
-            throw "Main user folders are redirected, exiting..."
+            throw "Default user directories are redirected, and the ValidateUserShellFolder parameter is set to true. The migration can not continue if the user directories are redirected. Exiting..."
         } elseif ($ValidateDirectory -eq $false) {
             Write-ToLog "Skipping User Shell Folder Validation..." -Level Verbose -Step "Test-UserRegistryLoadState"
         } else {
-            Write-ToLog "Main user folders are default for Usersid: $($UserSid), continuing..." -Level Verbose -Step "Test-UserRegistryLoadState"
+            Write-ToLog "Default user directories are not redirected for Usersid: $($UserSid), continuing..." -Level Verbose -Step "Test-UserRegistryLoadState"
         }
     }
 }
