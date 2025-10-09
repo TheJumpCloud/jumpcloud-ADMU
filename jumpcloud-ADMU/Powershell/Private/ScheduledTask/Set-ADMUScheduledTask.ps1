@@ -15,7 +15,7 @@ function Set-ADMUScheduledTask {
         "disable" {
             try {
                 $scheduledTasks | ForEach-Object {
-                    Write-ToLog -message:("Disabling Scheduled Task: $($_.TaskName)") -level Verbose -Step "Set-ADMUScheduledTask"
+                    # Write-ToLog -message:("Disabling Scheduled Task: $($_.TaskName)") -level Verbose -Step "Set-ADMUScheduledTask"
                     Disable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
                 }
             } catch {
@@ -25,7 +25,7 @@ function Set-ADMUScheduledTask {
         "enable" {
             try {
                 $scheduledTasks | ForEach-Object {
-                    Write-ToLog -message("Enabling Scheduled Task: $($_.TaskName)") -level Verbose -Step "Set-ADMUScheduledTask"
+                    # Write-ToLog -message("Enabling Scheduled Task: $($_.TaskName)") -level Verbose -Step "Set-ADMUScheduledTask"
                     Enable-ScheduledTask -TaskName $_.TaskName -TaskPath $_.TaskPath | Out-Null
                 }
             } catch {
