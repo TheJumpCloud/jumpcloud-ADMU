@@ -1,35 +1,3 @@
-#Logging function
-<#
-  .Synopsis
-     Write-ToLog writes a message to a specified log file with the current time stamp.
-  .DESCRIPTION
-     The Write-ToLog function is designed to add logging capability to other scripts.
-     In addition to writing output and/or verbose you can write to a log file for
-     later debugging.
-  .NOTES
-     Created by: Jason Wasser @wasserja
-     Modified: 11/24/2015 09:30:19 AM
-  .PARAMETER Message
-     Message is the content that you wish to add to the log file.
-  .PARAMETER Path
-     The path to the log file to which you would like to write. By default the function will
-     create the path and file if it does not exist.
-  .PARAMETER Level
-     Specify the criticality of the log information being written to the log (i.e. Error, Warning, Informational)
-  .EXAMPLE
-     Write-ToLog -Message 'Log message'
-     Writes the message to c:\Logs\PowerShellLog.log.
-  .EXAMPLE
-     Write-ToLog -Message 'Restarting Server.' -Path c:\Logs\Scriptoutput.log
-     Writes the content to the specified log file and creates the path and file specified.
-  .EXAMPLE
-     Write-ToLog -Message 'Folder does not exist.' -Path c:\Logs\Script.log -Level Error
-     Writes the message to the specified log file as an error message, and writes the message to the error pipeline.
-  .LINK
-     https://gallery.technet.microsoft.com/scriptcenter/Write-ToLog-PowerShell-999c32d0
-  #>
-# Set a global parameter for debug logging
-
 Function Write-ToLog {
    [CmdletBinding()]
    Param
@@ -37,7 +5,8 @@ Function Write-ToLog {
       [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message,
       [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log",
       [Parameter(Mandatory = $false)][ValidateSet("Error", "Warning", "Info", "Verbose")][string]$Level = "Info",
-      [Parameter(Mandatory = $false)][string]$Step
+      [Parameter(Mandatory = $false)][string]$Step,
+      [Parameter(Mandatory = $false)][switch]$MigrationStep
    )
    Begin {
       $VerbosePreference = 'Continue'
@@ -50,7 +19,20 @@ Function Write-ToLog {
       $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
       $levelText = $Level.ToUpper()
       $stepText = if ($Step) { "[$Step]" } else { "" }
-      $logMessage = "[$timestamp] [$levelText] $stepText $Message"
+
+      # Handle MigrationStep formatting
+      if ($MigrationStep) {
+         $totalWidth = 52
+         $messageText = $Message
+         $availableWidth = $totalWidth - $messageText.Length - 2  # -2 for spaces around message
+         $paddingEach = [math]::Floor($availableWidth / 2)
+         $paddingLeft = "=" * $paddingEach
+         $paddingRight = "=" * ($availableWidth - $paddingEach)
+         $formattedMessage = "$paddingLeft $messageText $paddingRight"
+         $logMessage = "[$timestamp] [$levelText] $stepText $formattedMessage"
+      } else {
+         $logMessage = "[$timestamp] [$levelText] $stepText $Message"
+      }
 
       # Write to appropriate pipeline and optionally to console
       switch ($Level) {
