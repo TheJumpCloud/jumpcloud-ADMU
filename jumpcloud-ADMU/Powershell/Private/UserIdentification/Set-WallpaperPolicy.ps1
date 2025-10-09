@@ -12,10 +12,7 @@ function Set-WallpaperPolicy {
 
     begin {
         # Mount the HKEY_USERS hive if it is not already available as a PSDrive.
-        # TODO: CUT-4890 Replace PSDrive with private function
-        if ("HKEY_USERS" -notin (Get-PSDrive | Select-Object -ExpandProperty Name)) {
-            New-PSDrive -Name "HKEY_USERS" -PSProvider "Registry" -Root "HKEY_USERS" | Out-Null
-        }
+        Set-HKEYUserMount
 
         # Construct the full path to the target registry key.
         $basePath = "HKEY_USERS:\$($UserSid)"

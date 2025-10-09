@@ -33,10 +33,7 @@ Describe "Test-DATFilePermission Acceptance Tests" -Tag "Acceptance" {
             $NTUser | Should -Be $true
             $UsrClass | Should -Be $true
             # load file into memory + test registry permissions
-            # TODO: CUT-4890 Replace PSDrive with private function
-            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
-            }
+            Set-HKEYUserMount
             REG LOAD HKU\$($datUserTrue) "C:\Users\$datUserTrue\NTUSER.DAT" *>&1
             REG LOAD HKU\$($datUserTrue)_classes "C:\Users\$datUserTrue\AppData\Local\Microsoft\Windows\UsrClass.dat" *>&1
             # Test NTUSER dat permissions
@@ -98,10 +95,7 @@ Describe "Test-DATFilePermission Acceptance Tests" -Tag "Acceptance" {
             }
             # Registry Validations:
             # load file into memory + test registry permissions
-            # TODO: CUT-4890 Replace PSDrive with private function
-            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
-            }
+            Set-HKEYUserMount
             foreach ($FilePath in $filePaths) {
                 if ($filePath -match 'usrclass') {
                     REG LOAD "HKU\tempPath_classes" "$FilePath" *>&1

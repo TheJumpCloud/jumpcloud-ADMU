@@ -23,10 +23,7 @@ Describe "Test-PreviousSID Acceptance Tests" -Tag "Acceptance" {
     }
     Context "Validate previousSid" {
         It 'Validates the function Test-PreviousSID returns $false if PreviousSID is not present' {
-            # TODO: CUT-4890 Replace PSDrive with private function
-            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
-            }
+            Set-HKEYUserMount
             #$currentSID = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
             $newUser = "ADMU_User" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $password = '$T#st1234adsasddasasd'
@@ -42,10 +39,7 @@ Describe "Test-PreviousSID Acceptance Tests" -Tag "Acceptance" {
         }
 
         It "Validates the function Test-PreviousSID returns $true if PreviousSID is present" {
-            # TODO: CUT-4890 Replace PSDrive with private function
-            if ((Get-psdrive | select-object name) -notmatch "HKEY_USERS") {
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS")
-            }
+            Set-HKEYUserMount
             #$currentSID = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
             $newUser = "ADMU_User" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $password = '$T#st1234adsasddasasd'

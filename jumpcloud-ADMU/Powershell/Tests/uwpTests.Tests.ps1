@@ -23,11 +23,7 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
                 New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
 
-            # TODO: replace with Set-HKEYUsersMount
-            # TODO: CUT-4890 Replace PSDrive with private function
-            if ("HKEY_USERS" -notin (Get-psdrive | select-object name).Name) {
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
-            }
+            Set-HKEYUserMount
             # set the file type associations
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
             write-host "fta count: $($fileTypeAssociations.count)"

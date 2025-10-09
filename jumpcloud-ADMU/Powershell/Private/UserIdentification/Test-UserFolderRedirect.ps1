@@ -10,12 +10,7 @@ function Test-UserFolderRedirect {
 
     )
     begin {
-        # TODO: replace with Set-HKEYUsersMount
-        # TODO: CUT-4890 Replace PSDrive with private function
-        if ("HKEY_USERS" -notin (Get-PSDrive | select-object name).Name) {
-            Write-ToLog "Mounting HKEY_USERS"
-            New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
-        }
+        Set-HKEYUserMount
         $UserFolders = @( "Desktop", "Documents", "Downloads", "Favorites", "Music", "Pictures", "Videos" )
         # Support doc for personal folders: https://support.microsoft.com/en-us/topic/operation-to-change-a-personal-folder-location-fails-in-windows-ffb95139-6dbb-821d-27ec-62c9aaccd720
         $basePath = "HKEY_USERS:\$($UserSid)"

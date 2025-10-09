@@ -155,7 +155,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = '2.9.1'
+        $admuVersion = "2.9.2"
         # Log Windows System Version Information
         Write-ToLog -Message:("OSName: $($systemVersion.OSName), OSVersion: $($systemVersion.OSVersion), OSBuildNumber: $($systemVersion.OsBuildNumber), OSEdition: $($systemVersion.WindowsEditionId)")
         $script:JumpCloudUserID = $JumpCloudUserID
@@ -650,12 +650,7 @@ Function Start-Migration {
                 }
             }
             # Validate file permissions on registry item
-            # TODO: replace with Set-HKEYUsersMount
-            # TODO: CUT-4890 Replace PSDrive with private function
-            if ("HKEY_USERS" -notin (Get-PSDrive | select-object name).Name) {
-                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
-            }
+            Set-HKEYUserMount
             $validateRegistryPermission, $validateRegistryPermissionResult = Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_admu" -username $jumpcloudUsername -type 'registry'
             $validateRegistryPermissionClasses, $validateRegistryPermissionClassesResult = Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_Classes_admu" -username $jumpcloudUsername -type 'registry'
 
@@ -714,12 +709,7 @@ Function Start-Migration {
 
             # SelectedUserSid
             # Validate file permissions on registry item
-            # TODO: replace with Set-HKEYUsersMount
-            # TODO: CUT-4890 Replace PSDrive with private function
-            if ("HKEY_USERS" -notin (Get-PSDrive | select-object name).Name) {
-                Write-ToLog "Mounting HKEY_USERS to check USER UWP keys"
-                New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
-            }
+            Set-HKEYUserMount
             Write-ToProgress -ProgressBar $ProgressBar -Status "CopyDefaultProtocols" -form $isForm -SystemDescription $systemDescription
             # Get the file type associations while the user registry is loaded
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $SelectedUserSid
