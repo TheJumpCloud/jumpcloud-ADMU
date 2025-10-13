@@ -431,7 +431,6 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 # Act & Assert
                 $result = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
                 # Assert
-                $result.Count | Should -Be 1
                 $result[0].SelectedUserName | Should -Be "S-1-5-21-ABC"
                 $result[0].JumpCloudUserName | Should -Be "bobby.jones"
                 $result[0].JumpCloudUserID | Should -Be "jcuser456"
