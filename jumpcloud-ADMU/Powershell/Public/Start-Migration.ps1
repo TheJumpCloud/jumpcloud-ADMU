@@ -760,9 +760,9 @@ Function Start-Migration {
             #TODO: Out NULL?
             reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
             if ($?) {
-                Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+                Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
             } else {
-                Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+                Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
                 # attempt to recover:
                 # list processes for target user
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
@@ -780,9 +780,9 @@ Function Start-Migration {
                 reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
                 switch ($?) {
                     $true {
-                        Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+                        Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
                     } $false {
-                        Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+                        Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
                         Write-AdmuErrorMessage -ErrorName "copy_error"
                         $admuTracker.copyRegistry.fail = $true
                         break
@@ -885,7 +885,7 @@ Function Start-Migration {
             Write-ToLog -Message $admuTracker.copyRegistryFiles.step -MigrationStep
             try {
                 Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
-                Copy-Item -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Destination "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Force -ErrorAction Stop
+                Copy-Item -Path "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Destination "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force -ErrorAction Stop
             } catch {
                 Write-ToLog -Message($_.Exception.Message)
                 # attempt to recover:
@@ -903,7 +903,7 @@ Function Start-Migration {
                 }
                 try {
                     Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
-                    Copy-Item -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Destination "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Force -ErrorAction Stop
+                    Copy-Item -Path "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Destination "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force -ErrorAction Stop
                 } catch {
                     Write-ToLog -Message("Could not copy backup registry hives to the destination location in $($oldUserProfileImagePath): Exiting...")
                     $admuTracker.copyRegistryFiles.fail = $true
