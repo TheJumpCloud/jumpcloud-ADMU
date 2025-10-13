@@ -406,7 +406,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Missing required data for field 'LocalPath'."
             }
 
-            It "Should throw an error if 'JumpCloudUserName' field is empty" {
+            It "Should not return rows if 'JumpCloudUserName' field is empty" {
                 # Arrange
                 $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
@@ -415,7 +415,27 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Missing required data for field 'JumpCloudUserName'."
+                Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false | Should -BeNullOrEmpty
+            }
+            It "Should only return rows where 'JumpCloudUserName' field is not empty" {
+                # Arrange
+                $csvContent = @"
+"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
+"S-1-5-21-XYZ","C:\Users\j.doe",$computerName,"j.doe","","jcuser123","jcsystem123",$serialNumber
+"S-1-5-21-ABC","C:\Users\b.jones",$computerName,"b.jones","bobby.jones","jcuser456","jcsystem456",$serialNumber
+"@
+                Set-Content -Path $csvPath -Value $csvContent -Force
+
+                # Act & Assert
+                # Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false | Should -Not -BeNullOrEmpty
+                $result = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
+                $result | Where-Object { -not [string]::IsNullOrWhiteSpace($_.JumpCloudUserName) } | Should -Not -BeNullOrEmpty
+                $result.Count | Should -Be 1
+                $result[0].SelectedUserName | Should -Be "S-1-5-21-ABC"
+                $result[0].JumpCloudUserName | Should -Be "bobby.jones"
+                $result[0].JumpCloudUserID | Should -Be "jcuser456"
+                $result[0].JumpCloudSystemID | Should -Be "jcsystem456"
+                $result[0].SerialNumber | Should -Be $serialNumber
             }
 
             It "Should throw an error if 'JumpCloudUserID' is empty when systemContextBinding is enabled" {
