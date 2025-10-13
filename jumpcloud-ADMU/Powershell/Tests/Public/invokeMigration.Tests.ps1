@@ -410,7 +410,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Missing required data for field 'LocalPath'."
             }
 
-            It "Should throw an error if 'JumpCloudUserName' field is empty" {
+            It "Should throw an error if 'JumpCloudUserName' field is empty and no other valid rows exist" {
                 # Arrange
                 $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
@@ -419,7 +419,25 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Missing required data for field 'JumpCloudUserName'."
+                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: No users were found in the CSV matching this computer's name ('$computerName') and serial number ('$serialNumber')."
+
+            }
+            It "Should only return rows where 'JumpCloudUserName' field is not empty but not throw an error if one row is not populated with a 'JumpCloudUserName' field" {
+                # Arrange
+                $csvContent = @"
+"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
+"S-1-5-21-XYZ","C:\Users\j.doe",$computerName,"j.doe","","jcuser123","jcsystem123",$serialNumber
+"S-1-5-21-ABC","C:\Users\b.jones",$computerName,"b.jones","bobby.jones","jcuser456","jcsystem456",$serialNumber
+"S-1-5-21-DEF","C:\Users\a.smith","DIFFERENT-PC","a.smith","","jcuser789","jcsystem789","DIFFERENT-SN"
+"@
+                Set-Content -Path $csvPath -Value $csvContent -Force
+
+                # Act & Assert
+                $result = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
+                # Assert
+                $result[0].SelectedUserName | Should -Be "S-1-5-21-ABC"
+                $result[0].JumpCloudUserName | Should -Be "bobby.jones"
+                $result[0].JumpCloudUserID | Should -Be "jcuser456"
             }
 
             It "Should throw an error if 'JumpCloudUserID' is empty when systemContextBinding is enabled" {
