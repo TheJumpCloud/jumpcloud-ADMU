@@ -173,7 +173,11 @@ public class ProcessTerminator {
         param($Process)
 
         # Check if it's a service
-        $service = Get-WmiObject -Class Win32_Service | Where-Object { $_.ProcessId -eq $Process.Id }
+        try {
+            $service = Get-WmiObject -Class Win32_Service | Where-Object { $_.ProcessId -eq $Process.Id }
+        } catch {
+            $service = Get-CimInstance -Class Win32_Service | Where-Object { $_.ProcessId -eq $Process.Id }
+        }
         if ($service) {
             return "Service"
         }
@@ -189,7 +193,11 @@ public class ProcessTerminator {
     function Get-ServiceName {
         param([int]$ProcessId)
 
-        $service = Get-WmiObject -Class Win32_Service | Where-Object { $_.ProcessId -eq $ProcessId }
+        try {
+            $service = Get-WmiObject -Class Win32_Service | Where-Object { $_.ProcessId -eq $ProcessId }
+        } catch {
+            $service = Get-CimInstance -Class Win32_Service | Where-Object { $_.ProcessId -eq $ProcessId }
+        }
         if ($service) {
             return $service.Name
         }

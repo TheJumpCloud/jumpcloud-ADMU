@@ -379,7 +379,11 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         Context "Run on local computer" {
             BeforeAll {
                 $computerName = $env:COMPUTERNAME
-                $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+                try {
+                    $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+                } catch {
+                    $serialNumber = (Get-CimInstance -Class Win32_BIOS).SerialNumber
+                }
             }
 
             It "Should throw an error if 'SID' field is empty" {
@@ -800,9 +804,14 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             $userSid = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom
             # Create a CSV file for the user migration, should have these: "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
             $csvPath = "C:\Windows\Temp\jcdiscovery.csv"
+            try {
+                $SN = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+            } catch {
+                $SN = (Get-CimInstance -Class Win32_BIOS).SerialNumber
+            }
             $csvContent = @"
 SID,LocalPath,LocalComputerName,LocalUsername,JumpCloudUserName,JumpCloudUserID,JumpCloudSystemID,SerialNumber
-$userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userToMigrateTo,$null,$null,$((Get-WmiObject -Class Win32_BIOS).SerialNumber)
+$userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userToMigrateTo,$null,$null,$SN
 "@
             $csvContent | Set-Content -Path $csvPath -Force
         }

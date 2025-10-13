@@ -25,7 +25,11 @@ Describe "Test-LocalUserName Acceptance Tests" -Tag "Acceptance" {
         New-localUser -Name "$($UserName)" -password $newUserPassword -Description "Created By JumpCloud ADMU"
 
         # Get Win32 Profiles to merge data with valid SIDs
-        $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+        try {
+            $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+        } catch {
+            $win32UserProfiles = Get-CimInstance -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+        }
         # get localUsers (can contain users who have not logged in yet/ do not have a SID)
         $nonSIDLocalUsers = Get-LocalUser
         Test-LocalUsername -username $userName -win32UserProfiles $win32UserProfiles -localUserProfiles $nonSIDLocalUsers | Should -Be $true
@@ -34,7 +38,11 @@ Describe "Test-LocalUserName Acceptance Tests" -Tag "Acceptance" {
     It 'Should not return true when a username does not exist' {
 
         # Get Win32 Profiles to merge data with valid SIDs
-        $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+        try {
+            $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+        } catch {
+            $win32UserProfiles = Get-CimInstance -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+        }
         # get localUsers (can contain users who have not logged in yet/ do not have a SID)
         $nonSIDLocalUsers = Get-LocalUser
         Test-LocalUsername -username 'blazarz' -win32UserProfiles $win32UserProfiles -localUserProfiles $nonSIDLocalUsers | Should -Be $false

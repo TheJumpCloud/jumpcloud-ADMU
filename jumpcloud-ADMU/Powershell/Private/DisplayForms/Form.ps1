@@ -274,11 +274,19 @@ Function Show-SelectionForm {
     $img_localAccountPasswordValid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
     # Define misc static variables
 
-    $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+    Try {
+        $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+    } Catch {
+        $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
+    }
     Write-progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..' -PercentComplete 25
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..'
     if ($WmiComputerSystem.PartOfDomain) {
-        $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
+        Try {
+            $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
+        } Catch {
+            $WmiComputerDomain = Get-CimInstance -Class:('Win32_ntDomain')
+        }
         try {
             $secureChannelStatus = Test-ComputerSecureChannel
         } catch {
@@ -370,7 +378,11 @@ Function Show-SelectionForm {
         }
     }
     # Get Win32 Profiles to merge data with valid SIDs
-    $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+    Try {
+        $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+    } Catch {
+        $win32UserProfiles = Get-CimInstance -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+    }
     # get localUsers (can contain users who have not logged in yet/ do not have a SID)
     $nonSIDLocalUsers = Get-LocalUser
     $date_format = "yyyy-MM-dd HH:mm"
