@@ -51,9 +51,9 @@ Describe "Write-ToLog Acceptance Tests" -Tag "Acceptance" {
         if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
             remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
         }
-        Write-ToLog -Message:('Test Warning Log Entry.') -Level:('Warn')
+        Write-ToLog -Message:('Test Warning Log Entry.') -Level Warning
         $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
-        $Log.Contains('WARNING: Test Warning Log Entry.') | Should -Be $true
+        $Log.Contains('[WARNING] Test Warning Log Entry.') | Should -Be $true
     }
 
     It 'Write-ToLog - INFO: Log entry exists' {
@@ -62,7 +62,16 @@ Describe "Write-ToLog Acceptance Tests" -Tag "Acceptance" {
         }
         Write-ToLog -Message:('Test Info Log Entry.') -Level:('Info')
         $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
-        $Log.Contains('INFO: Test Info Log Entry.') | Should -Be $true
+        $Log.Contains('[INFO] Test Info Log Entry.') | Should -Be $true
+        remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+    }
+    It 'Write-ToLog - INFO: Verbose entry exists' {
+        if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
+            remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
+        }
+        Write-ToLog -Message:('Test Info Log Entry.') -Level:('Verbose')
+        $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
+        $Log.Contains('[VERBOSE] Test Info Log Entry.') | Should -Be $true
         remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
     }
 

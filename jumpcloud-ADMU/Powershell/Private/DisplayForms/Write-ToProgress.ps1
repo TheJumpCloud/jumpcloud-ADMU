@@ -91,14 +91,14 @@ function Write-ToProgress {
             if ($SystemDescription.ValidatedSystemContextAPI) {
                 Invoke-SystemContextAPI -Method PUT -Endpoint 'Systems' -Body @{'description' = ($description | ConvertTo-Json -Compress) } | Out-Null
             } elseif ($SystemDescription.ValidatedApiKey) {
-                Write-ToLog -Message "Using API Key to report migration progress to API" -Level Warn
+                # Write-ToLog -Message "Using API Key to report migration progress to API" -Level Warning
                 try {
                     Invoke-SystemPut -JcApiKey $SystemDescription.JCApiKey -jcOrgID $SystemDescription.JumpCloudOrgID -systemId $SystemDescription.DeviceID -Body @{'description' = ($description | ConvertTo-Json -Compress) }
                 } catch {
                     Write-ToLog -Message "Error occurred while reporting migration progress to API: $_" -Level Error
                 }
             } else {
-                Write-ToLog -Message "No valid method to report migration progress to API" -Level Warn
+                Write-ToLog -Message "No valid method to report migration progress to API" -Level Warning
             }
         }
 

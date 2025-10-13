@@ -25,13 +25,13 @@ function Get-MtpOrganization {
         }
         $results = @()
         if ($orgID) {
-            Write-ToLog -Message "OrgID specified, attempting to validate org..."
+            Write-ToLog -Message "OrgID specified, attempting to validate org..." -Level Verbose -Step "Get-MtpOrganization"
             $baseURl = "https://console.jumpcloud.com/api/organizations/$($orgID)"
             $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
             $Content = $Request.Content | ConvertFrom-Json
             $results += $Content
         } else {
-            Write-ToLog -Message "No OrgID specified, attempting to search for valid orgs..."
+            Write-ToLog -Message "No OrgID specified, attempting to search for valid orgs..." -Level Verbose -Step "Get-MtpOrganization"
             while ($paginate) {
                 $baseUrl = "https://console.jumpcloud.com/api/organizations"
                 $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
@@ -48,27 +48,27 @@ function Get-MtpOrganization {
     process {
         # if there's only one org return found org, else prompt for selection
         if (($results.count -eq 1) -And ($($results._id))) {
-            Write-ToLog -Message "API Key Validated`nOrgName: $($results.DisplayName)"
+            Write-ToLog -Message "API Key Validated`nOrgName: $($results.DisplayName)" -Level Verbose -Step "Get-MtpOrganization"
             $orgs = $results._id, $results.DisplayName
         } elseif (($results.count -gt 1)) {
-            Write-ToLog -Message "Found $($results.count) orgs with the specified API Key"
+            Write-ToLog -Message "Found $($results.count) orgs with the specified API Key" -Level Verbose -Step "Get-MtpOrganization"
             # Set the MTP Admin variable to true
             $mtpAdmin = $true
             # initial prompt for MTP selection
             switch ($inputType) {
                 $true {
-                    Write-ToLog -Message "Prompting for MTP Admin Selection"
+                    Write-ToLog -Message "Prompting for MTP Admin Selection" -Level Verbose -Step "Get-MtpOrganization"
                     $orgs = Show-MtpSelection -Orgs $results
                     $orgs = $orgs.Id, $orgs.DisplayName
-                    Write-ToLog -Message "API Key Validated`nOrgName: $($orgs[1])"
+                    Write-ToLog -Message "API Key Validated`nOrgName: $($orgs[1])" -Level Verbose -Step "Get-MtpOrganization"
                 }
                 Default {
-                    Write-ToLog -Message "API Key appears to be a MTP Admin Key. Please specify the JumpCloudOrgID Parameter and try again"
+                    Write-ToLog -Message "API Key appears to be a MTP Admin Key. Please specify the JumpCloudOrgID Parameter and try again" -Level Verbose -Step "Get-MtpOrganization"
                     throw "API Key appears to be a MTP Admin Key. Please specify the JumpCloudOrgID Parameter and try again"
                 }
             }
         } else {
-            Write-ToLog -Message "No orgs matched provided API Key"
+            Write-ToLog -Message "No orgs matched provided API Key" -Level Verbose -Step "Get-MtpOrganization"
             $orgs = $false
         }
 

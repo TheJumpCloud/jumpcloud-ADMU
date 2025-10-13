@@ -19,7 +19,7 @@ function Close-ProcessByOwner {
         switch ($force) {
             $true {
                 foreach ($item in $ProcessList) {
-                    Write-ToLog "Attempting to close processID: $($item.ProcessId)"
+                    Write-ToLog "Attempting to close processID: $($item.ProcessId)" -Level Verbose -Step "Close-ProcessByOwner"
                     $tkStatus = taskkill /t /f /PID $item.ProcessId 2>&1
                     $tkSuccess = if ($tkStatus -match "ERROR") {
                         $false

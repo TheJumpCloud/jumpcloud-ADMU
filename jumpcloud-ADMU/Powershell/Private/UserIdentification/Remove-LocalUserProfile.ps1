@@ -56,6 +56,6 @@ function Remove-LocalUserProfile {
     }
     End {
         # Output some info
-        Write-ToLog -message:("$UserName's account, profile and Registry Key SID were removed")
+        Write-ToLog -message:("$UserName's account, profile and Registry Key SID were removed") -Level Verbose -Step "Remove-LocalUserProfile"
     }
 }

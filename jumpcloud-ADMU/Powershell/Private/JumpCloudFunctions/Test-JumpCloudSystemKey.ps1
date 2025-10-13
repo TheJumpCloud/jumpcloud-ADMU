@@ -12,7 +12,7 @@ function Test-JumpCloudSystemKey {
     process {
         $config = get-content "$WindowsDrive\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf" -ErrorVariable configExitCode -ErrorAction SilentlyContinue
         if ($configExitCode -and $force) {
-            Write-ToLog -Message "JumpCloud Agent is not installed on this system`nPlease also enter your Connect Key to install JumpCloud"
+            Write-ToLog -Message "JumpCloud Agent is not installed on this system`nPlease also enter your Connect Key to install JumpCloud" -Level Verbose -Step "Test-JumpCloudSystemKey"
             return $false
         } elseif ($configExitCode ) {
             $message += "JumpCloud Agent is not installed on this system`nPlease also enter your Connect Key to install JumpCloud"

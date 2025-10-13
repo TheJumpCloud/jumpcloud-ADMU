@@ -31,17 +31,17 @@ function Test-usernameOrSID {
         if ([regex]::IsMatch($usernameOrSID, $sidPattern)) {
             if (($usernameOrSID -in $users.SID) -And !($users.SID.Contains($localComputerIDPrefix))) {
                 # return, it's a valid SID
-                Write-ToLog "valid sid returning sid"
+                Write-ToLog "valid sid returning sid" -Level Verbose -Step "Test-usernameOrSID"
                 return $usernameOrSID
             }
         } elseif ([regex]::IsMatch($convertedUser, $sidPattern)) {
             if (($convertedUser -in $users.SID) -And !($users.SID.Contains($localComputerIDPrefix))) {
                 # return, it's a valid SID
-                Write-ToLog "valid user returning sid"
+                Write-ToLog "valid user returning sid" -Level Verbose -Step "Test-usernameOrSID"
                 return $convertedUser
             }
         } else {
-            Write-ToLog 'SID or Username is invalid'
+            Write-ToLog 'SID or Username is invalid' -Level Verbose -Step "Test-usernameOrSID"
             throw 'SID or Username is invalid'
         }
     }

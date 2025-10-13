@@ -15,7 +15,7 @@ Function Test-UserRegistryLoadState {
         $results = REG QUERY HKU *>&1
         # Tests to check that the reg items are not loaded
         If ($results -match $UserSid) {
-            Write-ToLog "REG Keys are loaded, attempting to unload"
+            Write-ToLog "REG Keys are loaded, attempting to unload" -Level Verbose -Step "Test-UserRegistryLoadState"
             try {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
@@ -38,7 +38,7 @@ Function Test-UserRegistryLoadState {
             # return boolean for redirected user directories
             $isFolderRedirect = Test-UserFolderRedirect -UserSid $UserSid
         } else {
-            Write-ToLog "Skipping User Shell Folder Validation..."
+            Write-ToLog "Skipping User Shell Folder Validation..." -Level Verbose -Step "Test-UserRegistryLoadState"
         }
 
         # Check for previousSid from \Software\JCADMU
@@ -62,7 +62,7 @@ Function Test-UserRegistryLoadState {
         $results = REG QUERY HKU *>&1
         # Tests to check that the reg items are not loaded
         If ($results -match $UserSid) {
-            Write-ToLog "REG Keys are loaded, attempting to unload"
+            Write-ToLog "REG Keys are loaded, attempting to unload" -Level Verbose -Step "Test-UserRegistryLoadState"
             try {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
@@ -74,11 +74,11 @@ Function Test-UserRegistryLoadState {
         # If isFolderRedirect is false throw error
         if ($isFolderRedirect -and $ValidateDirectory) {
             Write-AdmuErrorMessage -Error:("user_folder_redirection_error")
-            throw "Main user folders are redirected, exiting..."
+            throw "Default user directories are redirected, and the ValidateUserShellFolder parameter is set to true. The migration can not continue if the user directories are redirected. Exiting..."
         } elseif ($ValidateDirectory -eq $false) {
-            Write-ToLog "Skipping User Shell Folder Validation..."
+            Write-ToLog "Skipping User Shell Folder Validation..." -Level Verbose -Step "Test-UserRegistryLoadState"
         } else {
-            Write-ToLog "Main user folders are default for Usersid: $($UserSid), continuing..."
+            Write-ToLog "Default user directories are not redirected for Usersid: $($UserSid), continuing..." -Level Verbose -Step "Test-UserRegistryLoadState"
         }
     }
 }

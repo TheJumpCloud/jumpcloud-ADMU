@@ -22,14 +22,14 @@ function Set-RegPermission {
         $SourceAccount = $SourceSIDObj.Translate([System.Security.Principal.NTAccount]).Value
         $SourceAccountTranslated = $true
     } catch {
-        Write-ToLog "Warning: Could not translate SourceSID $SourceSID to NTAccount. Using SID string instead."
+        Write-ToLog "Warning: Could not translate SourceSID $SourceSID to NTAccount. Using SID string instead." -Level Verbose -Step "Set-RegPermission"
         $SourceAccount = $SourceSID
     }
     try {
         $TargetAccount = $TargetSIDObj.Translate([System.Security.Principal.NTAccount]).Value
         $TargetAccountTranslated = $true
     } catch {
-        Write-ToLog "Warning: Could not translate TargetSID $TargetSID to NTAccount. Using SID string instead."
+        Write-ToLog "Warning: Could not translate TargetSID $TargetSID to NTAccount. Using SID string instead." -Level Verbose -Step "Set-RegPermission"
         $TargetAccount = $TargetSID
     }
 
@@ -49,17 +49,17 @@ function Set-RegPermission {
     }
 
     # Use icacls for bulk operations - much faster than PowerShell ACL cmdlets
-    Write-ToLog "Starting permission migration using icacls for path: $FilePath"
+    Write-ToLog "Starting permission migration using icacls for path: $FilePath" -Level Verbose -Step "Set-RegPermission"
 
     # Step 1: Grant target user full control inheritance on root folder
-    Write-ToLog "Granting permissions to: $TargetAccountIcacls"
+    Write-ToLog "Granting permissions to: $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
     $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /C /Q
 
     if ($LASTEXITCODE -ne 0) {
         # Only log if there are non-filtered errors
-        Write-ToLog "Warning: icacls grant operation had issues. Exit code: $LASTEXITCODE"
+        Write-ToLog "Warning: icacls grant operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step "Set-RegPermission"
     } else {
-        Write-ToLog "Successfully granted permissions to $TargetAccountIcacls"
+        Write-ToLog "Successfully granted permissions to $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
     }
 
     # Step 2: Replace source user with target user in all ACLs (preserves existing permissions)
@@ -73,14 +73,14 @@ function Set-RegPermission {
     # }
 
     # Step 3: Change ownership from source to target user
-    Write-ToLog "Setting owner to $TargetAccountIcacls"
+    Write-ToLog "Setting owner to $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
     $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /T /C /Q
 
     if ($LASTEXITCODE -ne 0) {
         # Only log if there are non-filtered errors
-        Write-ToLog "Warning: icacls setowner operation had issues. Exit code: $LASTEXITCODE"
+        Write-ToLog "Warning: icacls setowner operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step "Set-RegPermission"
     } else {
-        Write-ToLog "Successfully set owner to $TargetAccountIcacls"
+        Write-ToLog "Successfully set owner to $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
     }
 
     # Provide progress feedback
@@ -88,5 +88,5 @@ function Set-RegPermission {
         & $ProgressCallback 100 100  # Report completion
     }
 
-    Write-ToLog "Permission migration completed for path: $FilePath"
+    Write-ToLog "Permission migration completed for path: $FilePath" -Level Verbose -Step "Set-RegPermission"
 }

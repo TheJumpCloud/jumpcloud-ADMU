@@ -21,18 +21,18 @@ function Test-ApiKey {
         try {
             $confPath = 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
             if (-not (Test-Path $confPath)) {
-                Write-ToLog "Configuration file not found at '$confPath'."
+                Write-ToLog "Configuration file not found at '$confPath'." -Level Verbose -Step "Test-ApiKey"
             }
             $config = Get-Content $confPath
             $regex = 'systemKey\":\"(\w+)\"'
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
 
             if (-not $systemKey) {
-                Write-ToLog "Could not find a systemKey in the configuration file." -level Error
+                Write-ToLog "Could not find a systemKey in the configuration file." -level Error -Step "Test-ApiKey"
             }
         } catch {
             # If setup fails, the whole command fails. This is a terminating error.
-            Write-ToLog "Failed to initialize function. Reason: $($_.Exception.Message)" -level Error
+            Write-ToLog "Failed to initialize function. Reason: $($_.Exception.Message)" -level Error -Step "Test-ApiKey"
         }
     }
 

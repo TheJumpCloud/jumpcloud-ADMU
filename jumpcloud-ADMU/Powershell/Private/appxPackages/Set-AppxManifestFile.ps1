@@ -33,6 +33,6 @@ Function Set-AppxManifestFile {
         }
     }
     end {
-        Write-ToLog "appXManifest written: $($fileDetails.LastWriteTime), size: $($fileSize)kb"
+        Write-ToLog "appXManifest written: $($fileDetails.LastWriteTime), size: $($fileSize)kb" -Level Verbose -Step "Set-AppxManifestFile"
     }
 }

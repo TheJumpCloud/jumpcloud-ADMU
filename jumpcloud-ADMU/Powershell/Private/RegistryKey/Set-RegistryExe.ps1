@@ -29,11 +29,11 @@ function Set-RegistryExe {
     process {
         switch ($op) {
             "Load" {
-                Write-ToLog "REG LOAD $KEY $hiveFile"
+                Write-ToLog "REG LOAD $KEY $hiveFile" -Level Verbose -Step "Set-RegistryExe"
                 $results = REG LOAD $key $hiveFile *>&1
             }
             "Unload" {
-                Write-ToLog "REG UNLOAD $KEY"
+                Write-ToLog "REG UNLOAD $KEY" -Level Verbose -Step "Set-RegistryExe"
                 $results = REG UNLOAD $key *>&1
             }
         }

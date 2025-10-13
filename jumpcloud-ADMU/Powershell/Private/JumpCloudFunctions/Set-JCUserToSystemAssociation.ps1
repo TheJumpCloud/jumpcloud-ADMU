@@ -14,11 +14,11 @@ function Set-JCUserToSystemAssociation {
         $systemKey = [regex]::Match($config, $regex).Groups[1].Value
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         If (!$systemKey) {
-            Write-ToLog -Message:("Could not find systemKey, aborting bind step") -Level:('Warn')
+            Write-ToLog -Message:("Could not find systemKey, aborting bind step") -Level Warning -Step "Set-JCUserToSystemAssociation"
         }
     }
     Process {
-        Write-ToLog -Message:("User matched in JumpCloud")
+        Write-ToLog -Message:("User matched in JumpCloud") -Level Verbose -Step "Set-JCUserToSystemAssociation"
         $Headers = @{
             'Accept'       = 'application/json';
             'Content-Type' = 'application/json';
@@ -31,7 +31,7 @@ function Set-JCUserToSystemAssociation {
             'id'   = "$systemKey"
         }
         if ($BindAsAdmin) {
-            Write-ToLog -Message:("Bind As Admin specified. Setting sudo attributes for userID: $JcUserID")
+            Write-ToLog -Message:("Bind As Admin specified. Setting sudo attributes for userID: $JcUserID") -Level Verbose -Step "Set-JCUserToSystemAssociation"
             $Form.Add("attributes", @{
                     "sudo" = @{
                         "enabled"         = $true
@@ -40,27 +40,27 @@ function Set-JCUserToSystemAssociation {
                 }
             )
         } else {
-            Write-ToLog -Message:("Bind As Admin NOT specified. userID: $JcUserID will be bound as a standard user")
+            Write-ToLog -Message:("Bind As Admin NOT specified. userID: $JcUserID will be bound as a standard user") -Level Verbose -Step "Set-JCUserToSystemAssociation"
         }
         $jsonForm = $Form | ConvertTo-Json
         Try {
-            Write-ToLog -Message:("Attempting to bind userID: $JcUserID to systemID: $systemKey")
+            Write-ToLog -Message:("Attempting to bind userID: $JcUserID to systemID: $systemKey") -Level Verbose -Step "Set-JCUserToSystemAssociation"
             $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JcUserID/associations" -Headers $Headers -Body $jsonForm -UseBasicParsing -UserAgent $UserAgent
             $StatusCode = $Response.StatusCode
         } catch {
             $errorMsg = $_.Exception.Message
             $StatusCode = $_.Exception.Response.StatusCode.value__
-            Write-ToLog -Message:("Could not bind user to system") -Level:('Warn')
+            Write-ToLog -Message:("Could not bind user to system") -Level Warning -Step "Set-JCUserToSystemAssociation"
         }
 
     }
     End {
         # Associations post should return 204 success no content
         if ($StatusCode -eq 204) {
-            Write-ToLog -Message:("Associations Endpoint returned statusCode $statusCode [success]") -Level:('Warn')
+            Write-ToLog -Message:("Associations Endpoint returned statusCode $statusCode [success]") -Level Warning -Step "Set-JCUserToSystemAssociation"
             return $true
         } else {
-            Write-ToLog -Message:("Associations Endpoint returned statusCode $statusCode | $errorMsg") -Level:('Warn')
+            Write-ToLog -Message:("Associations Endpoint returned statusCode $statusCode | $errorMsg") -Level Warning -Step "Set-JCUserToSystemAssociation"
             return $false
         }
     }
