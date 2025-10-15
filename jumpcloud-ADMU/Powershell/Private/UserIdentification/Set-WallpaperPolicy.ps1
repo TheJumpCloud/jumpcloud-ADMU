@@ -12,10 +12,7 @@ function Set-WallpaperPolicy {
 
     begin {
         # Mount the HKEY_USERS hive if it is not already available as a PSDrive.
-        # TODO: CUT-4890 Replace PSDrive with private function
-        if ("HKEY_USERS" -notin (Get-PSDrive | Select-Object -ExpandProperty Name)) {
-            New-PSDrive -Name "HKEY_USERS" -PSProvider "Registry" -Root "HKEY_USERS" | Out-Null
-        }
+        Set-HKEYUserMount
 
         # Construct the full path to the target registry key.
         $basePath = "HKEY_USERS:\$($UserSid)"
@@ -27,7 +24,7 @@ function Set-WallpaperPolicy {
             $fullPath = "$($basePath)$($policyRegKeyPath)"
         }
 
-        Write-ToLog "Checking Wallpaper Policy for SID: $($UserSid) at path: $($fullPath)" -level "Verbose"
+        Write-ToLog "Checking Wallpaper Policy for SID: $($UserSid) at path: $($fullPath)" -level "Verbose" -Step "Set-WallpaperPolicy"
     }
 
     process {
@@ -42,21 +39,21 @@ function Set-WallpaperPolicy {
                 $wallpaperPathValue = (Get-ItemProperty -Path $fullPath -Name "Wallpaper" -ErrorAction SilentlyContinue).Wallpaper
 
                 if ($wallpaperPathValue) {
-                    Write-ToLog "Validated network wallpaper path: $($wallpaperPathValue). Proceeding with removal."
+                    Write-ToLog "Validated network wallpaper path: $($wallpaperPathValue). Proceeding with removal." -Level Verbose -Step "Set-WallpaperPolicy"
 
                     # Remove both policy values from the specified registry path.
                     Remove-ItemProperty -Path $fullPath -Name $policyNames -Force
-                    Write-ToLog "Success: Attempted to remove Wallpaper and WallpaperStyle policies for SID '$($UserSid)'."
+                    Write-ToLog "Success: Attempted to remove Wallpaper and WallpaperStyle policies for SID '$($UserSid)'." -Level Verbose -Step "Set-WallpaperPolicy"
 
                 } else {
-                    Write-ToLog "No network wallpaper policy found for SID '$($UserSid)'. No action taken." -level "Verbose"
+                    Write-ToLog "No network wallpaper policy found for SID '$($UserSid)'. No action taken." -level "Verbose" -Step "Set-WallpaperPolicy"
                 }
 
             } catch {
-                Write-ToLog "Failed to remove policies for SID '$($UserSid)'. Error: $($_.Exception.Message)" -Level "Error"
+                Write-ToLog "Failed to remove policies for SID '$($UserSid)'. Error: $($_.Exception.Message)" -Level "Error" -Step "Set-WallpaperPolicy"
             }
         } else {
-            Write-ToLog "Info: Policy path not found for SID '$($UserSid)'. No action taken." -level "Verbose"
+            Write-ToLog "Info: Policy path not found for SID '$($UserSid)'. No action taken." -level "Verbose" -Step "Set-WallpaperPolicy"
         }
     }
 }

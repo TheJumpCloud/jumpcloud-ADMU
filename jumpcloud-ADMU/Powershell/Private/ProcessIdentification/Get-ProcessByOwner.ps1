@@ -30,7 +30,11 @@ function Get-ProcessByOwner {
         foreach ($process in $processes) {
             if ($process.id) {
                 # TODO: processItem would throw a null value exception
-                $processItem = (Get-WmiObject -Class Win32_Process -Filter:("ProcessId = $($Process.Id)"))
+                try {
+                    $processItem = (Get-WmiObject -Class Win32_Process -Filter:("ProcessId = $($Process.Id)"))
+                } catch {
+                    $processItem = (Get-CimInstance -Class Win32_Process -Filter:("ProcessId = $($Process.Id)"))
+                }
                 if (![string]::IsNullOrEmpty($processItem)) {
                     # Create null value check for processItem
                     $owner = $processItem.GetOwner()
@@ -57,8 +61,8 @@ function Get-ProcessByOwner {
     }
 
     end {
-        Write-ToLog -Message:("Getting Processes for: $domainUsername")
-        Write-ToLog -Message:("Processes found: $($processList.count)")
+        Write-ToLog -Message:("Getting Processes for: $domainUsername") -Level Verbose -Step "Get-ProcessByOwner"
+        Write-ToLog -Message:("Processes found: $($processList.count)") -Level Verbose -Step "Get-ProcessByOwner"
         return $processList
     }
 }

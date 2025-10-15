@@ -31,7 +31,7 @@ Describe "Remove-ItemIfExist Acceptance Tests" -Tag "Acceptance" {
         if ((Test-Path 'C:\Windows\Temp\jcAdmu.log') -eq $true) {
             remove-item -Path 'C:\windows\Temp\jcAdmu.log' -Force
         }
-        Mock Remove-ItemIfExist { Write-ToLog -Message ('Removal Of Temp Files & Folders Failed') -Level Warn }
+        Mock Remove-ItemIfExist { Write-ToLog -Message ('Removal Of Temp Files & Folders Failed') -Level Warning }
         Remove-ItemIfExist -Path 'c:\windows\Temp\test\'
         $Log = Get-Content 'c:\windows\temp\jcAdmu.log'
         $Log.Contains('Removal Of Temp Files & Folders Failed') | Should -Be $true

@@ -15,7 +15,11 @@ New-Item -ItemType file -path $CsvPath -force | Out-Null
 ("" | Select-Object "ComputerName", "SelectedUserName", "LocalPath", "RoamingConfigured", "Loaded", "LocalProfileSize", "JumpCloudUserName", "TempPassword", "AcceptEULA", "LeaveDomain", "ForceReboot", "AzureADProfile", "InstallJCAgent", "JumpCloudConnectKey", "Customxml", "ConvertProfile", "MigrationSuccess", "DomainName" | ConvertTo-Csv -NoType -Delimiter ",")[0] | Out-File $CsvPath
 
 $info = Get-ComputerInfo
-$Win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+try {
+        $Win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+} catch {
+        $Win32UserProfiles = Get-CimInstance -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+}
 $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name ComputerName -Value "$($info.csname)"
 $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name LocalProfileSize -Value $null
 $Win32UserProfiles | Add-Member -MemberType NoteProperty -Name JumpCloudUserName -Value $null
@@ -50,9 +54,8 @@ Install-Module PowerShellForGitHub -Force
 Set-GitHubAuthentication -Credential $cred
 
 # Check for gist
-$gist = Get-GitHubGist -UserName $GHUsername | Where-Object { $_.description -eq $GHGistDescription}
-if (!($gist))
-{
+$gist = Get-GitHubGist -UserName $GHUsername | Where-Object { $_.description -eq $GHGistDescription }
+if (!($gist)) {
         # upload gist for this host
         Write-Host "Uploading new file"
         New-GitHubGist -File $CsvPath -Description $GHGistDescription

@@ -26,11 +26,7 @@ function Test-PreviousSID {
         [string]$UserSid
     )
 
-    # Ensure the HKEY_USERS drive is available for registry queries.
-    # TODO: CUT-4890 Replace PSDrive with private function
-    if (-not (Get-PSDrive -Name 'HKEY_USERS' -ErrorAction SilentlyContinue)) {
-        New-PSDrive -Name 'HKEY_USERS' -PSProvider 'Registry' -Root 'HKEY_USERS' | Out-Null
-    }
+    Set-HKEYUserMount
 
     # Construct the path to the JCADMU registry key for the specified user.
     $registryPath = "HKEY_USERS:\$($UserSid)_admu\Software\JCADMU"
@@ -41,7 +37,7 @@ function Test-PreviousSID {
 
     if ($previousSid) {
         # A previous SID was found. This indicates a prior migration.
-        Write-ToLog "Found previous SID: $($previousSid). This indicates the user has been migrated before. Exiting..."
+        Write-ToLog "Found previous SID: $($previousSid). This indicates the user has been migrated before. Exiting..." -Level Verbose -Step "Test-PreviousSID"
         return $true
     } else {
         # No previous SID was found. The user is clear for migration.

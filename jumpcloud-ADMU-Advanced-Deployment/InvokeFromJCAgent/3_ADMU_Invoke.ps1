@@ -339,27 +339,34 @@ Function Get-MigrationUsersFromCsv {
         # 3. --- FIND AND BUILD USER OBJECTS ---
         $usersToMigrate = @()
         $computerName = $env:COMPUTERNAME
-        $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+        try {
+            $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+        } catch {
+            $serialNumber = (Get-CimInstance -Class Win32_BIOS).SerialNumber
+        }
 
         foreach ($row in $ImportedCSV) {
             # --- Filter for this machine and create the custom object ---
             if (($row.LocalComputerName -eq $computerName) -and ($row.SerialNumber -eq $serialNumber)) {
-                # Validate if JumpCloudUserID is not null or empty
-                if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
-                    throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
-                }
-                # --- Row content validation ---
-                $requiredFields = "LocalPath", "SID", "JumpCloudUserName"
-                foreach ($field in $requiredFields) {
-                    if ([string]::IsNullOrWhiteSpace($row.$field)) {
-                        throw "Validation Failed: Missing required data for field '$field'."
+                # If a non-empty JumpCloudUsername is provided, continue with further validation
+                If (-not [string]::IsNullOrWhiteSpace($row.JumpCloudUserName)) {
+                    # Validate if JumpCloudUserID is not null or empty when the systemContextBinding option is enabled
+                    if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
+                        throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
                     }
-                }
-                $usersToMigrate += [PSCustomObject]@{
-                    selectedUsername  = $row.SID
-                    LocalProfilePath  = $row.LocalPath
-                    JumpCloudUserName = $row.JumpCloudUserName
-                    JumpCloudUserID   = $row.JumpCloudUserID
+                    # --- Row content validation ---
+                    $requiredFields = "LocalPath", "SID"
+                    foreach ($field in $requiredFields) {
+                        if ([string]::IsNullOrWhiteSpace($row.$field)) {
+                            throw "Validation Failed: Missing required data for field '$field'."
+                        }
+                    }
+                    $usersToMigrate += [PSCustomObject]@{
+                        selectedUsername  = $row.SID
+                        LocalProfilePath  = $row.LocalPath
+                        JumpCloudUserName = $row.JumpCloudUserName
+                        JumpCloudUserID   = $row.JumpCloudUserID
+                    }
                 }
             }
         }

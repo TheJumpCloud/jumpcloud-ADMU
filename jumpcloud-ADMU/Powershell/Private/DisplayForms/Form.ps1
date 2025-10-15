@@ -33,7 +33,7 @@ Function Show-SelectionForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.9.1"
+        Title="JumpCloud ADMU 2.9.2"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -274,11 +274,19 @@ Function Show-SelectionForm {
     $img_localAccountPasswordValid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
     # Define misc static variables
 
-    $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+    Try {
+        $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+    } Catch {
+        $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
+    }
     Write-progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..' -PercentComplete 25
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..'
     if ($WmiComputerSystem.PartOfDomain) {
-        $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
+        Try {
+            $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
+        } Catch {
+            $WmiComputerDomain = Get-CimInstance -Class:('Win32_ntDomain')
+        }
         try {
             $secureChannelStatus = Test-ComputerSecureChannel
         } catch {
@@ -370,7 +378,11 @@ Function Show-SelectionForm {
         }
     }
     # Get Win32 Profiles to merge data with valid SIDs
-    $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+    Try {
+        $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+    } Catch {
+        $win32UserProfiles = Get-CimInstance -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
+    }
     # get localUsers (can contain users who have not logged in yet/ do not have a SID)
     $nonSIDLocalUsers = Get-LocalUser
     $date_format = "yyyy-MM-dd HH:mm"
@@ -609,8 +621,7 @@ Function Show-SelectionForm {
     # Change button when profile selected
     $lvProfileList.Add_SelectionChanged( {
             $SelectedUserName = $($lvProfileList.SelectedItem.username)
-            # TODO: CUT-4890 Replace PSDrive with private function
-            New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS
+            Set-HKEYUserMount
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
             try {
                 $SelectedUserSID = ((New-Object System.Security.Principal.NTAccount($SelectedUserName)).Translate( [System.Security.Principal.SecurityIdentifier]).Value)

@@ -10,12 +10,7 @@ function Test-UserFolderRedirect {
 
     )
     begin {
-        # TODO: replace with Set-HKEYUsersMount
-        # TODO: CUT-4890 Replace PSDrive with private function
-        if ("HKEY_USERS" -notin (Get-PSDrive | select-object name).Name) {
-            Write-ToLog "Mounting HKEY_USERS"
-            New-PSDrive -Name:("HKEY_USERS") -PSProvider:("Registry") -Root:("HKEY_USERS") | Out-Null
-        }
+        Set-HKEYUserMount
         $UserFolders = @( "Desktop", "Documents", "Downloads", "Favorites", "Music", "Pictures", "Videos" )
         # Support doc for personal folders: https://support.microsoft.com/en-us/topic/operation-to-change-a-personal-folder-location-fails-in-windows-ffb95139-6dbb-821d-27ec-62c9aaccd720
         $basePath = "HKEY_USERS:\$($UserSid)"
@@ -25,7 +20,7 @@ function Test-UserFolderRedirect {
         } else {
             $fullPath = "$($basePath)$($pathSuffix)"
         }
-        Write-ToLog -Message:("Checking User Shell Folders for USERSID: $($UserSid)")
+        Write-ToLog -Message:("Checking User Shell Folders for USERSID: $($UserSid)") -Level Verbose -Step "Test-UserFolderRedirect"
     }
     process {
 
@@ -62,15 +57,13 @@ function Test-UserFolderRedirect {
                 # If the registry value does not match the default path, set redirectedDirectory to true and log the error
                 $regex = '^\\\\[a-zA-Z0-9.-]+\\[a-zA-Z0-9._-]+(\\[a-zA-Z0-9._-]+)*$' # regex for network paths ie \\server\share\folder, \\server.example.com\share\folder
                 if ($folderRegKeyValue -match $regex) {
-                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue) is a network path (IP or Domain). Migration NOT allowed.") -Level warn
+                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue) is a network path (IP or Domain). Users can be migrated in this state but be aware that they might not be able to access their files if the location is unavailable post-migration. If you encounter this issue and would like to migrate this user anyways, please use the ValidateUserShellFolder parameter and set the value to false") -Level Warning -Step "Test-UserFolderRedirect"
                     $redirectedDirectory = $true
-                } else {
-                    Write-ToLog -Message:("$($userFolder) path value: $($folderRegKeyValue). Migration allowed.")
                 }
             }
         } else {
             # If the registry path does not exist, set redirectedDirectory to true and log the error
-            Write-ToLog -Message:("User Shell registry folders not found in registry") -Level warn
+            Write-ToLog -Message:("User Shell registry folders not found in registry") -Level Warning -Step "Test-UserFolderRedirect"
             $redirectedDirectory = $true
         }
     }

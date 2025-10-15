@@ -32,13 +32,13 @@ function Invoke-SystemPut {
                 # add to retry counter and continue loop
                 $success = $false
             } else {
-                Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warn
+                Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning -Step "Invoke-SystemPut"
                 # exit the loop
                 $success = $true
             }
         }
     } while (-not $success -and $retryCount -lt $maxRetries)
     if (-not $success) {
-        Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Warn
+        Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Warning -Step "Invoke-SystemPut"
     }
 }

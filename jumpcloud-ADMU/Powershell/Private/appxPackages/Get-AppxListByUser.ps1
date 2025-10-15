@@ -26,26 +26,26 @@ Function Get-AppxListByUser {
             try {
                 $appxList = Get-AppxPackage -user $username
             } catch {
-                Write-ToLog "the appx packages could not be found for userSID $SID"
+                Write-ToLog "the appx packages could not be found for userSID $SID" -Level Verbose -Step "Get-AppxListByUser"
             }
             if (-NOT $appxList) {
                 # try to get the list from all users
                 try {
                     $appxList = Get-AppxPackage -AllUsers | Select-Object InstallLocation
                 } catch {
-                    Write-ToLog "the appx packages could not be found for allUsers"
+                    Write-ToLog "the appx packages could not be found for allUsers" -Level Verbose -Step "Get-AppxListByUser"
                 }
             }
-            Write-ToLog "$($appxList.count) appx packages were identified"
+            Write-ToLog "$($appxList.count) appx packages were identified" -Level Verbose -Step "Get-AppxListByUser"
         } else {
             try {
                 $appxList = Get-AppxPackage -AllUsers | Select-Object InstallLocation
             } catch {
-                Write-ToLog "the appx packages could not be found for allUsers"
+                Write-ToLog "the appx packages could not be found for allUsers" -Level Verbose -Step "Get-AppxListByUser"
             }
         }
         if (-NOT $appxList) {
-            Write-ToLog "Starting Job to Get AppxList"
+            Write-ToLog "Starting Job to Get AppxList" -Level Verbose -Step "Get-AppxListByUser"
             $homePath = Get-ProfileImagePath -UserSid $SID
             $j = Start-Job -ScriptBlock {
                 param($homePath)
@@ -62,16 +62,16 @@ Function Get-AppxListByUser {
             $timeout = 20
             # Monitor progress
             $count = 0
-            Write-ToLog "Appx Job started. Wait for job to complete"
+            Write-ToLog "Appx Job started. Wait for job to complete" -Level Verbose -Step "Get-AppxListByUser"
             while ($j.State -ne 'Completed') {
-                Write-ToLog "Job waiting..."
+                Write-ToLog "Job waiting..." -Level Verbose -Step "Get-AppxListByUser"
                 Start-Sleep -Seconds 1
                 $count ++
                 if ($count -ge $timeout) {
                     break
                 }
             }
-            Write-ToLog "Appx Job complete..."
+            Write-ToLog "Appx Job complete..." -Level Verbose -Step "Get-AppxListByUser"
             # Get the final result (if needed)
             $appxList = Receive-Job -Job $j
             Remove-Job -Job $j
