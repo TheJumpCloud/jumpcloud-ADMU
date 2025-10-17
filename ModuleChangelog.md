@@ -14,7 +14,7 @@ Update to the invoke scripts + module to support executing the ADMU as our EXE a
 
 ## 2.9.2
 
-Release Date: October 9, 2025
+Release Date: October 13, 2025
 
 #### RELEASE NOTES
 
