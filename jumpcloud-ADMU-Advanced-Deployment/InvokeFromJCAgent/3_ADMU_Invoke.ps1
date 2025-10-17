@@ -194,7 +194,7 @@ Function Get-MigrationUsersFromCsv {
     }
 
 }
-function Get-LatestADMUGUIExe {
+Function Get-LatestADMUGUIExe {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param(
@@ -292,7 +292,7 @@ function ConvertTo-ArgumentList {
     # Return the completed list of arguments.
     return $argumentList
 }
-function Get-JcadmuGuiSha256 {
+Function Get-JcadmuGuiSha256 {
     <#
     .SYNOPSIS
         Dynamically finds the latest JumpCloud ADMU release and retrieves the SHA256 hash from the asset's digest.
@@ -351,7 +351,7 @@ function Get-JcadmuGuiSha256 {
 
 
 }
-function Test-ExeSHA {
+Function Test-ExeSHA {
     param (
         [Parameter(Mandatory = $true)]
         [string]$filePath
@@ -377,8 +377,7 @@ function Test-ExeSHA {
         }
     }
 }
-
-function Invoke-UserMigrationBatch {
+Function Invoke-UserMigrationBatch {
     <#
     .SYNOPSIS
         Executes user migrations for a batch of users with comprehensive result tracking.
@@ -504,8 +503,7 @@ function Invoke-UserMigrationBatch {
     Write-Host "`nAll user migrations have been processed."
     return $results
 }
-
-function Invoke-SingleUserMigration {
+Function Invoke-SingleUserMigration {
     <#
     .SYNOPSIS
         Executes migration for a single user with error handling and result tracking.
@@ -567,8 +565,7 @@ function Invoke-SingleUserMigration {
         }
     }
 }
-
-function Get-DomainStatus {
+Function Get-DomainStatus {
     <#
     .SYNOPSIS
         Gets current domain join status for Azure AD and local domain.

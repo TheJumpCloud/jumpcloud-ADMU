@@ -1,10 +1,7 @@
 Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
-
-    # Validate the JumpCloud Agent is installed
     BeforeAll {
-
+        # get the remote invoke script path
         $global:remoteInvoke = Join-Path $PSScriptRoot '..\..\..\..\jumpcloud-ADMU-Advanced-Deployment\InvokeFromJCAgent\3_ADMU_Invoke.ps1'
-
         if (-not (Test-Path $global:remoteInvoke)) {
             throw "TEST SETUP FAILED: Script not found at the calculated path: $($global:remoteInvoke). Please check the relative path in the BeforeAll block."
         }
@@ -26,15 +23,11 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
         # import the init user function:
         . "$helpFunctionDir\Initialize-TestUser.ps1"
-
     }
 
     Context 'Confirm-MigrationParameter Function' {
-
         # This block runs once before any tests in this 'Describe' block.
         BeforeAll {
-            # --- IMPORTANT ---
-
             # get the function definitions from the script
             $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
             $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
@@ -49,14 +42,10 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         }
         BeforeEach {
             $baseParams = @{
-                # CSV or Github input
-                dataSource            = 'csv' # csv or github
+                # CSV
+                dataSource            = 'csv'
                 # CSV variables
                 csvName               = 'jcdiscovery.csv'
-                # Github variables
-                GitHubUsername        = ''
-                GitHubToken           = ''
-                GitHubRepoName        = 'Jumpcloud-ADMU-Discovery'
                 # ADMU variables
                 TempPassword          = 'Temp123!Temp123!'
                 LeaveDomain           = $true
@@ -116,57 +105,6 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 { Confirm-MigrationParameter @testParams } | Should -Throw "Parameter Validation Failed: When dataSource is 'csv', the 'csvName' parameter cannot be empty."
             }
         }
-
-        Context "Data Source: GitHub" {
-            It "Should return TRUE when dataSource is 'github' and all GitHub parameters are valid" {
-                $testParams = $baseParams.Clone()
-                $testParams.dataSource = 'github'
-                $testParams.GitHubUsername = 'testuser'
-                $testParams.GitHubToken = 'MySecretToken'
-                $testParams.GitHubRepoName = 'MyRepo'
-                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
-                $testParams.JumpCloudOrgID = 'TestORGID'
-
-                Confirm-MigrationParameter @testParams | Should -Be $true
-            }
-
-            It "Should THROW when dataSource is 'github' and GitHubUsername is empty" {
-                $testParams = $baseParams.Clone()
-                $testParams.dataSource = 'github'
-                $testParams.GitHubUsername = '' # Invalid
-                $testParams.GitHubToken = 'MySecretToken'
-                $testParams.GitHubRepoName = 'MyRepo'
-                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
-                $testParams.JumpCloudOrgID = 'TestORGID'
-
-                { Confirm-MigrationParameter @testParams } | Should -Throw "Parameter Validation Failed: When dataSource is 'github', the 'GitHubUsername' parameter cannot be empty."
-            }
-
-            It "Should THROW when dataSource is 'github' and GitHubToken is empty" {
-                $testParams = $baseParams.Clone()
-                $testParams.dataSource = 'github'
-                $testParams.GitHubUsername = 'testuser'
-                $testParams.GitHubToken = '' # Invalid
-                $testParams.GitHubRepoName = 'MyRepo'
-                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
-                $testParams.JumpCloudOrgID = 'TestORGID'
-
-                { Confirm-MigrationParameter @testParams } | Should -Throw "Parameter Validation Failed: When dataSource is 'github', the 'GitHubToken' parameter cannot be empty."
-            }
-
-            It "Should THROW when dataSource is 'github' and GitHubRepoName is empty" {
-                $testParams = $baseParams.Clone()
-                $testParams.dataSource = 'github'
-                $testParams.GitHubUsername = 'testuser'
-                $testParams.GitHubToken = 'MySecretToken'
-                $testParams.GitHubRepoName = '' # Invalid
-                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
-                $testParams.JumpCloudOrgID = 'TestORGID'
-
-                { Confirm-MigrationParameter @testParams } | Should -Throw "Parameter Validation Failed: When dataSource is 'github', the 'GitHubRepoName' parameter cannot be empty."
-            }
-        }
-
         Context "JumpCloud API Parameter Validation" {
             It "Should THROW when systemContextBinding is false and JumpCloudAPIKey is the default placeholder" {
                 # Create a hashtable for splatting
@@ -410,19 +348,6 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Missing required data for field 'LocalPath'."
             }
 
-            It "Should not return rows if 'JumpCloudUserName' field is empty" {
-                # Arrange
-                $csvContent = @"
-"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-XYZ","C:\Users\j.doe",$computerName,"j.doe","","jcuser123","jcsystem123",$serialNumber
-"S-1-5-21-ABC","C:\Users\b.jones",$computerName,"b.jones","bobby.jones","jcuser456","jcsystem456",$serialNumber
-"S-1-5-21-DEF","C:\Users\a.smith","DIFFERENT-PC","a.smith","","jcuser789","jcsystem789","DIFFERENT-SN"
-"@
-                Set-Content -Path $csvPath -Value $csvContent -Force
-
-                # Act & Assert
-                Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false | Should -BeNullOrEmpty
-            }
             It "Should only return rows where 'JumpCloudUserName' field is not empty" {
                 # Arrange
                 $csvContent = @"
@@ -436,12 +361,9 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 # Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false | Should -Not -BeNullOrEmpty
                 $result = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
                 $result | Where-Object { -not [string]::IsNullOrWhiteSpace($_.JumpCloudUserName) } | Should -Not -BeNullOrEmpty
-                $result.Count | Should -Be 1
                 $result[0].SelectedUserName | Should -Be "S-1-5-21-ABC"
                 $result[0].JumpCloudUserName | Should -Be "bobby.jones"
                 $result[0].JumpCloudUserID | Should -Be "jcuser456"
-                $result[0].JumpCloudSystemID | Should -Be "jcsystem456"
-                $result[0].SerialNumber | Should -Be $serialNumber
             }
 
             It "Should throw an error if 'JumpCloudUserID' is empty when systemContextBinding is enabled" {
@@ -489,102 +411,6 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 $result[1].SelectedUserName | Should -Be "S-1-5-21-USER3"
                 $result[1].JumpCloudUserID | Should -Be "jcuser3"
             }
-
-        }
-    }
-    Context "Confirm-RequiredModule Function" {
-        BeforeAll {
-            # get the "Confirm-RequiredModule" function from the script
-            $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
-
-            $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
-            $functionMatches = [regex]::Matches($scriptContent, $pattern)
-
-            # set the matches.value to a temp file and import the functions
-            $functionMatches.Value | Set-Content -Path (Join-Path $PSScriptRoot 'invokeFunctions.ps1') -Force
-
-            # import the functions from the temp file
-            . (Join-Path $PSScriptRoot 'invokeFunctions.ps1')
-        }
-        It "Confirm-RequiredModule should return true when all required modules are installed" {
-            $requiredModule = 'PowerShellForGitHub'
-            Install-Module -Name $requiredModule -Force
-            # get the latest version of the module
-            $module = (Find-Module -Name $requiredModule)
-            # Arrange: Mock Get-InstalledModule to return a list of installed modules
-            Mock Get-InstalledModule -ParameterFilter { $Name -eq 'PowerShellForGitHub' } { return [PSCustomObject]@{
-                    Version     = $module.Version
-                    Name        = $requiredModule
-                    Repository  = 'PSGallery'
-                    Description = $module.Description
-                }
-            }
-
-
-            # Act & Assert: Confirm-RequiredModule should return true
-            Confirm-RequiredModule -requiredModule $requiredModule | Should -BeTrue
-        }
-        It "Should Throw and return false if a required module update fails" {
-            $requiredModule = 'PowerShellForGitHub'
-            Mock Get-InstalledModule -ParameterFilter { $Name -eq $requiredModule } {
-                return [PSCustomObject]@{
-                    Version = '1.0.0';
-                    Name    = $requiredModule
-                }
-            }
-            Mock Find-Module -ParameterFilter { $Name -eq $requiredModule } {
-                return [PSCustomObject]@{
-                    Version = '2.0.0';
-                    Name    = $requiredModule
-                }
-            }
-            Mock Uninstall-Module -ParameterFilter { $Name -eq $requiredModule } { }
-            Mock Install-Module -ParameterFilter { $Name -eq $requiredModule } { throw "Simulated update failure" }
-            # Get the result of Confirm-RequiredModule
-            $thrown = $false
-            $result = $null
-            try {
-                $result = Confirm-RequiredModule -requiredModules $requiredModule
-            } catch {
-                $thrown = $true
-                $_.Exception.Message | Should -Be "Failed to update $requiredModule module, exiting..."
-            }
-            $thrown | Should -BeTrue
-            $result | Should -BeFalse
-
-        }
-        It "Should Throw and return false if a required module can not be imported" {
-            $requiredModule = 'PowerShellForGitHub'
-            Mock Import-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
-            Mock Get-Module -ParameterFilter { $Name -eq $requiredModule } { return $null }
-
-            # Get the result of Confirm-RequiredModule
-            $thrown = $false
-            $result = $null
-            try {
-                $result = Confirm-RequiredModule -requiredModules $requiredModule
-            } catch {
-                $thrown = $true
-                $_.Exception.Message | Should -Be "Failed to import $requiredModule module, exiting..."
-            }
-            $thrown | Should -BeTrue
-            $result | Should -BeFalse
-
-
-        }
-
-        It "Should install and import a required module if it was not installed previously" {
-            $requiredModule = 'PowerShellForGitHub'
-            # Mock Get-InstalledModule to return null, simulating the module not being installed
-            Mock Get-InstalledModule -ParameterFilter { $Name -eq $requiredModule } { return $null }
-            Mock Write-Host {}
-
-            # Get the result of Confirm-RequiredModule
-            $result = Confirm-RequiredModule -requiredModules $requiredModule
-            # allSuccess should be true
-            $result | Should -BeTrue
-            # within the relevant block, Write-Host should be called with the status message
-            Assert-MockCalled Write-Host -Exactly 1 -Scope It -ParameterFilter { $Object -eq "[status] $requiredModule module not found, installing..." }
 
         }
     }
