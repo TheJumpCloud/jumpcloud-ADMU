@@ -1177,20 +1177,7 @@ Function Start-Migration {
             #region NTFS Permissions
             Write-ToLog -Message:("Attempting to set owner to NTFS Permissions from: ($NewUserSID) to: $SelectedUserSID for path: $newUserProfileImagePath")
             $regPermStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-            $progressCallback = {
-                param($current, $total)
-                if ($total -eq 0) {
-                    $percent = 100
-                } else {
-                    $percent = [math]::Round(($current / $total) * 100)
-                }
-                $statusNTFS = [PSCustomObject]@{
-                    Current = $current
-                    Total   = $total
-                    Percent = $percent
-                }
-                Write-ToProgress -ProgressBar $ProgressBar -Status "NTFS" -form $isForm -SystemDescription $systemDescription -statusNtfs $statusNTFS
-            }
+            Write-ToProgress -ProgressBar $ProgressBar -Status "NTFS" -form $isForm -SystemDescription $systemDescription
             Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath -progressCallback $progressCallback
             $regPermStopwatch.Stop()
             Write-ToLog "Set-RegPermission completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."

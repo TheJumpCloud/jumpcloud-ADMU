@@ -5,9 +5,7 @@ function Set-RegPermission {
         [Parameter(Mandatory)]
         [string]$TargetSID,
         [Parameter(Mandatory)]
-        [string]$FilePath,
-        [Parameter(Mandatory = $false)]
-        [scriptblock]$progressCallback
+        [string]$FilePath
     )
 
     # Create SecurityIdentifier objects
@@ -89,11 +87,6 @@ function Set-RegPermission {
         Write-ToLog "Warning: icacls setowner operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step "Set-RegPermission"
     } else {
         Write-ToLog "Successfully set owner to $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
-    }
-
-    # Provide progress feedback
-    if ($ProgressCallback) {
-        & $ProgressCallback 100 100  # Report completion
     }
 
     Write-ToLog "Permission migration completed for path: $FilePath" -Level Verbose -Step "Set-RegPermission"
