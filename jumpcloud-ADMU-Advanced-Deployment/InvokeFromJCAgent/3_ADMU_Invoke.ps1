@@ -474,7 +474,6 @@ Function Invoke-UserMigrationBatch {
             SelectedUsername   = $user.selectedUsername
             Success            = $migrationResult.Success
             ErrorMessage       = $migrationResult.ErrorMessage
-            MigrationData      = $migrationResult.MigrationData
             DomainStatusBefore = $domainStatus
             StartTime          = $userStartTime
             EndTime            = Get-Date
@@ -534,34 +533,20 @@ Function Invoke-SingleUserMigration {
         # Execute the migration - your updated exe should return $true/$false or hashtable
         $migrationResult = & $GuiJcadmuPath $convertedParams
 
-        # Handle different return types from your updated exe
-        if ($migrationResult -is [hashtable]) {
-            return [PSCustomObject]@{
-                Success       = $migrationResult.Success
-                ErrorMessage  = $migrationResult.ErrorMessage
-                MigrationData = $migrationResult
-            }
-        } elseif ($migrationResult -is [bool]) {
-            return [PSCustomObject]@{
-                Success       = $migrationResult
-                ErrorMessage  = if (-not $migrationResult) { "Migration returned false" } else { $null }
-                MigrationData = @{ ReturnValue = $migrationResult }
-            }
-        } else {
-            # Fallback for other return types
-            $success = $migrationResult -ne $null -and $migrationResult -ne $false
-            return [PSCustomObject]@{
-                Success       = $success
-                ErrorMessage  = if (-not $success) { "Migration returned unexpected result: $migrationResult" } else { $null }
-                MigrationData = @{ ReturnValue = $migrationResult }
-            }
+        # print the hashtable if returned
+        if ($migrationResult -is [object]) {
+            Write-Host "[status] Migration Result:"
+            $migrationResult | Format-List
+        }
+        return [PSCustomObject]@{
+            Success      = $false
+            ErrorMessage = $null
         }
 
     } catch {
         return [PSCustomObject]@{
-            Success       = $false
-            ErrorMessage  = $_.Exception.Message
-            MigrationData = $null
+            Success      = $false
+            ErrorMessage = $_.Exception.Message
         }
     }
 }
