@@ -74,15 +74,14 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
 
         It 'Start-Migration version' {
             $VersionRegex = [regex]'\$admuVersion\s=\s\"([0-9]+.[0-9]+.[0-9]+)\"'
-            $VersionRegexPre291 = [regex]"(?<=admuVersion = ')(([0-9]+)\.([0-9]+)\.([0-9]+))"
             $startMigrationCmd = Get-Command Start-Migration
             $admuVersionRaw = $startMigrationCmd.Definition | Select-String -Pattern:($VersionRegex)
             $admuVersion = $admuVersionRaw.matches.groups[1].value
             $branchStartMigrationVersion = [version]$admuVersion
             $masterStartMigration = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Public/Start-Migration.ps1 -useBasicParsing).ToString()
-            $masterVersion = Select-String -InputObject:($masterStartMigration) -Pattern:($VersionRegexPre291)
-            write-host "Master Version Raw: $($masterVersion.Matches.value)"
-            $masterStartMigrationVersion = [version]$masterVersion.Matches.value
+            $masterVersion = Select-String -InputObject:($masterStartMigration) -Pattern:($VersionRegex)
+            write-host "Master Version Raw: $($masterVersion.matches.groups[1].value)"
+            $masterStartMigrationVersion = [version]$masterVersion.matches.groups[1].value
             if ($env:ModuleVersionType -eq "manual") {
                 $branchStartMigrationVersion | Should -be $psd1Version
             } else {

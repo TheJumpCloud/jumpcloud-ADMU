@@ -271,9 +271,9 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 # Backup Registry & Registry Files Should Exist
                 # Timestamp from log should exist on registry backup files
                 Test-Path "$UserHome/NTUSER_original_$dateMatch.DAT" | Should -Be $true
-                Test-Path "$UserHome/NTUSER.DAT" | Should -Be $true
-                Test-Path "$UserHome/AppData/Local/Microsoft/Windows/UsrClass.DAT" | Should -Be $true
-                Test-Path "$UserHome/AppData/Local/Microsoft/Windows/UsrClass_original_$dateMatch.DAT" | Should -Be $true
+                Test-Path "$UserHome\NTUSER.DAT" | Should -Be $true
+                Test-Path "$UserHome\AppData\Local\Microsoft\Windows\UsrClass.dat" | Should -Be $true
+                Test-Path "$UserHome\AppData\Local\Microsoft\Windows\UsrClass_original_$dateMatch.DAT" | Should -Be $true
 
                 # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
                 $FTAPath = "$($UserHome)\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv"

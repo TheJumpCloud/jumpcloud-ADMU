@@ -18,9 +18,7 @@ function Write-ToProgress {
         [Parameter(Mandatory = $false)]
         $LocalPath,
         [Parameter(Mandatory = $false)] # TODO: Eventually change this for the V2 update CUT-4862
-        $SystemDescription,
-        [Parameter(Mandatory = $false)]
-        $statusNTFS
+        $SystemDescription
 
     )
     # Create a hashtable of all status messages
@@ -37,7 +35,7 @@ function Write-ToProgress {
         "CopyUserRegFiles"        = "Copying user registry files"
         "CopyMergedProfile"       = "Copying merged profiles to destination profile path"
         "CopyDefaultProtocols"    = "Copying default protocol associations"
-        "NTFS"                    = "Setting NTFS permissions: $($statusNTFS.Current) of $( $statusNTFS.Total ) items processed. $( $statusNTFS.Percent )% complete."
+        "NTFS"                    = "Setting NTFS permissions, this may take several minutes"
         "ValidateUserPermissions" = "Validating user permissions"
         "CreateRegEntries"        = "Creating registry entries"
         "DownloadUWPApps"         = "Downloading UWP Apps"

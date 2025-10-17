@@ -159,7 +159,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.9.2"
+        $admuVersion = "2.9.3"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -764,9 +764,9 @@ Function Start-Migration {
             #TODO: Out NULL?
             reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
             if ($?) {
-                Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+                Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
             } else {
-                Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+                Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
                 # attempt to recover:
                 # list processes for target user
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
@@ -784,9 +784,9 @@ Function Start-Migration {
                 reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
                 switch ($?) {
                     $true {
-                        Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+                        Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
                     } $false {
-                        Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat")
+                        Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
                         Write-AdmuErrorMessage -ErrorName "copy_error"
                         $admuTracker.copyRegistry.fail = $true
                         break
@@ -889,7 +889,7 @@ Function Start-Migration {
             Write-ToLog -Message $admuTracker.copyRegistryFiles.step -MigrationStep
             try {
                 Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
-                Copy-Item -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Destination "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Force -ErrorAction Stop
+                Copy-Item -Path "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Destination "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force -ErrorAction Stop
             } catch {
                 Write-ToLog -Message($_.Exception.Message)
                 # attempt to recover:
@@ -907,7 +907,7 @@ Function Start-Migration {
                 }
                 try {
                     Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
-                    Copy-Item -Path "$newUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Destination "$oldUserProfileImagePath/AppData/Local/Microsoft/Windows/UsrClass.dat.bak" -Force -ErrorAction Stop
+                    Copy-Item -Path "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Destination "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force -ErrorAction Stop
                 } catch {
                     Write-ToLog -Message("Could not copy backup registry hives to the destination location in $($oldUserProfileImagePath): Exiting...")
                     $admuTracker.copyRegistryFiles.fail = $true
@@ -1181,21 +1181,8 @@ Function Start-Migration {
             #region NTFS Permissions
             Write-ToLog -Message:("Attempting to set owner to NTFS Permissions from: ($NewUserSID) to: $SelectedUserSID for path: $newUserProfileImagePath")
             $regPermStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
-            $progressCallback = {
-                param($current, $total)
-                if ($total -eq 0) {
-                    $percent = 100
-                } else {
-                    $percent = [math]::Round(($current / $total) * 100)
-                }
-                $statusNTFS = [PSCustomObject]@{
-                    Current = $current
-                    Total   = $total
-                    Percent = $percent
-                }
-                Write-ToProgress -ProgressBar $ProgressBar -Status "NTFS" -form $isForm -SystemDescription $systemDescription -statusNtfs $statusNTFS
-            }
-            Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath -progressCallback $progressCallback
+            Write-ToProgress -ProgressBar $ProgressBar -Status "NTFS" -form $isForm -SystemDescription $systemDescription
+            Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath -ErrorAction SilentlyContinue
             $regPermStopwatch.Stop()
             Write-ToLog "Set-RegPermission completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
 
@@ -1514,17 +1501,29 @@ Function Start-Migration {
         }
         # Final log and progress bar update
         Write-ToLog -Message "Migration Summary" -MigrationStep
+        # create the migrationResult object
+        $migrationResult = [PSCustomObject]@{
+            JumpCloudUserName = $JumpCloudUserName
+            SelectedUserName  = $selectedUserName
+            MigrationDate     = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+            MigrationStatus   = if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) { "Success" } else { "Failed" }
+            LogFileLocation   = $jcAdmuLogFile
+        }
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) {
             Write-ToLog -Message ('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
             Write-ToLog -Message "User $selectedUserName was migrated to $JumpCloudUserName"
             Write-ToLog -Message "Please login as $JumpCloudUserName to complete the migration and initialize the windows built in app setup."
             Write-ToProgress -ProgressBar $ProgressBar -Status "MigrationComplete" -form $isForm -SystemDescription $systemDescription
+            # set the migration result success to true
+            return $migrationResult
         } else {
             Write-ToLog -Message ("ADMU encountered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warning
             Write-ToLog -Message ("The following migration steps were reverted to their original state: $FixedErrors") -Level Warning
             Write-ToLog -Message ('Script finished with errors; Log file location: ' + $jcAdmuLogFile) -Level Warning
             Write-ToProgress -ProgressBar $ProgressBar -Status $Script:ErrorMessage -form $isForm -logLevel "Error" -SystemDescription $systemDescription
-            Throw "JumpCloud ADMU was unable to migrate $selectedUserName"
+            Write-ToLog -Message "JumpCloud ADMU was unable to migrate $selectedUserName" -Level Error
+            # set the migration result success to false
+            return $migrationResult
         }
         Write-ToLog -Message "=================================================="
     }
