@@ -152,7 +152,11 @@ Function Get-MigrationUsersFromCsv {
         # 3. --- FIND AND BUILD USER OBJECTS ---
         $usersToMigrate = @()
         $computerName = $env:COMPUTERNAME
-        $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+        try {
+            $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+        } catch {
+            $serialNumber = (Get-CimInstance -Class Win32_BIOS).SerialNumber
+        }
 
         foreach ($row in $ImportedCSV) {
             # --- Filter for this machine and create the custom object ---

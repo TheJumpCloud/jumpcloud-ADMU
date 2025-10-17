@@ -142,7 +142,11 @@ Function Start-Migration {
 
         # Define misc static variables
         $netBiosName = Get-NetBiosName
-        $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+        try {
+            $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+        } catch {
+            $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
+        }
         $localComputerName = $WmiComputerSystem.Name
         $systemVersion = Get-ComputerInfo | Select-Object OSName, OSVersion, OsHardwareAbstractionLayer, OsBuildNumber, WindowsEditionId
         $windowsDrive = Get-WindowsDrive
@@ -1317,7 +1321,11 @@ Function Start-Migration {
 
             #region leaveDomain
             write-tolog -Message $admuTracker.leaveDomain.step -MigrationStep
-            $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+            try {
+                $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+            } catch {
+                $WmiComputerSystem = Get-CimInstance -ClassName:('Win32_ComputerSystem')
+            }
             if ($LeaveDomain -eq $true) {
                 if ($AzureADStatus -match 'YES' -and $LocalDomainStatus -match 'YES') {
                     Write-ToLog -Message:('Device is HYBRID joined')

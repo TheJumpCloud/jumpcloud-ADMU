@@ -379,7 +379,11 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         Context "Run on local computer" {
             BeforeAll {
                 $computerName = $env:COMPUTERNAME
-                $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+                try {
+                    $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+                } catch {
+                    $serialNumber = (Get-CimInstance -Class Win32_BIOS).SerialNumber
+                }
             }
 
             It "Should throw an error if 'SID' field is empty" {
@@ -411,6 +415,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
 "S-1-5-21-XYZ","C:\Users\j.doe",$computerName,"j.doe","","jcuser123","jcsystem123",$serialNumber
+"S-1-5-21-ABC","C:\Users\b.jones",$computerName,"b.jones","bobby.jones","jcuser456","jcsystem456",$serialNumber
+"S-1-5-21-DEF","C:\Users\a.smith","DIFFERENT-PC","a.smith","","jcuser789","jcsystem789","DIFFERENT-SN"
 "@
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
@@ -738,9 +744,14 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             $userSid = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom
             # Create a CSV file for the user migration, should have these: "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
             $csvPath = "C:\Windows\Temp\jcdiscovery.csv"
+            try {
+                $SN = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+            } catch {
+                $SN = (Get-CimInstance -Class Win32_BIOS).SerialNumber
+            }
             $csvContent = @"
 SID,LocalPath,LocalComputerName,LocalUsername,JumpCloudUserName,JumpCloudUserID,JumpCloudSystemID,SerialNumber
-$userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userToMigrateTo,$null,$null,$((Get-WmiObject -Class Win32_BIOS).SerialNumber)
+$userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userToMigrateTo,$null,$null,$SN
 "@
             $csvContent | Set-Content -Path $csvPath -Force
         }
@@ -791,11 +802,7 @@ $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userT
         # Test for Init User to have a previousSID value
         It "Should have a previousSID value for the init user and unload the hive" {
             # Get the SID of the init user
-            # Load the NTUser.dat file
-            # TODO: CUT-4890 Replace PSDrive with private function
-            if (-not (Get-PSDrive HKEY_USERS -ErrorAction SilentlyContinue)) {
-                New-PSDrive -Name "HKEY_USERS" -PSProvider "Registry" -Root "HKEY_USERS"
-            }
+            Set-HKEYUserMount
 
             $userSid = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom
             $hivePath = "HKU\$($userSid)_admu"
