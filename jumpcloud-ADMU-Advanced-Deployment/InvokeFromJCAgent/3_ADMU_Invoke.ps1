@@ -32,7 +32,7 @@ $postMigrationBehavior = 'Restart' # Restart or Shutdown
 $removeMDM = $false # Remove the existing MDM (default false)
 
 # option to bind using the systemContext API
-$systemContextBinding = $true # Bind using the systemContext API (default False)
+$systemContextBinding = $false # Bind using the systemContext API (default False)
 # If you want to bind using the systemContext API, set the systemContextBinding to true
 # The systemContextBinding option is only available for devices that have enrolled a device using a JumpCloud Administrators Connect Key
 # for more information, see the JumpCloud documentation: https://docs.jumpcloud.com/api/2.0/index.html#section/System-Context
