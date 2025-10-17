@@ -33,6 +33,14 @@ function Set-RegPermission {
         $TargetAccount = $TargetSID
     }
 
+    $ntfsPermissionLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu_ntfs.log"
+    try {
+        Write-ToLog -Message "Starting permission migration from $SourceAccount to $TargetAccount on path: $FilePath" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        Write-ToLog -Message "Log messages below are streamed from standard output of the icacls command, output may be ignored if it contains errors about pointers *" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+    } catch {
+        Write-ToLog -Message "Failed to initialize NTFS permission log at $ntfsPermissionLogPath $($_.Exception.Message)" -Level Warning -Step "Set-RegPermission"
+    }
+
     # Prepare icacls-compatible account identifiers (SIDs need * prefix)
     $SourceAccountIcacls = if ($SourceAccountTranslated) { $SourceAccount } else { "*$SourceAccount" }
     $TargetAccountIcacls = if ($TargetAccountTranslated) { $TargetAccount } else { "*$TargetAccount" }
@@ -53,7 +61,7 @@ function Set-RegPermission {
 
     # Step 1: Grant target user full control inheritance on root folder
     Write-ToLog "Granting permissions to: $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
-    $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /C /Q
+    $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /C /Q >> $ntfsPermissionLogPath 2>&1
 
     if ($LASTEXITCODE -ne 0) {
         # Only log if there are non-filtered errors
@@ -74,7 +82,7 @@ function Set-RegPermission {
 
     # Step 3: Change ownership from source to target user
     Write-ToLog "Setting owner to $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
-    $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /T /C /Q
+    $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /T /C /Q >> $ntfsPermissionLogPath 2>&1
 
     if ($LASTEXITCODE -ne 0) {
         # Only log if there are non-filtered errors
