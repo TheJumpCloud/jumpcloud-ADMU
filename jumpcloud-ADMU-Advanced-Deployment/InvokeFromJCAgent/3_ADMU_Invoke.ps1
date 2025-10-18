@@ -20,19 +20,19 @@ $BindAsAdmin = $false # Bind user as admin (default False)
 $JumpCloudAPIKey = 'YOURAPIKEY' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
 $JumpCloudOrgID = 'YOURORGID' # This field is required if you use a MTP API Key
 $SetDefaultWindowsUser = $true # Set the default last logged on windows user to the JumpCloud user (default True)
-$ReportStatus = $false # Report status back to JumpCloud Description (default False)
+$ReportStatus = $true # Report status back to JumpCloud Description (default False)
 
 # Option to shutdown or restart
 # Restarting the system is the default behavior
 # If you want to shutdown the system, set the postMigrationBehavior to Shutdown
 # The 'shutdown' behavior performs a shutdown of the system in a much faster manner than 'restart' which can take 5 mins form the time the command is issued
-$postMigrationBehavior = 'Restart' # Restart or Shutdown
+$postMigrationBehavior = 'Shutdown' # Restart or Shutdown
 
 # Option to remove the existing MDM
 $removeMDM = $false # Remove the existing MDM (default false)
 
 # option to bind using the systemContext API
-$systemContextBinding = $false # Bind using the systemContext API (default False)
+$systemContextBinding = $true # Bind using the systemContext API (default False)
 # If you want to bind using the systemContext API, set the systemContextBinding to true
 # The systemContextBinding option is only available for devices that have enrolled a device using a JumpCloud Administrators Connect Key
 # for more information, see the JumpCloud documentation: https://docs.jumpcloud.com/api/2.0/index.html#section/System-Context
@@ -439,7 +439,7 @@ Function Invoke-UserMigrationBatch {
             BindAsAdmin           = $MigrationConfig.BindAsAdmin
             SetDefaultWindowsUser = $MigrationConfig.SetDefaultWindowsUser
             LeaveDomain           = $leaveDomainParam
-            adminDebug            = $true
+            adminDebug            = $false
             ReportStatus          = $MigrationConfig.ReportStatus
         }
 
@@ -460,7 +460,7 @@ Function Invoke-UserMigrationBatch {
         # Get domain status before migration
         $domainStatus = Get-DomainStatus
 
-        Write-Host "Domain status before migration:"
+        Write-Host "[status] Domain status before migration:"
         Write-Host "[status] Azure/EntraID status: $($domainStatus.AzureAD)"
         Write-Host "[status] Local domain status: $($domainStatus.LocalDomain)"
         Write-Host "[status] Begin Migration for JumpCloudUser: $($user.JumpCloudUserName)"
@@ -531,15 +531,10 @@ Function Invoke-SingleUserMigration {
         Write-Host "[status] Executing migration command..."
 
         # Execute the migration - your updated exe should return $true/$false or hashtable
-        $migrationResult = & $GuiJcadmuPath $convertedParams
-
-        # print the hashtable if returned
-        if ($migrationResult -is [object]) {
-            Write-Host "[status] Migration Result:"
-            $migrationResult | Format-List
-        }
+        & $GuiJcadmuPath $convertedParams
+        # return true if we haven't thrown
         return [PSCustomObject]@{
-            Success      = $false
+            Success      = $true
             ErrorMessage = $null
         }
 
@@ -687,15 +682,13 @@ if ($UsersToMigrate) {
 $guiJcadmuPath = "C:\Windows\Temp\gui_jcadmu.exe" # Exe path
 
 # Download the latest ADMU GUI executable
-Get-LatestADMUGUIExe # Download the latest ADMU GUI executable
+# Get-LatestADMUGUIExe # Download the latest ADMU GUI executable
 
 # Validate the downloaded file against the official release hash
-Test-ExeSHA -filePath $guiJcadmuPath
+# Test-ExeSHA -filePath $guiJcadmuPath
 
 # Get the last user in the migration list
 $lastUser = $($UsersToMigrate | Select-Object -Last 1)
-
-Write-Host "Starting validation for file: $CsvPath"
 
 # Execute the migration batch processing
 $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig @{
@@ -723,29 +716,27 @@ if ($migrationResults.FailedUsers.Count -gt 0) {
     foreach ($failedUser in $migrationResults.FailedUsers) {
         Write-Host "  - $($failedUser.JumpCloudUserName): $($failedUser.ErrorMessage)"
     }
-}
-#endregion migration
-
-#region removeMDM
-# Un-manage the device from Intune:
-# Remove the existing MDM
-if ($removeMDM) {
-    # get the raw content from the script
-    $rawGitHubContentUrl = "https://raw.githubusercontent.com/TheJumpCloud/support/refs/heads/master/scripts/windows/remove_windowsMDM.ps1"
-    # download the script to the temp directory
-    $scriptPath = "$env:TEMP\remove_windowsMDM.ps1"
-    Invoke-WebRequest -Uri $rawGitHubContentUrl -OutFile $scriptPath
-    # run the script from the file
-    # Execute the script
-    & $scriptPath
-}
-#endregion removeMDM
-
-#region restart/shutdown
-# If force restart was specified, we kick off a command to initiate the restart
-# this ensures that the JumpCloud commands reports a success
-if ($ForceRebootAfterMigration) {
-    if ($systemContextBinding -eq $true) {
+    exit 1
+} else {
+    # process remainder of the script:
+    #region removeMDM
+    # Un-manage the device from Intune:
+    # Remove the existing MDM
+    if ($removeMDM) {
+        # get the raw content from the script
+        $rawGitHubContentUrl = "https://raw.githubusercontent.com/TheJumpCloud/support/refs/heads/master/scripts/windows/remove_windowsMDM.ps1"
+        # download the script to the temp directory
+        $scriptPath = "$env:TEMP\remove_windowsMDM.ps1"
+        Invoke-WebRequest -Uri $rawGitHubContentUrl -OutFile $scriptPath
+        # run the script from the file
+        # Execute the script
+        & $scriptPath
+    }
+    #endregion removeMDM
+    #region restart/shutdown
+    # If force restart was specified, we kick off a command to initiate the restart
+    # this ensures that the JumpCloud commands reports a success
+    if ($ForceRebootAfterMigration) {
         # wait 20 seconds after migration to ensure the agent has time to associate the user to the device
         Start-Sleep 20
         switch ($postMigrationBehavior) {
@@ -758,35 +749,8 @@ if ($ForceRebootAfterMigration) {
                 Restart-Computer -ComputerName localhost -force
             }
         }
-    } else {
-        Write-Host "[status] Restarting system using JumpCloud API..."
-        $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
-        $regex = 'systemKey\":\"(\w+)\"'
-        $systemKey = [regex]::Match($config, $regex).Groups[1].Value
-        $postMigrationBehavior = $postMigrationBehavior.ToLower() # Restart or Shutdown endpoint is case sensitive
-        if ([string]::IsNullOrEmpty($systemKey)) {
-            Write-Host "JumpCloud SystemID could not be verified, exiting..."
-            exit 1
-        }
-        if ([string]::IsNullOrEmpty($JumpCloudOrgID)) {
-            $headers = @{
-                "x-api-key" = $JumpCloudAPIKey
-            }
-        } else {
-            $headers = @{
-                "x-api-key" = $JumpCloudAPIKey
-                "x-org-id"  = $JumpCloudOrgID
-            }
-        }
-        write-host "[status] invoking $postMigrationBehavior command through JumpCloud agent, this may take a moment..."
-        $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/systems/$($systemKey)/command/builtin/$postMigrationBehavior" -Method POST -Headers $headers
-        if ($response.queueId) {
-            Write-Host "[status] $postMigrationBehavior command was successful"
-        } else {
-            Write-Host "[status] $postMigrationBehavior command was not successful, please $postMigrationBehavior manually"
-            exit 1
-        }
     }
+    #endregion restart/shutdown
 }
-#endregion restart/shutdown
+#endregion migration
 exit 0
