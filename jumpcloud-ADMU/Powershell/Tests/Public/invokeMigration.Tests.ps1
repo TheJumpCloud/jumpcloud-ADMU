@@ -487,24 +487,26 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         }
         It "Should return success and error message valid parameters" {
             $result = invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe"
-            $result.GetType().Name | Should -Be "Object"
+            $result.GetType().Name | Should -Be "Object[]"
             $result.Success | Should -BeOfType "Boolean"
-            $result.ErrorMessage | Should -BeOfType "String"
             $result.Success | Should -Be $true
             $result.ErrorMessage | Should -BeNullOrEmpty
         }
         It "Should throw if an error occurs in migration" {
-            $migrationParams.JumpCloudUserName = "NonExistentUser"
+            # to throw the test init the user to migrate to
+            Initialize-TestUser -username $userToMigrateTo -password $tempPassword
+            # do the migration
             { invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe" } | Should -Throw
         }
         It "Should return an non success and error message if an error occurs in migration" {
-            $migrationParams.JumpCloudUserName = "NonExistentUser"
+            to throw the test init the user to migrate to
+            Initialize-TestUser -username $userToMigrateTo -password $tempPassword
+            # do the migration
             $result = invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe"
-            $result.GetType().Name | Should -Be "Object"
+            $result.GetType().Name | Should -Be "Object[]"
             $result.Success | Should -BeOfType "Boolean"
-            $result.ErrorMessage | Should -BeOfType "String"
             $result.Success | Should -Be $false
-            $result.ErrorMessage | Should -not -BeNullOrEmpty
+            $result.ErrorMessage | Should -Not -BeNullOrEmpty
         }
     }
     Context "Invoke-UserMigrationBatch Function" {
@@ -541,6 +543,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             }
 
             $userSid = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom
+            $userSid1 = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom1
             # Create a CSV file for the user migration, should have these: "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
             $csvPath = "C:\Windows\Temp\jcdiscovery.csv"
             try {
@@ -551,7 +554,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             $csvContent = @"
 SID,LocalPath,LocalComputerName,LocalUsername,JumpCloudUserName,JumpCloudUserID,JumpCloudSystemID,SerialNumber
 $userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userToMigrateTo,$null,$null,$SN
-$userSid,C:\Users\$userToMigrateFrom1,$env:COMPUTERNAME,$userToMigrateFrom1,$userToMigrateTo1,$null,$null,$SN
+$userSid1,C:\Users\$userToMigrateFrom1,$env:COMPUTERNAME,$userToMigrateFrom1,$userToMigrateTo1,$null,$null,$SN
 "@
             $csvContent | Set-Content -Path $csvPath -Force
             # Build migration parameters for this user
