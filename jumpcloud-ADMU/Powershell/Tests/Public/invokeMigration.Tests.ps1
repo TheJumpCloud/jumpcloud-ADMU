@@ -466,7 +466,6 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             }
 
             $sourceUser = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom
-            $targetUser = Test-UsernameOrSID -usernameOrSid $userToMigrateTo
 
             # Build migration parameters for this user
             $migrationParams = @{
@@ -569,6 +568,7 @@ $userSid,C:\Users\$userToMigrateFrom1,$env:COMPUTERNAME,$userToMigrateFrom1,$use
                 LeaveDomainAfterMigration = $false
                 guiJcadmuPath             = $destinationPath
             }
+            $systemContextBinding = $false
         }
         # Migration with Valid data
         It "Should migrate the users to JumpCloud and not throw an error" {
