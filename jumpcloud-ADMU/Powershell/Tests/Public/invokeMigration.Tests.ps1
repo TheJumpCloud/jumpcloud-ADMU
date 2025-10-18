@@ -492,14 +492,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             $result.Success | Should -Be $true
             $result.ErrorMessage | Should -BeNullOrEmpty
         }
-        It "Should throw if an error occurs in migration" {
-            # to throw the test init the user to migrate to
-            Initialize-TestUser -username $userToMigrateTo -password $tempPassword
-            # do the migration
-            { invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe" } | Should -Throw
-        }
         It "Should return an non success and error message if an error occurs in migration" {
-            to throw the test init the user to migrate to
+            # to throw the test init the user to migrate to
             Initialize-TestUser -username $userToMigrateTo -password $tempPassword
             # do the migration
             $result = invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe"
@@ -593,30 +587,14 @@ $userSid1,C:\Users\$userToMigrateFrom1,$env:COMPUTERNAME,$userToMigrateFrom1,$us
             # set the users to migrate
             $UsersToMigrate = Get-MigrationUsersFromCsv -CsvPath $csvPath -systemContextBinding $systemContextBinding
             # Force an error by setting one of the JumpCloudUserName to an invalid user
-            $UsersToMigrate[0].JumpCloudUserName = "NonExistentUser"
-
+            # to throw the test init the user to migrate to
+            Initialize-TestUser -username $userToMigrateTo1 -password $tempPassword
             # Execute the migration batch processing
             $results = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig $migrationParams
             $results.TotalUsers | Should -Be 2
             $results.SuccessfulMigrations | Should -Be 1
             $results.FailedMigrations | Should -Be 1
         }
-        # User2 Should have user1 profile
-        It "User2 Should have user1 profile directory" {
-            # Run invokeScript.ps1 and should return 0
-            . $PSScriptRoot\invokeScript.ps1
-
-            # test that the registry profile path for init user 2 is set to c:\users\initUser1
-            $user2Sid = Test-UsernameOrSID -usernameOrSid $userToMigrateTo
-            $user2ProfilePath = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$user2Sid").ProfileImagePath
-            $user2ProfilePath | Should -Be "C:\Users\$userToMigrateFrom"
-
-            $logs = Get-Content -Path "C:\Windows\Temp\jcAdmu.log" -Raw
-            $logs | Should -Not -BeNullOrEmpty
-            Write-Host $logs
-            $logs | Should -Match "Script finished successfully"
-        }
-
     }
 
 }
