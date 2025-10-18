@@ -26,13 +26,13 @@ $ReportStatus = $true # Report status back to JumpCloud Description (default Fal
 # Restarting the system is the default behavior
 # If you want to shutdown the system, set the postMigrationBehavior to Shutdown
 # The 'shutdown' behavior performs a shutdown of the system in a much faster manner than 'restart' which can take 5 mins form the time the command is issued
-$postMigrationBehavior = 'Shutdown' # Restart or Shutdown
+$postMigrationBehavior = 'Restart' # Restart or Shutdown
 
 # Option to remove the existing MDM
 $removeMDM = $false # Remove the existing MDM (default false)
 
 # option to bind using the systemContext API
-$systemContextBinding = $true # Bind using the systemContext API (default False)
+$systemContextBinding = $false # Bind using the systemContext API (default False)
 # If you want to bind using the systemContext API, set the systemContextBinding to true
 # The systemContextBinding option is only available for devices that have enrolled a device using a JumpCloud Administrators Connect Key
 # for more information, see the JumpCloud documentation: https://docs.jumpcloud.com/api/2.0/index.html#section/System-Context
@@ -682,13 +682,10 @@ if ($UsersToMigrate) {
 $guiJcadmuPath = "C:\Windows\Temp\gui_jcadmu.exe" # Exe path
 
 # Download the latest ADMU GUI executable
-# Get-LatestADMUGUIExe # Download the latest ADMU GUI executable
+Get-LatestADMUGUIExe # Download the latest ADMU GUI executable
 
 # Validate the downloaded file against the official release hash
-# Test-ExeSHA -filePath $guiJcadmuPath
-
-# Get the last user in the migration list
-$lastUser = $($UsersToMigrate | Select-Object -Last 1)
+Test-ExeSHA -filePath $guiJcadmuPath
 
 # Execute the migration batch processing
 $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig @{
