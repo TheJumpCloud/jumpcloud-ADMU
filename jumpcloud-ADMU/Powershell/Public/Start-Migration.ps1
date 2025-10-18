@@ -1501,20 +1501,17 @@ Function Start-Migration {
         }
         # Final log and progress bar update
         Write-ToLog -Message "Migration Summary" -MigrationStep
-        # create the migrationResult object
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) {
             Write-ToLog -Message ('Script finished successfully; Log file location: ' + $jcAdmuLogFile)
             Write-ToLog -Message "User $selectedUserName was migrated to $JumpCloudUserName"
             Write-ToLog -Message "Please login as $JumpCloudUserName to complete the migration and initialize the windows built in app setup."
             Write-ToProgress -ProgressBar $ProgressBar -Status "MigrationComplete" -form $isForm -SystemDescription $systemDescription
-            # set the migration result success to true
         } else {
             Write-ToLog -Message ("ADMU encountered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warning
             Write-ToLog -Message ("The following migration steps were reverted to their original state: $FixedErrors") -Level Warning
             Write-ToLog -Message ('Script finished with errors; Log file location: ' + $jcAdmuLogFile) -Level Warning
             Write-ToProgress -ProgressBar $ProgressBar -Status $Script:ErrorMessage -form $isForm -logLevel "Error" -SystemDescription $systemDescription
             Throw "JumpCloud ADMU was unable to migrate $selectedUserName"
-            # set the migration result success to false
         }
         Write-ToLog -Message "=================================================="
     }
