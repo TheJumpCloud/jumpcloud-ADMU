@@ -5,9 +5,7 @@ function Set-RegPermission {
         [Parameter(Mandatory)]
         [string]$TargetSID,
         [Parameter(Mandatory)]
-        [string]$FilePath,
-        [Parameter(Mandatory = $false)]
-        [scriptblock]$progressCallback
+        [string]$FilePath
     )
 
     # Create SecurityIdentifier objects
@@ -61,7 +59,7 @@ function Set-RegPermission {
 
     # Step 1: Grant target user full control inheritance on root folder
     Write-ToLog "Granting permissions to: $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
-    $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /C /Q
+    $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /C /Q > $ntfsPermissionLogPath 2>&1
 
     if ($LASTEXITCODE -ne 0) {
         # Only log if there are non-filtered errors
@@ -82,18 +80,12 @@ function Set-RegPermission {
 
     # Step 3: Change ownership from source to target user
     Write-ToLog "Setting owner to $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
-    $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /T /C /Q
-
+    $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /T /C /Q > $ntfsPermissionLogPath 2>&1
     if ($LASTEXITCODE -ne 0) {
         # Only log if there are non-filtered errors
         Write-ToLog "Warning: icacls setowner operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step "Set-RegPermission"
     } else {
         Write-ToLog "Successfully set owner to $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
-    }
-
-    # Provide progress feedback
-    if ($ProgressCallback) {
-        & $ProgressCallback 100 100  # Report completion
     }
 
     Write-ToLog "Permission migration completed for path: $FilePath" -Level Verbose -Step "Set-RegPermission"

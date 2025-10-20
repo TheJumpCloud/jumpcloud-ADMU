@@ -1,7 +1,20 @@
+## 2.9.3
+
+Release Date: October 20, 2025
+
+#### RELEASE NOTES
+
+```
+Update to the invoke scripts + module to support executing the ADMU as our EXE application opposed to the PowerShell module.
+```
+
+#### IMPROVEMENTS:
+
+- Updated the invoke scripts and module to support executing the ADMU as our EXE application opposed to the PowerShell module. This should improve reliability when invoking the ADMU remotely from JumpCloud Commands or other RMM tools.
+
 ## 2.9.2
 
 Release Date: October 13, 2025
-
 
 #### RELEASE NOTES
 

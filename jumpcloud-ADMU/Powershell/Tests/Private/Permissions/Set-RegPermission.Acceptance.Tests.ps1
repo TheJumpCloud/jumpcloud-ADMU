@@ -31,7 +31,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $testPath = "$env:TEMP\testfile.txt"
             New-Item -Path $testPath -ItemType File -Force | Out-Null
             # Act
-            { Set-RegPermission -SourceSID $fakeSID -TargetSID $targetSID -FilePath $testPath } | Should -Throw 'Exception calling "AddAccessRule" with "1" argument(s): "Some or all identity references could not be translated."'
+            { Set-RegPermission -SourceSID $fakeSID -TargetSID $targetSID -FilePath $testPath -ErrorAction SilentlyContinue } | Should -Throw 'Exception calling "AddAccessRule" with "1" argument(s): "Some or all identity references could not be translated."'
             # Cleanup
             Remove-Item $testPath -Force
         }
@@ -83,7 +83,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             Write-Host "Current Owner: $((Get-Acl $profileImagePath).Owner)"
             Write-Host "####################"
             # Run SetRegPermission:
-            Set-RegPermission -SourceSID $domainSID -TargetSID $targetSID -FilePath $profileImagePath
+            Set-RegPermission -SourceSID $domainSID -TargetSID $targetSID -FilePath $profileImagePath -ErrorAction SilentlyContinue
 
             $items = Get-ChildItem -Path $profileImagePath -Recurse -Force
             foreach ($item in $items) {
@@ -143,7 +143,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
                 }
             }
             # then attempt to update the ownership
-            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir
+            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir -ErrorAction SilentlyContinue
 
             $items = Get-ChildItem -Path $testDir -Recurse -Force
             foreach ($item in $items) {
@@ -166,7 +166,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $acl.AddAccessRule($rule)
             Set-Acl -Path $filePath -AclObject $acl
 
-            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir
+            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir -ErrorAction SilentlyContinue
 
             $acl = Get-Acl $filePath
             $targetAccount = (New-Object System.Security.Principal.SecurityIdentifier($targetSID)).Translate([System.Security.Principal.NTAccount]).Value
@@ -183,7 +183,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $acl.SetOwner((New-Object System.Security.Principal.SecurityIdentifier($otherSID)))
             Set-Acl -Path $filePath -AclObject $acl
 
-            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir
+            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir -ErrorAction SilentlyContinue
 
             $acl = Get-Acl $filePath
             $acl.Owner | Should -Be $otherAccount
@@ -191,7 +191,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
 
         It "Should add the targetAccount as a member of the ACL if it does not already exist" {
 
-            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir
+            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir -ErrorAction SilentlyContinue
             # the targetAccount should be added to the ACL
             $acl = Get-Acl $testDir
             $targetAccount = (New-Object System.Security.Principal.SecurityIdentifier($targetSID)).Translate([System.Security.Principal.NTAccount]).Value
@@ -240,7 +240,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
         # now perform the registry clone and change
         $userProfilePath = "C:\Users\$($userToMigrateFrom)"
         $regPermStopwatchNew = [System.Diagnostics.Stopwatch]::StartNew()
-        Set-RegPermission -SourceSID $UserSID -TargetSID $UserSIDNew -FilePath $userProfilePath
+        Set-RegPermission -SourceSID $UserSID -TargetSID $UserSIDNew -FilePath $userProfilePath -ErrorAction SilentlyContinue
         $regPermStopwatchNew.Stop()
         $newTime = $regPermStopwatchNew.Elapsed.TotalSeconds
 
@@ -314,13 +314,13 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $Acl.SetAccessRule($Ar)
             $Acl | Set-Acl -Path $userProfilePath
 
-            Set-RegPermissionOld -sourceSID $UserSID -targetSID $UserSIDOldFunction -filePath $userProfilePath
+            Set-RegPermissionOld -sourceSID $UserSID -targetSID $UserSIDOldFunction -filePath $userProfilePath -ErrorAction SilentlyContinue
             $regPermStopwatchOld.Stop()
 
             # perform the same operation with the new Set-RegPermission
             # re-import the Set-RegPermission function
             $regPermStopwatchNew = [System.Diagnostics.Stopwatch]::StartNew()
-            Set-RegPermission -SourceSID $UserSID -TargetSID $UserSIDNewFunction -FilePath $userProfilePath
+            Set-RegPermission -SourceSID $UserSID -TargetSID $UserSIDNewFunction -FilePath $userProfilePath -ErrorAction SilentlyContinue
             $regPermStopwatchNew.Stop()
 
             # Compare the times:
