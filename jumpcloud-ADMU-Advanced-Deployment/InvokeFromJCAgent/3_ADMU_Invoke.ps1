@@ -528,7 +528,7 @@ Function Invoke-SingleUserMigration {
     $convertedParams = ConvertTo-ArgumentList -InputHashtable $MigrationParams
 
     Write-Host "[status] Executing migration command..."
-    # Execute the migration - your updated exe should return $true/$false or hashtable
+    # Execute the migration
     $result = & $GuiJcadmuPath $convertedParams
     # get the exit code
     $exitCode = $LASTEXITCODE
