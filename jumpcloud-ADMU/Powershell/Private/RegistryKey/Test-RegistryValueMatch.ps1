@@ -13,9 +13,7 @@ function Test-RegistryValueMatch {
 
     )
 
-    $ErrorActionPreference = "SilentlyContinue"
-    $regValue = Get-ItemPropertyValue -Path $Path -Name $Value
-    $ErrorActionPreference = "Continue"
+    $regValue = Get-ItemPropertyValue -Path $Path -Name $Value -ErrorAction SilentlyContinue
     $out = 'Value For ' + $Value + ' Is ' + $1 + ' On ' + $Path
 
 

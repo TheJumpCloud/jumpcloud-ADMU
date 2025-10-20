@@ -1511,7 +1511,9 @@ Function Start-Migration {
             Write-ToLog -Message ("The following migration steps were reverted to their original state: $FixedErrors") -Level Warning
             Write-ToLog -Message ('Script finished with errors; Log file location: ' + $jcAdmuLogFile) -Level Warning
             Write-ToProgress -ProgressBar $ProgressBar -Status $Script:ErrorMessage -form $isForm -logLevel "Error" -SystemDescription $systemDescription
+            #region exeExitCode
             Throw "JumpCloud ADMU was unable to migrate $selectedUserName"
+            #endregion exeExitCode
         }
         Write-ToLog -Message "=================================================="
     }

@@ -219,6 +219,14 @@ if (`$PSBoundParameters.Count -eq 0) {
 "@
         # add executable region to the template
         $templateString += $executableRegion + [Environment]::NewLine
+        # finally replace the exe exit code region
+        $replacement = @'
+#region exeExitCode
+            Write-ToLog -Message "JumpCloud ADMU was unable to migrate $selectedUserName" -Level Error
+            exit 1
+            #endregion exeExitCode
+'@
+        $templateString = $templateString -replace '#region\sexeExitCode[\s\S+]+#endregion\sexeExitCode', $replacement
     }
     end {
         # write out the file

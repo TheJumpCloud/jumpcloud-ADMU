@@ -519,29 +519,31 @@ Function Invoke-SingleUserMigration {
         [string]$GuiJcadmuPath
     )
 
-    try {
-        # Validate exe exists
-        if (-not (Test-Path -Path $GuiJcadmuPath)) {
-            throw "The gui_jcadmu.exe file was not found at: '$GuiJcadmuPath'. Please ensure the file is present before running the migration."
-        }
+    # Validate exe exists
+    if (-not (Test-Path -Path $GuiJcadmuPath)) {
+        throw "The gui_jcadmu.exe file was not found at: '$GuiJcadmuPath'. Please ensure the file is present before running the migration."
+    }
 
-        # Convert parameters to argument list
-        $convertedParams = ConvertTo-ArgumentList -InputHashtable $MigrationParams
+    # Convert parameters to argument list
+    $convertedParams = ConvertTo-ArgumentList -InputHashtable $MigrationParams
 
-        Write-Host "[status] Executing migration command..."
+    Write-Host "[status] Executing migration command..."
 
-        # Execute the migration - your updated exe should return $true/$false or hashtable
-        & $GuiJcadmuPath $convertedParams
-        # return true if we haven't thrown
+    # Execute the migration - your updated exe should return $true/$false or hashtable
+    $result = & $GuiJcadmuPath $convertedParams
+    $exitCode = $LASTEXITCODE
+    # get the exit code
+    Write-Host "[status] Migration process completed with exit code: $exitCode"
+    if ($exitCode -eq 0) {
+        # return true
         return [PSCustomObject]@{
             Success      = $true
             ErrorMessage = $null
         }
-
-    } catch {
+    } else {
         return [PSCustomObject]@{
             Success      = $false
-            ErrorMessage = $_.Exception.Message
+            ErrorMessage = $result[-1]
         }
     }
 }
