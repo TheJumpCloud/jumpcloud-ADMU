@@ -20,7 +20,7 @@ $BindAsAdmin = $false # Bind user as admin (default False)
 $JumpCloudAPIKey = 'YOURAPIKEY' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
 $JumpCloudOrgID = 'YOURORGID' # This field is required if you use a MTP API Key
 $SetDefaultWindowsUser = $true # Set the default last logged on windows user to the JumpCloud user (default True)
-$ReportStatus = $true # Report status back to JumpCloud Description (default False)
+$ReportStatus = $false # Report status back to JumpCloud Description (default False)
 
 # Option to shutdown or restart
 # Restarting the system is the default behavior
@@ -439,7 +439,7 @@ Function Invoke-UserMigrationBatch {
             BindAsAdmin           = $MigrationConfig.BindAsAdmin
             SetDefaultWindowsUser = $MigrationConfig.SetDefaultWindowsUser
             LeaveDomain           = $leaveDomainParam
-            adminDebug            = $false
+            adminDebug            = $true
             ReportStatus          = $MigrationConfig.ReportStatus
         }
 
@@ -491,7 +491,7 @@ Function Invoke-UserMigrationBatch {
         } else {
             $results.FailedMigrations++
             $results.FailedUsers += $userResult
-            Write-Host "[status] Migration failed for user: $($user.JumpCloudUserName) - $($migrationResult.ErrorMessage)"
+            Write-Host "[status] Migration failed for user: $($user.JumpCloudUserName)"
         }
     }
 
@@ -528,12 +528,15 @@ Function Invoke-SingleUserMigration {
     $convertedParams = ConvertTo-ArgumentList -InputHashtable $MigrationParams
 
     Write-Host "[status] Executing migration command..."
-
     # Execute the migration - your updated exe should return $true/$false or hashtable
     $result = & $GuiJcadmuPath $convertedParams
-    $exitCode = $LASTEXITCODE
     # get the exit code
+    $exitCode = $LASTEXITCODE
     Write-Host "[status] Migration process completed with exit code: $exitCode"
+    write-Host "`n[status] Migration output:"
+    $result | Out-Host
+    write-Host "`n"
+
     if ($exitCode -eq 0) {
         # return true
         return [PSCustomObject]@{
@@ -713,7 +716,7 @@ Write-Host "Failed Migrations: $($migrationResults.FailedMigrations)"
 if ($migrationResults.FailedUsers.Count -gt 0) {
     Write-Host "`nFailed Users:"
     foreach ($failedUser in $migrationResults.FailedUsers) {
-        Write-Host "  - $($failedUser.JumpCloudUserName): $($failedUser.ErrorMessage)"
+        Write-Host "  - $($failedUser.JumpCloudUserName)"
     }
     exit 1
 } else {

@@ -487,7 +487,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         }
         It "Should return success and error message valid parameters" {
             $result = invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe"
-            $result.GetType().Name | Should -Be "Object[]"
+            $result.GetType().Name | Should -Be "PSCustomObject"
             $result.Success | Should -BeOfType "Boolean"
             $result.Success | Should -Be $true
             $result.ErrorMessage | Should -BeNullOrEmpty
@@ -497,7 +497,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Initialize-TestUser -username $userToMigrateTo -password $tempPassword
             # do the migration
             $result = invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe"
-            $result.GetType().Name | Should -Be "Object[]"
+            $result.GetType().Name | Should -Be "PSCustomObject"
             $result.Success | Should -BeOfType "Boolean"
             $result.Success | Should -Be $false
             $result.ErrorMessage | Should -Not -BeNullOrEmpty
