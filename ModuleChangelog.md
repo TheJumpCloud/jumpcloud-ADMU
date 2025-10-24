@@ -1,3 +1,13 @@
+## 2.9.4
+
+Release Date: October 24, 2025
+
+#### RELEASE NOTES
+
+```
+Update to the invoke script to only validate duplicate SIDs for the local device. Previous versions would throw an error if the same SID was found on different devices in the CSV.
+```
+
 ## 2.9.3
 
 Release Date: October 20, 2025

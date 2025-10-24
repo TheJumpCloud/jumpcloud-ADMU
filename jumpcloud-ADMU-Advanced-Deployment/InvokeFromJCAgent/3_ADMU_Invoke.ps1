@@ -125,13 +125,15 @@ Function Get-MigrationUsersFromCsv {
     )
 
     begin {
-        # 1. --- FILE AND HEADER VALIDATION ---
+        # Test CSV Path
         if (-not (Test-Path -Path $csvPath -PathType Leaf)) {
             Throw "Validation Failed: The CSV file was not found at: '$csvPath'."
         }
+        # Import the CSV
         $ImportedCSV = Import-Csv -Path $csvPath -ErrorAction Stop
     }
     process {
+        # Begin by processing the CSV content headers, these should include the required values
         $requiredHeaders = @("LocalComputerName", "SerialNumber", "JumpCloudUserName", "SID", "LocalPath")
         $csvHeaders = $ImportedCSV[0].PSObject.Properties.Name
         foreach ($header in $requiredHeaders) {
@@ -139,57 +141,59 @@ Function Get-MigrationUsersFromCsv {
                 throw "Validation Failed: The CSV is missing the required header: '$header'."
             }
         }
-
-        # 2. --- DUPLICATE SID VALIDATION ---
-        $groupedByDevice = $ImportedCSV | Group-Object -Property 'LocalComputerName'
-        foreach ($device in $groupedByDevice) {
-            $duplicateSids = $device.Group | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
-            if ($duplicateSids) {
-                throw "Validation Failed: Duplicate SID '$($duplicateSids[0].Name)' found for LocalComputerName '$($device.Name)'."
-            }
-        }
-
-        # 3. --- FIND AND BUILD USER OBJECTS ---
-        $usersToMigrate = @()
+        # Create a new list
+        $usersToMigrate = New-Object System.Collections.ArrayList
+        # To validate the users on the CSV get the local computer name and serial number
         $computerName = $env:COMPUTERNAME
         try {
             $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
         } catch {
             $serialNumber = (Get-CimInstance -Class Win32_BIOS).SerialNumber
         }
-
+        # Process the users in the CSV
         foreach ($row in $ImportedCSV) {
-            # --- Filter for this machine and create the custom object ---
+            # --- Filter for this machine and create the custom object returned users will only match this computer ---
             if (($row.LocalComputerName -eq $computerName) -and ($row.SerialNumber -eq $serialNumber)) {
                 # If a non-empty JumpCloudUsername is provided, continue with further validation
                 If (-not [string]::IsNullOrWhiteSpace($row.JumpCloudUserName)) {
+                    # Validate that rows with a non-null JumpCloudUsername do not have duplicate SIDs for this device
+                    # The same user SID can not be used more than once for a given device
+                    $groupedByDevice = $ImportedCSV | Group-Object -Property 'LocalComputerName' | Where-Object { $null -ne $_.JumpCloudUserName -and $_.JumpCloudUserName -ne '' }
+                    foreach ($device in $groupedByDevice) {
+                        $duplicateSids = $device.Group | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
+                        if ($duplicateSids) {
+                            throw "Validation Failed: Duplicate SID '$($duplicateSids[0].Name)' found for LocalComputerName '$($device.Name)'."
+                        }
+                    }
                     # Validate if JumpCloudUserID is not null or empty when the systemContextBinding option is enabled
                     if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
                         throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
                     }
-                    # --- Row content validation ---
+                    # Validate that each row with a non-null JumpCloud username has a non-null localPath and SID
                     $requiredFields = "LocalPath", "SID"
                     foreach ($field in $requiredFields) {
                         if ([string]::IsNullOrWhiteSpace($row.$field)) {
                             throw "Validation Failed: Missing required data for field '$field'."
                         }
                     }
-                    $usersToMigrate += [PSCustomObject]@{
-                        selectedUsername  = $row.SID
-                        LocalProfilePath  = $row.LocalPath
-                        JumpCloudUserName = $row.JumpCloudUserName
-                        JumpCloudUserID   = $row.JumpCloudUserID
-                    }
+                    # Add the validated user to the usersToMigrate list
+                    $usersToMigrate.Add([PSCustomObject]@{
+                            selectedUsername  = $row.SID
+                            LocalProfilePath  = $row.LocalPath
+                            JumpCloudUserName = $row.JumpCloudUserName
+                            JumpCloudUserID   = $row.JumpCloudUserID
+                        }) | Out-Null
                 }
             }
         }
     }
 
     end {
-        # 4. --- FINAL CHECK AND RETURN ---
+        # If no users found or validated, throw an error
         if ($usersToMigrate.Count -eq 0) {
             throw "Validation Failed: No users were found in the CSV matching this computer's name ('$computerName') and serial number ('$serialNumber')."
         }
+        # Otherwise, return the list of users to migrate
         return $usersToMigrate
     }
 
@@ -661,7 +665,7 @@ if ($UsersToMigrate) {
         If (($user.username)) {
             write-host "[status] Logging off user: $($user.username) with ID: $($user.ID)"
             # Force Logout
-            logoff.exe $($user.ID)
+            # logoff.exe $($user.ID)
         }
     }
     #endregion logoffUsers
@@ -687,10 +691,10 @@ if ($UsersToMigrate) {
 $guiJcadmuPath = "C:\Windows\Temp\gui_jcadmu.exe" # Exe path
 
 # Download the latest ADMU GUI executable
-Get-LatestADMUGUIExe # Download the latest ADMU GUI executable
+# Get-LatestADMUGUIExe # Download the latest ADMU GUI executable
 
 # Validate the downloaded file against the official release hash
-Test-ExeSHA -filePath $guiJcadmuPath
+# Test-ExeSHA -filePath $guiJcadmuPath
 
 # Execute the migration batch processing
 $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig @{

@@ -287,18 +287,48 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: The CSV is missing the required header: 'SID'."
         }
 
-        It "Should throw an error if a SID is duplicated for the same device" {
+        It "Should throw an error if a SID is duplicated for the local device and each row has a JumpCloudUserName" {
             # Arrange: The same SID appears twice for 'TEST-PC-1'.
             $csvContent = @"
 "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-"S-1-5-21-DUPLICATE-SID","C:\Users\j.doe","TEST-PC-1","j.doe","jane.doe","jcuser123","jcsystem123","TEST-SN-123"
-"S-1-5-21-DIFFERENT-SID","C:\Users\b.jones","TEST-PC-2","b.jones","bobby.jones","jcuser456","jcsystem456","TEST-SN-456"
-"S-1-5-21-DUPLICATE-SID","C:\Users\j.doe.new","TEST-PC-1","j.doe.new","john.doe","jcuser789","jcsystem789","TEST-SN-123"
+"S-1-5-21-DUPLICATE-SID","C:\Users\j.doe","$($env:COMPUTERNAME)","j.doe","jane.doe","jcuser123","jcsystem123","TEST-SN-123"
+"S-1-5-21-DIFFERENT-SID","C:\Users\b.jones","TEST-PC-1","b.jones","bobby.jones","jcuser456","jcsystem456","TEST-SN-456"
+"S-1-5-21-DUPLICATE-SID","C:\Users\j.doe.new","$($env:COMPUTERNAME)","j.doe.new","john.doe","jcuser789","jcsystem789","TEST-SN-123"
 "@
             Set-Content -Path $csvPath -Value $csvContent -Force
 
             # Act & Assert
             { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Validation Failed: Duplicate SID 'S-1-5-21-DUPLICATE-SID' found for LocalComputerName 'TEST-PC-1'."
+        }
+        It "Should NOT throw an error if a SID is duplicated for the local device and only one row has a JumpCloudUserName" {
+            # Arrange: The same SID appears twice for 'TEST-PC-1'.
+            $csvContent = @"
+"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
+"S-1-5-21-DUPLICATE-SID","C:\Users\j.doe","$($env:COMPUTERNAME)","j.doe","jane.doe","jcuser123","jcsystem123","TEST-SN-123"
+"S-1-5-21-DIFFERENT-SID","C:\Users\b.jones","TEST-PC-1","b.jones","bobby.jones","jcuser456","jcsystem456","TEST-SN-456"
+"S-1-5-21-DUPLICATE-SID","C:\Users\j.doe.new","$($env:COMPUTERNAME)","","john.doe","jcuser789","jcsystem789","TEST-SN-123"
+"@
+            Set-Content -Path $csvPath -Value $csvContent -Force
+
+            # Act & Assert
+            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Not -Throw
+            $usersToMigrate = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
+            $usersToMigrate.Count | Should -Be 1
+        }
+        It "Should NOT throw an error if a SID is duplicated for a different device" {
+            # Arrange: The same SID appears twice for 'TEST-PC-1'.
+            $csvContent = @"
+"SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
+"S-1-5-21-DIFFERENT-SID","C:\Users\j.doe","$($env:COMPUTERNAME)","j.doe","jane.doe","jcuser123","jcsystem123","TEST-SN-123"
+"S-1-5-21-DUPLICATE-SID","C:\Users\b.jones","TEST-PC-1","b.jones","bobby.jones","jcuser456","jcsystem456","TEST-SN-456"
+"S-1-5-21-DUPLICATE-SID","C:\Users\j.doe.new","TEST-PC-1","j.doe.new","john.doe","jcuser789","jcsystem789","TEST-SN-123"
+"@
+            Set-Content -Path $csvPath -Value $csvContent -Force
+
+            # Act & Assert
+            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Not -Throw
+            $usersToMigrate = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
+            $usersToMigrate.Count | Should -Be 1
         }
 
         # --- Test Cases for Row-Level Data Validation ---
