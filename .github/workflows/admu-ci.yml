@@ -172,11 +172,26 @@ jobs:
         shell: powershell
         env:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
-          PESTER_APIKEY: ${{ secrets.PESTER_APIKEY }}
-          PESTER_ORGID: ${{ secrets.PESTER_ORGID }}
-          PESTER_CONNECTKEY: ${{ secrets.PESTER_CONNECTKEY }}
+          PESTER_APIKEY_US: ${{ secrets.PESTER_APIKEY }}
+          PESTER_ORGID_US: ${{ secrets.PESTER_ORGID }}
+          PESTER_CONNECTKEY_US: ${{ secrets.PESTER_CONNECTKEY }}
+          PESTER_APIKEY_EU: ${{ secrets.PESTER_APIKEY_EU }}
+          PESTER_ORGID_EU: ${{ secrets.PESTER_ORGID_EU }}
+          PESTER_CONNECTKEY_EU: ${{ secrets.PESTER_CONNECTKEY_EU }}
+
         run: |
           $env:job_group = ${{ matrix.job_group }}
+          if (${{ github.build_number }} % 2 -eq 0){
+            # set US Pester env vars
+            $env:PESTER_APIKEY = $env:PESTER_APIKEY_US
+            $env:PESTER_ORGID = $env:PESTER_ORGID_US
+            $env:PESTER_CONNECTKEY = $env:PESTER_CONNECTKEY_US
+          } else {
+            # set EU Pester env vars
+            $env:PESTER_APIKEY = $env:PESTER_APIKEY_EU
+            $env:PESTER_ORGID = $env:PESTER_ORGID_EU
+            $env:PESTER_CONNECTKEY = $env:PESTER_CONNECTKEY_EU
+          }
           # build before test
           $installedModules = Get-ChildItem "C:\Users\runneradmin\Documents\PowerShell\Modules\"
           Write-Host "[status] InstalledModules:"

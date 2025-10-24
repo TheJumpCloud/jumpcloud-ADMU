@@ -36,15 +36,19 @@ function Test-JumpCloudUsername {
         $Body = $Form | ConvertTo-Json -Depth 4
     }
     Process {
-        Try {
-            # Write-ToLog "Searching JC for: $Username"
-            $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/search/systemusers" -Headers $Headers -Body $Body -UseBasicParsing
+        try {
+            Set-JcUrl -Region "US"
+            $baseUrl = "$($global:JCUrl)/api/search/systemusers"
+            $Response = Invoke-WebRequest -Method 'Post' -Uri $baseUrl -Headers $Headers -Body $Body -UseBasicParsing
             $Results = $Response.Content | ConvertFrom-Json
-
             $StatusCode = $Response.StatusCode
         } catch {
-            $StatusCode = $_.Exception.Response.StatusCode.value__
-            Write-ToLog -Message "Status Code $($StatusCode)" -Level Verbose -Step "Test-JumpCloudUsername"
+            # Call EU endpoint if US fails
+            Set-JcUrl -Region "EU"
+            $baseUrl = "$($global:JCUrl)/api/search/systemusers"
+            $Response = Invoke-WebRequest -Method 'Post' -Uri $baseUrl -Headers $Headers -Body $Body -UseBasicParsing
+            $Results = $Response.Content | ConvertFrom-Json
+            $StatusCode = $Response.StatusCode
         }
     }
     End {

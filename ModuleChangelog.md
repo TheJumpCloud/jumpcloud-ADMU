@@ -1,3 +1,16 @@
+## 2.9.4
+
+Release Date: October 24, 2025
+
+#### RELEASE NOTES
+
+```
+Added support for EU Orgs
+```
+
+#### IMPROVEMENTS:
+
+- Added support for EU Orgs
 ## 2.9.3
 
 Release Date: October 20, 2025

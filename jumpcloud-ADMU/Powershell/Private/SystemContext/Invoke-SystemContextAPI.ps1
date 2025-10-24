@@ -460,7 +460,7 @@ Function Invoke-SystemContextAPI {
                 $retryCount = 0
                 do {
                     try {
-                        $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers
+                        $request = Invoke-RestMethod -Method $method -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers
                         $success = $true
                     } catch {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
@@ -484,7 +484,7 @@ Function Invoke-SystemContextAPI {
                 $retryCount = 0
                 do {
                     try {
-                        $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
+                        $request = Invoke-RestMethod -Method $method -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
                         $success = $true
                     } catch {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
@@ -508,7 +508,7 @@ Function Invoke-SystemContextAPI {
                 $retryCount = 0
                 do {
                     try {
-                        $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
+                        $request = Invoke-RestMethod -Method $method -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
                         $success = $true
                     } catch {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
@@ -532,7 +532,7 @@ Function Invoke-SystemContextAPI {
                 $retryCount = 0
                 do {
                     try {
-                        $request = Invoke-RestMethod -Method DELETE -Uri "https://console.jumpcloud.com/$requestURL" -ContentType 'application/json' -Headers $headers
+                        $request = Invoke-RestMethod -Method DELETE -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers
                         $success = $true
                     } catch {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
