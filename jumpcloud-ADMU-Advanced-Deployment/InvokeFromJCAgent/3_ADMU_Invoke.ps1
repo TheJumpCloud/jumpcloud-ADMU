@@ -150,40 +150,42 @@ Function Get-MigrationUsersFromCsv {
         } catch {
             $serialNumber = (Get-CimInstance -Class Win32_BIOS).SerialNumber
         }
+        # Get valid rows for this device, valid rows must have:
+        # - Non-empty JumpCloudUserName
+        # - LocalComputerName matching this device
+        # - SerialNumber matching this device
+        $ValidDeviceRows = $ImportedCSV | Where-Object {
+            ((-not [string]::IsNullOrWhiteSpace($_.JumpCloudUserName))) -and
+            ($_.LocalComputerName -eq $computerName) -and
+            ($_.SerialNumber -eq $serialNumber)
+        }
+        # Check for duplicate SIDs out of the valid rows, throw if multiple entries are found
+        $duplicateSids = $ValidDeviceRows | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
+        if ($duplicateSids) {
+            throw "Validation Failed: Duplicate SID '$($duplicateSids[0].Name)' found for LocalComputerName '$($computerName)'."
+        }
         # Process the users in the CSV
-        foreach ($row in $ImportedCSV) {
+        foreach ($row in $ValidDeviceRows) {
             # --- Filter for this machine and create the custom object returned users will only match this computer ---
             if (($row.LocalComputerName -eq $computerName) -and ($row.SerialNumber -eq $serialNumber)) {
-                # If a non-empty JumpCloudUsername is provided, continue with further validation
-                If (-not [string]::IsNullOrWhiteSpace($row.JumpCloudUserName)) {
-                    # Validate that rows with a non-null JumpCloudUsername do not have duplicate SIDs for this device
-                    # The same user SID can not be used more than once for a given device
-                    $groupedByDevice = $ImportedCSV | Group-Object -Property 'LocalComputerName' | Where-Object { $null -ne $_.JumpCloudUserName -and $_.JumpCloudUserName -ne '' }
-                    foreach ($device in $groupedByDevice) {
-                        $duplicateSids = $device.Group | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
-                        if ($duplicateSids) {
-                            throw "Validation Failed: Duplicate SID '$($duplicateSids[0].Name)' found for LocalComputerName '$($device.Name)'."
-                        }
-                    }
-                    # Validate if JumpCloudUserID is not null or empty when the systemContextBinding option is enabled
-                    if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
-                        throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
-                    }
-                    # Validate that each row with a non-null JumpCloud username has a non-null localPath and SID
-                    $requiredFields = "LocalPath", "SID"
-                    foreach ($field in $requiredFields) {
-                        if ([string]::IsNullOrWhiteSpace($row.$field)) {
-                            throw "Validation Failed: Missing required data for field '$field'."
-                        }
-                    }
-                    # Add the validated user to the usersToMigrate list
-                    $usersToMigrate.Add([PSCustomObject]@{
-                            selectedUsername  = $row.SID
-                            LocalProfilePath  = $row.LocalPath
-                            JumpCloudUserName = $row.JumpCloudUserName
-                            JumpCloudUserID   = $row.JumpCloudUserID
-                        }) | Out-Null
+                # Validate if JumpCloudUserID is not null or empty when the systemContextBinding option is enabled
+                if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
+                    throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
                 }
+                # Validate that each row with a non-null JumpCloud username has a non-null localPath and SID
+                $requiredFields = "LocalPath", "SID"
+                foreach ($field in $requiredFields) {
+                    if ([string]::IsNullOrWhiteSpace($row.$field)) {
+                        throw "Validation Failed: Missing required data for field '$field'."
+                    }
+                }
+                # Add the validated user to the usersToMigrate list
+                $usersToMigrate.Add([PSCustomObject]@{
+                        selectedUsername  = $row.SID
+                        LocalProfilePath  = $row.LocalPath
+                        JumpCloudUserName = $row.JumpCloudUserName
+                        JumpCloudUserID   = $row.JumpCloudUserID
+                    }) | Out-Null
             }
         }
     }
