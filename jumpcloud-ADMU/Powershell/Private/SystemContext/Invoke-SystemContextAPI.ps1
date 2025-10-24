@@ -39,11 +39,21 @@ Function Invoke-SystemContextAPI {
         }
         try {
             $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
-            $regex = 'systemKey\":\"(\w+)\"'
-            $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+            $systemKeyRegex = 'systemKey\":\"(\w+)\"'
+            $systemKey = [regex]::Match($config, $systemKeyRegex).Groups[1].Value
+            $agentServerHostRegex = '"agentServerHost":"([^"]+)"'
+            $agentServerHost = [regex]::Match($config, $agentServerHostRegex).Groups[1].Value
+
+            if ($agentServerHost -eq "agent.eu.jumpcloud.com") {
+                $Global:JCUrl = "https://console.eu.jumpcloud.com"
+            } else {
+                $Global:JCUrl = "https://console.jumpcloud.com"
+            }
+            Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: $agentServerHost"
         } catch {
-            throw "Could not get systemKey from jcagent.conf"
+            throw "Could not get systemKey from jcagent.conf or Determine JumpCloud Region."
         }
+
         # Referenced Library for RSA
         Switch ($PSVersionTable.PSVersion.Major) {
             '5' {
