@@ -324,7 +324,11 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 # Act & Assert
                 { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Not -Throw
                 $usersToMigrate = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
-                $usersToMigrate.Count | Should -Be 1
+                $usersToMigrate | Should -Not -BeNullOrEmpty
+                ($usersToMigrate | Select-Object -First 1).SelectedUserName | Should -Be "S-1-5-21-DUPLICATE-SID"
+                ($usersToMigrate | Select-Object -First 1).LocalProfilePath | Should -Be "C:\Users\j.doe"
+                ($usersToMigrate | Select-Object -First 1).JumpCloudUserName | Should -Be "jane.doe"
+                ($usersToMigrate | Select-Object -First 1).JumpCloudUserID | Should -Be "jcuser123"
             }
             It "Should NOT throw an error if a SID is duplicated for a different device" {
                 # Arrange: The same SID appears twice for 'TEST-PC-1'.
@@ -339,7 +343,11 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 # Act & Assert
                 { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Not -Throw
                 $usersToMigrate = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
-                $usersToMigrate.Count | Should -Be 1
+                $usersToMigrate | Should -Not -BeNullOrEmpty
+                ($usersToMigrate | Select-Object -First 1).SelectedUserName | Should -Be "S-1-5-21-DIFFERENT-SID"
+                ($usersToMigrate | Select-Object -First 1).LocalProfilePath | Should -Be "C:\Users\j.doe"
+                ($usersToMigrate | Select-Object -First 1).JumpCloudUserName | Should -Be "jane.doe"
+                ($usersToMigrate | Select-Object -First 1).JumpCloudUserID | Should -Be "jcuser123"
             }
             It "Should throw an error if 'SID' field is empty" {
                 # Arrange
