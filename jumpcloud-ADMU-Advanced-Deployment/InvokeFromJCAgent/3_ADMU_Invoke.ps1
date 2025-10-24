@@ -187,7 +187,6 @@ Function Get-MigrationUsersFromCsv {
             }
         }
     }
-
     end {
         # If no users found or validated, throw an error
         if ($usersToMigrate.Count -eq 0) {
@@ -196,7 +195,6 @@ Function Get-MigrationUsersFromCsv {
         # Otherwise, return the list of users to migrate
         return $usersToMigrate
     }
-
 }
 Function Get-LatestADMUGUIExe {
     [CmdletBinding()]
