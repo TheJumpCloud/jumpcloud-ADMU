@@ -181,7 +181,7 @@ jobs:
 
         run: |
           $env:job_group = ${{ matrix.job_group }}
-          if (${{ github.build_number }} % 2 -eq 0){
+          if (${{ github.run_number	 }} % 2 -eq 0){
             # set US Pester env vars
             $env:PESTER_APIKEY = $env:PESTER_APIKEY_US
             $env:PESTER_ORGID = $env:PESTER_ORGID_US
