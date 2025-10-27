@@ -186,13 +186,13 @@ jobs:
             $env:PESTER_APIKEY = $env:PESTER_APIKEY_US
             $env:PESTER_ORGID = $env:PESTER_ORGID_US
             $env:PESTER_CONNECTKEY = $env:PESTER_CONNECTKEY_US
-            Write-Host "[status] Using US Pester Environment Variables"
+            Write-Host "[status] Using US Pester ENV Variables"
           } else {
             # set EU Pester env vars
             $env:PESTER_APIKEY = $env:PESTER_APIKEY_EU
             $env:PESTER_ORGID = $env:PESTER_ORGID_EU
             $env:PESTER_CONNECTKEY = $env:PESTER_CONNECTKEY_EU
-            Write-Host "[status] Using EU Pester Environment Variables"
+            Write-Host "[status] Using EU Pester ENV Variables"
           }
           # build before test
           $installedModules = Get-ChildItem "C:\Users\runneradmin\Documents\PowerShell\Modules\"
