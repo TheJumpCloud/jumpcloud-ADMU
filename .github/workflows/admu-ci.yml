@@ -172,17 +172,19 @@ jobs:
         shell: powershell
         env:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
+
         run: |
           $env:job_group = ${{ matrix.job_group }}
           if (${{ github.run_number }} % 2 -eq 0) {
             Write-Host "[status] Using US Pester ENV Variables"
-            "PESTER_APIKEY=${{ secrets.PESTER_APIKEY }}" >> $env:GITHUB_ENV
-            "PESTER_ORGID=${{ secrets.PESTER_ORGID }}" >> $env:GITHUB_ENV
-            "PESTER_CONNECTKEY=${{ secrets.PESTER_CONNECTKEY }}" >> $env:GITHUB_ENV
+            $env:PESTER_APIKEY = "${{ secrets.PESTER_APIKEY }}"
+            $env:PESTER_ORGID = "${{ secrets.PESTER_ORGID }}"
+            $env:PESTER_CONNECTKEY = "${{ secrets.PESTER_CONNECTKEY }}"
           } else {
-            "PESTER_APIKEY=${{ secrets.PESTER_APIKEY_EU }}" >> $env:GITHUB_ENV
-            "PESTER_ORGID=${{ secrets.PESTER_ORGID_EU }}" >> $env:GITHUB_ENV
-            "PESTER_CONNECTKEY=${{ secrets.PESTER_CONNECTKEY_EU }}" >> $env:GITHUB_ENV
+            Write-Host "[status] Using EU Pester ENV Variables"
+            $env:PESTER_APIKEY = "${{ secrets.PESTER_APIKEY_EU }}"
+            $env:PESTER_ORGID = "${{ secrets.PESTER_ORGID_EU }}"
+            $env:PESTER_CONNECTKEY = "${{ secrets.PESTER_CONNECTKEY_EU }}"
           }
           # build before test
           $installedModules = Get-ChildItem "C:\Users\runneradmin\Documents\PowerShell\Modules\"
