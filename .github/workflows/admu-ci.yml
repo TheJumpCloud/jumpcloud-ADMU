@@ -177,15 +177,15 @@ jobs:
           if (${{ github.run_number }} % 2 -eq 0) {
             # Set US Pester env vars for subsequent steps
             Write-Host "[status] Using US Pester ENV Variables"
-            "PESTER_APIKEY=${{ secrets.PESTER_APIKEY }}" >> $env:GITHUB_ENV
-            "PESTER_ORGID=${{ secrets.PESTER_ORGID }}" >> $env:GITHUB_ENV
-            "PESTER_CONNECTKEY=${{ secrets.PESTER_CONNECTKEY }}" >> $env:GITHUB_ENV
+            Add-Content -Path $env:GITHUB_ENV -Value "PESTER_APIKEY=${{ secrets.PESTER_APIKEY }}"
+            Add-Content -Path $env:GITHUB_ENV -Value "PESTER_ORGID=${{ secrets.PESTER_ORGID }}"
+            Add-Content -Path $env:GITHUB_ENV -Value "PESTER_CONNECTKEY=${{ secrets.PESTER_CONNECTKEY }}"
           } else {
             # Set EU Pester env vars for subsequent steps
             Write-Host "[status] Using EU Pester ENV Variables"
-            "PESTER_APIKEY=${{ secrets.PESTER_APIKEY_EU }}" >> $env:GITHUB_ENV
-            "PESTER_ORGID=${{ secrets.PESTER_ORGID_EU }}" >> $env:GITHUB_ENV
-            "PESTER_CONNECTKEY=${{ secrets.PESTER_CONNECTKEY_EU }}" >> $env:GITHUB_ENV
+            Add-Content -Path $env:GITHUB_ENV -Value "PESTER_APIKEY=${{ secrets.PESTER_APIKEY_EU }}"
+            Add-Content -Path $env:GITHUB_ENV -Value "PESTER_ORGID=${{ secrets.PESTER_ORGID_EU }}"
+            Add-Content -Path $env:GITHUB_ENV -Value "PESTER_CONNECTKEY=${{ secrets.PESTER_CONNECTKEY_EU }}"
           }
           # build before test
           $installedModules = Get-ChildItem "C:\Users\runneradmin\Documents\PowerShell\Modules\"
