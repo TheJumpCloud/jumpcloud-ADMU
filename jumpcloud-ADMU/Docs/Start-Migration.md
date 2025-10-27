@@ -19,8 +19,7 @@ Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPass
  [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
  [-AutoBindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-SetDefaultWindowsUser <Boolean>]
  [-AdminDebug <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>]
- [-ValidateUserShellFolder <Boolean>] [-ReportStatus <Boolean>] [-removeMDM <Boolean>]
- [<CommonParameters>]
+ [-ValidateUserShellFolder <Boolean>] [-ReportStatus <Boolean>] [-removeMDM <Boolean>] [<CommonParameters>]
 ```
 
 ### form

@@ -103,7 +103,6 @@ Describe "Get-WindowsMDMProvider Acceptance Tests" -Tag "Acceptance" {
         $mdmEnrollments = Get-WindowsMDMProvider
         # Should not be null or empty
         $mdmEnrollments | Should -Not -BeNullOrEmpty
-        $mdmEnrollments.Count | Should -BeGreaterThan 0
         $mdmEnrollments | Where-Object { $_.EnrollmentGUID -eq $newGUID } | ForEach-Object {
             $_.EnrollmentGUID | Should -Be $newGUID
             $_.ProviderID | Should -Be "MS DM Server"
