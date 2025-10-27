@@ -46,10 +46,12 @@ Function Invoke-SystemContextAPI {
 
             if ($agentServerHost -eq "agent.eu.jumpcloud.com") {
                 Set-JCUrl -Region "EU"
+                Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: EU."
             } else {
                 Set-JCUrl -Region "US"
+                Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: US."
             }
-            Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: $agentServerHost"
+
         } catch {
             throw "Could not get systemKey from jcagent.conf or Determine JumpCloud Region."
         }

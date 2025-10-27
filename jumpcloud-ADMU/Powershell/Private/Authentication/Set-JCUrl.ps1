@@ -9,11 +9,9 @@ function Set-JCUrl {
         switch ($Region) {
             "US" {
                 $global:JCUrl = "https://console.jumpcloud.com"
-                Write-ToLog -Message "JumpCloud URI set to US endpoint." -Level Info
             }
             "EU" {
                 $global:JCUrl = "https://console.eu.jumpcloud.com"
-                Write-ToLog -Message "JumpCloud URI set to EU endpoint." -Level Info
             }
         }
     }
