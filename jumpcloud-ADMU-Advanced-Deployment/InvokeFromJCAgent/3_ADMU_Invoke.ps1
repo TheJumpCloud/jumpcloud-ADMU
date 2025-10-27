@@ -61,6 +61,7 @@ Function Confirm-MigrationParameter {
         [bool]$AutoBindJCUser = $true,
         [bool]$BindAsAdmin = $false,
         [bool]$SetDefaultWindowsUser = $true,
+        [bool]$removeMDM = $true,
 
         # --- JumpCloud API Parameters ---
         [bool]$systemContextBinding = $false,
@@ -70,9 +71,7 @@ Function Confirm-MigrationParameter {
 
         # --- Post-Migration Behavior ---
         [ValidateSet('Restart', 'Shutdown')]
-        [string]$postMigrationBehavior = 'Restart',
-
-        [bool]$removeMDM = $false
+        [string]$postMigrationBehavior = 'Restart'
     )
 
     # --- Custom Validation Logic ---
@@ -431,6 +430,7 @@ Function Invoke-UserMigrationBatch {
 
         # Determine domain leave parameter for this user
         $leaveDomainParam = if ($isLastUser -and $MigrationConfig.LeaveDomainAfterMigration) { $true } else { $false }
+        $removeMDMParam = if ($isLastUser -and $MigrationConfig.RemoveMDM) { $true } else { $false }
 
         # Build migration parameters for this user
         $migrationParams = @{
@@ -443,6 +443,7 @@ Function Invoke-UserMigrationBatch {
             BindAsAdmin           = $MigrationConfig.BindAsAdmin
             SetDefaultWindowsUser = $MigrationConfig.SetDefaultWindowsUser
             LeaveDomain           = $leaveDomainParam
+            RemoveMDM             = $removeMDMParam
             adminDebug            = $true
             ReportStatus          = $MigrationConfig.ReportStatus
         }
@@ -725,20 +726,6 @@ if ($migrationResults.FailedUsers.Count -gt 0) {
     exit 1
 } else {
     # process remainder of the script:
-    #region removeMDM
-    # Un-manage the device from Intune:
-    # Remove the existing MDM
-    if ($removeMDM) {
-        # get the raw content from the script
-        $rawGitHubContentUrl = "https://raw.githubusercontent.com/TheJumpCloud/support/refs/heads/master/scripts/windows/remove_windowsMDM.ps1"
-        # download the script to the temp directory
-        $scriptPath = "$env:TEMP\remove_windowsMDM.ps1"
-        Invoke-WebRequest -Uri $rawGitHubContentUrl -OutFile $scriptPath
-        # run the script from the file
-        # Execute the script
-        & $scriptPath
-    }
-    #endregion removeMDM
     #region restart/shutdown
     # If force restart was specified, we kick off a command to initiate the restart
     # this ensures that the JumpCloud commands reports a success

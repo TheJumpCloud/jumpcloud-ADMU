@@ -1,12 +1,17 @@
 ## 2.9.4
 
-Release Date: October 24, 2025
+Release Date: October 27, 2025
 
 #### RELEASE NOTES
 
 ```
-Update to the invoke script to only validate duplicate SIDs for the local device. Previous versions would throw an error if the same SID was found on different devices in the CSV.
+Updates to the invoke scripts. Additional MDM removal feature added directly to the tool.
 ```
+
+#### Features:
+
+- This release introduces an enhancement to the bulk migration script, allowing it to validate duplicate SIDs only on the local device. This change prevents unnecessary errors when the same SID exists on different devices in the CSV file.
+- The ADMU now includes a feature to remove MDM enrollment from devices during the migration process. This is particularly useful for devices that are AzureAD joined and enrolled in MDM, as it allows for a smoother transition to JumpCloud management.
 
 ## 2.9.3
 
