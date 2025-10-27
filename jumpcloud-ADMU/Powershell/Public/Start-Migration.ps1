@@ -1434,6 +1434,7 @@ Function Start-Migration {
                     Write-ToLog -Message:('Device is not joined to a domain, skipping leave domain step')
                 }
                 if ($removeMDM) {
+                    Write-ToLog -Message:('Attempting to remove MDM Enrollment(s)')
                     # get the MDM Enrollments
                     $mdmEnrollments = Get-WindowsMDMProvider
                     foreach ($enrollment in $mdmEnrollments) {
