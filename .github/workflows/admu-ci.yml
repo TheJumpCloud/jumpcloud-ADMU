@@ -168,25 +168,16 @@ jobs:
         with:
           path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
           key: PS-Dependencies
-      - name: Test PWSH Module
+      - name: Test PWSH Module (US / EVEN)
+        if: (${{ github.run_number }} % 2 -eq 0)
         shell: powershell
         env:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
+          PESTER_APIKEY: ${{ secrets.PESTER_APIKEY }}
+          PESTER_ORGID: ${{ secrets.PESTER_ORGID }}
+          PESTER_CONNECTKEY: ${{ secrets.PESTER_CONNECTKEY }}
         run: |
           $env:job_group = ${{ matrix.job_group }}
-          if (${{ github.run_number }} % 2 -eq 0) {
-            # Set US Pester env vars for subsequent steps
-            Write-Host "[status] Using US Pester ENV Variables"
-            Add-Content -Path $env:GITHUB_ENV -Value "PESTER_APIKEY=${{ secrets.PESTER_APIKEY }}"
-            Add-Content -Path $env:GITHUB_ENV -Value "PESTER_ORGID=${{ secrets.PESTER_ORGID }}"
-            Add-Content -Path $env:GITHUB_ENV -Value "PESTER_CONNECTKEY=${{ secrets.PESTER_CONNECTKEY }}"
-          } else {
-            # Set EU Pester env vars for subsequent steps
-            Write-Host "[status] Using EU Pester ENV Variables"
-            Add-Content -Path $env:GITHUB_ENV -Value "PESTER_APIKEY=${{ secrets.PESTER_APIKEY_EU }}"
-            Add-Content -Path $env:GITHUB_ENV -Value "PESTER_ORGID=${{ secrets.PESTER_ORGID_EU }}"
-            Add-Content -Path $env:GITHUB_ENV -Value "PESTER_CONNECTKEY=${{ secrets.PESTER_CONNECTKEY_EU }}"
-          }
           # build before test
           $installedModules = Get-ChildItem "C:\Users\runneradmin\Documents\PowerShell\Modules\"
           Write-Host "[status] InstalledModules:"
@@ -199,3 +190,26 @@ jobs:
               Import-Module "$($modulePSD1.fullname)" -force
           }
           . "./jumpcloud-ADMU/Powershell/InvokePester.ps1" $env:RELEASE_TYPE
+
+      - name: Test PWSH Module (EU / ODD)
+        if: (${{ github.run_number }} % 2 -ne 0)
+        shell: powershell
+        env:
+          RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
+          PESTER_APIKEY: ${{ secrets.PESTER_APIKEY_EU }}
+          PESTER_ORGID: ${{ secrets.PESTER_ORGID_EU }}
+          PESTER_CONNECTKEY: ${{ secrets.PESTER_CONNECTKEY_EU }}
+        run: |
+          $env:job_group = ${{ matrix.job_group }}
+          # build before test
+          $installedModules = Get-ChildItem "C:\Users\runneradmin\Documents\PowerShell\Modules\"
+          Write-Host "[status] InstalledModules:"
+          $installedModules
+          # Explicitly import required modules for powershell shell:
+          $requiredModules = ('ps2exe', 'JumpCloud.SDK.DirectoryInsights', 'JumpCloud.SDK.V1', 'JumpCloud.SDK.V2', 'JumpCloud')
+          foreach ($module in $requiredModules){
+              $modulePSD1 = Get-ChildItem "C:\Users\runneradmin\Documents\PowerShell\Modules\$module" -Recurse -filter "*.psd1"
+              Write-Host "[status] Importing: $module at path $($modulePSD1.fullname)"
+              Import-Module "$($modulePSD1.fullname)" -force
+          }
+          . "./jumpcloud-ADMU/Powershell/InvokePester.ps1" $env:RELEASE_TYPE "EU"
