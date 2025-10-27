@@ -45,9 +45,9 @@ Function Invoke-SystemContextAPI {
             $agentServerHost = [regex]::Match($config, $agentServerHostRegex).Groups[1].Value
 
             if ($agentServerHost -eq "agent.eu.jumpcloud.com") {
-                $Global:JCUrl = "https://console.eu.jumpcloud.com"
+                Set-JCUrl -Region "EU"
             } else {
-                $Global:JCUrl = "https://console.jumpcloud.com"
+                Set-JCUrl -Region "US"
             }
             Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: $agentServerHost"
         } catch {
