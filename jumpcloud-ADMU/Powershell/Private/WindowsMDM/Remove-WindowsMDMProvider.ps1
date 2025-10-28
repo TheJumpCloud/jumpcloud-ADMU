@@ -33,7 +33,7 @@ Function Remove-WindowsMDMProvider {
     process {
         # Get the MDM Enrollment Info where the key name matches the provided EnrollmentGUID
         $matchingEnrollment = Get-ChildItem -path "$mdmEnrollmentKey" | Where-Object { $_.PSChildName -eq $EnrollmentGUID }
-        write-host "$matchingEnrollment"
+        Write-ToLog "Matching Enrollment: $matchingEnrollment" -Level Verbose -Step "Remove-WindowsMDMProvider"
 
         ###Check if the registry key has the ProviderID property###
         $enrollmentProperties = Get-ItemProperty -Path $matchingEnrollment.PSPath -ErrorAction SilentlyContinue
