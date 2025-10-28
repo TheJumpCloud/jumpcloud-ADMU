@@ -53,7 +53,7 @@ Function Invoke-SystemContextAPI {
             }
 
         } catch {
-            throw "Could not get systemKey from jcagent.conf or Determine JumpCloud Region."
+            throw "Could not get systemKey from jcagent.conf or determine JumpCloud Region."
         }
 
         # Referenced Library for RSA

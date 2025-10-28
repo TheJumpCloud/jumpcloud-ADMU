@@ -738,7 +738,7 @@ Function Show-SelectionForm {
 
 
     # lbl_connectKey link - Mouse button event
-    $lbl_connectKey.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start("$($global:JCUrl)/api/#/systems/new") })
+    $lbl_connectKey.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start("$($global:JCUrl)/#/systems/new") })
 
     # lbl_apiKey link - Mouse button event
     $lbl_apiKey.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start('https://support.jumpcloud.com/support/s/article/jumpcloud-apis1') })

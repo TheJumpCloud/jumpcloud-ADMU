@@ -119,7 +119,7 @@ Function New-ADMUTemplate {
 
         # Define the global URL
         $globalUrlString = @"
-        `$Global:JCUrl = 'https://console.jumpcloud.com/'
+        `$Global:JCUrl = 'https://console.jumpcloud.com'
 "@
         # add global URL to template
         $templateString += "$($globalUrlString)" + [Environment]::NewLine
