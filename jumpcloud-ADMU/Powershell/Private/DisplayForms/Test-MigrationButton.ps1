@@ -141,8 +141,17 @@ Function Test-MigrationButton {
                 'Accept'       = 'application/json';
                 'x-api-key'    = "$($tb_JumpCloudAPIKey.Password)";
             }
-            $baseUrl = "https://console.jumpcloud.com/api/organizations"
-            $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+            try {
+                Set-JcUrl -Region "US"
+                $baseUrl = "$($global:JCUrl)/api/organizations"
+                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+            } catch {
+                # Call EU endpoint if US fails
+                Set-JcUrl -Region "EU"
+                $baseUrl = "$($global:JCUrl)/api/organizations"
+                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+            }
+
             if (($Request.StatusCode -ne 200)) {
                 throw "A valid apiKey is required"
             }

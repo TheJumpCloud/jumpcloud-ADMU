@@ -1,3 +1,25 @@
+## 2.9.4
+
+Release Date: October 28, 2025
+
+#### RELEASE NOTES
+
+```
+Added GUI API support for JC EU Organizations
+```
+
+#### IMPROVEMENTS:
+
+- Added support for authenticating using API keys from EU-based organizations in the GUI.
+- Updates to the invoke scripts. Additional MDM removal feature added directly to the tool.
+```
+
+#### Features:
+
+- This release introduces an enhancement to the bulk migration script, allowing it to validate duplicate SIDs only on the local device. This change prevents unnecessary errors when the same SID exists on different devices in the CSV file.
+- The ADMU now includes a feature to remove MDM enrollment from devices during the migration process. This is particularly useful for devices that are AzureAD joined and enrolled in MDM, as it allows for a smoother transition to JumpCloud management.
+
+
 ## 2.9.3
 
 Release Date: October 20, 2025

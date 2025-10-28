@@ -32,8 +32,6 @@ Describe "Test API Key Acceptance Tests" -Tag "InstallJC" {
             Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($CONNECT_KEY) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
         }
 
-        Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
-
         # mock windows Drive in CI to reflect install location
         if ($env:CI) {
             Mock Get-WindowsDrive { return "C:" }

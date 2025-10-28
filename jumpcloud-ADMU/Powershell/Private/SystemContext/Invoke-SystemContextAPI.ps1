@@ -39,11 +39,26 @@ Function Invoke-SystemContextAPI {
         }
         try {
             $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
-            $regex = 'systemKey\":\"(\w+)\"'
-            $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+            $systemKeyRegex = 'systemKey":"(\w+)"'
+            $systemKey = [regex]::Match($config, $systemKeyRegex).Groups[1].Value
+            $agentServerHostRegex = '"agentServerHost":"agent\.(\w+)\.jumpcloud\.com"'
+            $agentServerHost = [regex]::Match($config, $agentServerHostRegex).Groups[1].Value
+
+            switch ($agentServerHost) {
+                "eu" {
+                    Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: EU."
+                    Set-JCUrl -Region "EU"
+                }
+                Default {
+                    Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: US."
+                    Set-JCUrl -Region "US"
+                }
+            }
+
         } catch {
-            throw "Could not get systemKey from jcagent.conf"
+            throw "Could not get systemKey from jcagent.conf or determine JumpCloud Region."
         }
+
         # Referenced Library for RSA
         Switch ($PSVersionTable.PSVersion.Major) {
             '5' {
@@ -460,7 +475,7 @@ Function Invoke-SystemContextAPI {
                 $retryCount = 0
                 do {
                     try {
-                        $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers
+                        $request = Invoke-RestMethod -Method $method -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers
                         $success = $true
                     } catch {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
@@ -484,7 +499,7 @@ Function Invoke-SystemContextAPI {
                 $retryCount = 0
                 do {
                     try {
-                        $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
+                        $request = Invoke-RestMethod -Method $method -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
                         $success = $true
                     } catch {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
@@ -508,7 +523,7 @@ Function Invoke-SystemContextAPI {
                 $retryCount = 0
                 do {
                     try {
-                        $request = Invoke-RestMethod -Method $method -Uri "https://console.jumpcloud.com$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
+                        $request = Invoke-RestMethod -Method $method -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
                         $success = $true
                     } catch {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
@@ -532,7 +547,7 @@ Function Invoke-SystemContextAPI {
                 $retryCount = 0
                 do {
                     try {
-                        $request = Invoke-RestMethod -Method DELETE -Uri "https://console.jumpcloud.com/$requestURL" -ContentType 'application/json' -Headers $headers
+                        $request = Invoke-RestMethod -Method DELETE -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers
                         $success = $true
                     } catch {
                         if ($_.Exception.Message -like "*The remote name could not be resolved*") {
