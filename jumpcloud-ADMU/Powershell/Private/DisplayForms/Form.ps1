@@ -532,7 +532,8 @@ Function Show-SelectionForm {
             $cb_removeMDM.IsChecked = $false
         })
 
-    # JumpCloud username validation
+
+    # JumpCloud username validation handler
     $tb_JumpCloudUserName.Add_TextChanged( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
             If (
