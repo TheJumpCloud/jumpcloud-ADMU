@@ -39,17 +39,20 @@ Function Invoke-SystemContextAPI {
         }
         try {
             $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
-            $systemKeyRegex = 'systemKey\":\"(\w+)\"'
+            $systemKeyRegex = 'systemKey":"(\w+)"'
             $systemKey = [regex]::Match($config, $systemKeyRegex).Groups[1].Value
-            $agentServerHostRegex = '"agentServerHost":"([^"]+)"'
+            $agentServerHostRegex = '"agentServerHost":"agent.(.\w+)+.jumpcloud.com"'
             $agentServerHost = [regex]::Match($config, $agentServerHostRegex).Groups[1].Value
 
-            if ($agentServerHost -eq "agent.eu.jumpcloud.com") {
-                Set-JCUrl -Region "EU"
-                Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: EU."
-            } else {
-                Set-JCUrl -Region "US"
-                Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: US."
+            switch ($agentServerHost) {
+                "eu" {
+                    Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: EU."
+                    Set-JCUrl -Region "EU"
+                }
+                Default {
+                    Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: US."
+                    Set-JCUrl -Region "US"
+                }
             }
 
         } catch {
