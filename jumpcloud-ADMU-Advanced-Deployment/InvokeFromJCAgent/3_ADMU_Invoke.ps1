@@ -666,7 +666,7 @@ if ($UsersToMigrate) {
         If (($user.username)) {
             write-host "[status] Logging off user: $($user.username) with ID: $($user.ID)"
             # Force Logout
-            # logoff.exe $($user.ID)
+            logoff.exe $($user.ID)
         }
     }
     #endregion logoffUsers
