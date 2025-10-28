@@ -43,7 +43,7 @@ function Test-ApiKey {
             if ($jcOrgId) {
                 $headers.Add("x-org-id", $jcOrgId)
             }
-            $response = Invoke-RestMethod -Uri "$($global:JCUrl)/api/systems/$systemKey" -Method GET -Headers $headers # No need to set the region here for JCUrl; Should be set globally when the we test the API key in the begining
+            $response = Invoke-RestMethod -Uri "$($global:JCUrl)/api/systems/$systemKey" -Method GET -Headers $headers # No need to set the region here for JCUrl; Should be set globally when the we test the API key in the beginning
 
             # Create a simplified result object.
             if ($response.id -eq $systemKey) {
