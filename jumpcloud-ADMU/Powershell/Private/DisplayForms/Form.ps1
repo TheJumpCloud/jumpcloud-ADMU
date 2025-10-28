@@ -455,7 +455,7 @@ Function Show-SelectionForm {
             }
 
         })
-
+    Write-ToLog "Global URL: $global:JCUrl"
     $cb_installJCAgent.Add_UnChecked( { Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser) })
     # $cb_installJCAgent.Add_Unchecked( { $InstallJCAgent = $false })
     $cb_installJCAgent.Add_Unchecked( { $tb_JumpCloudConnectKey.IsEnabled = $false })
@@ -574,6 +574,7 @@ Function Show-SelectionForm {
     # Validate API KEY
     $tb_JumpCloudAPIKey.Add_PasswordChanged( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
+            Write-ToLog "Validating API Key... Global URI: $($global:JCUrl)"
             If (Test-IsNotEmpty $tb_JumpCloudAPIKey.Password) {
                 $tb_JumpCloudAPIKey.Background = "#FFC6CBCF"
                 $tb_JumpCloudAPIKey.BorderBrush = "#FFF90000"
@@ -597,6 +598,7 @@ Function Show-SelectionForm {
                     $img_apiKeyValid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
                     $img_apiKeyValid.ToolTip = $null
                     Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -selectedOrgID($script:selectedOrgID) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
+                    Write-ToLog "Validating API Key through MTP... Global URI: $($global:JCUrl)"
                 } catch {
                     $lbl_selectOrgName.Visibility = 'Hidden'
                     $img_apiKeyValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
@@ -605,6 +607,7 @@ Function Show-SelectionForm {
                     $lbl_orgName.Text = ""
                     $img_apiKeyValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
                     Write-ToLog "MTP KEY MAY BE WRONG"
+                    Write-ToLog "Global URI: $($global:JCUrl)"
                 }
             }
         })
@@ -745,7 +748,7 @@ Function Show-SelectionForm {
 
 
     # lbl_connectKey link - Mouse button event
-    $lbl_connectKey.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start('https://console.jumpcloud.com/#/systems/new') })
+    $lbl_connectKey.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start("$($global:JCUrl)/#/systems/new") })
 
     # lbl_apiKey link - Mouse button event
     $lbl_apiKey.Add_PreviewMouseDown( { [System.Diagnostics.Process]::start('https://support.jumpcloud.com/support/s/article/jumpcloud-apis1') })

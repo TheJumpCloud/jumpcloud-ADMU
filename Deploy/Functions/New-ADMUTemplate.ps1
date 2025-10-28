@@ -117,8 +117,16 @@ Function New-ADMUTemplate {
         `$removeMDM
     )
 "@
-        # Add the param block to the top of the template string
-        $templateString = $paramBlockString + [Environment]::NewLine
+
+        # Add the param block to the template string
+        $templateString += $paramBlockString + [Environment]::NewLine
+
+        # Define the global URL
+        $globalUrlString = @"
+        `$Global:JCUrl = 'https://console.jumpcloud.com'
+"@
+        # add global URL to template
+        $templateString += "$($globalUrlString)" + [Environment]::NewLine
 
         #define Run As Admin block
         $adminString = @"
