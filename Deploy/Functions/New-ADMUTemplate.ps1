@@ -110,7 +110,11 @@ Function New-ADMUTemplate {
 
         [Parameter()]
         [bool]
-        `$ReportStatus
+        `$ReportStatus,
+
+        [Parameter()]
+        [bool]
+        `$removeMDM
     )
 "@
 
