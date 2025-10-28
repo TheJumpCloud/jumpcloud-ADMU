@@ -1,6 +1,6 @@
 ## 2.9.4
 
-Release Date: October 27, 2025
+Release Date: October 28, 2025
 
 #### RELEASE NOTES
 
@@ -10,7 +10,8 @@ Added support for EU Orgs
 
 #### IMPROVEMENTS:
 
-- Added support for EU Orgs
+- Added support for authenticating using API keys from EU-based organizations.
+
 ## 2.9.3
 
 Release Date: October 20, 2025

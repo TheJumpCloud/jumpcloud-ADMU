@@ -168,7 +168,7 @@ jobs:
         with:
           path: 'C:\Users\runneradmin\Documents\PowerShell\Modules\'
           key: PS-Dependencies
-      - name: Test PWSH Module (US / EU)
+      - name: Test PWSH Module
         shell: powershell
         env:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
