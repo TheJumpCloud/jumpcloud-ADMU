@@ -527,7 +527,10 @@ Function Show-SelectionForm {
     }
     # set removeMDM checkbox based on leave domain
     $cb_leaveDomain.Add_Checked( { $cb_removeMDM.IsEnabled = $true })
-    $cb_leaveDomain.Add_Unchecked( { $cb_removeMDM.IsEnabled = $false })
+    $cb_leaveDomain.Add_Unchecked( {
+            $cb_removeMDM.IsEnabled = $false
+            $cb_removeMDM.IsChecked = $false
+        })
 
     # JumpCloud username validation
     $tb_JumpCloudUserName.Add_TextChanged( {
