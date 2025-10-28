@@ -41,7 +41,7 @@ Function Invoke-SystemContextAPI {
             $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
             $systemKeyRegex = 'systemKey":"(\w+)"'
             $systemKey = [regex]::Match($config, $systemKeyRegex).Groups[1].Value
-            $agentServerHostRegex = '"agentServerHost":"agent.(.\w+)+.jumpcloud.com"'
+            $agentServerHostRegex = '"agentServerHost":"agent\.(\w+)\.jumpcloud\.com"'
             $agentServerHost = [regex]::Match($config, $agentServerHostRegex).Groups[1].Value
 
             switch ($agentServerHost) {
