@@ -5,12 +5,12 @@ Release Date: October 28, 2025
 #### RELEASE NOTES
 
 ```
-Added support for EU Orgs
+Added GUI API support for JC EU Organizations
 ```
 
 #### IMPROVEMENTS:
 
-- Added support for authenticating using API keys from EU-based organizations.
+- Added support for authenticating using API keys from EU-based organizations in the GUI.
 - Updates to the invoke scripts. Additional MDM removal feature added directly to the tool.
 ```
 
