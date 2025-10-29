@@ -709,6 +709,7 @@ $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -M
     JumpCloudOrgID            = $JumpCloudOrgID
     systemContextBinding      = $systemContextBinding
     LeaveDomainAfterMigration = $LeaveDomainAfterMigration
+    removeMDM                 = $removeMDM
     guiJcadmuPath             = $guiJcadmuPath
 }
 
