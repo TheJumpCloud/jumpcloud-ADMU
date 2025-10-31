@@ -96,7 +96,7 @@ function Get-MtpOrganization {
                 }
                 Default {
                     Write-ToLog -Message "API Key appears to be a MTP Admin Key. Please specify the JumpCloudOrgID Parameter and try again" -Level Verbose -Step "Get-MtpOrganization"
-                    throw "API Key appears to be a MTP Admin Key. Please specify the JumpCloudOrgID Parameter and try again"
+                    Throw "API Key appears to be a MTP Admin Key. Please specify the JumpCloudOrgID Parameter and try again"
                 }
             }
         } else {
