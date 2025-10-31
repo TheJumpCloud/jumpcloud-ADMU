@@ -35,7 +35,7 @@ function Remove-CommonParameterFromMarkdown {
     $ErrorActionPreference = 'Stop'
     $Docs = Get-ChildItem -Path $Path -Recurse
     foreach ($p in $Docs) {
-        Write-Host "[status]Removing ProgressAction from $p"
+        Write-Host "[status] Removing ProgressAction from $p"
         $content = (Get-Content -Path $p -Raw).TrimEnd()
         $updateFile = $false
         foreach ($param in $ParameterName) {
@@ -65,7 +65,7 @@ function Remove-CommonParameterFromMarkdown {
 }
 ###########################################################################
 
-Write-Host ('[status]Importing current module: ' + $ModuleName)
+Write-Host ('[status] Importing current module: ' + $ModuleName)
 Import-Module ($FilePath_psd1) -Force
 # Install module onto system
 If (-not (Get-InstalledModule -Name:('PlatyPS') -ErrorAction SilentlyContinue)) {
@@ -75,7 +75,7 @@ If (-not (Get-InstalledModule -Name:('PlatyPS') -ErrorAction SilentlyContinue)) 
 If (-not (Get-Module -Name:('PlatyPS'))) {
     Import-Module -Force -Name:('PlatyPS')
 }
-Write-Host ('[status]Creating/Updating help files')
+Write-Host ('[status] Creating/Updating help files')
 $Functions_Public | ForEach-Object {
     $FunctionName = $_.BaseName
     $FilePath_Md = $FolderPath_Docs + '/' + $FunctionName + '.md'
@@ -89,6 +89,6 @@ $Functions_Public | ForEach-Object {
     Remove-CommonParameterFromMarkdown -Path:($FilePath_Md)
 }
 # Create new ExternalHelp file.
-Write-Host ('[status]Creating new external help file')
+Write-Host ('[status] Creating new external help file')
 New-ExternalHelp -Path:($FolderPath_Docs) -OutputPath:($FolderPath_enUS) -Force
 Write-Host "======= End Build-HelpFiles ======="
