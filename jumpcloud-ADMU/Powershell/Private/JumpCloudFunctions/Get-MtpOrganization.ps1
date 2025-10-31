@@ -29,12 +29,20 @@ function Get-MtpOrganization {
             try {
                 Set-JcUrl -Region "US"
                 $baseUrl = "$($global:JCUrl)/api/organizations/$($orgID)"
-                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+                try {
+                    $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+                } catch {
+                    Throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key is valid. $($_.Exception.Message)"
+                }
             } catch {
                 # Call EU endpoint if US fails
                 Set-JcUrl -Region "EU"
                 $baseUrl = "$($global:JCUrl)/api/organizations/$($orgID)"
-                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+                try {
+                    $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+                } catch {
+                    Throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key is valid. $($_.Exception.Message)"
+                }
             }
             $Content = $Request.Content | ConvertFrom-Json
             $results += $Content
@@ -44,12 +52,20 @@ function Get-MtpOrganization {
                 try {
                     Set-JcUrl -Region "US"
                     $baseUrl = "$($global:JCUrl)/api/organizations"
-                    $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+                    try {
+                        $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+                    } catch {
+                        Throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key is valid. $($_.Exception.Message)"
+                    }
                 } catch {
                     # Call EU endpoint if US fails
                     Set-JcUrl -Region "EU"
                     $baseUrl = "$($global:JCUrl)/api/organizations"
-                    $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+                    try {
+                        $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+                    } catch {
+                        throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key is valid. $($_.Exception.Message)"
+                    }
                 }
                 $Content = $Request.Content | ConvertFrom-Json
                 $results += $Content.results
@@ -87,10 +103,10 @@ function Get-MtpOrganization {
             Write-ToLog -Message "No orgs matched provided API Key" -Level Verbose -Step "Get-MtpOrganization"
             $orgs = $false
         }
-
     }
     end {
-        #returned org as an object [0]=id [1]=displayName
+        # $orgs returned as an object [0]=id [1]=displayName
+        # mtpAdmin returned as boolean
         return $orgs, $mtpAdmin
     }
 }

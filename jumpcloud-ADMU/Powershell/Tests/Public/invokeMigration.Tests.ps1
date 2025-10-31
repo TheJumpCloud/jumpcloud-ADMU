@@ -529,7 +529,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             $result.Success | Should -Be $true
             $result.ErrorMessage | Should -BeNullOrEmpty
         }
-        It "Should return an non success and error message if an error occurs in migration" {
+        It "Should return a failure and error message if an error occurs in migration" {
             # to throw the test init the user to migrate to
             Initialize-TestUser -username $userToMigrateTo -password $tempPassword
             # do the migration
@@ -538,6 +538,15 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             $result.Success | Should -BeOfType "Boolean"
             $result.Success | Should -Be $false
             $result.ErrorMessage | Should -Not -BeNullOrEmpty
+        }
+        It "Should return a failure and error message if the APIKey is invalid" {
+            # set the API key to an invalid value
+            $migrationParams.JumpCloudAPIKey = "INVALID_API_KEY"
+            # do the migration
+            $result = invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath $invalidGuiPath
+            $result.GetType().Name | Should -Be "PSCustomObject"
+            $result.Success | Should -BeOfType "Boolean"
+            $result.Success | Should -Be $false
         }
     }
     Context "Invoke-UserMigrationBatch Function" {
