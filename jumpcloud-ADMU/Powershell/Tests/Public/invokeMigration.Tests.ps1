@@ -543,7 +543,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             # set the API key to an invalid value
             $migrationParams.JumpCloudAPIKey = "INVALID_API_KEY"
             # do the migration
-            $result = invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath $invalidGuiPath
+            $result = invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe"
             $result.GetType().Name | Should -Be "PSCustomObject"
             $result.Success | Should -BeOfType "Boolean"
             $result.Success | Should -Be $false

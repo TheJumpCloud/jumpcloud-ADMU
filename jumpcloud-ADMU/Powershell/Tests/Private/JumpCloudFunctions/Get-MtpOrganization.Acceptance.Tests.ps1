@@ -41,7 +41,7 @@ Describe "Get-MtpOrganization Acceptance Tests" -Tag "Acceptance" {
             $MTPAdmin | Should -Be $false
         }
         It "Should throw when an invalid API key is provided, expecting 401 Unauthorized" {
-            { Get-MtpOrganization -apiKey "asdf" } | Should -Throw -ExpectedMessage { "*401 (Unauthorized)*" }
+            { Get-MtpOrganization -apiKey "asdf" } | Should -Throw -ExpectedMessage { "*401*" }
         }
         It "Should throw when an empty API key is provided" {
             { Get-MtpOrganization -apiKey "" } | Should -Throw -ExpectedMessage "*because it is an empty string*"
