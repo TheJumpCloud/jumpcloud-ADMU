@@ -114,6 +114,12 @@ Function Start-Migration {
         [bool]
         $ReportStatus = $false,
         [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will attempt to set the specified user as the PrimarySystemUser for this device in JumpCloud. This is set to false by default.")]
+        [bool]
+        $PrimaryUser = $false,
+        [Parameter(
             ParameterSetName = "form")]
         [Object]
         $inputObject
@@ -139,6 +145,13 @@ Function Start-Migration {
             }
         }
 
+        # Validate parameter combination when $AutoBindJCUser is set to $true
+        if ($PrimaryUser -eq $true) {
+            if ($AutoBindJCUser -eq $false) {
+                throw "The 'PrimaryUser' parameter requires the 'AutoBindJCUser' parameter to be set to true."
+                break
+            }
+        }
 
         # Define misc static variables
         $netBiosName = Get-NetBiosName
@@ -541,7 +554,7 @@ Function Start-Migration {
             #### Begin check for Registry system attribute
             if (Test-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System") {
                 Set-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System" -Operation "Remove"
-            } Else {
+            } else {
                 $profileProperties = Get-ItemProperty -Path "$oldUserProfileImagePath\NTUSER.DAT"
                 $attributes = $($profileProperties.Attributes)
                 Write-ToLog -Message "$oldUserProfileImagePath\NTUSER.DAT attributes: $($attributes)"
@@ -1260,7 +1273,7 @@ Function Start-Migration {
                 }
             }
             $path = $newUserProfileImagePath + '\AppData\Local\JumpCloudADMU'
-            If (!(test-path $path)) {
+            if (!(Test-Path $path)) {
                 New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
 
@@ -1463,7 +1476,7 @@ Function Start-Migration {
         }
         #endregion leaveDomain
     }
-    End {
+    end {
         $FixedErrors = @();
         # if we caught any errors and need to revert based on admuTracker status, do so here:
         if ($admuTracker | ForEach-Object { $_.values.fail -eq $true }) {
@@ -1492,7 +1505,7 @@ Function Start-Migration {
                             }
                         }
 
-                        Default {
+                        default {
                             # Write-ToLog -Message:("default error") -Level Warning
                         }
                     }
@@ -1512,7 +1525,7 @@ Function Start-Migration {
             Write-ToLog -Message ('Script finished with errors; Log file location: ' + $jcAdmuLogFile) -Level Warning
             Write-ToProgress -ProgressBar $ProgressBar -Status $Script:ErrorMessage -form $isForm -logLevel "Error" -SystemDescription $systemDescription
             #region exeExitCode
-            Throw "JumpCloud ADMU was unable to migrate $selectedUserName"
+            throw "JumpCloud ADMU was unable to migrate $selectedUserName"
             #endregion exeExitCode
         }
         Write-ToLog -Message "=================================================="
