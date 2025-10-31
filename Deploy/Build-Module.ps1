@@ -16,7 +16,7 @@ If (-not $ADMUGetConfig) {
 }
 ###########################################################################
 # Region Checking PowerShell Gallery module version
-Write-Host ('[status]Check PowerShell Gallery for module version info')
+Write-Host ('[status] Check PowerShell Gallery for module version info')
 
 # Check to see if ManualModuleVersion parameter is set to true
 if ($ManualModuleVersion) {
@@ -57,8 +57,8 @@ New-ModuleManifest -Path:($FilePath_psd1) `
 # Update ModuleChangelog.md File:
 If ($ModuleChangelogVersion -ne $ModuleVersion) {
     # add a new version section to the module ModuleChangelog.md
-    Write-Host "[Status] Appending new changelog for version: $PSD1Version"
-    $NewModuleChangelogRecord = New-ModuleChangelog -LatestVersion:($PSD1Version) -ReleaseNotes:('{{Fill in the Release Notes}}') -Features:('{{Fill in the Features}}') -Improvements:('{{Fill in the Improvements}}') -BugFixes('{{Fill in the Bug Fixes}}')
+    Write-Host "[Status] Appending new changelog for version: $ModuleVersion"
+    $NewModuleChangelogRecord = New-ModuleChangelog -LatestVersion:($ModuleVersion) -ReleaseNotes:('{{Fill in the Release Notes}}') -Features:('{{Fill in the Features}}') -Improvements:('{{Fill in the Improvements}}') -BugFixes('{{Fill in the Bug Fixes}}')
 
     ($NewModuleChangelogRecord + ($ModuleChangelog | Out-String)).Trim() | Set-Content -Path:($FilePath_ModuleChangelog) -Force
 } else {

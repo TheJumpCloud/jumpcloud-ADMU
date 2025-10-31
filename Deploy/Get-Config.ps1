@@ -42,11 +42,11 @@ Switch ($env:DEPLOYFOLDER) {
     }
 }
 # Log statuses
-Write-Host ('[status]Platform: ' + [environment]::OSVersion.Platform)
-Write-Host ('[status]PowerShell Version: ' + ($PSVersionTable.PSVersion -join '.'))
-Write-Host ('[status]Host: ' + (Get-Host).Name)
-Write-Host ('[status]UserName: ' + $env:USERNAME)
-Write-Host ('[status]Loaded config: ' + $MyInvocation.MyCommand.Path)
+Write-Host ('[status] Platform: ' + [environment]::OSVersion.Platform)
+Write-Host ('[status] PowerShell Version: ' + ($PSVersionTable.PSVersion -join '.'))
+Write-Host ('[status] Host: ' + (Get-Host).Name)
+Write-Host ('[status] UserName: ' + $env:USERNAME)
+Write-Host ('[status] Loaded config: ' + $MyInvocation.MyCommand.Path)
 # Set misc. variables
 $FolderPath_ModuleRootPath = (Get-Item -Path:($DEPLOYFOLDER)).Parent.FullName
 New-Variable -Name 'FolderPath_ModuleRootPath' -Value $FolderPath_ModuleRootPath -Force -Scope Global;
@@ -85,7 +85,7 @@ Foreach ($DeployFunction In $DeployFunctions) {
 }
 # Install NuGet
 If (!(Get-PackageProvider -Name:('NuGet') -ListAvailable -ErrorAction:('SilentlyContinue'))) {
-    Write-Host ('[status]Installing package provider NuGet'); Install-PackageProvider -Name:('NuGet') -Scope:('CurrentUser') -Force
+    Write-Host ('[status] Installing package provider NuGet'); Install-PackageProvider -Name:('NuGet') -Scope:('CurrentUser') -Force
 }
 
 # Get module function names
