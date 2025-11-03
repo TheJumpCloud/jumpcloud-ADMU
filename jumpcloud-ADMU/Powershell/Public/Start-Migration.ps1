@@ -250,7 +250,7 @@ Function Start-Migration {
                     # set the orgID and orgName
                     $ValidatedJumpCloudOrgName = "$($OrgSelection[1])"
                     $ValidatedJumpCloudOrgID = "$($OrgSelection[0])"
-                    If (-Not [string]::IsNullOrEmpty($ValidatedJumpCloudOrgID)) {
+                    If ([string]::IsNullOrEmpty($ValidatedJumpCloudOrgID)) {
                         Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
                     }
                 }
@@ -268,7 +268,7 @@ Function Start-Migration {
                     # set the orgID and orgName
                     $ValidatedJumpCloudOrgName = "$($OrgSelection[1])"
                     $ValidatedJumpCloudOrgID = "$($OrgSelection[0])"
-                    If (-Not [string]::IsNullOrEmpty($ValidatedJumpCloudOrgID)) {
+                    If ([string]::IsNullOrEmpty($ValidatedJumpCloudOrgID)) {
                         Throw [System.Management.Automation.ValidationMetadataException] "ORG ID Could not be validated"
                     }
                 }
