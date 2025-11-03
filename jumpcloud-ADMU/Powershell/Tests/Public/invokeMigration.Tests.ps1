@@ -703,6 +703,12 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
             $config = get-content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
             $regex = 'systemKey\":\"(\w+)\"'
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+
+            # set the GUI path variable
+            # Copy the exe file from D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\exe\gui_jcadmu.exe to C:\Windows\Temp
+            $guiPath = Join-Path $PSScriptRoot '..\..\..\..\jumpCloud-Admu\Exe\gui_jcadmu.exe'
+            $destinationPath = Join-Path -Path 'C:\Windows\Temp' -ChildPath 'gui_jcadmu.exe'
+            Copy-Item -Path $guiPath -Destination $destinationPath -Force
         }
 
         BeforeEach {
