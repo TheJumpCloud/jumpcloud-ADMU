@@ -113,6 +113,12 @@ Function Start-Migration {
             HelpMessage = "When set to true, the ADMU will attempt to set the migration status to the system description. This parameter requires that the JumpCloud agent be installed. This parameter requires either access to the SystemContext API or a valid Administrator's API Key. This is set to false by default.")]
         [bool]
         $ReportStatus = $false,
+[Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU will remove any existing MDM enrollment from the system. This parameter requires the `leaveDomain` parameter to also be set to true. This parameter will remove MDM enrollment profiles if they have non-null ProviderIDs, and UPNs associated with them. This parameter will not remove JumpCloud MDM enrollments.")]
+        [bool]
+        $removeMDM = $false,
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
@@ -172,7 +178,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.9.3"
+        $admuVersion = "2.9.4"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -208,6 +214,7 @@ Function Start-Migration {
 
             $BindAsAdmin = $inputObject.BindAsAdmin
             $LeaveDomain = $InputObject.LeaveDomain
+            $RemoveMDM = $InputObject.RemoveMDM
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
         } else {
@@ -302,6 +309,11 @@ Function Start-Migration {
         # Validate JCUserName and Hostname are not the equal. If equal, throw error and exit
         if ($JumpCloudUserName -eq $env:computername) {
             Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and Hostname cannot be the same. Exiting..."
+            break
+        }
+        # Validate that the removeMDM parameter is only used when LeaveDomain is also set to true
+        if ($removeMDM -eq $true -and $LeaveDomain -eq $false) {
+            Throw [System.Management.Automation.ValidationMetadataException] "The 'removeMDM' parameter requires the 'LeaveDomain' parameter to also be set to true."
             break
         }
         #endregion validation
@@ -1458,6 +1470,15 @@ Function Start-Migration {
                     }
                 } else {
                     Write-ToLog -Message:('Device is not joined to a domain, skipping leave domain step')
+                }
+                if ($removeMDM) {
+                    Write-ToLog -Message:('Attempting to remove MDM Enrollment(s)')
+                    # get the MDM Enrollments
+                    $mdmEnrollments = Get-WindowsMDMProvider
+                    foreach ($enrollment in $mdmEnrollments) {
+                        Write-ToLog -Message:("Removing MDM Enrollment: $($enrollment.EnrollmentGUID)")
+                        Remove-WindowsMDMProvider -EnrollmentGUID $enrollment.EnrollmentGUID
+                    }
                 }
             }
             #endRegion Leave Domain or AzureAD

@@ -61,6 +61,7 @@ Function Confirm-MigrationParameter {
         [bool]$AutoBindJCUser = $true,
         [bool]$BindAsAdmin = $false,
         [bool]$SetDefaultWindowsUser = $true,
+        [bool]$removeMDM = $true,
 
         # --- JumpCloud API Parameters ---
         [bool]$systemContextBinding = $false,
@@ -70,9 +71,7 @@ Function Confirm-MigrationParameter {
 
         # --- Post-Migration Behavior ---
         [ValidateSet('Restart', 'Shutdown')]
-        [string]$postMigrationBehavior = 'Restart',
-
-        [bool]$removeMDM = $false
+        [string]$postMigrationBehavior = 'Restart'
     )
 
     # --- Custom Validation Logic ---
@@ -125,13 +124,15 @@ Function Get-MigrationUsersFromCsv {
     )
 
     begin {
-        # 1. --- FILE AND HEADER VALIDATION ---
+        # Test CSV Path
         if (-not (Test-Path -Path $csvPath -PathType Leaf)) {
             Throw "Validation Failed: The CSV file was not found at: '$csvPath'."
         }
+        # Import the CSV
         $ImportedCSV = Import-Csv -Path $csvPath -ErrorAction Stop
     }
     process {
+        # Begin by processing the CSV content headers, these should include the required values
         $requiredHeaders = @("LocalComputerName", "SerialNumber", "JumpCloudUserName", "SID", "LocalPath")
         $csvHeaders = $ImportedCSV[0].PSObject.Properties.Name
         foreach ($header in $requiredHeaders) {
@@ -139,60 +140,62 @@ Function Get-MigrationUsersFromCsv {
                 throw "Validation Failed: The CSV is missing the required header: '$header'."
             }
         }
-
-        # 2. --- DUPLICATE SID VALIDATION ---
-        $groupedByDevice = $ImportedCSV | Group-Object -Property 'LocalComputerName'
-        foreach ($device in $groupedByDevice) {
-            $duplicateSids = $device.Group | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
-            if ($duplicateSids) {
-                throw "Validation Failed: Duplicate SID '$($duplicateSids[0].Name)' found for LocalComputerName '$($device.Name)'."
-            }
-        }
-
-        # 3. --- FIND AND BUILD USER OBJECTS ---
-        $usersToMigrate = @()
+        # Create a new list
+        $usersToMigrate = New-Object System.Collections.ArrayList
+        # To validate the users on the CSV get the local computer name and serial number
         $computerName = $env:COMPUTERNAME
         try {
             $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
         } catch {
             $serialNumber = (Get-CimInstance -Class Win32_BIOS).SerialNumber
         }
-
-        foreach ($row in $ImportedCSV) {
-            # --- Filter for this machine and create the custom object ---
+        # Get valid rows for this device, valid rows must have:
+        # - Non-empty JumpCloudUserName
+        # - LocalComputerName matching this device
+        # - SerialNumber matching this device
+        $ValidDeviceRows = $ImportedCSV | Where-Object {
+            ((-not [string]::IsNullOrWhiteSpace($_.JumpCloudUserName))) -and
+            ($_.LocalComputerName -eq $computerName) -and
+            ($_.SerialNumber -eq $serialNumber)
+        }
+        # Check for duplicate SIDs out of the valid rows, throw if multiple entries are found
+        $duplicateSids = $ValidDeviceRows | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
+        if ($duplicateSids) {
+            throw "Validation Failed: Duplicate SID '$($duplicateSids[0].Name)' found for LocalComputerName '$($computerName)'."
+        }
+        # Process the users in the CSV
+        foreach ($row in $ValidDeviceRows) {
+            # --- Filter for this machine and create the custom object returned users will only match this computer ---
             if (($row.LocalComputerName -eq $computerName) -and ($row.SerialNumber -eq $serialNumber)) {
-                # If a non-empty JumpCloudUsername is provided, continue with further validation
-                If (-not [string]::IsNullOrWhiteSpace($row.JumpCloudUserName)) {
-                    # Validate if JumpCloudUserID is not null or empty when the systemContextBinding option is enabled
-                    if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
-                        throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
+                # Validate if JumpCloudUserID is not null or empty when the systemContextBinding option is enabled
+                if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
+                    throw "VALIDATION FAILED: on row $rowNum : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
+                }
+                # Validate that each row with a non-null JumpCloud username has a non-null localPath and SID
+                $requiredFields = "LocalPath", "SID"
+                foreach ($field in $requiredFields) {
+                    if ([string]::IsNullOrWhiteSpace($row.$field)) {
+                        throw "Validation Failed: Missing required data for field '$field'."
                     }
-                    # --- Row content validation ---
-                    $requiredFields = "LocalPath", "SID"
-                    foreach ($field in $requiredFields) {
-                        if ([string]::IsNullOrWhiteSpace($row.$field)) {
-                            throw "Validation Failed: Missing required data for field '$field'."
-                        }
-                    }
-                    $usersToMigrate += [PSCustomObject]@{
+                }
+                # Add the validated user to the usersToMigrate list
+                $usersToMigrate.Add([PSCustomObject]@{
                         selectedUsername  = $row.SID
                         LocalProfilePath  = $row.LocalPath
                         JumpCloudUserName = $row.JumpCloudUserName
                         JumpCloudUserID   = $row.JumpCloudUserID
-                    }
-                }
+                    }) | Out-Null
             }
         }
     }
-
     end {
-        # 4. --- FINAL CHECK AND RETURN ---
+        # If no users found or validated, throw an error
         if ($usersToMigrate.Count -eq 0) {
             throw "Validation Failed: No users were found in the CSV matching this computer's name ('$computerName') and serial number ('$serialNumber')."
         }
+        # Otherwise, return the list of users to migrate
         return $usersToMigrate
     }
-
 }
 Function Get-LatestADMUGUIExe {
     [CmdletBinding()]
@@ -427,6 +430,7 @@ Function Invoke-UserMigrationBatch {
 
         # Determine domain leave parameter for this user
         $leaveDomainParam = if ($isLastUser -and $MigrationConfig.LeaveDomainAfterMigration) { $true } else { $false }
+        $removeMDMParam = if ($isLastUser -and $MigrationConfig.RemoveMDM) { $true } else { $false }
 
         # Build migration parameters for this user
         $migrationParams = @{
@@ -439,6 +443,7 @@ Function Invoke-UserMigrationBatch {
             BindAsAdmin           = $MigrationConfig.BindAsAdmin
             SetDefaultWindowsUser = $MigrationConfig.SetDefaultWindowsUser
             LeaveDomain           = $leaveDomainParam
+            RemoveMDM             = $removeMDMParam
             adminDebug            = $true
             ReportStatus          = $MigrationConfig.ReportStatus
         }
@@ -704,6 +709,7 @@ $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -M
     JumpCloudOrgID            = $JumpCloudOrgID
     systemContextBinding      = $systemContextBinding
     LeaveDomainAfterMigration = $LeaveDomainAfterMigration
+    removeMDM                 = $removeMDM
     guiJcadmuPath             = $guiJcadmuPath
 }
 
@@ -721,20 +727,6 @@ if ($migrationResults.FailedUsers.Count -gt 0) {
     exit 1
 } else {
     # process remainder of the script:
-    #region removeMDM
-    # Un-manage the device from Intune:
-    # Remove the existing MDM
-    if ($removeMDM) {
-        # get the raw content from the script
-        $rawGitHubContentUrl = "https://raw.githubusercontent.com/TheJumpCloud/support/refs/heads/master/scripts/windows/remove_windowsMDM.ps1"
-        # download the script to the temp directory
-        $scriptPath = "$env:TEMP\remove_windowsMDM.ps1"
-        Invoke-WebRequest -Uri $rawGitHubContentUrl -OutFile $scriptPath
-        # run the script from the file
-        # Execute the script
-        & $scriptPath
-    }
-    #endregion removeMDM
     #region restart/shutdown
     # If force restart was specified, we kick off a command to initiate the restart
     # this ensures that the JumpCloud commands reports a success

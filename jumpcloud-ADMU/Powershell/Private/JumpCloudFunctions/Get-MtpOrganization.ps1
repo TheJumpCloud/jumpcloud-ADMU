@@ -26,15 +26,31 @@ function Get-MtpOrganization {
         $results = @()
         if ($orgID) {
             Write-ToLog -Message "OrgID specified, attempting to validate org..." -Level Verbose -Step "Get-MtpOrganization"
-            $baseURl = "https://console.jumpcloud.com/api/organizations/$($orgID)"
-            $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+            try {
+                Set-JcUrl -Region "US"
+                $baseUrl = "$($global:JCUrl)/api/organizations/$($orgID)"
+                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+            } catch {
+                # Call EU endpoint if US fails
+                Set-JcUrl -Region "EU"
+                $baseUrl = "$($global:JCUrl)/api/organizations/$($orgID)"
+                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+            }
             $Content = $Request.Content | ConvertFrom-Json
             $results += $Content
         } else {
             Write-ToLog -Message "No OrgID specified, attempting to search for valid orgs..." -Level Verbose -Step "Get-MtpOrganization"
             while ($paginate) {
-                $baseUrl = "https://console.jumpcloud.com/api/organizations"
-                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+                try {
+                    Set-JcUrl -Region "US"
+                    $baseUrl = "$($global:JCUrl)/api/organizations"
+                    $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+                } catch {
+                    # Call EU endpoint if US fails
+                    Set-JcUrl -Region "EU"
+                    $baseUrl = "$($global:JCUrl)/api/organizations"
+                    $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+                }
                 $Content = $Request.Content | ConvertFrom-Json
                 $results += $Content.results
                 if ($Content.results.Count -eq $limit) {
@@ -78,3 +94,4 @@ function Get-MtpOrganization {
         return $orgs, $mtpAdmin
     }
 }
+

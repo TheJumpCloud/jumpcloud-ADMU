@@ -180,6 +180,19 @@ jobs:
           PESTER_CONNECTKEY: ${{ secrets.PESTER_CONNECTKEY }}
         run: |
           $env:job_group = ${{ matrix.job_group }}
+          # CUT-4958
+          # Uncomment below to alternate between US and EU test environments based on run number when Connect-JCOnline supports EU region.
+          # if (${{ github.run_number }} % 2 -eq 0) {
+          #   Write-Host "[status] Using US Pester ENV Variables"
+          #   $env:PESTER_APIKEY = "${{ secrets.PESTER_APIKEY }}"
+          #   $env:PESTER_ORGID = "${{ secrets.PESTER_ORGID }}"
+          #   $env:PESTER_CONNECTKEY = "${{ secrets.PESTER_CONNECTKEY }}"
+          # } else {
+          #   Write-Host "[status] Using EU Pester ENV Variables"
+          #   $env:PESTER_APIKEY = "${{ secrets.PESTER_APIKEY_EU }}"
+          #   $env:PESTER_ORGID = "${{ secrets.PESTER_ORGID_EU }}"
+          #   $env:PESTER_CONNECTKEY = "${{ secrets.PESTER_CONNECTKEY_EU }}"
+          # }
           # build before test
           $installedModules = Get-ChildItem "C:\Users\runneradmin\Documents\PowerShell\Modules\"
           Write-Host "[status] InstalledModules:"

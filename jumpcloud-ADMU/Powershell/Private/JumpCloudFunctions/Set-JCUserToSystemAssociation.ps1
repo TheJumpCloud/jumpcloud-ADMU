@@ -45,7 +45,7 @@ function Set-JCUserToSystemAssociation {
         $jsonForm = $Form | ConvertTo-Json
         Try {
             Write-ToLog -Message:("Attempting to bind userID: $JcUserID to systemID: $systemKey") -Level Verbose -Step "Set-JCUserToSystemAssociation"
-            $Response = Invoke-WebRequest -Method 'Post' -Uri "https://console.jumpcloud.com/api/v2/users/$JcUserID/associations" -Headers $Headers -Body $jsonForm -UseBasicParsing -UserAgent $UserAgent
+            $Response = Invoke-WebRequest -Method 'Post' -Uri "$($global:JCUrl)/api/v2/users/$JcUserID/associations" -Headers $Headers -Body $jsonForm -UseBasicParsing -UserAgent $UserAgent
             $StatusCode = $Response.StatusCode
         } catch {
             $errorMsg = $_.Exception.Message

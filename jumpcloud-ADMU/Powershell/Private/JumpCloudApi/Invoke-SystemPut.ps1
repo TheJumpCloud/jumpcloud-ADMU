@@ -9,7 +9,7 @@ function Invoke-SystemPut {
         [Parameter(Mandatory = $true)]
         [object]$Body
     )
-    $uri = "https://console.jumpcloud.com/api/systems/$systemId"
+    $uri = "$($global:JCUrl)/api/systems/$systemId"
 
     $Headers = @{
         'Accept'       = 'application/json';
