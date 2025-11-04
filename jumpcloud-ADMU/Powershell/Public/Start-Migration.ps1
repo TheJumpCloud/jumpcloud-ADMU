@@ -152,11 +152,9 @@ Function Start-Migration {
         }
 
         # Validate parameter combination when $AutoBindJCUser is set to $true
-        if ($PrimaryUser -eq $true) {
-            if ($AutoBindJCUser -eq $false) {
-                throw "The 'PrimaryUser' parameter requires the 'AutoBindJCUser' parameter to be set to true."
-                break
-            }
+        if ($PrimaryUser -eq $true -and $AutoBindJCUser -eq $false) {
+            throw [System.Management.Automation.ValidationMetadataException] "The 'PrimaryUser' parameter requires the 'AutoBindJCUser' parameter to be set to true."
+            break
         }
 
         # Define misc static variables
