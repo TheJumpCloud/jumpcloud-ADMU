@@ -341,6 +341,7 @@ Function Show-SelectionForm {
         AutoBindJCUser      = $false
         BindAsAdmin         = $false
         LeaveDomain         = $false
+        PrimaryUser         = $false
         removeMDM           = $false
         ForceReboot         = $false
         SelectedUserName    = $null
@@ -517,6 +518,10 @@ Function Show-SelectionForm {
                 $tb_JumpCloudAPIKey.BorderBrush = "#FFC6CBCF"
             }
         })
+
+
+    # Primary User checkbox
+    $cb_primaryUser.IsEnabled( { $cb_autobindJCUser.IsChecked = $true })
 
 
     # Leave Domain checkbox
