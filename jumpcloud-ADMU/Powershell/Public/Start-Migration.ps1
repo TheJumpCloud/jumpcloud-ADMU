@@ -1337,6 +1337,22 @@ Function Start-Migration {
             if ($systemContextBinding -eq $true) {
                 Write-ToLog -Message:("Attempting to associate system to userID: $script:JumpCloudUserID with SystemContext API")
                 Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $script:JumpCloudUserID -admin $BindAsAdmin
+
+                #TODO: Invoke SystemContext API to set primary user if specified
+                #TODO: If primarySystemUser.id exists - record success - otherwise record failure
+                if ($PrimaryUser -eq $true) {
+                    Write-ToLog -Message:("Attempting to set primary system user to userID: $script:JumpCloudUserID")
+                    $primaryUserBody = @{
+                        "primarySystemUser.id" = $script:JumpCloudUserId
+                    }
+                    $primarySystemUserResults = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body $primaryUserBody
+
+                    if ($primarySystemUserResults.primarySystemUser.id -eq $script:JumpCloudUserID) {
+                        Write-ToLog -Message:("Successfully set primary system user to userID: $script:JumpCloudUserID")
+                    } else {
+                        Write-ToLog -Message:("Failed to set primary system user to userID: $script:JumpCloudUserID") -Level Warning
+                    }
+                }
             }
             #endregion AutoBindUserToJCSystem
 
