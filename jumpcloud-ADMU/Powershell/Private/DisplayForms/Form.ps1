@@ -33,7 +33,7 @@ Function Show-SelectionForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.9.4"
+        Title="JumpCloud ADMU 2.9.5"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -483,6 +483,7 @@ Function Show-SelectionForm {
     $cb_autobindJCUser.Add_Checked( { $img_apiKeyInfo.Visibility = 'Visible' })
     $cb_autobindJCUser.Add_Checked( { $img_apiKeyValid.Visibility = 'Visible' })
     $cb_autobindJCUser.Add_Checked( { $cb_bindAsAdmin.IsEnabled = $true })
+    $cb_autobindJCUser.Add_Checked( { $cb_primaryUser.IsEnabled = $true })
     # $cb_bindAsAdmin.Add_Checked( { $BindAsAdmin = $true })
     $cb_autobindJCUser.Add_Checked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
@@ -505,6 +506,8 @@ Function Show-SelectionForm {
     $cb_autobindJCUser.Add_Unchecked( { $lbl_selectOrgName.Visibility = 'Hidden' })
     $cb_autobindJCUser.Add_Unchecked( { $cb_bindAsAdmin.IsEnabled = $false })
     $cb_autobindJCUser.Add_Unchecked( { $cb_bindAsAdmin.IsChecked = $false })
+    $cb_autobindJCUser.Add_Unchecked( { $cb_primaryUser.IsEnabled = $false })
+    $cb_autobindJCUser.Add_Unchecked( { $cb_primaryUser.IsChecked = $false })
     # $cb_bindAsAdmin.Add_Unchecked( { $BindAsAdmin = $false })
     $cb_autobindJCUser.Add_Unchecked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
@@ -518,11 +521,6 @@ Function Show-SelectionForm {
                 $tb_JumpCloudAPIKey.BorderBrush = "#FFC6CBCF"
             }
         })
-
-
-    # Primary User checkbox
-    $cb_primaryUser.IsEnabled( { $cb_autobindJCUser.IsChecked = $true })
-
 
     # Leave Domain checkbox
     if (($AzureADStatus -eq 'Yes') -or ($AzureDomainStatus -eq 'Yes')) {
