@@ -16,21 +16,20 @@ Describe "Backup-ProfileImageACL Acceptance Tests" -Tag "Acceptance" {
             $currentPath = Split-Path $currentPath -Parent
         }
         . "$helpFunctionDir\$fileName"
-        $profileImagePath = $env:USERPROFILE
-        $currentSid = ([System.Security.Principal.WindowsIdentity]::GetCurrent()).User.Value
-
-
     }
 
     Context 'Validate Backup-ProfileImageACL Function' {
         It 'Validate that Backup-ProfileImageACL creates a backup file with hidden attribute' {
             # Call the function with valid parameters
-            $Output = Backup-ProfileImageACL -ProfileImagePath $profileImagePath -sourceSID $currentSid
+            $currentUserSID = (Get-LocalUser -Name $env:USERNAME | Select-Object SID).SID
+            $Output = Backup-ProfileImageACL -ProfileImagePath $HOME -sourceSID $currentUserSID
 
-            $backupDirectory = Join-Path -Path $profileImagePath -ChildPath "AppData\Local\JumpCloudADMU"
+            $backupDirectory = Join-Path -Path $HOME -ChildPath "AppData\Local\JumpCloudADMU"
 
             # Get the list of files in the backup directory
             $backupFile = Get-ChildItem -Path $backupDirectory -Force
+            $expectedPattern = "$currentSid`_permission_backup_*"
+            $backupFile = $backupFile | Where-Object { $_.Name -like $expectedPattern }
 
             # Assert that at least one file matches the expected pattern
             $backupFile.Count | Should -Be 1
