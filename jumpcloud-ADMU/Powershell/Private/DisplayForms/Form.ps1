@@ -227,6 +227,7 @@ Function Show-SelectionForm {
                     <CheckBox Name="cb_installJCAgent" Content="Install JCAgent" HorizontalAlignment="Left" Margin="10,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                     <CheckBox Name="cb_autobindJCUser" Content="Autobind JC User" HorizontalAlignment="Left" Margin="10,56,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" />
                     <CheckBox Name="cb_bindAsAdmin" Content="Bind As Admin" HorizontalAlignment="Left" Margin="10,76,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
+                    <CheckBox Name="cb_primaryUser" Content="Primary User" HorizontalAlignment="Left" Margin="10,96,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
                     <CheckBox Name="cb_leaveDomain" ToolTipService.ShowOnDisabled="True" Content="Leave Domain" HorizontalAlignment="Left" Margin="125,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                     <CheckBox Name="cb_removeMDM" Content="Remove MDM" HorizontalAlignment="Left" Margin="125,56,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
                     <CheckBox Name="cb_forceReboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="240,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
