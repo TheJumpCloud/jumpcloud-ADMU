@@ -1,3 +1,18 @@
+## 2.10.0
+
+Release Date: Nov 4, 2025
+
+#### RELEASE NOTES
+
+```
+Added functionality to backup profileImage permissions
+```
+
+#### IMPROVEMENTS:
+
+- Profile image permission backup functionality added
+
+
 ## 2.9.4
 
 Release Date: October 28, 2025

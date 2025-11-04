@@ -113,7 +113,7 @@ Function Start-Migration {
             HelpMessage = "When set to true, the ADMU will attempt to set the migration status to the system description. This parameter requires that the JumpCloud agent be installed. This parameter requires either access to the SystemContext API or a valid Administrator's API Key. This is set to false by default.")]
         [bool]
         $ReportStatus = $false,
-[Parameter(
+        [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
             HelpMessage = "When set to true, the ADMU will remove any existing MDM enrollment from the system. This parameter requires the `leaveDomain` parameter to also be set to true. This parameter will remove MDM enrollment profiles if they have non-null ProviderIDs, and UPNs associated with them. This parameter will not remove JumpCloud MDM enrollments.")]
@@ -165,7 +165,7 @@ Function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.9.4"
+        $admuVersion = "2.10.0"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -538,7 +538,6 @@ Function Start-Migration {
         while ($MigrateUser) {
             Write-ToProgress -ProgressBar $ProgressBar -Status "BackupUserFiles" -form $isForm -SystemDescription $systemDescription
 
-
             #region backupOldUserReg
             Write-ToLog -Message $admuTracker.backupOldUserReg.step -MigrationStep
             ### Begin Backup Registry for source user ###
@@ -549,6 +548,9 @@ Function Start-Migration {
                 $admuTracker.backupOldUserReg.fail = $true
                 break
             }
+
+            # Backup UserProfile ACL Permissions
+            Backup-ProfileImageACL -ProfileImagePath $oldUserProfileImagePath -sourceSID $SelectedUserSID
 
             #### Begin check for Registry system attribute
             if (Test-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System") {
