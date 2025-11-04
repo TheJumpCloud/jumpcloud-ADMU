@@ -1320,6 +1320,15 @@ Function Start-Migration {
                 if ($bindResult) {
                     Write-ToLog -Message:('JumpCloud automatic bind step succeeded for user ' + $JumpCloudUserName)
                     $admuTracker.autoBind.pass = $true
+
+                    # if user was bound successfully, set as primary user if specified
+                    if ($PrimaryUser -eq $true) {
+                        Write-ToLog -Message:("Attempting to set primary system user to userID: $script:JumpCloudUserID")
+                        $primaryUserBody = @{
+                            "primarySystemUser.id" = $script:JumpCloudUserId
+                        }
+                        Invoke-SystemPut -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemID $systemDescription.DeviceID -Body $primaryUserBody
+                    }
                 } else {
                     Write-ToLog -Message:('JumpCloud automatic bind step failed, Api Key or JumpCloud username is incorrect.') -Level Warning
                     # $admuTracker.autoBind.fail = $true
