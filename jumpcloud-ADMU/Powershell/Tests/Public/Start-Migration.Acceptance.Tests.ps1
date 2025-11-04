@@ -443,6 +443,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.SelectedUserName = $userToMigrateFrom
                     $testCaseInput.TempPassword = $tempPassword
                     $testCaseInput.AutoBindJCUser = $true
+                    $testCaseInput.PrimaryUser = $true
                     # Migrate the initialized user to the second username
                     { Start-Migration @testCaseInput } | Should -Not -Throw
 
@@ -452,6 +453,11 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $association | Should -not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
+
+
+                    # get the system primary user
+                    $primarySystemUser = Get-JcSdkSystem -Id $systemKey | Select-Object PrimarySystemUserId
+                    $primarySystemUser | Should -Be $GeneratedUser.Id
                 }
                 It "Associates a JumpCloud user as 'admin' using 'AutoBindJCUser'" {
                     # set the $testCaseInput
