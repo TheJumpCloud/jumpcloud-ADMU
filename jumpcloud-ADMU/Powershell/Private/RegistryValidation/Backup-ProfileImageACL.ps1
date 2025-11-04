@@ -39,11 +39,7 @@ function Backup-ProfileImageACL {
         Write-ToLog $Summary
 
         if ($LASTEXITCODE -eq 0) {
-            # Set the hidden attribute on the backup file
-            $item = Get-Item -Path $backupFilePath
-            $item.Attributes = $item.Attributes -bor [System.IO.FileAttributes]::Hidden
             Write-ToLog "Permissions for '$ProfileImagePath' have been saved to '$backupFilePath'."
-            Write-ToLog "ICACLS SAVE failed with exit code: $LASTEXITCODE. Please check permissions or run PowerShell as Administrator."
         }
     } catch {
         # Catch errors from the ValidateScript block or other unexpected issues
