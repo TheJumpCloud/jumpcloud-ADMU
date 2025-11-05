@@ -154,11 +154,8 @@ Function Start-Migration {
         # Validate parameter combinations for $PrimaryUser, $AutoBindJCUser, and $systemContextBinding
         if ($PrimaryUser -eq $true) {
             # PrimaryUser can only be used with AutoBindJCUser=true OR systemContextBinding=true
-            if ($AutoBindJCUser -eq $false) {
-                throw [System.Management.Automation.ValidationMetadataException] "The 'PrimaryUser' parameter requires 'AutoBindJCUser' to be set to true"
-            }
-            if ($systemContextBinding -eq $false) {
-                throw [System.Management.Automation.ValidationMetadataException] "The 'PrimaryUser' parameter requires'systemContextBinding' to be set to true."
+            if ($AutoBindJCUser -eq $false -or $systemContextBinding -eq $false) {
+                throw [System.Management.Automation.ValidationMetadataException] "The 'PrimaryUser' parameter requires 'AutoBindJCUser' OR 'systemContextBinding' to be set to true"
             }
         }
 
