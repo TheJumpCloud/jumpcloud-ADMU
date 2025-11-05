@@ -22,7 +22,7 @@ Describe "Backup-ProfileImageACL Acceptance Tests" -Tag "Acceptance" {
         It 'Validate that Backup-ProfileImageACL creates a backup file with hidden attribute' {
             # Call the function with valid parameters
             $currentUserSID = (Get-LocalUser -Name $env:USERNAME | Select-Object SID).SID
-            $profileImagePath = $HOME
+            $profileImagePath = "C:\Users\TestUser" # Test User profile path since the runner denies access to some APPData folders
             Backup-ProfileImageACL -ProfileImagePath $profileImagePath -sourceSID $currentUserSID
 
             $path = $profileImagePath + '\AppData\Local\JumpCloudADMU'
