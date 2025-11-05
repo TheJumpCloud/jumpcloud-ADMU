@@ -1,6 +1,6 @@
 ## 2.9.5
 
-Release Date: November 04, 2025
+Release Date: November 05, 2025
 
 #### RELEASE NOTES
 
@@ -22,7 +22,7 @@ Release Date: November 04, 2025
 
 ## 2.9.4
 
-Release Date: November 04, 2025
+Release Date: November 05, 2025
 
 #### RELEASE NOTES
 
