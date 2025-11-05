@@ -22,12 +22,16 @@ Describe "Backup-ProfileImageACL Acceptance Tests" -Tag "Acceptance" {
         It 'Validate that Backup-ProfileImageACL creates a backup file with hidden attribute' {
             # Call the function with valid parameters
             $currentUserSID = (Get-LocalUser -Name $env:USERNAME | Select-Object SID).SID
-            Backup-ProfileImageACL -ProfileImagePath $HOME -sourceSID $currentUserSID
+            $profileImagePath = $HOME
+            Backup-ProfileImageACL -ProfileImagePath $profileImagePath -sourceSID $currentUserSID
 
-            $backupDirectory = Join-Path -Path $HOME -ChildPath "AppData\Local\JumpCloudADMU"
+            $path = $profileImagePath + '\AppData\Local\JumpCloudADMU'
+            If (!(test-path $path)) {
+                New-Item -ItemType Directory -Force -Path $path | Out-Null
+            }
 
             # Get the list of files in the backup directory
-            $backupFile = Get-ChildItem -Path $backupDirectory -Force
+            $backupFile = Get-ChildItem -Path $path -Force
             $expectedPattern = "$currentUserSID`_permission_backup_*"
             $backupFile = $backupFile | Where-Object { $_.Name -like $expectedPattern }
 

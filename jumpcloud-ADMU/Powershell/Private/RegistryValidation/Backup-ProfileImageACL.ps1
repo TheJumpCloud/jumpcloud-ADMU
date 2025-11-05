@@ -15,24 +15,25 @@ function Backup-ProfileImageACL {
         try {
 
             # Test if the directory exists. If not, create it recursively.
-            if (!(Test-Path -Path $path -PathType Container)) {
+            if (-Not (Test-Path -Path $path)) {
+                Write-ToLog "Creating directory: `"$path`"" -Level "Verbose"
                 New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
 
-            Write-ToLog "Backup file will be saved as: `"$file`""
-            Write-ToLog "Running ICACLS to save permissions. This may take a moment..."
+            Write-ToLog "Backup file will be saved as: `"$file`"" -Level "Verbose"
+            Write-ToLog "Running ICACLS to save permissions. This may take a moment..." -Level "Verbose"
 
             $Output = icacls $ProfileImagePath /save $file /T /C 2>&1
             $Summary = $Output | Select-Object -Last 1
 
-            Write-ToLog $Summary
+            Write-ToLog $Summary -Level "Verbose"
 
             if ($LASTEXITCODE -eq 0) {
-                Write-ToLog "Permissions for '$ProfileImagePath' have been saved to '$file'."
+                Write-ToLog "Permissions for '$ProfileImagePath' have been saved to '$file'." -Level "Verbose"
             }
         } catch {
             # Catch errors from the ValidateScript block or other unexpected issues
-            Write-ToLog "An unexpected error occurred: $($_.Exception.Message)" -Level Error
+            Write-ToLog "An unexpected error occurred: $($_.Exception.Message)" -Level "Error"
         }
     }
 }
