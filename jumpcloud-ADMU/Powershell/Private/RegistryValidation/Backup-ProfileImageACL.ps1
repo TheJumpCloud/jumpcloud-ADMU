@@ -26,13 +26,13 @@ function Backup-ProfileImageACL {
 
         $folderName = Split-Path -Leaf $Path
         if ($protectedFolders -contains $folderName) {
-            Write-Host "Skipping protected folder: $Path"
+            Write-ToLog "Skipping protected folder: $Path" -Level "Verbose"
             return
         }
 
         # Also skip if folder is a reparse point (junction)
         if ((Get-Item $Path -Force).Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
-            Write-Host "Skipping reparse point (junction): $Path"
+            Write-ToLog "Skipping reparse point (junction): $Path" -Level "Verbose"
             return
         }
 
