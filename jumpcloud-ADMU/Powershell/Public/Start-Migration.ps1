@@ -514,7 +514,7 @@ Function Start-Migration {
 
         # TODO:  API key or SystemContext
         Write-ToLog -Message ("Validating JumpCloud Connectivity...")
-        if ($AgentService -and $reportStatus) {
+        if ($AgentService -and $autobindJCUser) {
             # Object to pass in to the Write-
             Write-ToLog -Message ("JumpCloud Agent is installed, confirming connectivity to JumpCloud...")
             $confirmAPIResult = Confirm-API -JcApiKey $JumpCloudAPIKey -JcOrgId $JumpCloudOrgID -SystemContextBinding $systemContextBinding
@@ -532,16 +532,19 @@ Function Start-Migration {
                 Write-ToLog -Message ("Could not validate API Key or SystemContext API, please check your parameters and try again.") -Level Warning
                 Write-ToProgress -ProgressBar $ProgressBar -Status "Could not validate API Key or SystemContext API" -form $isForm -logLevel Error
             }
-            $systemDescription = [PSCustomObject]@{
-                UserSID                   = $SelectedUserSID
-                MigrationUsername         = $JumpCloudUserName
-                UserID                    = $script:JumpCloudUserID
-                DeviceID                  = $validatedSystemID
-                ValidatedSystemContextAPI = $validatedSystemContextAPI
-                ValidatedApiKey           = $validatedApiKey
-                JCApiKey                  = $JumpCloudAPIKey
-                OrgID                     = $JumpCloudOrgID
-                reportStatus              = $reportStatus
+            if ($reportStatus) {
+                # build the report status object
+                $systemDescription = [PSCustomObject]@{
+                    UserSID                   = $SelectedUserSID
+                    MigrationUsername         = $JumpCloudUserName
+                    UserID                    = $script:JumpCloudUserID
+                    DeviceID                  = $validatedSystemID
+                    ValidatedSystemContextAPI = $validatedSystemContextAPI
+                    ValidatedApiKey           = $validatedApiKey
+                    JCApiKey                  = $JumpCloudAPIKey
+                    OrgID                     = $JumpCloudOrgID
+                    reportStatus              = $reportStatus
+                }
             }
         }
 
