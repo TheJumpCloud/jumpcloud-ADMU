@@ -22,7 +22,21 @@ function Backup-ProfileImageACL {
         Write-ToLog "Backup file will be saved as: `"$file`"" -Level "Verbose"
         Write-ToLog "Running ICACLS to save permissions. This may take a moment..." -Level "Verbose"
 
-        $aclResults = icacls $ProfileImagePath /save $file /T /C > $ACLPermissionLogPath 2>&1
+        $protectedFolders = @("Application Data", "Local Settings", "Cookies", "NetHood", "PrintHood", "Recent", "SendTo", "Start Menu", "Templates")
+
+        $folderName = Split-Path -Leaf $Path
+        if ($protectedFolders -contains $folderName) {
+            Write-Host "Skipping protected folder: $Path"
+            return
+        }
+
+        # Also skip if folder is a reparse point (junction)
+        if ((Get-Item $Path -Force).Attributes -band [System.IO.FileAttributes]::ReparsePoint) {
+            Write-Host "Skipping reparse point (junction): $Path"
+            return
+        }
+
+        icacls $ProfileImagePath /save $file /T /C > $ACLPermissionLogPath 2>&1
 
         if ($LASTEXITCODE -ne 0) {
             # Only log if there are non-filtered errors
