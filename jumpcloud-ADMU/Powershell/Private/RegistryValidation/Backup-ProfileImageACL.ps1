@@ -23,7 +23,7 @@ function Backup-ProfileImageACL {
             Write-ToLog "Backup file will be saved as: `"$file`"" -Level "Verbose"
             Write-ToLog "Running ICACLS to save permissions. This may take a moment..." -Level "Verbose"
 
-            $Output = icacls $ProfileImagePath /save $file /T /C 2>&1
+            $Output = icacls $ProfileImagePath /save $file /T /C /L 2>&1
             $Summary = $Output | Select-Object -Last 1
 
             Write-ToLog $Summary -Level "Verbose"
