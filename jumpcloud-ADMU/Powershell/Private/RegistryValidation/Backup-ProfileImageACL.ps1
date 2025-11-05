@@ -16,7 +16,7 @@ function Backup-ProfileImageACL {
         try {
             # Test if the directory exists. If not, create it recursively.
             if (-Not (Test-Path -Path $path)) {
-                Write-ToLog "Creating directory: `"$path`"" -Level
+                Write-ToLog "Creating directory: `"$path`"" -Level "Info"
                 New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
 
