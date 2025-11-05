@@ -33,7 +33,7 @@ function Backup-ProfileImageACL {
             }
         } catch {
             # Catch errors from the ValidateScript block or other unexpected issues
-            Write-ToLog "An unexpected error occurred: $($_.Exception.Message)" -Level "Error"
+            Write-ToLog "An unexpected error occurred: $($_.Exception.Message)" -Level "Warning"
         }
     }
 }
