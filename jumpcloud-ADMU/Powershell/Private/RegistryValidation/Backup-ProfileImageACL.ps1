@@ -16,24 +16,24 @@ function Backup-ProfileImageACL {
         try {
             # Test if the directory exists. If not, create it recursively.
             if (-Not (Test-Path -Path $path)) {
-                Write-ToLog "Creating directory: `"$path`"" -Level "Info"
+                Write-ToLog "Creating directory: `"$path`"" -Step "Backup-ProfileImageACL"
                 New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
 
-            Write-ToLog "Backup file will be saved as: `"$file`"" -Level
-            Write-ToLog "Running ICACLS to save permissions. This may take a moment..." -Level "Verbose"
+            Write-ToLog "Backup file will be saved as: `"$file`"" -Step "Backup-ProfileImageACL"
+            Write-ToLog "Running ICACLS to save permissions. This may take a moment..." -Level "Verbose" -Step "Backup-ProfileImageACL"
 
-            icacls $ProfileImagePath /save $file /T /C > $ACLPermissionLogPath 2>&1
+            $results = icacls $ProfileImagePath /save $file /T /C > $ACLPermissionLogPath 2>&1
 
             if ($LASTEXITCODE -ne 0) {
                 # Only log if there are non-filtered errors
-                Write-ToLog "Warning: icacls save operation had issues. Exit code: $LASTEXITCODE" -Level "Warning"
+                Write-ToLog "Warning: icacls save operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step "Backup-ProfileImageACL"
             } else {
-                Write-ToLog "Permissions for '$ProfileImagePath' have been saved to '$file'."
+                Write-ToLog "Permissions for '$ProfileImagePath' have been saved to '$file'." -Level Verbose -Step "Backup-ProfileImageACL"
             }
         } catch {
             # Write the exception to the log
-            Write-ToLog "Error occurred while backing up permissions: $($_.Exception.Message)" -Level "Warning"
+            Write-ToLog "Error occurred while backing up permissions: $($_.Exception.Message)" -Level "Warning" -Step "Backup-ProfileImageACL"
         }
 
     }
