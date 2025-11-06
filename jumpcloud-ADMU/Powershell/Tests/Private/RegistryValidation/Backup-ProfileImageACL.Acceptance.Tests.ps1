@@ -41,7 +41,7 @@ Describe "Backup-ProfileImageACL Acceptance Tests" -Tag "Acceptance" {
         }
 
         It 'Validates for Invalid ProfileImagePath' {
-            $invalidProfileImagePath = "Z:\Windows" # Path
+            $invalidProfileImagePath = "Z:\Windows" # Invalid path for testing error handling
             $currentUserSID = (Get-LocalUser -Name $env:USERNAME | Select-Object SID).SID
             $mockErrorMessage = "Access is denied"
 
