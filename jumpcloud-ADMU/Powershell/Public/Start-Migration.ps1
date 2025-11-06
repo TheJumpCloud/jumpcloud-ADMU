@@ -1342,7 +1342,7 @@ Function Start-Migration {
                         $primaryUserBody = @{
                             "primarySystemUser.id" = $script:JumpCloudUserId
                         }
-                        Invoke-SystemPut -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemID $systemDescription.DeviceID -Body $primaryUserBody
+                        Invoke-SystemPut -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemID $validatedSystemID -Body $primaryUserBody
                     }
                 } else {
                     Write-ToLog -Message:('JumpCloud automatic bind step failed, Api Key or JumpCloud username is incorrect.') -Level Warning
