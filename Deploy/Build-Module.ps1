@@ -67,10 +67,13 @@ If ($ModuleChangelogVersion -ne $ModuleVersion) {
     $ReleaseDateRegex = [regex]'(?<=Release Date:\s)(.*)'
     $ReleaseDateRegexMatch = $ModuleChangelogContent | Select-String -Pattern $ReleaseDateRegex
     $ReleaseDate = $ReleaseDateRegexMatch.Matches.Value
-    $todaysDate = $(Get-Date -UFormat:('%B %d, %Y'))
-    if (($ReleaseDate) -and ($ReleaseDate -ne $todaysDate)) {
-        write-host "[Status] Updating Changelog date: $ReleaseDate to: $todaysDate)"
-        $ModuleChangelog.Replace($ReleaseDate, $todaysDate) | Set-Content $FilePath_ModuleChangelog
+    $todayDate = Get-Date -UFormat "%B %d, %Y"
+    if ($todayDate | Select-String -Pattern "0\d,") {
+        $todayDate = "$(Get-Date -UFormat %B) $($(Get-Date -Uformat %d) -replace '0', ''), $(Get-Date -UFormat %Y)"
+    }
+    if (($ReleaseDate) -and ($ReleaseDate -ne $todayDate)) {
+        write-host "[Status] Updating Changelog date: $ReleaseDate to: $todayDate)"
+        $ModuleChangelog.Replace($ReleaseDate, $todayDate) | Set-Content $FilePath_ModuleChangelog
     }
 }
 
