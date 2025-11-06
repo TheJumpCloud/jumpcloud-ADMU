@@ -17,7 +17,6 @@ Function Start-Migration {
             ParameterSetName = 'cmd',
             Mandatory = $true,
             HelpMessage = "The password to be set for the new local user. This password will be set as the local migrated user's password and will be used to log into the local system. This password must meet the local system's password complexity requirements. When the 'AutoBindJCUser' is selected, this temporary password will be overwritten by the JumpCloud password and not used on first login.")]
-        [ValidateNotNullOrEmpty()]
         [string]$TempPassword,
         [Parameter(
             ParameterSetName = 'cmd',
@@ -83,7 +82,6 @@ Function Start-Migration {
             ParameterSetName = 'cmd',
             Mandatory = $false,
             HelpMessage = "When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will authenticate to JumpCloud using the provided Org ID. This is required for the user to be bound to JumpCloud correctly. If this is not set, the user will not be bound to JumpCloud. This parameter is only required for MTP Administrator API keys.")]
-        [ValidateLength(24, 24)]
         [string]
         $JumpCloudOrgID,
         [Parameter(
@@ -104,7 +102,6 @@ Function Start-Migration {
             Mandatory = $false,
             HelpMessage = "When set amd used in conjunction with the 'systemContextBinding' parameter, the ADMU will run in system context. This is required for the user to be bound to JumpCloud correctly. If this is not set, the user will not be bound to JumpCloud.",
             DontShow)]
-        [ValidateLength(24, 24)]
         [string]
         $JumpCloudUserID,
         [Parameter(
@@ -126,7 +123,90 @@ Function Start-Migration {
     )
 
     Begin {
-        # parameter combination validation:
+        #region validation
+        # validate SelectedUserName is not null or empty
+        if ([string]::IsNullOrEmpty($SelectedUserName)) {
+            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for SelectedUserName"
+        }
+        # validate that if the JumpCloudOrgID is provided, the length is 24 characters
+        if (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)) -And ($JumpCloudOrgID.Length -ne 24)) {
+            Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudOrgID must be 24 characters long"
+        }
+        # validate that if the JumpCloudUserID is provided, the length is 24 characters
+        if (-Not ([string]::IsNullOrEmpty($JumpCloudUserID)) -And ($JumpCloudUserID.Length -ne 24)) {
+            Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserID must be 24 characters long"
+        }
+        # validate API KEY/ OrgID if AutoBind is selected
+        if ($AutoBindJCUser) {
+            if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
+                # Validate Org/ APIKEY & Return OrgID
+                # If not $isForm, validate the API Key and OrgID
+                if (!$isForm) {
+                    # Get the org from the API KEY
+                    try {
+                        $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
+                    } catch {
+                        Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
+                    }
+                    $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
+                    # set the orgID and orgName
+                    $ValidatedJumpCloudOrgName = "$($OrgSelection[1])"
+                    $ValidatedJumpCloudOrgID = "$($OrgSelection[0])"
+                    If ([string]::IsNullOrEmpty($ValidatedJumpCloudOrgID)) {
+                        Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
+                    }
+                }
+            } elseif ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
+                # Attempt To Validate Org/ APIKEY & Return OrgID
+                # Error thrown in Get-MtpOrganization if MTPKEY
+                if (!$isForm) {
+                    # Get the org from the API KEY
+                    try {
+                        $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
+                    } catch {
+                        Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
+                    }
+                    $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
+                    # set the orgID and orgName
+                    $ValidatedJumpCloudOrgName = "$($OrgSelection[1])"
+                    $ValidatedJumpCloudOrgID = "$($OrgSelection[0])"
+                    If ([string]::IsNullOrEmpty($ValidatedJumpCloudOrgID)) {
+                        Throw [System.Management.Automation.ValidationMetadataException] "ORG ID Could not be validated"
+                    }
+                }
+            } elseif ((([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
+                # Throw Error
+                Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autoBinding a JC User"
+            } elseif ((([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
+                # Throw Error
+                Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autoBinding a JC User"
+            }
+
+            # Throw error if $ret is false, if we are autoBinding users and the specified username does not exist, throw an error and terminate here
+            $ret, $script:JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+            # Write to log all variables above
+            Write-ToLog -Message ("JumpCloudUserName: $($JumpCloudUserName), JumpCloudSystemUserName = $($JumpCloudSystemUserName)")
+
+            if ($JumpCloudSystemUserName) {
+                $JumpCloudUsername = $JumpCloudSystemUserName
+            }
+            if ($ret -eq $false) {
+                Throw [System.Management.Automation.ValidationMetadataException] "The specified JumpCloudUsername does not exist"
+            }
+        }
+        # Validate ConnectKey if Install Agent is selected
+        If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) {
+            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent"
+        }
+
+        # Validate JCUserName and Hostname are not the equal. If equal, throw error and exit
+        if ($JumpCloudUserName -eq $env:computername) {
+            Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and Hostname cannot be the same. Exiting..."
+        }
+        # Validate that the removeMDM parameter is only used when LeaveDomain is also set to true
+        if ($removeMDM -eq $true -and $LeaveDomain -eq $false) {
+            Throw [System.Management.Automation.ValidationMetadataException] "The 'removeMDM' parameter requires the 'LeaveDomain' parameter to also be set to true."
+        }
         # Validate parameter combinations when $systemContextBinding is set to $true
         if ($systemContextBinding -eq $true) {
             $invalidStringParams = @('JumpCloudAPIKey', 'JumpCloudOrgID', 'JumpCloudConnectKey') | Where-Object { $PSBoundParameters.ContainsKey($_) }
@@ -135,15 +215,15 @@ Function Start-Migration {
             # Validate params
             if ($invalidStringParams -or $trueBoolParams) {
                 $allInvalidParams = $invalidStringParams + $trueBoolParams
-                Throw "The 'SystemContextBinding' parameter cannot be used with the following parameters: $($allInvalidParams -join ', '). Please remove these parameters when running SystemContextBinding and try again."
-
+                Throw [System.Management.Automation.ValidationMetadataException] "The 'SystemContextBinding' parameter cannot be used with the following parameters: $($allInvalidParams -join ', '). Please remove these parameters when running SystemContextBinding and try again."
 
             }
+            # validate required parameter
             if (-not $PSBoundParameters.ContainsKey('JumpCloudUserID')) {
-                Throw "The 'SystemContextBinding' parameter requires the 'JumpCloudUserID' parameter to be set."
-                break
+                Throw [System.Management.Automation.ValidationMetadataException] "The 'SystemContextBinding' parameter requires the 'JumpCloudUserID' parameter to be set."
             }
         }
+        #endregion validation
 
 
         # Define misc static variables
@@ -233,79 +313,7 @@ Function Start-Migration {
         Write-ToLog -Message ("OSBuildNumber: $($systemVersion.OsBuildNumber)")
         Write-ToLog -Message ("OSEdition: $($systemVersion.WindowsEditionId)")
 
-        #region validation
-        # validate API KEY/ OrgID if AutoBind is selected
-        if ($AutoBindJCUser) {
-            if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
-                # Validate Org/ APIKEY & Return OrgID
-                # If not $isForm, validate the API Key and OrgID
-                if (!$isForm) {
-                    # Get the org from the API KEY
-                    try {
-                        $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
-                    } catch {
-                        Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
-                    }
-                    $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
-                    # set the orgID and orgName
-                    $ValidatedJumpCloudOrgName = "$($OrgSelection[1])"
-                    $ValidatedJumpCloudOrgID = "$($OrgSelection[0])"
-                    If ([string]::IsNullOrEmpty($ValidatedJumpCloudOrgID)) {
-                        Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
-                    }
-                }
-            } elseif ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
-                # Attempt To Validate Org/ APIKEY & Return OrgID
-                # Error thrown in Get-MtpOrganization if MTPKEY
-                if (!$isForm) {
-                    # Get the org from the API KEY
-                    try {
-                        $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
-                    } catch {
-                        Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
-                    }
-                    $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
-                    # set the orgID and orgName
-                    $ValidatedJumpCloudOrgName = "$($OrgSelection[1])"
-                    $ValidatedJumpCloudOrgID = "$($OrgSelection[0])"
-                    If ([string]::IsNullOrEmpty($ValidatedJumpCloudOrgID)) {
-                        Throw [System.Management.Automation.ValidationMetadataException] "ORG ID Could not be validated"
-                    }
-                }
-            } elseif ((([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
-                # Throw Error
-                Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autoBinding a JC User"
-            } elseif ((([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
-                # Throw Error
-                Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autoBinding a JC User"
-            }
 
-            # Throw error if $ret is false, if we are autoBinding users and the specified username does not exist, throw an error and terminate here
-            $ret, $script:JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
-            # Write to log all variables above
-            Write-ToLog -Message ("JumpCloudUserName: $($JumpCloudUserName), JumpCloudSystemUserName = $($JumpCloudSystemUserName)")
-
-            if ($JumpCloudSystemUserName) {
-                $JumpCloudUsername = $JumpCloudSystemUserName
-            }
-            if ($ret -eq $false) {
-                Throw [System.Management.Automation.ValidationMetadataException] "The specified JumpCloudUsername does not exist"
-            }
-        }
-        # Validate ConnectKey if Install Agent is selected
-        If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) {
-            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent"
-        }
-
-        # Validate JCUserName and Hostname are not the equal. If equal, throw error and exit
-        if ($JumpCloudUserName -eq $env:computername) {
-            Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and Hostname cannot be the same. Exiting..."
-        }
-        # Validate that the removeMDM parameter is only used when LeaveDomain is also set to true
-        if ($removeMDM -eq $true -and $LeaveDomain -eq $false) {
-            Throw [System.Management.Automation.ValidationMetadataException] "The 'removeMDM' parameter requires the 'LeaveDomain' parameter to also be set to true."
-        }
-        #endregion validation
         $trackAccountMerge = $false
         # Track migration steps
         $admuTracker = [Ordered]@{
