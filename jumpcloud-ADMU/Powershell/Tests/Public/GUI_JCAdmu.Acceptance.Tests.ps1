@@ -531,6 +531,29 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # the association should be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
                 }
+                It "Associates a JumpCloud user and sets 'primaryUser' to true" {
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutoBindJCUser = $true
+                    # Migrate the initialized user to the second username
+                    $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
+                    $command = "$guiPath $argumentList"
+
+                    { Invoke-Expression $command } | Should -Not -Throw
+
+                    # get the system association:
+                    $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                    # the system should be associated to the user
+                    $association | Should -not -BeNullOrEmpty
+                    # the association should NOT be sudo enabled
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
+                    # the association should have primaryUser set to true
+                    # get the system primary user
+                    $primarySystemUser = Get-JcSdkSystem -Id $systemKey | Select-Object PrimarySystemUserId
+                    $primarySystemUser.PrimarySystemUserId | Should -Be $GeneratedUser.Id
+                }
                 It "Associates a JumpCloud user using 'systemContextBinding'" {
                     # set the $testCaseInput
                     # For systemContextBinding, remove the APIKey/ ORgID params
@@ -583,6 +606,36 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $association | Should -not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
+                }
+                It "Associates a JumpCloud user using 'systemContextBinding' and sets 'primaryUser' to true" {
+                    # set the $testCaseInput
+                    # For systemContextBinding, remove the APIKey/ ORgID params
+                    $testCaseInput.Remove('JumpCloudApiKey')
+                    $testCaseInput.Remove('JumpCloudOrgID')
+                    $testCaseInput.Remove('AutoBindJCUser')
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.SystemContextBinding = $true
+                    $testCaseInput.InstallJCAgent = $true
+                    # Add the JumpCloudUserID parameter
+                    $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
+                    # Migrate the initialized user to the second username
+                    $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
+                    $command = "$guiPath $argumentList"
+
+                    { Invoke-Expression $command } | Should -Not -Throw
+
+                    # get the system association:
+                    $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                    # the system should be associated to the user
+                    $association | Should -not -BeNullOrEmpty
+                    # the association should NOT be sudo enabled
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $false
+                    # the association should have primaryUser set to true
+                    # get the system primary user
+                    $primarySystemUser = Get-JcSdkSystem -Id $systemKey | Select-Object PrimarySystemUserId
+                    $primarySystemUser.PrimarySystemUserId | Should -Be $GeneratedUser.Id
                 }
                 # remove the users
                 AfterEach {

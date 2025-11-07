@@ -727,6 +727,7 @@ Function Show-SelectionForm {
             $FormResults.BindAsAdmin = $cb_bindAsAdmin.IsChecked
             $FormResults.LeaveDomain = $cb_leaveDomain.IsChecked
             $FormResults.RemoveMDM = $cb_removeMDM.IsChecked
+            $FormResults.PrimaryUser = $cb_primaryUser.IsChecked
             $FormResults.ForceReboot = $cb_forceReboot.IsChecked
             $FormResults.SelectedUserName = $SelectedUserName
             $FormResults.JumpCloudUserName = $tb_JumpCloudUserName.Text
@@ -811,7 +812,7 @@ Function Show-SelectionForm {
     #===========================================================================
 
     if (-Not $hideForm) {
-        $Form.ShowDialog()
+        $Form.ShowDialog() | Out-Null
     }
 
     # if the migrate button is enabled and it is clicked, send formResults to Start-Migration

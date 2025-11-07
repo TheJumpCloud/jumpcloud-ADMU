@@ -18,7 +18,8 @@ Function Start-Migration {
             Mandatory = $true,
             HelpMessage = "The password to be set for the new local user. This password will be set as the local migrated user's password and will be used to log into the local system. This password must meet the local system's password complexity requirements. When the 'AutoBindJCUser' is selected, this temporary password will be overwritten by the JumpCloud password and not used on first login.")]
         [ValidateNotNullOrEmpty()]
-        [string]$TempPassword,
+        [string]
+        $TempPassword,
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
@@ -215,6 +216,7 @@ Function Start-Migration {
             $BindAsAdmin = $inputObject.BindAsAdmin
             $LeaveDomain = $InputObject.LeaveDomain
             $RemoveMDM = $InputObject.RemoveMDM
+            $PrimaryUser = $InputObject.PrimaryUser
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
         } else {
@@ -229,6 +231,10 @@ Function Start-Migration {
         Write-ToLog -Message ('ADMU Version: ' + 'v' + $admuVersion)
         Write-ToLog -Message ('Log Location: ' + $jcAdmuLogFile)
         Write-ToLog -Message ('Parameter Input: ')
+        # print out the parameter input
+        switch ($PSCmdlet.ParameterSetName) {
+            'cmd' {
+                # print all parameters except sensitive info
         $PSBoundParameters.GetEnumerator() | ForEach-Object {
             if (($_.Key -eq 'TempPassword') -or
                 ($_.Key -eq 'JumpCloudAPIKey') -or
@@ -237,6 +243,23 @@ Function Start-Migration {
                 Write-ToLog -Message ("Parameter: $($_.Key) = <hidden>")
             } else {
                 Write-ToLog -Message ("Parameter: $($_.Key) = $($_.Value)")
+                    }
+                }
+            }
+            'form' {
+                # get the properties of the inputObject
+                $properties = $inputObject.PSObject.Properties | Where-Object { $_.MemberType -eq 'NoteProperty' }
+                foreach ($property in $properties) {
+                    $key = $property.Name
+                    if (($key -eq 'TempPassword') -or
+                        ($key -eq 'JumpCloudAPIKey') -or
+                        ($key -eq 'JumpCloudOrgID') -or
+                        ($key -eq 'JumpCloudConnectKey')) {
+                        Write-ToLog -Message ("Parameter: $key = <hidden>")
+                    } else {
+                        Write-ToLog -Message ("Parameter: $key = $($property.Value)")
+                    }
+                }
             }
         }
         # print system info
