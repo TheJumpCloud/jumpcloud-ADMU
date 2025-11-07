@@ -450,6 +450,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                 ValidateUserShellFolder = $true
                 SystemContextBinding    = $false
                 ReportStatus            = $false
+                primaryUser             = $false
                 # JumpCloudUserID         = $null
             }
             # remove the log
@@ -537,6 +538,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.SelectedUserName = $userToMigrateFrom
                     $testCaseInput.TempPassword = $tempPassword
                     $testCaseInput.AutoBindJCUser = $true
+                    # set primaryUser to true
+                    $testCaseInput.primaryUser = $true
                     # Migrate the initialized user to the second username
                     $argumentList = ConvertTo-ArgumentList -InputHashtable $testCaseInput
                     $command = "$guiPath $argumentList"
@@ -613,11 +616,13 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.Remove('JumpCloudApiKey')
                     $testCaseInput.Remove('JumpCloudOrgID')
                     $testCaseInput.Remove('AutoBindJCUser')
+                    $testCaseInput.Remove('InstallJCAgent')
                     $testCaseInput.JumpCloudUserName = $userToMigrateTo
                     $testCaseInput.SelectedUserName = $userToMigrateFrom
                     $testCaseInput.TempPassword = $tempPassword
                     $testCaseInput.SystemContextBinding = $true
-                    $testCaseInput.InstallJCAgent = $true
+                    # set primaryUser to true
+                    $testCaseInput.primaryUser = $true
                     # Add the JumpCloudUserID parameter
                     $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
                     # Migrate the initialized user to the second username
@@ -625,7 +630,6 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $command = "$guiPath $argumentList"
 
                     { Invoke-Expression $command } | Should -Not -Throw
-
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
                     # the system should be associated to the user
