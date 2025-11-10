@@ -123,6 +123,71 @@ Function Start-Migration {
     )
 
     Begin {
+        #region Initialize Variables
+        # Define misc static variables
+        $netBiosName = Get-NetBiosName
+        try {
+            $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
+        } catch {
+            $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
+        }
+        $localComputerName = $WmiComputerSystem.Name
+        $systemVersion = Get-ComputerInfo | Select-Object OSName, OSVersion, OsHardwareAbstractionLayer, OsBuildNumber, WindowsEditionId
+        $windowsDrive = Get-WindowsDrive
+        $jcAdmuTempPath = "$windowsDrive\Windows\Temp\JCADMU\"
+        $jcAdmuLogFile = "$windowsDrive\Windows\Temp\jcAdmu.log"
+
+        # JumpCloud Agent Installation Variables
+        $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
+        $AGENT_BINARY_NAME = "jumpcloud-agent.exe"
+        $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
+        $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
+        $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
+        $admuVersion = "2.9.5"
+        $script:JumpCloudUserID = $JumpCloudUserID
+        $script:AdminDebug = $AdminDebug
+        $isForm = $PSCmdlet.ParameterSetName -eq "form"
+        If ($isForm) {
+            $userAgent = "JumpCloud_ADMU.Application/$($admuVersion)"
+            $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
+            $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
+            $profileSize = Get-ProfileSize -profilePath $oldUserProfileImagePath
+
+            $SelectedUserName = $inputObject.SelectedUserName
+            $JumpCloudUserName = $inputObject.JumpCloudUserName
+            if ($inputObject.JumpCloudConnectKey) {
+                $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
+            }
+            if ($inputObject.JumpCloudAPIKey) {
+                $JumpCloudAPIKey = $inputObject.JumpCloudAPIKey
+                $JumpCloudOrgID = $inputObject.JumpCloudOrgID
+                $ValidatedJumpCloudOrgID = $inputObject.JumpCloudOrgID
+            }
+            $InstallJCAgent = $inputObject.InstallJCAgent
+            $AutoBindJCUser = $inputObject.AutoBindJCUser
+
+            # Validate JumpCloudSystemUserName to write to the GUI
+            $ret, $script:JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+            $TempPassword = $inputObject.TempPassword
+            # Write to progress bar
+            $script:ProgressBar = New-ProgressForm
+            if ($JumpCloudSystemUserName) {
+                Write-ToProgress -form $isForm -ProgressBar $ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudSystemUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath
+            } else {
+                Write-ToProgress -form $isForm -ProgressBar $ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath
+            }
+
+            $BindAsAdmin = $inputObject.BindAsAdmin
+            $LeaveDomain = $InputObject.LeaveDomain
+            $RemoveMDM = $InputObject.RemoveMDM
+            $ForceReboot = $InputObject.ForceReboot
+            $UpdateHomePath = $inputObject.UpdateHomePath
+        } else {
+            $userAgent = "JumpCloud_ADMU.Powershell/$($admuVersion)"
+            $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
+        }
+        #endregion Initialize Variables
+
         #region validation
         # validate SelectedUserName is not null or empty
         if ([string]::IsNullOrEmpty($SelectedUserName)) {
@@ -226,84 +291,41 @@ Function Start-Migration {
         #endregion validation
 
 
-        # Define misc static variables
-        $netBiosName = Get-NetBiosName
-        try {
-            $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-        } catch {
-            $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
-        }
-        $localComputerName = $WmiComputerSystem.Name
-        $systemVersion = Get-ComputerInfo | Select-Object OSName, OSVersion, OsHardwareAbstractionLayer, OsBuildNumber, WindowsEditionId
-        $windowsDrive = Get-WindowsDrive
-        $jcAdmuTempPath = "$windowsDrive\Windows\Temp\JCADMU\"
-        $jcAdmuLogFile = "$windowsDrive\Windows\Temp\jcAdmu.log"
-
-        # JumpCloud Agent Installation Variables
-        $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
-        $AGENT_BINARY_NAME = "jumpcloud-agent.exe"
-        $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
-        $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
-        $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.9.5"
-        $script:JumpCloudUserID = $JumpCloudUserID
-        $script:AdminDebug = $AdminDebug
-        $isForm = $PSCmdlet.ParameterSetName -eq "form"
-        If ($isForm) {
-            $userAgent = "JumpCloud_ADMU.Application/$($admuVersion)"
-            $SelectedUserName = $inputObject.SelectedUserName
-            $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
-            $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
-            $profileSize = Get-ProfileSize -profilePath $oldUserProfileImagePath
-
-            $JumpCloudUserName = $inputObject.JumpCloudUserName
-            if ($inputObject.JumpCloudConnectKey) {
-                $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
-            }
-            if ($inputObject.JumpCloudAPIKey) {
-                $JumpCloudAPIKey = $inputObject.JumpCloudAPIKey
-                $JumpCloudOrgID = $inputObject.JumpCloudOrgID
-                $ValidatedJumpCloudOrgID = $inputObject.JumpCloudOrgID
-            }
-            $InstallJCAgent = $inputObject.InstallJCAgent
-            $AutoBindJCUser = $inputObject.AutoBindJCUser
-
-            # Validate JumpCloudSystemUserName to write to the GUI
-            $ret, $script:JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
-            $TempPassword = $inputObject.TempPassword
-            # Write to progress bar
-            $script:ProgressBar = New-ProgressForm
-            if ($JumpCloudSystemUserName) {
-                Write-ToProgress -form $isForm -ProgressBar $ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudSystemUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath
-            } else {
-                Write-ToProgress -form $isForm -ProgressBar $ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath
-            }
-
-            $BindAsAdmin = $inputObject.BindAsAdmin
-            $LeaveDomain = $InputObject.LeaveDomain
-            $RemoveMDM = $InputObject.RemoveMDM
-            $ForceReboot = $InputObject.ForceReboot
-            $UpdateHomePath = $inputObject.UpdateHomePath
-        } else {
-            $userAgent = "JumpCloud_ADMU.Powershell/$($admuVersion)"
-            $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
-        }
-
-
         $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
         Write-ToLog -Message "Migration Start" -MigrationStep
         # Start script
         Write-ToLog -Message ('ADMU Version: ' + 'v' + $admuVersion)
         Write-ToLog -Message ('Log Location: ' + $jcAdmuLogFile)
         Write-ToLog -Message ('Parameter Input: ')
-        $PSBoundParameters.GetEnumerator() | ForEach-Object {
-            if (($_.Key -eq 'TempPassword') -or
-                ($_.Key -eq 'JumpCloudAPIKey') -or
-                ($_.Key -eq 'JumpCloudOrgID') -or
-                ($_.Key -eq 'JumpCloudConnectKey')) {
-                Write-ToLog -Message ("Parameter: $($_.Key) = <hidden>")
-            } else {
-                Write-ToLog -Message ("Parameter: $($_.Key) = $($_.Value)")
+        # print out the parameter input
+        switch ($PSCmdlet.ParameterSetName) {
+            'cmd' {
+                # print all parameters except sensitive info
+                $PSBoundParameters.GetEnumerator() | ForEach-Object {
+                    if (($_.Key -eq 'TempPassword') -or
+                        ($_.Key -eq 'JumpCloudAPIKey') -or
+                        ($_.Key -eq 'JumpCloudOrgID') -or
+                        ($_.Key -eq 'JumpCloudConnectKey')) {
+                        Write-ToLog -Message ("Parameter: $($_.Key) = <hidden>")
+                    } else {
+                        Write-ToLog -Message ("Parameter: $($_.Key) = $($_.Value)")
+                    }
+                }
+            }
+            'form' {
+                # get the properties of the inputObject
+                $properties = $inputObject.PSObject.Properties | Where-Object { $_.MemberType -eq 'NoteProperty' }
+                foreach ($property in $properties) {
+                    $key = $property.Name
+                    if (($key -eq 'TempPassword') -or
+                        ($key -eq 'JumpCloudAPIKey') -or
+                        ($key -eq 'JumpCloudOrgID') -or
+                        ($key -eq 'JumpCloudConnectKey')) {
+                        Write-ToLog -Message ("Parameter: $key = <hidden>")
+                    } else {
+                        Write-ToLog -Message ("Parameter: $key = $($property.Value)")
+                    }
+                }
             }
         }
         # print system info
