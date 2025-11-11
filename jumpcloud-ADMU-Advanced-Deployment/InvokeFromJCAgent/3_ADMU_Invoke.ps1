@@ -16,6 +16,7 @@ $LeaveDomain = $true
 $ForceReboot = $true
 $UpdateHomePath = $false
 $AutoBindJCUser = $true
+$PrimaryUser = $false
 $BindAsAdmin = $false # Bind user as admin (default False)
 $JumpCloudAPIKey = 'YOURAPIKEY' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
 $JumpCloudOrgID = 'YOURORGID' # This field is required if you use a MTP API Key
@@ -59,6 +60,7 @@ Function Confirm-MigrationParameter {
         [bool]$ForceReboot = $true,
         [bool]$UpdateHomePath = $false,
         [bool]$AutoBindJCUser = $true,
+        [bool]$PrimaryUser = $false,
         [bool]$BindAsAdmin = $false,
         [bool]$SetDefaultWindowsUser = $true,
         [bool]$removeMDM = $true,
@@ -439,6 +441,7 @@ Function Invoke-UserMigrationBatch {
             TempPassword          = $MigrationConfig.TempPassword
             UpdateHomePath        = $MigrationConfig.UpdateHomePath
             AutoBindJCUser        = $MigrationConfig.AutoBindJCUser
+            PrimaryUser           = $MigrationConfig.PrimaryUser
             JumpCloudAPIKey       = $MigrationConfig.JumpCloudAPIKey
             BindAsAdmin           = $MigrationConfig.BindAsAdmin
             SetDefaultWindowsUser = $MigrationConfig.SetDefaultWindowsUser
@@ -604,6 +607,7 @@ $confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource
     -ForceReboot $ForceReboot `
     -UpdateHomePath $UpdateHomePath `
     -AutoBindJCUser $AutoBindJCUser `
+    -PrimaryUser $PrimaryUser `
     -BindAsAdmin $BindAsAdmin `
     -SetDefaultWindowsUser $SetDefaultWindowsUser `
     -systemContextBinding $systemContextBinding `
@@ -702,6 +706,7 @@ $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -M
     TempPassword              = $TempPassword
     UpdateHomePath            = $UpdateHomePath
     AutoBindJCUser            = $AutoBindJCUser
+    PrimaryUser               = $PrimaryUser
     JumpCloudAPIKey           = $JumpCloudAPIKey
     BindAsAdmin               = $BindAsAdmin
     SetDefaultWindowsUser     = $SetDefaultWindowsUser

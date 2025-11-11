@@ -72,6 +72,10 @@ Function New-ADMUTemplate {
 
         [Parameter()]
         [bool]
+        `$PrimaryUser,
+
+        [Parameter()]
+        [bool]
         `$BindAsAdmin,
 
         [Parameter()]
