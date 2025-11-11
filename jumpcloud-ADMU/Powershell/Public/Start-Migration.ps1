@@ -84,7 +84,6 @@ Function Start-Migration {
             ParameterSetName = 'cmd',
             Mandatory = $false,
             HelpMessage = "When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will authenticate to JumpCloud using the provided Org ID. This is required for the user to be bound to JumpCloud correctly. If this is not set, the user will not be bound to JumpCloud. This parameter is only required for MTP Administrator API keys.")]
-        [ValidateLength(24, 24)]
         [string]
         $JumpCloudOrgID,
         [Parameter(
@@ -105,7 +104,6 @@ Function Start-Migration {
             Mandatory = $false,
             HelpMessage = "When set amd used in conjunction with the 'systemContextBinding' parameter, the ADMU will run in system context. This is required for the user to be bound to JumpCloud correctly. If this is not set, the user will not be bound to JumpCloud.",
             DontShow)]
-        [ValidateLength(24, 24)]
         [string]
         $JumpCloudUserID,
         [Parameter(
@@ -114,7 +112,7 @@ Function Start-Migration {
             HelpMessage = "When set to true, the ADMU will attempt to set the migration status to the system description. This parameter requires that the JumpCloud agent be installed. This parameter requires either access to the SystemContext API or a valid Administrator's API Key. This is set to false by default.")]
         [bool]
         $ReportStatus = $false,
-[Parameter(
+        [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
             HelpMessage = "When set to true, the ADMU will remove any existing MDM enrollment from the system. This parameter requires the `leaveDomain` parameter to also be set to true. This parameter will remove MDM enrollment profiles if they have non-null ProviderIDs, and UPNs associated with them. This parameter will not remove JumpCloud MDM enrollments.")]
@@ -185,11 +183,11 @@ Function Start-Migration {
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
         If ($isForm) {
             $userAgent = "JumpCloud_ADMU.Application/$($admuVersion)"
-            $SelectedUserName = $inputObject.SelectedUserName
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
             $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
             $profileSize = Get-ProfileSize -profilePath $oldUserProfileImagePath
 
+            $SelectedUserName = $inputObject.SelectedUserName
             $JumpCloudUserName = $inputObject.JumpCloudUserName
             if ($inputObject.JumpCloudConnectKey) {
                 $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
@@ -270,6 +268,18 @@ Function Start-Migration {
         Write-ToLog -Message ("OSEdition: $($systemVersion.WindowsEditionId)")
 
         #region validation
+        # validate SelectedUserName is not null or empty
+        if ([string]::IsNullOrEmpty($SelectedUserName)) {
+            Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for SelectedUserName"
+        }
+        # validate that if the JumpCloudOrgID is provided, the length is 24 characters
+        if (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)) -And ($JumpCloudOrgID.Length -ne 24)) {
+            Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudOrgID must be 24 characters long"
+        }
+        # validate that if the JumpCloudUserID is provided, the length is 24 characters
+        if (-Not ([string]::IsNullOrEmpty($JumpCloudUserID)) -And ($JumpCloudUserID.Length -ne 24)) {
+            Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserID must be 24 characters long"
+        }
         # validate API KEY/ OrgID if AutoBind is selected
         if ($AutoBindJCUser) {
             if ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
@@ -277,13 +287,17 @@ Function Start-Migration {
                 # If not $isForm, validate the API Key and OrgID
                 if (!$isForm) {
                     # Get the org from the API KEY
+                    try {
+                        $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
+                    } catch {
+                        Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
+                    }
                     $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
                     # set the orgID and orgName
                     $ValidatedJumpCloudOrgName = "$($OrgSelection[1])"
                     $ValidatedJumpCloudOrgID = "$($OrgSelection[0])"
-                    If (-Not $ValidatedJumpCloudOrgID) {
+                    If ([string]::IsNullOrEmpty($ValidatedJumpCloudOrgID)) {
                         Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
-                        break
                     }
                 }
             } elseif ((-Not ([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
@@ -291,23 +305,25 @@ Function Start-Migration {
                 # Error thrown in Get-MtpOrganization if MTPKEY
                 if (!$isForm) {
                     # Get the org from the API KEY
+                    try {
+                        $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
+                    } catch {
+                        Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
+                    }
                     $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
                     # set the orgID and orgName
                     $ValidatedJumpCloudOrgName = "$($OrgSelection[1])"
                     $ValidatedJumpCloudOrgID = "$($OrgSelection[0])"
-                    If (-Not $ValidatedJumpCloudOrgID) {
+                    If ([string]::IsNullOrEmpty($ValidatedJumpCloudOrgID)) {
                         Throw [System.Management.Automation.ValidationMetadataException] "ORG ID Could not be validated"
-                        break
                     }
                 }
             } elseif ((([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (-Not ([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
                 # Throw Error
                 Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autoBinding a JC User"
-                break
             } elseif ((([string]::IsNullOrEmpty($JumpCloudAPIKey))) -And (([string]::IsNullOrEmpty($JumpCloudOrgID)))) {
                 # Throw Error
                 Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudAPIKey when autoBinding a JC User"
-                break
             }
 
             # Throw error if $ret is false, if we are autoBinding users and the specified username does not exist, throw an error and terminate here
@@ -320,26 +336,85 @@ Function Start-Migration {
             }
             if ($ret -eq $false) {
                 Throw [System.Management.Automation.ValidationMetadataException] "The specified JumpCloudUsername does not exist"
-                break
             }
         }
         # Validate ConnectKey if Install Agent is selected
         If (($InstallJCAgent -eq $true) -and ([string]::IsNullOrEmpty($JumpCloudConnectKey))) {
             Throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for JumpCloudConnectKey when installing the JC Agent"
-            break
         }
 
         # Validate JCUserName and Hostname are not the equal. If equal, throw error and exit
         if ($JumpCloudUserName -eq $env:computername) {
             Throw [System.Management.Automation.ValidationMetadataException] "JumpCloudUserName and Hostname cannot be the same. Exiting..."
-            break
         }
         # Validate that the removeMDM parameter is only used when LeaveDomain is also set to true
         if ($removeMDM -eq $true -and $LeaveDomain -eq $false) {
             Throw [System.Management.Automation.ValidationMetadataException] "The 'removeMDM' parameter requires the 'LeaveDomain' parameter to also be set to true."
-            break
+        }
+        # Validate parameter combinations when $systemContextBinding is set to $true
+        if ($systemContextBinding -eq $true) {
+            $invalidStringParams = @('JumpCloudAPIKey', 'JumpCloudOrgID', 'JumpCloudConnectKey') | Where-Object { $PSBoundParameters.ContainsKey($_) }
+            $invalidBoolParams = @('InstallJCAgent', 'AutoBindJCUser') | Where-Object { $PSBoundParameters.ContainsKey($_) }
+            $trueBoolParams = $invalidBoolParams | Where-Object { $PSBoundParameters[$_] -eq $true }
+            # Validate params
+            if ($invalidStringParams -or $trueBoolParams) {
+                $allInvalidParams = $invalidStringParams + $trueBoolParams
+                Throw [System.Management.Automation.ValidationMetadataException] "The 'SystemContextBinding' parameter cannot be used with the following parameters: $($allInvalidParams -join ', '). Please remove these parameters when running SystemContextBinding and try again."
+
+            }
+            # validate required parameter
+            if (-not $PSBoundParameters.ContainsKey('JumpCloudUserID')) {
+                Throw [System.Management.Automation.ValidationMetadataException] "The 'SystemContextBinding' parameter requires the 'JumpCloudUserID' parameter to be set."
+            }
         }
         #endregion validation
+
+
+        $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
+        Write-ToLog -Message "Migration Start" -MigrationStep
+        # Start script
+        Write-ToLog -Message ('ADMU Version: ' + 'v' + $admuVersion)
+        Write-ToLog -Message ('Log Location: ' + $jcAdmuLogFile)
+        Write-ToLog -Message ('Parameter Input: ')
+        # print out the parameter input
+        switch ($PSCmdlet.ParameterSetName) {
+            'cmd' {
+                # print all parameters except sensitive info
+                $PSBoundParameters.GetEnumerator() | ForEach-Object {
+                    if (($_.Key -eq 'TempPassword') -or
+                        ($_.Key -eq 'JumpCloudAPIKey') -or
+                        ($_.Key -eq 'JumpCloudOrgID') -or
+                        ($_.Key -eq 'JumpCloudConnectKey')) {
+                        Write-ToLog -Message ("Parameter: $($_.Key) = <hidden>")
+                    } else {
+                        Write-ToLog -Message ("Parameter: $($_.Key) = $($_.Value)")
+                    }
+                }
+            }
+            'form' {
+                # get the properties of the inputObject
+                $properties = $inputObject.PSObject.Properties | Where-Object { $_.MemberType -eq 'NoteProperty' }
+                foreach ($property in $properties) {
+                    $key = $property.Name
+                    if (($key -eq 'TempPassword') -or
+                        ($key -eq 'JumpCloudAPIKey') -or
+                        ($key -eq 'JumpCloudOrgID') -or
+                        ($key -eq 'JumpCloudConnectKey')) {
+                        Write-ToLog -Message ("Parameter: $key = <hidden>")
+                    } else {
+                        Write-ToLog -Message ("Parameter: $key = $($property.Value)")
+                    }
+                }
+            }
+        }
+        # print system info
+        Write-ToLog -Message ('System Information: ')
+        Write-ToLog -Message ("OSName: $($systemVersion.OSName)")
+        Write-ToLog -Message ("OSVersion: $($systemVersion.OSVersion)")
+        Write-ToLog -Message ("OSBuildNumber: $($systemVersion.OsBuildNumber)")
+        Write-ToLog -Message ("OSEdition: $($systemVersion.WindowsEditionId)")
+
+
         $trackAccountMerge = $false
         # Track migration steps
         $admuTracker = [Ordered]@{
