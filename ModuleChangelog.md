@@ -1,3 +1,18 @@
+## 2.9.5
+
+Release Date: November 10, 2025
+
+#### RELEASE NOTES
+
+```
+Patch release to address several issues.
+```
+
+#### BUG FIXES:
+
+- Resolved an issue where the ADMU EXE would return exit code 0 if an invalid API key was used. The ADMU will now return exit code 1 if an invalid API key is provided.
+- Resolved an issue where remote invoke script status was not being reported correctly in certain edge cases.
+
 ## 2.9.4
 
 Release Date: October 28, 2025
