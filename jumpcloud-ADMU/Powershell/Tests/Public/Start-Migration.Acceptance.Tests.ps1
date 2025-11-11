@@ -38,6 +38,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 JumpCloudUserName       = $userToMigrateTo
                 SelectedUserName        = $userToMigrateFrom
                 TempPassword            = $tempPassword
+                PrimaryUser             = $false
                 LeaveDomain             = $false
                 ForceReboot             = $false
                 UpdateHomePath          = $false
@@ -372,6 +373,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                 UpdateHomePath          = $false
                 InstallJCAgent          = $false
                 AutoBindJCUser          = $false
+                PrimaryUser             = $false
                 BindAsAdmin             = $false
                 SetDefaultWindowsUser   = $true
                 AdminDebug              = $false
@@ -436,6 +438,38 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
 
                 }
+                It "Associates a JumpCloud user using 'AutoBindJCUser' and sets the user as PrimaryUser" {
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutoBindJCUser = $true
+                    $testCaseInput.PrimaryUser = $true
+                    # Migrate the initialized user to the second username
+                    { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                    # get the system association:
+                    $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                    # the system should be associated to the user
+                    $association | Should -not -BeNullOrEmpty
+                    # the association should NOT be sudo enabled
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
+
+
+                    # get the system primary user
+                    $primarySystemUser = Get-JcSdkSystem -Id $systemKey | Select-Object PrimarySystemUserId
+                    $primarySystemUser.PrimarySystemUserId | Should -Be $GeneratedUser.Id
+                }
+                It "'AutoBindJCUser' set to false and 'PrimaryUser' set to true should throw an error" {
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutoBindJCUser = $false
+                    $testCaseInput.PrimaryUser = $true
+
+                    { Start-Migration @testCaseInput } | Should -Throw
+                }
                 It "Associates a JumpCloud user as 'admin' using 'AutoBindJCUser'" {
                     # set the $testCaseInput
                     $testCaseInput.JumpCloudUserName = $userToMigrateTo
@@ -474,6 +508,48 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $association | Should -not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $false
+                }
+                It "'AutoBindJCUser' set to false and 'PrimaryUser' set to true should throw an error" {
+                    # set the $testCaseInput
+                    $testCaseInput.Remove('JumpCloudApiKey')
+                    $testCaseInput.Remove('JumpCloudOrgID')
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutoBindJCUser = $false
+                    $testCaseInput.PrimaryUser = $true
+                    $testCaseInput.SystemContextBinding = $false
+                    # Add the JumpCloudUserID parameter
+                    $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
+
+                    { Start-Migration @testCaseInput } | Should -Throw
+                }
+                It "Associates a JumpCloud user using 'systemContextBinding' and sets the user as PrimaryUser" {
+                    # set the $testCaseInput
+                    # For systemContextBinding, remove the APIKey/ ORgID params
+                    $testCaseInput.Remove('JumpCloudApiKey')
+                    $testCaseInput.Remove('JumpCloudOrgID')
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutoBindJCUser = $false
+                    $testCaseInput.PrimaryUser = $true
+                    $testCaseInput.SystemContextBinding = $true
+                    # Add the JumpCloudUserID parameter
+                    $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
+                    # Migrate the initialized user to the second username
+                    { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                    # get the system association:
+                    $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                    # the system should be associated to the user
+                    $association | Should -not -BeNullOrEmpty
+                    # the association should NOT be sudo enabled
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $false
+
+                    # get the system primary user
+                    $primarySystemUser = Get-JcSdkSystem -Id $systemKey | Select-Object PrimarySystemUserId
+                    $primarySystemUser.PrimarySystemUserId | Should -Be $GeneratedUser.Id
                 }
                 It "Associates a JumpCloud user as an 'admin' using 'systemContextBinding'" {
                     # set the $testCaseInput

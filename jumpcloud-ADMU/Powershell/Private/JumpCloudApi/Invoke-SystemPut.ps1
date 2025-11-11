@@ -24,21 +24,23 @@ function Invoke-SystemPut {
     do {
         try {
             $response = Invoke-RestMethod -Uri $uri -Method Put -Headers $Headers -Body ($Body | ConvertTo-Json)
-            $success = $true
+            $retry = $false
         } catch {
             if ($_.Exception.Message -like "*The remote name could not be resolved*") {
                 $retryCount++
                 Start-Sleep -Seconds 2
                 # add to retry counter and continue loop
-                $success = $false
+                $retry = $true
             } else {
-                Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning -Step "Invoke-SystemPut"
+                $ErrorMessage = $_.Exception.Message
+                Write-ToLog "Failed to update system: $($ErrorMessage)" -Level Warning -Step "Invoke-SystemPut"
                 # exit the loop
-                $success = $true
+                $retry = $false
+                $success = $false
             }
         }
-    } while (-not $success -and $retryCount -lt $maxRetries)
-    if (-not $success) {
+    } while ($retry -and $retryCount -lt $maxRetries)
+    if ($retryCount -eq $maxRetries) {
         Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Warning -Step "Invoke-SystemPut"
     }
 }
