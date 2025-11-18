@@ -60,7 +60,7 @@ Describe "Restore-ProfileACL Tests" -Tag "Acceptance" {
                 New-Item $logPath -Force -ItemType File
             }
         }
-        It "Validates that Restore-ProfileACL restores ACLs successfully" -Skip {
+        It "Validates that Restore-ProfileACL restores ACLs successfully" {
             # Migrate the initialized user to the second username
             $migrationInput = @{
                 JumpCloudUserName       = $userToMigrateTo
