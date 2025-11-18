@@ -183,11 +183,11 @@ Function Start-Migration {
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
         If ($isForm) {
             $userAgent = "JumpCloud_ADMU.Application/$($admuVersion)"
+            $SelectedUserName = $inputObject.SelectedUserName
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
             $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
             $profileSize = Get-ProfileSize -profilePath $oldUserProfileImagePath
 
-            $SelectedUserName = $inputObject.SelectedUserName
             $JumpCloudUserName = $inputObject.JumpCloudUserName
             if ($inputObject.JumpCloudConnectKey) {
                 $JumpCloudConnectKey = $inputObject.JumpCloudConnectKey
@@ -292,7 +292,6 @@ Function Start-Migration {
                     } catch {
                         Throw [System.Management.Automation.ValidationMetadataException] "Provided JumpCloudAPIKey and OrgID could not be validated"
                     }
-                    $OrgSelection, $MTPAdmin = (Get-MtpOrganization -apiKey $JumpCloudAPIKey -orgId $JumpCloudOrgID)
                     # set the orgID and orgName
                     $ValidatedJumpCloudOrgName = "$($OrgSelection[1])"
                     $ValidatedJumpCloudOrgID = "$($OrgSelection[0])"
@@ -368,45 +367,6 @@ Function Start-Migration {
             }
         }
         #endregion validation
-
-
-        $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
-        Write-ToLog -Message "Migration Start" -MigrationStep
-        # Start script
-        Write-ToLog -Message ('ADMU Version: ' + 'v' + $admuVersion)
-        Write-ToLog -Message ('Log Location: ' + $jcAdmuLogFile)
-        Write-ToLog -Message ('Parameter Input: ')
-        # print out the parameter input
-        switch ($PSCmdlet.ParameterSetName) {
-            'cmd' {
-                # print all parameters except sensitive info
-                $PSBoundParameters.GetEnumerator() | ForEach-Object {
-                    if (($_.Key -eq 'TempPassword') -or
-                        ($_.Key -eq 'JumpCloudAPIKey') -or
-                        ($_.Key -eq 'JumpCloudOrgID') -or
-                        ($_.Key -eq 'JumpCloudConnectKey')) {
-                        Write-ToLog -Message ("Parameter: $($_.Key) = <hidden>")
-                    } else {
-                        Write-ToLog -Message ("Parameter: $($_.Key) = $($_.Value)")
-                    }
-                }
-            }
-            'form' {
-                # get the properties of the inputObject
-                $properties = $inputObject.PSObject.Properties | Where-Object { $_.MemberType -eq 'NoteProperty' }
-                foreach ($property in $properties) {
-                    $key = $property.Name
-                    if (($key -eq 'TempPassword') -or
-                        ($key -eq 'JumpCloudAPIKey') -or
-                        ($key -eq 'JumpCloudOrgID') -or
-                        ($key -eq 'JumpCloudConnectKey')) {
-                        Write-ToLog -Message ("Parameter: $key = <hidden>")
-                    } else {
-                        Write-ToLog -Message ("Parameter: $key = $($property.Value)")
-                    }
-                }
-            }
-        }
         # print system info
         Write-ToLog -Message ('System Information: ')
         Write-ToLog -Message ("OSName: $($systemVersion.OSName)")
