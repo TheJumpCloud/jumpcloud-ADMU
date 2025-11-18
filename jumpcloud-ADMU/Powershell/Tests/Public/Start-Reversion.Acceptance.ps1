@@ -62,20 +62,33 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
             }
         }
         Context "Reversion Success" {
-            It "Tests that the Reversion is successful" {
+            It "Tests that the Reversion is successful and returns a valid result object" {
 
-                # Migrate the initialized user to the second username
                 { Start-Migration @testCaseInput } | Should -Not -Throw
 
-                # Revert the migration
                 $reversionInput = @{
                     UserSID                = $userToMigrateFromSID
                     TargetProfileImagePath = "C:\Users\$userToMigrateFrom"
                 }
 
-                { Start-Reversion @reversionInput } | Should -Not -Throw
+                $revertResult = $null
+                { $revertResult = Start-Reversion @reversionInput } | Should -Not -Throw
 
-                # Validate that the original user exists
+                $revertResult | Should -Not -BeNullOrEmpty
+                Write-Host "Reversion Result: $($revertResult | Out-String)"
+                # Verify High-Level Success
+                $revertResult.Success | Should -BeTrue
+                $revertResult.RegistryUpdated | Should -BeTrue
+                $revertResult.Errors.Count | Should -Be 0
+
+                # Verify Data Integrity
+                $revertResult.UserSID | Should -Be $userToMigrateFromSID
+                $revertResult.TargetProfilePath | Should -Be $reversionInput.TargetProfileImagePath
+
+                $revertResult.FilesReverted.Count | Should -BeGreaterThan 0
+
+
+                # 5. Validate that the original user exists (System Check)
                 { Get-LocalUser -Name $userToMigrateFrom } | Should -Not -Throw
             }
         }

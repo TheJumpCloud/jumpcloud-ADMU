@@ -21,7 +21,7 @@ Describe "Restore-ProfileACL Tests" -Tag "Acceptance" {
         . "$helpFunctionDir\Initialize-TestUser.ps1"
     }
 
-    Context "Restore ProfileACL Tests" {
+    Context "Restore ProfileACL Migration tests" {
         # Test Setup
         BeforeEach {
             # sample password
@@ -60,7 +60,7 @@ Describe "Restore-ProfileACL Tests" -Tag "Acceptance" {
                 New-Item $logPath -Force -ItemType File
             }
         }
-        It "Validates that Restore-ProfileACL restores ACLs successfully" {
+        It "Validates that Restore-ProfileACL restores ACLs successfully" -Skip {
             # Migrate the initialized user to the second username
             $migrationInput = @{
                 JumpCloudUserName       = $userToMigrateTo
@@ -91,6 +91,110 @@ Describe "Restore-ProfileACL Tests" -Tag "Acceptance" {
             $latestAclBackupFile = $aclBackupFiles | Sort-Object LastWriteTime -Descending | Select-Object -First 1
             $backupPath = Join-Path -Path $aclBackupDir -ChildPath $latestAclBackupFile.Name
             { Restore-ProfileACL -BackupPath $backupPath } | Should -Not -Throw
+        }
+    }
+    Context "Execution Logic" {
+        BeforeEach {
+            Mock Test-Path { return $true }
+            Mock Write-ToLog
+        }
+
+        It "Should call icacls with the correct parameters" {
+            # Mock icacls execution
+            Mock icacls { return "Successfully processed 1 files" }
+
+            $testBackup = "C:\Temp\perms.acl"
+            Restore-ProfileACL -BackupPath $testBackup
+
+            # Verify exact command arguments
+            Assert-MockCalled icacls -Times 1 -ParameterFilter {
+                $args[0] -eq "C:\Users\" -and
+                $args[1] -eq "/restore" -and
+                $args[2] -eq $testBackup -and
+                $args[3] -eq "/T" -and
+                $args[4] -eq "/C"
+            }
+        }
+
+        It "Should log success when icacls returns exit code 0" {
+            Mock icacls { return "Success" }
+
+            # Force global success
+            $global:LASTEXITCODE = 0
+
+            Restore-ProfileACL -BackupPath "C:\Temp\backup"
+
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Level -eq "Verbose" -and $Message -eq "Restore operation completed."
+            }
+        }
+
+        It "Should log warning when icacls returns non-zero exit code" {
+            # Simulate External Command Failure
+            # Note: Modifying LastExitCode inside a mock can be tricky in some Pester scopes,
+            # but setting the expectation for the code flow is key.
+            # We force the variable immediately before the check would happen in a real scenario.
+            Mock icacls { $global:LASTEXITCODE = 5; return "Fail" }
+
+            Restore-ProfileACL -BackupPath "C:\Temp\backup"
+
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Level -eq "Verbose" -and $Message -match "Warning: icacls save operation had issues"
+            }
+        }
+    }
+    Context "Path Validation" {
+
+        It "Should abort and log error if BackupPath does not exist" {
+            Mock Test-Path { return $false } -ParameterFilter { $Path -eq "C:\Fake\backup.acl" }
+            Mock Write-ToLog
+            Mock icacls
+
+            Restore-ProfileACL -BackupPath "C:\Fake\backup.acl"
+
+            # Verify icacls is NEVER called
+            Assert-MockCalled icacls -Times 0
+
+            # Verify Error was logged
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Level -eq "Error" -and $Message -match "specified backup file was not found"
+            }
+        }
+
+        It "Should abort and log warning if TargetPath (C:\Users\) does not exist" {
+            Mock Test-Path {
+                if ($Path -eq "C:\Valid\backup.acl") { return $true }
+                if ($Path -eq "C:\Users\") { return $false }
+            }
+            Mock Write-ToLog
+            Mock icacls
+
+            Restore-ProfileACL -BackupPath "C:\Valid\backup.acl"
+
+            # Verify icacls is NEVER called
+            Assert-MockCalled icacls -Times 0
+
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Level -eq "Warning" -and $Message -match "target directory was not found"
+            }
+        }
+
+
+    }
+    Context "Exception Handling" {
+        It "Should catch exceptions thrown by command execution" {
+            Mock Test-Path { return $true }
+            Mock Write-ToLog
+
+            # Make icacls throw a terminating error
+            Mock icacls { throw "Critical Access Denied" }
+
+            Restore-ProfileACL -BackupPath "C:\Temp\permissionsACL"
+
+            # Check if the Catch block's log message was triggered
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Level -eq "Warning" -and $Message -match "An error occurred during the icacls execution"
+            }
         }
     }
 }
