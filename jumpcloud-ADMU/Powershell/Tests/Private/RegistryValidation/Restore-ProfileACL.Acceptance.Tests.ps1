@@ -83,9 +83,10 @@ Describe "Restore-ProfileACL Tests" -Tag "Acceptance" {
             { Start-Migration @migrationInput } | Should -Not -Throw
 
             # test Restore-ProfileACL
-            $aclBackupDir = "C:\Users\$userToMigrateTo\AppData\Local\JumpCloudADMU"
+            $aclBackupDir = "C:\Users\$userToMigrateFrom\AppData\Local\JumpCloudADMU"
             $aclBackupFiles = @()
-            $aclBackupPattern = '^S-\d-(?:\d+-)+\d+_permission_backup_\d{8}-\d{4}$'
+            $UserSid = (Get-LocalUser -Name $userToMigrateFrom).SID.Value
+            $aclBackupPattern = "^{0}_permission_backup_\d{{8}}-\d{{4}}$" -f [Regex]::Escape($UserSID)
             if (Test-Path -Path $aclBackupDir -PathType Container) {
                 $aclBackupFiles = Get-ChildItem -Path $aclBackupDir -File | Where-Object { $_.Name -match $aclBackupPattern }
             }
