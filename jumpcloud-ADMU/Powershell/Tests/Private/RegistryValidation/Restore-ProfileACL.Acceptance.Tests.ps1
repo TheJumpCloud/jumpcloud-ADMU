@@ -85,10 +85,12 @@ Describe "Restore-ProfileACL Tests" -Tag "Acceptance" {
             # test Restore-ProfileACL
             $aclBackupDir = "C:\Users\$userToMigrateTo\AppData\Local\JumpCloudADMU"
             $aclBackupFiles = @()
+            $aclBackupPattern = '^S-\d-(?:\d+-)+\d+_permission_backup_\d{8}-\d{4}$'
             if (Test-Path -Path $aclBackupDir -PathType Container) {
                 $aclBackupFiles = Get-ChildItem -Path $aclBackupDir -File | Where-Object { $_.Name -match $aclBackupPattern }
             }
             $latestAclBackupFile = $aclBackupFiles | Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            $latestAclBackupFile | Should -Not -BeNullOrEmpty
             $backupPath = Join-Path -Path $aclBackupDir -ChildPath $latestAclBackupFile.Name
             { Restore-ProfileACL -BackupPath $backupPath } | Should -Not -Throw
         }
