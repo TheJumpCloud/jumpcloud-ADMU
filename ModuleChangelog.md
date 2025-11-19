@@ -1,6 +1,26 @@
+## 2.10.0
+
+Release Date: November 18, 2025
+
+#### RELEASE NOTES
+
+```
+Patch release to address several issues.
+```
+
+#### BUG FIXES:
+
+- Resolved an issue where the ADMU EXE would return exit code 0 if an invalid API key was used. The ADMU will now return exit code 1 if an invalid API key is provided.
+- Resolved an issue where remote invoke script status was not being reported correctly in certain edge cases.
+- Added PrimaryUser parameter to allow for setting a user as a device's Primary User
+
+#### FEATURES:
+
+- This release introduces the ability to set a device's primary user using the PrimaryUser parameter. This can only be done when using the AutoBindJCUser feature as well as using SystemContext.
+
 ## 2.9.4
 
-Release Date: October 28, 2025
+Release Date: November 06, 2025
 
 #### RELEASE NOTES
 

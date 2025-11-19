@@ -529,7 +529,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             $result.Success | Should -Be $true
             $result.ErrorMessage | Should -BeNullOrEmpty
         }
-        It "Should return an non success and error message if an error occurs in migration" {
+        It "Should return a failure and error message if an error occurs in migration" {
             # to throw the test init the user to migrate to
             Initialize-TestUser -username $userToMigrateTo -password $tempPassword
             # do the migration
@@ -633,5 +633,129 @@ $userSid1,C:\Users\$userToMigrateFrom1,$env:COMPUTERNAME,$userToMigrateFrom1,$us
             $results.FailedMigrations | Should -Be 1
         }
     }
+}
 
+Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
+    BeforeAll {
+        # get the remote invoke script path
+        $global:remoteInvoke = Join-Path $PSScriptRoot '..\..\..\..\jumpcloud-ADMU-Advanced-Deployment\InvokeFromJCAgent\3_ADMU_Invoke.ps1'
+        if (-not (Test-Path $global:remoteInvoke)) {
+            throw "TEST SETUP FAILED: Script not found at the calculated path: $($global:remoteInvoke). Please check the relative path in the BeforeAll block."
+        }
+        $currentPath = $PSScriptRoot # Start from the current script's directory.
+        $TargetDirectory = "helperFunctions"
+        $FileName = "Import-AllFunctions.ps1"
+        while ($currentPath -ne $null) {
+            $filePath = Join-Path -Path $currentPath $TargetDirectory
+            if (Test-Path $filePath) {
+                # File found! Return the full path.
+                $helpFunctionDir = $filePath
+                break
+            }
+
+            # Move one directory up.
+            $currentPath = Split-Path $currentPath -Parent
+        }
+        . "$helpFunctionDir\$fileName"
+
+        # import the init user function:
+        . "$helpFunctionDir\Initialize-TestUser.ps1"
+
+        # import functions from the remote invoke script
+        # get the function definitions from the script
+        $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
+        $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
+        $functionMatches = [regex]::Matches($scriptContent, $pattern)
+
+        # set the matches.value to a temp file and import the functions
+        $tempFunctionFile = Join-Path $PSScriptRoot 'invokeFunctions.ps1'
+        $functionMatches.Value | Set-Content -Path $tempFunctionFile -Force
+
+        # import the functions from the temp file
+        . $tempFunctionFile
+    }
+    Context "JumpCloud Agent Required Migrations" {
+        # Validate the JumpCloud Agent is installed
+        BeforeAll {
+            # for these tests, the jumpCloud agent needs to be installed:
+            $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
+            If (-Not $AgentService) {
+                # set install variables
+                $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
+                $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
+                $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
+                $AGENT_INSTALLER_PATH = "C:\Windows\Temp\jcagent-msi-signed.msi"
+                $AGENT_BINARY_NAME = "jumpcloud-agent.exe"
+                $CONNECT_KEY = $env:PESTER_CONNECTKEY
+
+                # now go install the agent
+                Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($CONNECT_KEY) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
+            }
+
+            # Auth to the JumpCloud Module
+            Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
+
+            # get the org details
+            $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
+            $OrgName = "$($OrgSelection[1])"
+            $OrgID = "$($OrgSelection[0])"
+            # get the system key
+            $config = get-content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
+            $regex = 'systemKey\":\"(\w+)\"'
+            $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+
+            # set the GUI path variable
+            # Copy the exe file from D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\exe\gui_jcadmu.exe to C:\Windows\Temp
+            $guiPath = Join-Path $PSScriptRoot '..\..\..\..\jumpCloud-Admu\Exe\gui_jcadmu.exe'
+            $destinationPath = Join-Path -Path 'C:\Windows\Temp' -ChildPath 'gui_jcadmu.exe'
+            Copy-Item -Path $guiPath -Destination $destinationPath -Force
+        }
+
+        BeforeEach {
+            # sample password
+            $tempPassword = "Temp123!Temp123!"
+            # Generate two users for testing
+            # username to migrate
+            $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # username to migrate to
+            $userToMigrateTo = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+
+            # Initialize-TestUser
+            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            # remove the log
+            $logPath = "C:\Windows\Temp\jcadmu.log"
+            if (Test-Path -Path $logPath) {
+                Remove-Item $logPath
+                New-Item $logPath -Force -ItemType File
+            }
+
+            $sourceUser = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom
+
+            # Build migration parameters for this user
+            $migrationParams = @{
+                JumpCloudUserName     = $userToMigrateTo
+                SelectedUserName      = $sourceUser
+                TempPassword          = $tempPassword
+                UpdateHomePath        = $false
+                AutoBindJCUser        = $true
+                JumpCloudAPIKey       = $null
+                BindAsAdmin           = $false
+                SetDefaultWindowsUser = $true
+                LeaveDomain           = $false
+                adminDebug            = $false
+                ReportStatus          = $false
+            }
+        }
+        It "Should return a failure and error message if the APIKey is invalid" {
+            # set the API key to an invalid value
+            $migrationParams.JumpCloudAPIKey = "INVALID_API_KEY"
+            # create the JumpCloud user to migrate to
+            New-JcSdkUser -Email "$userToMigrateTo@jumpcloudadmu.com" -Username $userToMigrateTo -Password $tempPassword
+            # do the migration
+            $result = invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe"
+            $result.GetType().Name | Should -Be "PSCustomObject"
+            $result.Success | Should -BeOfType "Boolean"
+            $result.Success | Should -Be $false
+        }
+    }
 }

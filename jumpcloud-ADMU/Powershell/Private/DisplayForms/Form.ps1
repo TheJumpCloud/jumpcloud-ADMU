@@ -33,7 +33,7 @@ Function Show-SelectionForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.9.4"
+        Title="JumpCloud ADMU 2.10.0"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -229,6 +229,7 @@ Function Show-SelectionForm {
                     <CheckBox Name="cb_bindAsAdmin" Content="Bind As Admin" HorizontalAlignment="Left" Margin="10,76,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
                     <CheckBox Name="cb_leaveDomain" ToolTipService.ShowOnDisabled="True" Content="Leave Domain" HorizontalAlignment="Left" Margin="125,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                     <CheckBox Name="cb_removeMDM" Content="Remove MDM" HorizontalAlignment="Left" Margin="125,56,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
+                    <CheckBox Name="cb_primaryUser" Content="Primary User" HorizontalAlignment="Left" Margin="125,76,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
                     <CheckBox Name="cb_forceReboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="240,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                     <Image Name="img_connectKeyValid" HorizontalAlignment="Left" Height="23" Margin="446,135,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Connect Key must not be empty &amp; not contain spaces" />
                     <Image Name="img_connectKeyInfo" HorizontalAlignment="Left" Height="14" Margin="152,114,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="The Connect Key provides you with a means of associating this system with your JumpCloud organization. The Key is used to deploy the agent to this system." />
@@ -340,6 +341,7 @@ Function Show-SelectionForm {
         AutoBindJCUser      = $false
         BindAsAdmin         = $false
         LeaveDomain         = $false
+        PrimaryUser         = $false
         removeMDM           = $false
         ForceReboot         = $false
         SelectedUserName    = $null
@@ -481,6 +483,7 @@ Function Show-SelectionForm {
     $cb_autobindJCUser.Add_Checked( { $img_apiKeyInfo.Visibility = 'Visible' })
     $cb_autobindJCUser.Add_Checked( { $img_apiKeyValid.Visibility = 'Visible' })
     $cb_autobindJCUser.Add_Checked( { $cb_bindAsAdmin.IsEnabled = $true })
+    $cb_autobindJCUser.Add_Checked( { $cb_primaryUser.IsEnabled = $true })
     # $cb_bindAsAdmin.Add_Checked( { $BindAsAdmin = $true })
     $cb_autobindJCUser.Add_Checked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
@@ -503,6 +506,8 @@ Function Show-SelectionForm {
     $cb_autobindJCUser.Add_Unchecked( { $lbl_selectOrgName.Visibility = 'Hidden' })
     $cb_autobindJCUser.Add_Unchecked( { $cb_bindAsAdmin.IsEnabled = $false })
     $cb_autobindJCUser.Add_Unchecked( { $cb_bindAsAdmin.IsChecked = $false })
+    $cb_autobindJCUser.Add_Unchecked( { $cb_primaryUser.IsEnabled = $false })
+    $cb_autobindJCUser.Add_Unchecked( { $cb_primaryUser.IsChecked = $false })
     # $cb_bindAsAdmin.Add_Unchecked( { $BindAsAdmin = $false })
     $cb_autobindJCUser.Add_Unchecked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
@@ -516,7 +521,6 @@ Function Show-SelectionForm {
                 $tb_JumpCloudAPIKey.BorderBrush = "#FFC6CBCF"
             }
         })
-
 
     # Leave Domain checkbox
     if (($AzureADStatus -eq 'Yes') -or ($AzureDomainStatus -eq 'Yes')) {
@@ -723,6 +727,7 @@ Function Show-SelectionForm {
             $FormResults.BindAsAdmin = $cb_bindAsAdmin.IsChecked
             $FormResults.LeaveDomain = $cb_leaveDomain.IsChecked
             $FormResults.RemoveMDM = $cb_removeMDM.IsChecked
+            $FormResults.PrimaryUser = $cb_primaryUser.IsChecked
             $FormResults.ForceReboot = $cb_forceReboot.IsChecked
             $FormResults.SelectedUserName = $SelectedUserName
             $FormResults.JumpCloudUserName = $tb_JumpCloudUserName.Text
@@ -807,7 +812,7 @@ Function Show-SelectionForm {
     #===========================================================================
 
     if (-Not $hideForm) {
-        $Form.ShowDialog()
+        $Form.ShowDialog() | Out-Null
     }
 
     # if the migrate button is enabled and it is clicked, send formResults to Start-Migration

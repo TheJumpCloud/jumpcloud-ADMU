@@ -16,7 +16,7 @@ If (-not $ADMUGetConfig) {
 }
 ###########################################################################
 # Region Checking PowerShell Gallery module version
-Write-Host ('[status]Check PowerShell Gallery for module version info')
+Write-Host ('[status] Check PowerShell Gallery for module version info')
 
 # Check to see if ManualModuleVersion parameter is set to true
 if ($ManualModuleVersion) {
@@ -28,7 +28,7 @@ if ($ManualModuleVersion) {
     $PSGalleryInfo = Get-PSGalleryModuleVersion -Name:($ModuleName) -ReleaseType:($ModuleVersionType) #('Major', 'Minor', 'Patch')
     $ModuleVersion = $PSGalleryInfo.NextVersion
 }
-Write-Host ('[status]PowerShell Gallery Name:' + $PSGalleryInfo.Name + ';CurrentVersion:' + $PSGalleryInfo.Version + '; NextVersion:' + $ModuleVersion )
+Write-Host ('[status] PowerShell Gallery Name:' + $PSGalleryInfo.Name + ';CurrentVersion:' + $PSGalleryInfo.Version + '; NextVersion:' + $ModuleVersion )
 
 # Get Content From PSD1, Form, ModuleChangelog
 $VersionPsd1Regex = [regex]"(?<=ModuleVersion\s*=\s*')(([0-9]+)\.([0-9]+)\.([0-9]+))"
@@ -43,7 +43,7 @@ $ModuleChangelogVersion = $ModuleChangelogVersionMatch.Matches.Value
 # EndRegion Checking PowerShell Gallery module version
 
 # Region Building New-JCModuleManifest
-Write-Host ('[status]Building New-ModuleManifest')
+Write-Host ('[status] Building New-ModuleManifest')
 New-ModuleManifest -Path:($FilePath_psd1) `
     -FunctionsToExport:($Functions_Public.BaseName | Sort-Object) `
     -RootModule:((Get-Item -Path:($FilePath_psm1)).Name) `
@@ -55,10 +55,10 @@ New-ModuleManifest -Path:($FilePath_psd1) `
     -Guid:('8354fb8a-af52-4db9-9882-a903063751a5')
 
 # Update ModuleChangelog.md File:
-If ($ModuleChangelogVersion -ne $PSD1Version) {
+If ($ModuleChangelogVersion -ne $ModuleVersion) {
     # add a new version section to the module ModuleChangelog.md
-    Write-Host "[Status]: Appending new changelog for version: $PSD1Version"
-    $NewModuleChangelogRecord = New-ModuleChangelog -LatestVersion:($PSD1Version) -ReleaseNotes:('{{Fill in the Release Notes}}') -Features:('{{Fill in the Features}}') -Improvements:('{{Fill in the Improvements}}') -BugFixes('{{Fill in the Bug Fixes}}')
+    Write-Host "[Status] Appending new changelog for version: $ModuleVersion"
+    $NewModuleChangelogRecord = New-ModuleChangelog -LatestVersion:($ModuleVersion) -ReleaseNotes:('{{Fill in the Release Notes}}') -Features:('{{Fill in the Features}}') -Improvements:('{{Fill in the Improvements}}') -BugFixes('{{Fill in the Bug Fixes}}')
 
     ($NewModuleChangelogRecord + ($ModuleChangelog | Out-String)).Trim() | Set-Content -Path:($FilePath_ModuleChangelog) -Force
 } else {
@@ -67,10 +67,13 @@ If ($ModuleChangelogVersion -ne $PSD1Version) {
     $ReleaseDateRegex = [regex]'(?<=Release Date:\s)(.*)'
     $ReleaseDateRegexMatch = $ModuleChangelogContent | Select-String -Pattern $ReleaseDateRegex
     $ReleaseDate = $ReleaseDateRegexMatch.Matches.Value
-    $todaysDate = $(Get-Date -UFormat:('%B %d, %Y'))
-    if (($ReleaseDate) -and ($ReleaseDate -ne $todaysDate)) {
-        write-host "[Status] Updating Changelog date: $ReleaseDate to: $todaysDate)"
-        $ModuleChangelog.Replace($ReleaseDate, $todaysDate) | Set-Content $FilePath_ModuleChangelog
+    $todayDate = Get-Date -UFormat "%B %d, %Y"
+    if ($todayDate | Select-String -Pattern "0\d,") {
+        $todayDate = "$(Get-Date -UFormat %B) $($(Get-Date -Uformat %d) -replace '0', ''), $(Get-Date -UFormat %Y)"
+    }
+    if (($ReleaseDate) -and ($ReleaseDate -ne $todayDate)) {
+        write-host "[Status] Updating Changelog date: $ReleaseDate to: $todayDate)"
+        $ModuleChangelog.Replace($ReleaseDate, $todayDate) | Set-Content $FilePath_ModuleChangelog
     }
 }
 
