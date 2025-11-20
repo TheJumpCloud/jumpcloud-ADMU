@@ -15,7 +15,6 @@ function Restore-ProfileACL {
         if (-not (Test-Path -Path $BackupPath -PathType Leaf)) {
             Write-ToLog -Message "The specified backup file was not found: '$BackupPath'. Aborting restore." -Level Error -Step $logStep
             # Use Write-Error for standard PowerShell error handling
-            Write-ToLog -Message "The specified backup file was not found: '$BackupPath'. Aborting restore." -Level Error -Step $logStep
             return
         }
 
