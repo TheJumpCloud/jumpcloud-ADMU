@@ -104,7 +104,7 @@ Function Start-Reversion {
             $profileRegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"
 
             if (-not (Test-Path $profileRegistryPath)) {
-                throw "Profile registry entry not found for SID: $UserSID"
+                throw "Profile registry path not found for SID: $UserSID"
             }
 
             $registryProfileImagePath = (Get-ItemProperty -Path $profileRegistryPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
