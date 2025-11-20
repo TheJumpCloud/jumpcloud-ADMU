@@ -33,7 +33,7 @@ function Restore-ProfileACL {
         # 3. Execute the icacls Restore Command
         try {
             # Restore and only get this output: Successfully processed 7962 files; Failed processing 0 files
-            $restoreRsult = icacls $targetPath /restore $BackupPath /T /C > $ACLRestoreLogPath 2>&1
+            $restoreResult = icacls $targetPath /restore $BackupPath /T /C > $ACLRestoreLogPath 2>&1
             if ($LASTEXITCODE -ne 0) {
                 # Only log if there are non-filtered errors
                 Write-ToLog "Warning: icacls save operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step $logStep
