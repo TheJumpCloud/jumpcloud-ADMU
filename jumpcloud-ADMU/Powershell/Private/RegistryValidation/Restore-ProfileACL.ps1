@@ -22,7 +22,6 @@ function Restore-ProfileACL {
         # 2. Validate the Target Path
         if (-not (Test-Path -Path $targetPath -PathType Container)) {
             Write-ToLog -Message "The target directory was not found: '$targetPath'. Aborting restore." -Level Warning -Step $logStep
-            Write-ToLog -Message "The target directory was not found: '$targetPath'. Aborting restore." -Level Warning -Step $logStep
             return
         }
 
