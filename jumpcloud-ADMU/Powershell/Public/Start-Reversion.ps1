@@ -1,20 +1,7 @@
 Function Start-Reversion {
     <#
     .SYNOPSIS
-        Revert        # Initialize result object
-        $revertResult = [PSCustomObject]@{
-            Success              = $false
-            UserSID              = $UserSID
-            RegistryProfilePath  = $null
-            TargetProfilePath    = $TargetProfileImagePath
-            ActualProfilePath    = $null
-            RegistryUpdated      = $false
-            FilesReverted        = @()
-            Errors               = @()
-            StartTime            = Get-Date
-            EndTime              = $null
-            WhatIfMode           = $DryRun.IsPresent
-        }ration by restoring original registry files for a specified Windows SID.
+        Reverts a user migration by restoring original registry files for a specified Windows SID.
 
     .DESCRIPTION
         This function reverts a user migration by:
