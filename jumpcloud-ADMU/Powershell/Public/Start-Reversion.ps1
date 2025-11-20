@@ -98,7 +98,7 @@ Function Start-Reversion {
     Process {
         try {
             #region Validate Registry and Determine Profile Path
-            Write-ToLog -Message "Looking up profilea information for SID: $UserSID" -Level Info -Step "Revert-Migration"
+            Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
 
             # Get profile information from registry for validation
             $profileRegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"
