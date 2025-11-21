@@ -201,13 +201,13 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 # Get the registry for LogonUI
                 $logonUI = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI
                 # The default user should not be the migrated user
-                $logonUI.LastLoggedOnUser | Should -not -Be ".\$userToMigrateTo"
-                $logonUi.LastLoggedOnSAMUser | Should -not -Be ".\$userToMigrateTo"
+                $logonUI.LastLoggedOnUser | Should -Not -Be ".\$userToMigrateTo"
+                $logonUi.LastLoggedOnSAMUser | Should -Not -Be ".\$userToMigrateTo"
 
                 #Check SID
                 $UserSID = Get-LocalUser -Name $userToMigrateTo | Select-Object -ExpandProperty SID
-                $logonUI.LastLoggedOnUserSID | Should -not -Be $UserSID
-                $logonUI.SelectedUserSID | Should -not -Be $UserSID
+                $logonUI.LastLoggedOnUserSID | Should -Not -Be $UserSID
+                $logonUI.SelectedUserSID | Should -Not -Be $UserSID
             }
         }
         Context "Update Home Path" {
@@ -261,7 +261,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
             } else {
                 $UserHome = "C:\Users\$($userToMigrateFrom)"
             }
-            if (-Not $testFailureExpected) {
+            if (-not $testFailureExpected) {
                 # Read the log and get date data
                 $regex = [regex]"ntuser_original_([0-9]+-[0-9]+-[0-9]+-[0-9]+[0-9]+[0-9]+)"
                 $match = Select-String -Path:($logPath) -Pattern:($regex)
@@ -293,7 +293,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
 
             # remove the users:
             Remove-LocalUserProfile -username $userToMigrateFrom
-            if (-Not $testFailureExpected) {
+            if (-not $testFailureExpected) {
                 Remove-LocalUserProfile -username $userToMigrateTo
             }
         }
@@ -327,7 +327,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
         BeforeAll {
             # for these tests, the jumpCloud agent needs to be installed:
             $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
-            If (-Not $AgentService) {
+            if (-not $AgentService) {
                 # set install variables
                 $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
                 $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
@@ -341,14 +341,14 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
             }
 
             # Auth to the JumpCloud Module
-            Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
+            Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -force
 
             # get the org details
             $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
             $OrgName = "$($OrgSelection[1])"
             $OrgID = "$($OrgSelection[0])"
             # get the system key
-            $config = get-content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
+            $config = Get-Content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
             $regex = 'systemKey\":\"(\w+)\"'
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
         }
@@ -416,7 +416,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     { Start-Migration @testCaseInput } | Should -Not -Throw
 
                     # get the system description
-                    $systemDesc = Get-JcSdkSystem -id $systemKey | Select-Object -ExpandProperty Description
+                    $systemDesc = Get-JcSdkSystem -Id $systemKey | Select-Object -ExpandProperty Description
                     # Should have this value: {"MigrationStatus":"Migration completed successfully","MigrationPercentage":100,"UserSID":"S-1-12-1-3466645622-1152519358-2404555438-459629385","MigrationUsername":"test1","UserID":"61e9de2fac31c01519042fe1","DeviceID":"6894eaab354d2a9865a44c74"}
                     $systemDesc | Should -Not -BeNullOrEmpty
                     Write-Host $systemDesc
@@ -433,7 +433,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
                     # the system should be associated to the user
-                    $association | Should -not -BeNullOrEmpty
+                    $association | Should -Not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
 
@@ -451,7 +451,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
                     # the system should be associated to the user
-                    $association | Should -not -BeNullOrEmpty
+                    $association | Should -Not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
 
@@ -483,7 +483,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
                     # the system should be associated to the user
-                    $association | Should -not -BeNullOrEmpty
+                    $association | Should -Not -BeNullOrEmpty
                     # the association should be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
                 }
@@ -505,7 +505,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
                     # the system should be associated to the user
-                    $association | Should -not -BeNullOrEmpty
+                    $association | Should -Not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $false
                 }
@@ -543,7 +543,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
                     # the system should be associated to the user
-                    $association | Should -not -BeNullOrEmpty
+                    $association | Should -Not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $false
 
@@ -571,7 +571,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
                     # the system should be associated to the user
-                    $association | Should -not -BeNullOrEmpty
+                    $association | Should -Not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
                 }
@@ -594,6 +594,90 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
                     # the system should NOT be associated to the user
                     $association | Should -BeNullOrEmpty
+                }
+            }
+            Context "When local user exists tests" {
+                It "Should throw when some local user exists and is created and managed by the JumpCloud agent" {
+                    # TODO: modify the C:\Program Files\JumpCloud\Plugins\Contrib\managedUsers.json to contain a string with the username 'userToMigrateTo'
+                    # Get the contents of the managedUsers.json, append the username to the list, and write it back
+
+                    # Create target user
+                    $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
+
+                    # Mock creating the user with JumpCloud by setting the description like the JumpCloud agent would
+                    New-localUser -Name $userToMigrateTo -password $newUserPassword -Description "Created By JumpCloud"
+
+                    # test local user description
+                    $localUser = Get-LocalUser -username $userToMigrateTo
+                    $localUser.Description | Should -Match "Created By JumpCloud"
+
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+
+                    # TODO: update expected message with expected output from start-migration
+                    # should throw a message stating that the local user exists and was created and managed by JumpCloud
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "{Your Message Added to Start-Migration Function Here}"
+                }
+                It "Should throw when some local user exists and is created by the JumpCloud agent but no longer managed" {
+                    # Create target user
+                    $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
+
+                    # Mock creating the user with JumpCloud by setting the description like the JumpCloud agent would
+                    New-localUser -Name $userToMigrateTo -password $newUserPassword -Description "Created By JumpCloud"
+
+                    # test local user description
+                    $localUser = Get-LocalUser -username $userToMigrateTo
+                    $localUser.Description | Should -Match "Created By JumpCloud"
+
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+
+                    # TODO: update expected message with expected output from start-migration
+                    # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "{Your Message Added to Start-Migration Function Here}"
+                }
+                It "Should throw when some local user exists and was previously created by the JumpCloud ADMU tool" {
+                    # Create target user
+                    $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
+
+                    # Mock creating the user with JumpCloud by setting the description like the JumpCloud agent would
+                    New-localUser -Name $userToMigrateTo -password $newUserPassword -Description "Created By JumpCloud ADMU"
+
+                    # test local user description
+                    $localUser = Get-LocalUser -username $userToMigrateTo
+                    $localUser.Description | Should -Match "Created By JumpCloud ADMU"
+
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+
+                    # TODO: update expected message with expected output from start-migration
+                    # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "{Your Message Added to Start-Migration Function Here}"
+                }
+                It "Should throw when some local user exists and does not match any known JumpCloud created user descriptions" {
+                    # Create target user
+                    $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
+
+                    # Mock creating the user with JumpCloud by setting the description like the JumpCloud agent would
+                    New-localUser -Name $userToMigrateTo -password $newUserPassword
+                    # test local user description
+                    $localUser = Get-LocalUser -username $userToMigrateTo
+                    $localUser.Description | Should -Not -Match "Created By JumpCloud|Created by JumpCloud ADMU"
+
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+
+                    # TODO: update expected message with expected output from start-migration
+                    # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "{Your Message Added to Start-Migration Function Here}"
                 }
             }
         }
