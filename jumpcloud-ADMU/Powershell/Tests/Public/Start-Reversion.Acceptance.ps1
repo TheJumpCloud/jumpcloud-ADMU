@@ -64,6 +64,14 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
         Context "Reversion Success" {
             It "Tests that the Reversion is successful and returns a valid result object" {
 
+                #Pre Migration Access
+                icacls "C:\Users\$userToMigrateFrom" /setowner $userToMigrateFrom /T /C /Q
+                # Re-fetch the ACL after setting owner
+                $preMigrationACL = Get-Acl -Path "C:\Users\$userToMigrateFrom"
+                $preMigrationOwner = $preMigrationACL.Owner
+                $preMigrationOwner | Should -Match $([System.Text.RegularExpressions.Regex]::Escape($userToMigrateFrom))
+
+
                 { Start-Migration @testCaseInput } | Should -Not -Throw
 
                 $reversionInput = @{
@@ -71,8 +79,13 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                     TargetProfileImagePath = "C:\Users\$userToMigrateFrom"
                 }
 
-                $revertResult = $null
-                { $revertResult = Start-Reversion @reversionInput } | Should -Not -Throw
+                $revertResult = Start-Reversion @reversionInput -force
+                Write-Host "Revert Result Object: $($revertResult | Out-String)"
+
+                # Validate that the owner is the same as pre-migration
+                $postReversionACL = Get-Acl -Path "C:\Users\$userToMigrateFrom"
+                $postReversionOwner = $postReversionACL.Owner
+                $postReversionOwner | Should -Be $preMigrationOwner
 
                 $revertResult | Should -Not -BeNullOrEmpty
                 Write-Host "Reversion Result: $($revertResult | Out-String)"
@@ -86,6 +99,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 $revertResult.TargetProfilePath | Should -Be $reversionInput.TargetProfileImagePath
 
                 $revertResult.FilesReverted.Count | Should -BeGreaterThan 0
+
 
 
                 # 5. Validate that the original user exists (System Check)
@@ -102,6 +116,18 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 $reversionInput = @{
                     UserSID                = "S-1-5-21-0000000000-0000000000-0000000000-9999" # Invalid SID
                     TargetProfileImagePath = "C:\Users\$userToMigrateFrom"
+                }
+
+                { Start-Reversion @reversionInput } | Should -Throw "Profile registry path not found for SID: S-1-5-21-0000000000-0000000000-0000000000-9999"
+            }
+            It "Tests that the Reversion fails with an invalid SID NO Profile Path param" {
+
+                # Migrate the initialized user to the second username
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                # Revert the migration with an invalid SID
+                $reversionInput = @{
+                    UserSID = "S-1-5-21-0000000000-0000000000-0000000000-9999" # Invalid SID
                 }
 
                 { Start-Reversion @reversionInput } | Should -Throw "Profile registry path not found for SID: S-1-5-21-0000000000-0000000000-0000000000-9999"

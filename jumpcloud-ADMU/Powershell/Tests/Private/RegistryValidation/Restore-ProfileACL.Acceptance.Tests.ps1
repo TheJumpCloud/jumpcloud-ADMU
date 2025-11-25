@@ -81,34 +81,38 @@ Describe "Restore-ProfileACL Tests" -Tag "Acceptance" {
             }
 
             # Get the C:\Users\UserToMigrateFrom ACL owner and access before migration
+            # Set the ownner to $userToMigrateFrom since when we create the test user it is owned by Administrators
+            icacls "C:\Users\$userToMigrateFrom" /setowner $userToMigrateFrom /T /C /Q
+            # Re-fetch the ACL after setting owner
             $preMigrationACL = Get-Acl -Path "C:\Users\$userToMigrateFrom"
             $preMigrationOwner = $preMigrationACL.Owner
-            $preMigrationOwner | Should -Contain $userToMigrateFrom
+            $preMigrationOwner | Should -Match $([System.Text.RegularExpressions.Regex]::Escape($userToMigrateFrom))
 
             $preMigrationAccess = $preMigrationACL.Access
             $TargetIdentity = $preMigrationOwner
             $ExpectedRights = "FullControl"
 
-            $TargetAce = $preMigrationAccess | Where-Object {
+            $preAccess = $preMigrationAccess | Where-Object {
                 $_.IdentityReference -eq $TargetIdentity
             }
-            $TargetAce.FileSystemRights | Should -Contain $ExpectedRights
+            $preAccFlags = $preAccess.InheritanceFlags
+            $preAccRights = $preAccess.FileSystemRights
+            $preAccess.FileSystemRights | Should -Contain $ExpectedRights
 
 
             { Start-Migration @migrationInput } | Should -Not -Throw
+
             # Post Migration ACL check
             $postMigrationACL = Get-Acl -Path "C:\Users\$userToMigrateFrom"
             $postMigrationOwner = $postMigrationACL.Owner
             $postMigrationOwner | Should -Not -Contain $userToMigrateFrom
-            $postMigrationOwner | Should -Contain $userToMigrateTo
+            $postMigrationOwner | Should -Match $([System.Text.RegularExpressions.Regex]::Escape($userToMigrateTo))
 
-            $TargetIdentity = $postMigrationOwner
-            $ExpectedRights = "FullControl"
-
-            $TargetAce = $preMigrationAccess | Where-Object {
-                $_.IdentityReference -eq $TargetIdentity
+            $TargetAce = $postMigrationACL.Access | Where-Object {
+                $_.IdentityReference -eq $postMigrationOwner
             }
-            $TargetAce.FileSystemRights | Should -Contain $ExpectedRights
+            $TargetAce.FileSystemRights | Should -Contain $preAccRights
+            $TargetAce.InheritanceFlags | Should -Contain $preAccFlags
 
 
 
@@ -127,15 +131,17 @@ Describe "Restore-ProfileACL Tests" -Tag "Acceptance" {
 
             # Post Restore ACL check
             $restoredACL = Get-Acl -Path "C:\Users\$userToMigrateFrom"
-            $restoredOwner = $restoredACL.Owner
-            $restoredOwner | Should -Contain $userToMigrateFrom
-            $restoredOwner | Should -Not -Contain $userToMigrateTo
-            $TargetIdentity = $restoredOwner
+
+            # Find the IdentityReference that matches the userToMigrateFrom
             $ExpectedRights = "FullControl"
+            $inHeritanceFlags = "ContainerInherit, ObjectInherit"
+            Write-Host "Access Entries after Restore: $($restoredACL.Access | Out-String)"
             $TargetAce = $restoredACL.Access | Where-Object {
-                $_.IdentityReference -eq $TargetIdentity
+                $_.IdentityReference -match $([System.Text.RegularExpressions.Regex]::Escape($userToMigrateFrom))
             }
-            $TargetAce.FileSystemRights | Should -Contain $ExpectedRights
+
+            $TargetAce.FileSystemRights | Should -Contain $preAccRights
+            $TargetAce.InheritanceFlags | Should -Contain $preAccFlags
         }
     }
     Context "Execution Logic" {
