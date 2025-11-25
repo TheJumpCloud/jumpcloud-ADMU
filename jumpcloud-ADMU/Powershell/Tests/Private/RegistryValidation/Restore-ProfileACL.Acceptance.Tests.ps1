@@ -80,7 +80,37 @@ Describe "Restore-ProfileACL Tests" -Tag "Acceptance" {
                 ValidateUserShellFolder = $true
             }
 
+            # Get the C:\Users\UserToMigrateFrom ACL owner and access before migration
+            $preMigrationACL = Get-Acl -Path "C:\Users\$userToMigrateFrom"
+            $preMigrationOwner = $preMigrationACL.Owner
+            $preMigrationOwner | Should -Contain $userToMigrateFrom
+
+            $preMigrationAccess = $preMigrationACL.Access
+            $TargetIdentity = $preMigrationOwner
+            $ExpectedRights = "FullControl"
+
+            $TargetAce = $preMigrationAccess | Where-Object {
+                $_.IdentityReference -eq $TargetIdentity
+            }
+            $TargetAce.FileSystemRights | Should -Contain $ExpectedRights
+
+
             { Start-Migration @migrationInput } | Should -Not -Throw
+            # Post Migration ACL check
+            $postMigrationACL = Get-Acl -Path "C:\Users\$userToMigrateFrom"
+            $postMigrationOwner = $postMigrationACL.Owner
+            $postMigrationOwner | Should -Not -Contain $userToMigrateFrom
+            $postMigrationOwner | Should -Contain $userToMigrateTo
+
+            $TargetIdentity = $postMigrationOwner
+            $ExpectedRights = "FullControl"
+
+            $TargetAce = $preMigrationAccess | Where-Object {
+                $_.IdentityReference -eq $TargetIdentity
+            }
+            $TargetAce.FileSystemRights | Should -Contain $ExpectedRights
+
+
 
             # test Restore-ProfileACL
             $aclBackupDir = "C:\Users\$userToMigrateFrom\AppData\Local\JumpCloudADMU"
@@ -94,6 +124,18 @@ Describe "Restore-ProfileACL Tests" -Tag "Acceptance" {
             $latestAclBackupFile | Should -Not -BeNullOrEmpty
             $backupPath = Join-Path -Path $aclBackupDir -ChildPath $latestAclBackupFile.Name
             { Restore-ProfileACL -BackupPath $backupPath } | Should -Not -Throw
+
+            # Post Restore ACL check
+            $restoredACL = Get-Acl -Path "C:\Users\$userToMigrateFrom"
+            $restoredOwner = $restoredACL.Owner
+            $restoredOwner | Should -Contain $userToMigrateFrom
+            $restoredOwner | Should -Not -Contain $userToMigrateTo
+            $TargetIdentity = $restoredOwner
+            $ExpectedRights = "FullControl"
+            $TargetAce = $restoredACL.Access | Where-Object {
+                $_.IdentityReference -eq $TargetIdentity
+            }
+            $TargetAce.FileSystemRights | Should -Contain $ExpectedRights
         }
     }
     Context "Execution Logic" {

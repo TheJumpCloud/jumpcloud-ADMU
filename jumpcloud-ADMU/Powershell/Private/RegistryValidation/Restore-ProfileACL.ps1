@@ -36,7 +36,7 @@ function Restore-ProfileACL {
                 # Only log if there are non-filtered errors
                 Write-ToLog "Warning: icacls save operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step $logStep
             } else {
-                Write-ToLog "Restore operation completed." -Level Verbose -Step $logStep
+                Write-ToLog "Restore ACL operation completed." -Level Verbose -Step $logStep
             }
         } catch {
             Write-ToLog -Message "An error occurred during the icacls execution: $($_.Exception.Message)" -Level Warning -Step $logStep

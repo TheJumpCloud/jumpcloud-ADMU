@@ -88,6 +88,8 @@ Function Start-Reversion {
             WhatIfMode          = $DryRun.IsPresent
             RegistryUpdated     = $false
         }
+        $account = New-Object System.Security.Principal.SecurityIdentifier($UserSID)
+        $domainUser = ($account.Translate([System.Security.Principal.NTAccount])).Value
 
         # Regex pattern to identify .ADMU profile paths
         $admuPathPattern = '\.ADMU$'
@@ -257,7 +259,7 @@ Function Start-Reversion {
                     Write-Host "        Current:  $($regFile.CurrentFile)" -ForegroundColor DarkGray
                     Write-Host "        Backup: $($regFile.OriginalFile)" -ForegroundColor DarkGray
                 }
-                Write-Host "`nWARNING: This operation will overwrite the current registry files with the original backups." -ForegroundColor Red
+                Write-Host "`nWARNING: This operation will overwrite the current registry files with the original backups and change the ownership of the profile directory to $domainUser." -ForegroundColor Red
                 $confirmation = Read-Host "`nDo you want to proceed with the revert? (y/N)"
                 if ($confirmation -notmatch '^[Yy]([Ee][Ss])?$') {
                     Write-ToLog -Message "Revert operation cancelled by user" -Level Info -Step "Revert-Migration"
@@ -355,6 +357,23 @@ Function Start-Reversion {
                 Write-Host "WHAT IF: Would restore profile ACLs from backup file: $($latestAclBackupFile.Name)" -ForegroundColor Cyan
             }
             #endregion Restore Profile ACLs
+
+            #region Take Ownership of Profile Directory
+            if (-not $DryRun) {
+                Write-ToLog -Message "Setting ownership of profile directory: $profileImagePath" -Level Verbose -Step "Revert-Migration"
+                $ACLRestoreLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu_Revert_SetOwner.log"
+
+                $icaclsOwnerResult = icacls "$($profileImagePath)" /setowner $domainUser /T /C /Q > $ACLRestoreLogPath 2>&1
+                # Check if any error occurred
+                if ($LASTEXITCODE -ne 0) {
+                    Write-ToLog -Message "Failed to set ownership of profile directory. Check log at $ACLRestoreLogPath" -Level Warning -Step "Revert-Migration"
+                } else {
+                    Write-ToLog -Message "Successfully set ownership of profile directory to $domainUser" -Level Info -Step "Revert-Migration"
+                }
+            } else {
+                Write-Host "WHAT IF: Would take ownership of profile directory: $profileImagePath" -ForegroundColor Cyan
+            }
+            #endregion Take Ownership of Profile Directory
 
             #region Final Validation
             if (-not $DryRun) {
