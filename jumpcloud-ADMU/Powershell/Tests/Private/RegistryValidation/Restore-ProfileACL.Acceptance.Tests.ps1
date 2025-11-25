@@ -176,7 +176,7 @@ Describe "Restore-ProfileACL Tests" -Tag "Acceptance" {
             Restore-ProfileACL -BackupPath "C:\Temp\backup"
 
             Assert-MockCalled Write-ToLog -ParameterFilter {
-                $Level -eq "Verbose" -and $Message -eq "Restore operation completed."
+                $Level -eq "Verbose" -and $Message -eq "Restore ACL operation completed."
             }
         }
 
