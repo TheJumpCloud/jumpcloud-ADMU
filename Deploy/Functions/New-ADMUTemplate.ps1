@@ -9,7 +9,7 @@ This function combines all the the private functions, forms, their assets and th
 This parameter optionally adds the code snippet to run the forms with or without the debug window. The default behavior is to hide these windows but when debugging it can be helpful to show these windows.
 
 #>
-Function New-ADMUTemplate {
+function New-ADMUTemplate {
 
     [CmdletBinding()]
     param (
@@ -30,7 +30,7 @@ Function New-ADMUTemplate {
         # Public Functions
         $Public = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Public/*.ps1" -Recurse)
         # Load all functions from private folders except for the forms and assets
-        $Private = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/*.ps1" -Recurse | Where-Object { ($_.fullname -notmatch "DisplayForms") -AND ($_.fullname -notmatch "DisplayAssets") } )
+        $Private = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/*.ps1" -Recurse | Where-Object { ($_.fullname -notmatch "DisplayForms") -and ($_.fullname -notmatch "DisplayAssets") } )
     }
     process {
 

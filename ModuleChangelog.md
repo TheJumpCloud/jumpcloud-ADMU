@@ -1,3 +1,25 @@
+## 2.11.0
+
+Release Date: December 1, 2025
+
+#### RELEASE NOTES
+
+```
+{{Fill in the Release Notes}}
+```
+
+#### FEATURES:
+
+{{Fill in the Features}}
+
+#### IMPROVEMENTS:
+
+{{Fill in the Improvements}}
+
+#### BUG FIXES:
+
+{{Fill in the Bug Fixes}}
+
 ## 2.10.0
 
 Release Date: November 18, 2025

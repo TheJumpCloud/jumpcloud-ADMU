@@ -57,15 +57,15 @@ function Set-RegPermission {
     # Use icacls for bulk operations - much faster than PowerShell ACL cmdlets
     Write-ToLog "Starting permission migration using icacls for path: $FilePath" -Level Verbose -Step "Set-RegPermission"
 
-    # Step 1: Grant target user full control inheritance on root folder
+    # Step 1: Grant target user full control inheritance on root folder (no /T flag = non-recursive, immediate level only)
     Write-ToLog "Granting permissions to: $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
-    $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /C /Q > $ntfsPermissionLogPath 2>&1
+    $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /C /Q > $ntfsPermissionLogPath 2>&1
 
     if ($LASTEXITCODE -ne 0) {
         # Only log if there are non-filtered errors
         Write-ToLog "Warning: icacls grant operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step "Set-RegPermission"
     } else {
-        Write-ToLog "Successfully granted permissions to $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
+        Write-ToLog "Successfully granted permissions to $TargetAccountIcacls (immediate level only)" -Level Verbose -Step "Set-RegPermission"
     }
 
     # Step 2: Replace source user with target user in all ACLs (preserves existing permissions)
@@ -78,14 +78,14 @@ function Set-RegPermission {
     #     Write-ToLog "Successfully substituted $SourceAccountIcacls with $TargetAccountIcacls"
     # }
 
-    # Step 3: Change ownership from source to target user
+    # Step 3: Change ownership from source to target user (no /T flag = non-recursive, immediate level only)
     Write-ToLog "Setting owner to $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
-    $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /T /C /Q > $ntfsPermissionLogPath 2>&1
+    $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /C /Q > $ntfsPermissionLogPath 2>&1
     if ($LASTEXITCODE -ne 0) {
         # Only log if there are non-filtered errors
         Write-ToLog "Warning: icacls setowner operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step "Set-RegPermission"
     } else {
-        Write-ToLog "Successfully set owner to $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
+        Write-ToLog "Successfully set owner to $TargetAccountIcacls (immediate level only)" -Level Verbose -Step "Set-RegPermission"
     }
 
     Write-ToLog "Permission migration completed for path: $FilePath" -Level Verbose -Step "Set-RegPermission"
