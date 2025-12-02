@@ -38,6 +38,45 @@ $ProfilePath = $ProfilePath.Trim().Trim("'").Trim('"')
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+# Helper function to get current file type association (prevents unnecessary desktop flashing)
+function Get-FTA {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [String]$Extension
+    )
+
+    try {
+        $assocPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$Extension\UserChoice"
+        if (Test-Path $assocPath) {
+            return (Get-ItemProperty $assocPath -ErrorAction SilentlyContinue).ProgId
+        }
+    } catch {
+        return $null
+    }
+    return $null
+}
+
+# Helper function to get current protocol type association (prevents unnecessary desktop flashing)
+function Get-PTA {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [String]$Protocol
+    )
+
+    try {
+        $assocPath = "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$Protocol\UserChoice"
+        if (Test-Path $assocPath) {
+            return (Get-ItemProperty $assocPath -ErrorAction SilentlyContinue).ProgId
+        }
+    } catch {
+        return $null
+    }
+    return $null
+}
+
 # Get user file type associations
 function Set-FTA {
 
@@ -63,9 +102,38 @@ function Set-FTA {
         $ProgId = "SFTA." + [System.IO.Path]::GetFileNameWithoutExtension($ProgId).replace(" ", "") + $Extension
     }
 
-    Write-Verbose "ProgId: $ProgId"
-    Write-Verbose "Extension/Protocol: $Extension"
+    Write-ToLog "ProgId: $ProgId"
+    Write-ToLog "Extension/Protocol: $Extension"
 
+    # Check if association is already set correctly to avoid desktop flashing (GitHub issue #34)
+    # Determine if this is a file extension or protocol based on presence of dot
+    if ($Extension.StartsWith(".")) {
+        # File extension
+        try {
+            $currentProgId = Get-FTA -Extension $Extension -ErrorAction Stop
+            if ($currentProgId -eq $ProgId) {
+                Write-ToLog "Extension $Extension is already set to $ProgId - skipping"
+                return
+            } else {
+                Write-ToLog "Extension $Extension needs to be changed from '$currentProgId' to '$ProgId'"
+            }
+        } catch {
+            Write-ToLog "Unable to determine current FTA for $Extension - will proceed with setting"
+        }
+    } else {
+        # Protocol
+        try {
+            $currentProgId = Get-PTA -Protocol $Extension -ErrorAction Stop
+            if ($currentProgId -eq $ProgId) {
+                Write-ToLog "Protocol $Extension is already set to $ProgId - skipping"
+                return
+            } else {
+                Write-ToLog "Protocol $Extension needs to be changed from '$currentProgId' to '$ProgId'"
+            }
+        } catch {
+            Write-ToLog "Unable to determine current PTA for $Extension - will proceed with setting"
+        }
+    }
 
     #Write required Application Ids to ApplicationAssociationToasts
     #When more than one application associated with an Extension/Protocol is installed ApplicationAssociationToasts need to be updated
@@ -83,9 +151,9 @@ function Set-FTA {
         try {
             $keyPath = "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts"
             [Microsoft.Win32.Registry]::SetValue($keyPath, $ProgId + "_" + $Extension, 0x0)
-            Write-Verbose ("Write Reg ApplicationAssociationToasts OK: " + $ProgId + "_" + $Extension)
+            Write-ToLog ("Write Reg ApplicationAssociationToasts OK: " + $ProgId + "_" + $Extension)
         } catch {
-            Write-Verbose ("Write Reg ApplicationAssociationToasts FAILED: " + $ProgId + "_" + $Extension)
+            Write-ToLog ("Write Reg ApplicationAssociationToasts FAILED: " + $ProgId + "_" + $Extension)
         }
 
         $allApplicationAssociationToasts = Get-ChildItem -Path HKLM:\SOFTWARE\Classes\$Extension\OpenWithList\* -ErrorAction SilentlyContinue |
@@ -109,9 +177,9 @@ function Set-FTA {
         $allApplicationAssociationToasts |
         ForEach-Object { if ($_) {
                 if (Set-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts $_"_"$Extension -Value 0 -Type DWord -ErrorAction SilentlyContinue -PassThru) {
-                    Write-Verbose ("Write Reg ApplicationAssociationToastsList OK: " + $_ + "_" + $Extension)
+                    Write-ToLog ("Write Reg ApplicationAssociationToastsList OK: " + $_ + "_" + $Extension)
                 } else {
-                    Write-Verbose ("Write Reg ApplicationAssociationToastsList FAILED: " + $_ + "_" + $Extension)
+                    Write-ToLog ("Write Reg ApplicationAssociationToastsList FAILED: " + $_ + "_" + $Extension)
                 }
             }
         }
@@ -151,15 +219,16 @@ public static void Refresh() {
         try {
             $keyPath = "HKEY_CURRENT_USER\SOFTWARE\Classes\$ProgId\DefaultIcon"
             [Microsoft.Win32.Registry]::SetValue($keyPath, "", $Icon)
-            Write-Verbose "Write Reg Icon OK"
-            Write-Verbose "Reg Icon: $keyPath"
+            Write-ToLog "Write Reg Icon OK"
+            Write-ToLog "Reg Icon: $keyPath"
         } catch {
-            Write-Verbose "Write Reg Icon FAILED"
+            Write-ToLog "Write Reg Icon FAILED"
         }
     }
 
 
     function local:Write-ExtensionKeys {
+        [OutputType([bool])]
         param (
             [Parameter( Position = 0, Mandatory = $True )]
             [String]
@@ -227,14 +296,23 @@ namespace Registry {
             $keyPath = "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$Extension\UserChoice"
             [Microsoft.Win32.Registry]::SetValue($keyPath, "Hash", $ProgHash)
             [Microsoft.Win32.Registry]::SetValue($keyPath, "ProgId", $ProgId)
-            Write-Verbose "Write Reg Extension UserChoice OK"
+            Write-ToLog "Write Reg Extension UserChoice OK"
+            return $true
         } catch {
-            throw "Write Reg Extension UserChoice FAILED"
+            # Check if this is UCPD.sys blocking (unauthorized operation)
+            if ($_.Exception.Message -match "unauthorized|access.*denied") {
+                Write-ToLog "Write Reg Extension UserChoice BLOCKED by UCPD.sys (UserChoice Protection Driver) - This is expected on newer Windows versions"
+            } else {
+                Write-ToLog "Write Reg Extension UserChoice FAILED: $($_.Exception.Message)"
+            }
+            # Return false to indicate failure
+            return $false
         }
     }
 
 
     function local:Write-ProtocolKeys {
+        [OutputType([bool])]
         param (
             [Parameter( Position = 0, Mandatory = $True )]
             [String]
@@ -264,9 +342,17 @@ namespace Registry {
             $keyPath = "HKEY_CURRENT_USER\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$Protocol\UserChoice"
             [Microsoft.Win32.Registry]::SetValue( $keyPath, "Hash", $ProgHash)
             [Microsoft.Win32.Registry]::SetValue($keyPath, "ProgId", $ProgId)
-            Write-Verbose "Write Reg Protocol UserChoice OK"
+            Write-ToLog "Write Reg Protocol UserChoice OK"
+            return $true
         } catch {
-            throw "Write Reg Protocol UserChoice FAILED"
+            # Check if this is UCPD.sys blocking (unauthorized operation)
+            if ($_.Exception.Message -match "unauthorized|access.*denied") {
+                Write-ToLog "Write Reg Protocol UserChoice BLOCKED by UCPD.sys (UserChoice Protection Driver) - Protocol associations for $Protocol cannot be set programmatically on this system"
+            } else {
+                Write-ToLog "Write Reg Protocol UserChoice FAILED: $($_.Exception.Message)"
+            }
+            # Return false to indicate failure
+            return $false
         }
 
     }
@@ -472,8 +558,8 @@ namespace Registry {
         Write-Output $base64Hash
     }
 
-    Write-Verbose "Getting Hash For $ProgId   $Extension"
-    if ($DomainSID.IsPresent) { Write-Verbose "Use Get-UserSidDomain" } else { Write-Verbose "Use Get-UserSid" }
+    Write-ToLog "Getting Hash For $ProgId   $Extension"
+    if ($DomainSID.IsPresent) { Write-ToLog "Use Get-UserSidDomain" } else { Write-ToLog "Use Get-UserSid" }
     $userSid = if ($DomainSID.IsPresent) { Get-UserSidDomain } else { Get-UserSid }
     $userExperience = Get-UserExperience
     $userDateTime = Get-HexDateTime
@@ -482,33 +568,43 @@ namespace Registry {
     Write-Debug "UserExperience: $userExperience"
 
     $baseInfo = "$Extension$userSid$ProgId$userDateTime$userExperience".ToLower()
-    Write-Verbose "baseInfo: $baseInfo"
+    Write-ToLog "baseInfo: $baseInfo"
 
     $progHash = Get-Hash $baseInfo
-    Write-Verbose "Hash: $progHash"
+    Write-ToLog "Hash: $progHash"
 
     #Write AssociationToasts List
     Write-RequiredApplicationAssociationToasts $ProgId $Extension
 
-    #Handle Extension Or Protocol
+    # Attempt to set association via registry
+    # Note: http/https/pdf protocols are typically blocked by UCPD.sys (UserChoice Protection Driver)
+    # on Windows 10 1703+ and cannot be set programmatically
+    $registrySuccess = $false
     if ($Extension.Contains(".")) {
-        Write-Verbose "Write Registry Extension: $Extension"
-        Write-ExtensionKeys $ProgId $Extension $progHash
+        Write-ToLog "Write Registry Extension: $Extension"
+        $registrySuccess = Write-ExtensionKeys $ProgId $Extension $progHash
 
     } else {
-        Write-Verbose "Write Registry Protocol: $Extension"
-        Write-ProtocolKeys $ProgId $Extension $progHash
+        Write-ToLog "Write Registry Protocol: $Extension"
+        $registrySuccess = Write-ProtocolKeys $ProgId $Extension $progHash
+    }
+
+    # Log failure if registry method was blocked
+    if (-not $registrySuccess) {
+        Write-ToLog "FAILURE: Association for $Extension -> $ProgId could not be set (likely blocked by UCPD.sys)"
+        throw "Association blocked"
     }
 
 
     if ($Icon) {
-        Write-Verbose "Set Icon: $Icon"
+        Write-ToLog "Set Icon: $Icon"
         Set-Icon $ProgId $Icon
     }
 
     Update-RegistryChanges
 
 }
+
 
 function Set-PTA {
     [CmdletBinding()]
