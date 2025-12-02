@@ -1,9 +1,20 @@
 param(
-    [bool]$SetPermissions = $false,
+    [string]$SetPermissions = "0",
     [string]$SourceSID = "",
     [string]$TargetSID = "",
     [string]$ProfilePath = ""
 )
+
+# Convert SetPermissions string to boolean (compiled exes pass all params as strings)
+$SetPermissionsMode = $false
+if ($SetPermissions -in @("1", "true", "True", "$true", "yes")) {
+    $SetPermissionsMode = $true
+}
+
+# Clean up parameters - remove quotes and whitespace that may be passed from command line
+$SourceSID = $SourceSID.Trim().Trim("'").Trim('"')
+$TargetSID = $TargetSID.Trim().Trim("'").Trim('"')
+$ProfilePath = $ProfilePath.Trim().Trim("'").Trim('"')
 ##### MIT License #####
 # MIT License
 
@@ -714,7 +725,7 @@ $signature = Add-Type -MemberDefinition $signature -Name Win32ShowWindow -Namesp
 $signature::ShowWindow($hwnd, 1) # 0 = SW_HIDE
 
 # Check if we're in permission-setting mode
-if ($SetPermissions -eq $true) {
+if ($SetPermissionsMode -eq $true) {
     Write-Host "Starting permission-setting mode..."
     Write-ToLog "Running in permission-setting mode" -Path "C:\Windows\Temp\jcAdmu_permission_migration.log"
 

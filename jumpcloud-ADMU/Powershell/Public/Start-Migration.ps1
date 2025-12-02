@@ -926,8 +926,6 @@ function Start-Migration {
                 } catch {
                     Write-ToLog "This account has been previously migrated"
                 }
-                # if ($UnloadReg){
-                # }
             } else {
                 # Create the new key & remind add tracking from previous domain account for reversion if necessary
                 New-RegKey -registryRoot Users -keyPath "$($newUserSID)_admu\SOFTWARE\JCADMU"
@@ -1277,8 +1275,8 @@ function Start-Migration {
 
             # Create scheduled task to set recursive permissions on user logon
             try {
-                # Build argument string with parameters
-                $taskArguments = "-SetPermissions:(`$true) -SourceSID: '$SelectedUserSID' -TargetSID '$NewUserSID' -ProfilePath '$newUserProfileImagePath'"
+                # Build argument string with parameters (no quotes needed - they cause issues with SID parsing)
+                $taskArguments = "-SetPermissions 1 -SourceSID $SelectedUserSID -TargetSID $NewUserSID -ProfilePath `"$newUserProfileImagePath`""
 
                 $taskAction = New-ScheduledTaskAction -Execute "$windowsDrive\Windows\uwp_jcadmu.exe" -Argument $taskArguments
                 $taskTrigger = New-ScheduledTaskTrigger -AtLogOn -User $JumpCloudUsername
@@ -1304,7 +1302,8 @@ function Start-Migration {
                 Write-ToLog -Message:("Task arguments: $taskArguments")
             } catch {
                 Write-ToLog -Message:("Warning: Failed to create scheduled task for deferred permissions: $_") -Level Warning
-            }            #endRegion NTFS Permissions
+            }
+            #endRegion NTFS Permissions
 
             #region Validate Hive Permissions
             # Validate if .DAT has correct permissions
