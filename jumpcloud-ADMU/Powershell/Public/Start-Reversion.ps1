@@ -122,6 +122,10 @@ Function Start-Reversion {
             } else {
                 # Use registry path, remove .ADMU suffix
                 $profileImagePath = $registryProfileImagePath -replace $admuPathPattern, ''
+                $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $profileImagePath -UserSID $UserSID
+                if (-not $sidValidation.IsValid) {
+                    throw "Registry profile path validation failed: $($sidValidation.Reason)"
+                }
                 Write-ToLog -Message "Using registry profile path (without .ADMU): $profileImagePath" -Level Info -Step "Revert-Migration"
             }
 
@@ -184,6 +188,10 @@ Function Start-Reversion {
 
                 Write-ToLog -Message "Found NTUSER original backup: $($ntuserOriginal.Name)" -Level Info -Step "Revert-Migration"
             }
+            # Validate that the UsrClass and NTUSER original files were found
+            if ($registryFiles.Type -notcontains "NTUSER") {
+                Throw "No NTUser.DAT backup files found in directory: $profileImagePath for SID: $UserSID. Cannot proceed with revert."
+            }
 
             # UsrClass.dat files in AppData
             $appDataPath = Join-Path $profileImagePath "AppData\Local\Microsoft\Windows"
@@ -208,8 +216,8 @@ Function Start-Reversion {
                 Write-ToLog -Message "Found UsrClass original backup: $($usrClassOriginal.Name)" -Level Info -Step "Revert-Migration"
             }
 
-            if ($registryFiles.Count -eq 0) {
-                throw "No original registry file backups found. Cannot perform revert operation."
+            if ($registryFiles.Type -notcontains "UsrClass") {
+                Throw "No UsrClass.dat backup files found in directory: $profileImagePath for SID: $UserSID. Cannot proceed with revert."
             }
             #endregion Identify Registry Files to Revert
 
@@ -299,7 +307,7 @@ Function Start-Reversion {
 
             try {
                 if ($DryRun) {
-                    Write-Host "WHAT IF: Would update registry ProfileImagePath from '$registryProfileImagePath' to '$profileImagePath'" -ForegroundColor Cyan
+                    Write-ToLog "WHAT IF: Would update registry ProfileImagePath from '$registryProfileImagePath' to '$profileImagePath'" -ForegroundColor Cyan
                 } else {
                     # Update the ProfileImagePath in the registry to point to the target profile path
                     # This informs Windows where to find the restored .DAT files
@@ -341,7 +349,7 @@ Function Start-Reversion {
                     $revertResult.Errors += $errorMsg
                 }
             } else {
-                Write-Host "WHAT IF: Would restore profile ACLs from backup file: $($latestAclBackupFile.Name)" -ForegroundColor Cyan
+                Write-ToLog -Message "WHAT IF: Would restore profile ACLs from backup file: $($latestAclBackupFile.Name)" -Level Verbose -Step "Revert-Migration"
             }
             #endregion Restore Profile ACLs
 
@@ -358,7 +366,7 @@ Function Start-Reversion {
                     Write-ToLog -Message "Successfully set ownership of profile directory to $domainUser" -Level Info -Step "Revert-Migration"
                 }
             } else {
-                Write-Host "WHAT IF: Would take ownership of profile directory: $profileImagePath" -ForegroundColor Cyan
+                Write-ToLog -Message "WHAT IF: Would take ownership of profile directory: $profileImagePath" -Level Verbose -Step "Revert-Migration"
             }
             #endregion Take Ownership of Profile Directory
 
