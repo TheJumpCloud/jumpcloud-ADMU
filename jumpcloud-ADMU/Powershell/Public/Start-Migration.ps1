@@ -1287,7 +1287,8 @@ function Start-Migration {
                     -StartWhenAvailable `
                     -RestartInterval (New-TimeSpan -Minutes 1) `
                     -RestartCount 3 `
-                    -ExecutionTimeLimit (New-TimeSpan -Hours 1)
+                    -ExecutionTimeLimit (New-TimeSpan -Hours 1) `
+                    -Priority 4
 
                 $taskName = "ADMU-SetPermissions-$NewUserSID"
                 Register-ScheduledTask -TaskName $taskName `
