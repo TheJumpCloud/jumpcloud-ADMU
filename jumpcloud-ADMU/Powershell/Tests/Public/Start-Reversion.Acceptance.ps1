@@ -61,7 +61,7 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
                 New-Item $logPath -Force -ItemType File
             }
         }
-        Context "Reversion Success"  -Skip {
+        Context "Reversion Success" {
             It "Tests that the Reversion is successful and returns a valid result object" {
 
                 #Pre Migration Access
@@ -107,7 +107,7 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
             }
         }
         Context "Reversion Failure" {
-            It "Tests that the Reversion fails with an invalid SID"  -Skip {
+            It "Tests that the Reversion fails with an invalid SID" {
 
                 # Migrate the initialized user to the second username
                 { Start-Migration @testCaseInput } | Should -Not -Throw
@@ -120,7 +120,7 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
 
                 { Start-Reversion @reversionInput } | Should -Throw "Profile registry path not found for SID: S-1-5-21-0000000000-0000000000-0000000000-9999"
             }
-            It "Tests that the Reversion fails with an invalid SID NO Profile Path param"  -Skip {
+            It "Tests that the Reversion fails with an invalid SID NO Profile Path param" {
 
                 # Migrate the initialized user to the second username
                 { Start-Migration @testCaseInput } | Should -Not -Throw
@@ -133,7 +133,7 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
                 { Start-Reversion @reversionInput } | Should -Throw "Profile registry path not found for SID: S-1-5-21-0000000000-0000000000-0000000000-9999"
             }
 
-            It "Tests that the Reversion fails with a missing profile path" -Skip {
+            It "Tests that the Reversion fails with a missing profile path" {
 
                 # Migrate the initialized user to the second username
                 { Start-Migration @testCaseInput } | Should -Not -Throw
