@@ -24,15 +24,15 @@ Function Start-Reversion {
         Bypasses confirmation prompts and forces the revert operation.
 
     .EXAMPLE
-        Revert-Migration -UserSID "S-1-5-21-123456789-1234567890-123456789-1001"
+        Start-Reversion -UserSID "S-1-5-21-123456789-1234567890-123456789-1001"
         Reverts the migration for the specified user SID using the registry profile path.
 
     .EXAMPLE
-        Revert-Migration -UserSID "S-1-5-21-123456789-1234567890-123456789-1001" -TargetProfileImagePath "C:\Users\john.doe"
+        Start-Reversion -UserSID "S-1-5-21-123456789-1234567890-123456789-1001" -TargetProfileImagePath "C:\Users\john.doe"
         Reverts the migration using a specific target profile path instead of the registry value.
 
     .EXAMPLE
-        Revert-Migration -UserSID "S-1-5-21-123456789-1234567890-123456789-1001" -DryRun
+        Start-Reversion -UserSID "S-1-5-21-123456789-1234567890-123456789-1001" -DryRun
         Shows what would be reverted without making actual changes.
 
     .OUTPUTS

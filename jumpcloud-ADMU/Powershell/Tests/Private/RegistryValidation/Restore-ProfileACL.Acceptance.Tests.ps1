@@ -81,7 +81,7 @@ Describe "Restore-ProfileACL Tests" -Tag "Acceptance" {
             }
 
             # Get the C:\Users\UserToMigrateFrom ACL owner and access before migration
-            # Set the ownner to $userToMigrateFrom since when we create the test user it is owned by Administrators
+            # Set the owner to $userToMigrateFrom since when we create the test user it is owned by Administrators
             icacls "C:\Users\$userToMigrateFrom" /setowner $userToMigrateFrom /T /C /Q
             # Re-fetch the ACL after setting owner
             $preMigrationACL = Get-Acl -Path "C:\Users\$userToMigrateFrom"
