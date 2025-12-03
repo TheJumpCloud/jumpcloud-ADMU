@@ -31,7 +31,7 @@ function Set-RegPermission {
         $TargetAccount = $TargetSID
     }
 
-    $ntfsPermissionLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu_ntfs.log"
+    $ntfsPermissionLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
     try {
         Write-ToLog -Message "Starting permission migration from $SourceAccount to $TargetAccount on path: $FilePath" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
         Write-ToLog -Message "Log messages below are streamed from standard output of the icacls command, output may be ignored if it contains errors about pointers *" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
@@ -59,13 +59,21 @@ function Set-RegPermission {
 
     # Step 1: Grant target user full control inheritance on root folder (no /T flag = non-recursive, immediate level only)
     Write-ToLog "Granting permissions to: $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
-    $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /C /Q > $ntfsPermissionLogPath 2>&1
+    $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /C /Q 2>&1
+
+    # Log icacls output for debugging
+    if ($icaclsGrantResult) {
+        foreach ($line in $icaclsGrantResult) {
+            if ($line -and $line.ToString().Trim()) {
+                Write-ToLog "  icacls output: $line" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+            }
+        }
+    }
 
     if ($LASTEXITCODE -ne 0) {
-        # Only log if there are non-filtered errors
-        Write-ToLog "Warning: icacls grant operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step "Set-RegPermission"
+        Write-ToLog "Warning: icacls grant operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
     } else {
-        Write-ToLog "Successfully granted permissions to $TargetAccountIcacls (immediate level only)" -Level Verbose -Step "Set-RegPermission"
+        Write-ToLog "Successfully granted permissions to $TargetAccountIcacls (immediate level only)" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
     }
 
     # Step 2: Replace source user with target user in all ACLs (preserves existing permissions)
@@ -80,13 +88,20 @@ function Set-RegPermission {
 
     # Step 3: Change ownership from source to target user (no /T flag = non-recursive, immediate level only)
     Write-ToLog "Setting owner to $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
-    $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /C /Q > $ntfsPermissionLogPath 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        # Only log if there are non-filtered errors
-        Write-ToLog "Warning: icacls setowner operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step "Set-RegPermission"
-    } else {
-        Write-ToLog "Successfully set owner to $TargetAccountIcacls (immediate level only)" -Level Verbose -Step "Set-RegPermission"
+    $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /C /Q 2>&1
+
+    # Log icacls output for debugging
+    if ($icaclsOwnerResult) {
+        foreach ($line in $icaclsOwnerResult) {
+            if ($line -and $line.ToString().Trim()) {
+                Write-ToLog "  icacls output: $line" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+            }
+        }
     }
 
-    Write-ToLog "Permission migration completed for path: $FilePath" -Level Verbose -Step "Set-RegPermission"
+    if ($LASTEXITCODE -ne 0) {
+        Write-ToLog "Warning: icacls setowner operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+    } else {
+        Write-ToLog "Successfully set owner to $TargetAccountIcacls (immediate level only)" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+    }    Write-ToLog "Permission migration completed for path: $FilePath" -Level Verbose -Step "Set-RegPermission"
 }
