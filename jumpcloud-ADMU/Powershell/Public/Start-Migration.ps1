@@ -1274,35 +1274,9 @@ function Start-Migration {
             Write-ToLog "Set-RegPermission (immediate level) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
 
             # Create scheduled task to set recursive permissions on user logon
-            try {
-                # Build argument string with parameters (no quotes needed - they cause issues with SID parsing)
-                $taskArguments = "-SetPermissions 1 -SourceSID $SelectedUserSID -TargetSID $NewUserSID -ProfilePath `"$newUserProfileImagePath`""
-
-                $taskAction = New-ScheduledTaskAction -Execute "$windowsDrive\Windows\uwp_jcadmu.exe" -Argument $taskArguments
-                $taskTrigger = New-ScheduledTaskTrigger -AtLogOn -User $JumpCloudUsername
-                $taskPrincipal = New-ScheduledTaskPrincipal -UserId "NT AUTHORITY\SYSTEM" -RunLevel Highest
-                $taskSettings = New-ScheduledTaskSettingsSet `
-                    -AllowStartIfOnBatteries `
-                    -DontStopIfGoingOnBatteries `
-                    -StartWhenAvailable `
-                    -RestartInterval (New-TimeSpan -Minutes 1) `
-                    -RestartCount 3 `
-                    -ExecutionTimeLimit (New-TimeSpan -Hours 1) `
-                    -Priority 4
-
-                $taskName = "ADMU-SetPermissions-$NewUserSID"
-                Register-ScheduledTask -TaskName $taskName `
-                    -Action $taskAction `
-                    -Trigger $taskTrigger `
-                    -Principal $taskPrincipal `
-                    -Settings $taskSettings `
-                    -Description "JumpCloud ADMU: Set recursive NTFS permissions on user profile (runs once on first login)" `
-                    -Force | Out-Null
-
-                Write-ToLog -Message:("Created scheduled task '$taskName' with parameters for deferred permissions")
-                Write-ToLog -Message:("Task arguments: $taskArguments")
-            } catch {
-                Write-ToLog -Message:("Warning: Failed to create scheduled task for deferred permissions: $_") -Level Warning
+            $taskCreated = New-RegPermissionTask -ProfilePath $newUserProfileImagePath -TargetSID $NewUserSID -SourceSID $SelectedUserSID -TaskUser $JumpCloudUsername
+            if (-not $taskCreated) {
+                Write-ToLog -Message "Scheduled task creation failed. Permissions may not be fully applied on first login." -Level Warning
             }
             #endRegion NTFS Permissions
 
