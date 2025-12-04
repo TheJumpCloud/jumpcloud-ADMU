@@ -842,19 +842,19 @@ $signature::ShowWindow($hwnd, 1) # 0 = SW_HIDE
 if ($SetPermissionsMode -eq $true) {
     $ntfsPermissionLogPath = "C:\Windows\Temp\jcAdmu.log"
 
-    Write-ToLog "Begin Post-Migration NFTS Task" -Path $ntfsPermissionLogPath -MigrationStep
-    Write-ToLog "Running in permission-setting mode" -Path $ntfsPermissionLogPath
+    Write-ToLog "Begin Post-Migration NFTS Task" -Path $ntfsPermissionLogPath -MigrationStep -Level Verbose
+    Write-ToLog "Running in permission-setting mode" -Path $ntfsPermissionLogPath -Level Verbose
 
     # Validate parameters
     if ([string]::IsNullOrEmpty($SourceSID) -or [string]::IsNullOrEmpty($TargetSID) -or [string]::IsNullOrEmpty($ProfilePath)) {
-        Write-ToLog "Error: Missing required parameters. SourceSID, TargetSID, and ProfilePath must be provided." -Path $ntfsPermissionLogPath
+        Write-ToLog "Error: Missing required parameters. SourceSID, TargetSID, and ProfilePath must be provided." -Path $ntfsPermissionLogPath -Level Verbose
         exit 1
     }
 
     try {
-        Write-ToLog "Setting recursive permissions for profile: $ProfilePath" -Path $ntfsPermissionLogPath
-        Write-ToLog "Source SID: $SourceSID" -Path $ntfsPermissionLogPath
-        Write-ToLog "Target SID: $TargetSID" -Path $ntfsPermissionLogPath
+        Write-ToLog "Setting recursive permissions for profile: $ProfilePath" -Path $ntfsPermissionLogPath -Level Verbose
+        Write-ToLog "Source SID: $SourceSID" -Path $ntfsPermissionLogPath -Level Verbose
+        Write-ToLog "Target SID: $TargetSID" -Path $ntfsPermissionLogPath -Level Verbose
 
         # Load Set-RegPermission function with recursive /T flags
         function Set-RegPermission {
@@ -879,67 +879,67 @@ if ($SetPermissionsMode -eq $true) {
                 $SourceAccount = $SourceSIDObj.Translate([System.Security.Principal.NTAccount]).Value
                 $SourceAccountTranslated = $true
             } catch {
-                Write-ToLog "Warning: Could not translate SourceSID $SourceSID to NTAccount. Using SID string instead." -Path $ntfsPermissionLogPath
+                Write-ToLog "Warning: Could not translate SourceSID $SourceSID to NTAccount. Using SID string instead." -Path $ntfsPermissionLogPath -Level Verbose
                 $SourceAccount = $SourceSID
             }
             try {
                 $TargetAccount = $TargetSIDObj.Translate([System.Security.Principal.NTAccount]).Value
                 $TargetAccountTranslated = $true
             } catch {
-                Write-ToLog "Warning: Could not translate TargetSID $TargetSID to NTAccount. Using SID string instead." -Path $ntfsPermissionLogPath
+                Write-ToLog "Warning: Could not translate TargetSID $TargetSID to NTAccount. Using SID string instead." -Path $ntfsPermissionLogPath -Level Verbose
                 $TargetAccount = $TargetSID
             }
 
             try {
-                Write-ToLog "Starting recursive permission migration from $SourceAccount to $TargetAccount on path: $FilePath" -Path $ntfsPermissionLogPath
+                Write-ToLog "Starting recursive permission migration from $SourceAccount to $TargetAccount on path: $FilePath" -Path $ntfsPermissionLogPath -Level Verbose
             } catch {
-                Write-ToLog "Failed to initialize NTFS permission log at $ntfsPermissionLogPath" -Path $ntfsPermissionLogPath
+                Write-ToLog "Failed to initialize NTFS permission log at $ntfsPermissionLogPath" -Path $ntfsPermissionLogPath -Level Verbose
             }
 
             $SourceAccountIcacls = if ($SourceAccountTranslated) { $SourceAccount } else { "*$SourceAccount" }
             $TargetAccountIcacls = if ($TargetAccountTranslated) { $TargetAccount } else { "*$TargetAccount" }
 
             # Grant permissions recursively with /T flag
-            Write-ToLog "Granting recursive permissions to: $TargetAccountIcacls"
+            Write-ToLog "Granting recursive permissions to: $TargetAccountIcacls" -Level Verbose
             $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /C /Q 2>&1
 
             # Log icacls output for debugging
             if ($icaclsGrantResult) {
                 foreach ($line in $icaclsGrantResult) {
                     if ($line -and $line.ToString().Trim()) {
-                        Write-ToLog "  icacls output: $line" -Path $ntfsPermissionLogPath
+                        Write-ToLog "  icacls output: $line" -Path $ntfsPermissionLogPath -Level Verbose
                     }
                 }
             }
 
             if ($LASTEXITCODE -ne 0) {
-                Write-ToLog "Warning: icacls grant operation had issues. Exit code: $LASTEXITCODE" -Path $ntfsPermissionLogPath
+                Write-ToLog "Warning: icacls grant operation had issues. Exit code: $LASTEXITCODE" -Path $ntfsPermissionLogPath -Level Verbose
                 throw "Failed to grant permissions"
             } else {
-                Write-ToLog "Successfully granted recursive permissions to $TargetAccountIcacls" -Path $ntfsPermissionLogPath
+                Write-ToLog "Successfully granted recursive permissions to $TargetAccountIcacls" -Path $ntfsPermissionLogPath -Level Verbose
             }
 
             # Set ownership recursively with /T flag
-            Write-ToLog "Setting recursive owner to $TargetAccountIcacls"
+            Write-ToLog "Setting recursive owner to $TargetAccountIcacls" -Level Verbose
             $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /T /C /Q 2>&1
 
             # Log icacls output for debugging
             if ($icaclsOwnerResult) {
                 foreach ($line in $icaclsOwnerResult) {
                     if ($line -and $line.ToString().Trim()) {
-                        Write-ToLog "  icacls output: $line" -Path $ntfsPermissionLogPath
+                        Write-ToLog "  icacls output: $line" -Path $ntfsPermissionLogPath -Level Verbose
                     }
                 }
             }
 
             if ($LASTEXITCODE -ne 0) {
-                Write-ToLog "Warning: icacls setowner operation had issues. Exit code: $LASTEXITCODE" -Path $ntfsPermissionLogPath
+                Write-ToLog "Warning: icacls setowner operation had issues. Exit code: $LASTEXITCODE" -Path $ntfsPermissionLogPath -Level Verbose
                 throw "Failed to set owner"
             } else {
-                Write-ToLog "Successfully set recursive owner to $TargetAccountIcacls" -Path $ntfsPermissionLogPath
+                Write-ToLog "Successfully set recursive owner to $TargetAccountIcacls" -Path $ntfsPermissionLogPath -Level Verbose
             }
 
-            Write-ToLog "Recursive permission migration completed for path: $FilePath" -Path $ntfsPermissionLogPath
+            Write-ToLog "Recursive permission migration completed for path: $FilePath" -Path $ntfsPermissionLogPath -Level Verbose
         }
 
 
@@ -947,26 +947,26 @@ if ($SetPermissionsMode -eq $true) {
         # Execute permission setting
         Set-RegPermission -sourceSID $SourceSID -targetSID $TargetSID -filePath $ProfilePath
         $regPermStopwatch.Stop()
-        Write-ToLog "Set-RegPermission (recursive level) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds." -Path $ntfsPermissionLogPath
+        Write-ToLog "Set-RegPermission (recursive level) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds." -Path $ntfsPermissionLogPath -Level Verbose
 
-        Write-ToLog "Permission migration completed successfully" -Path $ntfsPermissionLogPath
+        Write-ToLog "Permission migration completed successfully" -Path $ntfsPermissionLogPath -Level Verbose
 
         # Delete the scheduled task that triggered this
         $taskName = "ADMU-SetPermissions-$TargetSID"
         try {
             Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction Stop
-            Write-ToLog "Successfully deleted scheduled task: $taskName" -Path $ntfsPermissionLogPath
+            Write-ToLog "Successfully deleted scheduled task: $taskName" -Path $ntfsPermissionLogPath -Level Verbose
         } catch {
-            Write-ToLog "Warning: Could not delete scheduled task $taskName : $_" -Path $ntfsPermissionLogPath
+            Write-ToLog "Warning: Could not delete scheduled task $taskName : $_" -Path $ntfsPermissionLogPath -Level Verbose
         }
 
         exit 0
 
     } catch {
-        Write-ToLog "Error during permission setting: $_" -Path $ntfsPermissionLogPath
+        Write-ToLog "Error during permission setting: $_" -Path $ntfsPermissionLogPath -Level Verbose
         exit 1
     }
-    Write-ToLog "End Post-Migration NFTS Task" -Path $ntfsPermissionLogPath -MigrationStep
+    Write-ToLog "End Post-Migration NFTS Task" -Path $ntfsPermissionLogPath -MigrationStep -Level Verbose
 
 } else {
     Write-ToLog "Running in normal UWP app registration mode"
