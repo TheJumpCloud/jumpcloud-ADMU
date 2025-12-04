@@ -11,7 +11,7 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
     Context -Name "UWP Application runs and processes appx/ fta & pta files" {
         BeforeEach {
             $currentUserSID = (Get-LocalUser -Name $env:USERNAME | Select-Object SID).SID
-            write-host "userSID: $currentUserSID"
+            Write-Host "userSID: $currentUserSID"
             $appxList = Get-AppxPackage | Select-Object -First 5 | Select-Object InstallLocation
             # $appxList = Get-AppxListByUser -SID $currentUserSID
             $profileImagePath = $HOME
@@ -19,20 +19,20 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # create the local path if it's not already created
             $path = $profileImagePath + '\AppData\Local\JumpCloudADMU'
-            If (!(test-path $path)) {
+            if (!(Test-Path $path)) {
                 New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
 
             Set-HKEYUserMount
             # set the file type associations
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
-            write-host "fta count: $($fileTypeAssociations.count)"
+            Write-Host "fta count: $($fileTypeAssociations.count)"
             $fileTypeAssociations | Should -Not -BeNullOrEmpty
             # select first 5
             $fileTypeAssociations | Select-Object -First 5 | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
             # set the file type protocols
             $protocolTypeAssociations = Get-ProtocolTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
-            write-host "pta count: $($protocolTypeAssociations.count)"
+            Write-Host "pta count: $($protocolTypeAssociations.count)"
             $protocolTypeAssociations | Should -Not -BeNullOrEmpty
             # select first 5
             $protocolTypeAssociations | Select-Object -First 5 | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
@@ -61,9 +61,9 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
         }
         It -Name "Tests that the individual logs are generated post uwp run" {
 
-            Get-Item "$path\fileTypeAssociations.csv" | should -not -BeNullOrEmpty
-            Get-Item "$path\protocolTypeAssociations.csv" | should -not -BeNullOrEmpty
-            Get-Item "$path\appx_manifest.csv" | should -not -BeNullOrEmpty
+            Get-Item "$path\fileTypeAssociations.csv" | Should -Not -BeNullOrEmpty
+            Get-Item "$path\protocolTypeAssociations.csv" | Should -Not -BeNullOrEmpty
+            Get-Item "$path\appx_manifest.csv" | Should -Not -BeNullOrEmpty
 
             . $uwpPath
 
@@ -87,8 +87,8 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             # Remove PTA csv $path\protocolTypeAssociations.csv
             Remove-Item "$path\protocolTypeAssociations.csv" -Force
 
-            Test-Path -Path "$path\protocolTypeAssociations.csv" | should -Be $false
-            Get-Item "$path\appx_manifest.csv" | should -Not -BeNullOrEmpty
+            Test-Path -Path "$path\protocolTypeAssociations.csv" | Should -Be $false
+            Get-Item "$path\appx_manifest.csv" | Should -Not -BeNullOrEmpty
 
             # Call the function
             . $uwpPath
@@ -100,8 +100,8 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             # Remove PTA csv $path\protocolTypeAssociations.csv
             Remove-Item "$path\fileTypeAssociations.csv" -Force
 
-            Test-Path -Path "$path\fileTypeAssociations.csv" | should -Be $false
-            Get-Item "$path\protocolTypeAssociations.csv" | should -Not -BeNullOrEmpty
+            Test-Path -Path "$path\fileTypeAssociations.csv" | Should -Be $false
+            Get-Item "$path\protocolTypeAssociations.csv" | Should -Not -BeNullOrEmpty
 
             # Call the function
             . $uwpPath
@@ -113,8 +113,8 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             # Remove PTA csv $path\protocolTypeAssociations.csv
             Remove-Item "$path\appx_manifest.csv" -Force
 
-            Test-Path -Path "$path\appx_manifest.csv" | should -Be $false
-            Get-Item "$path\fileTypeAssociations.csv" | should -Not -BeNullOrEmpty
+            Test-Path -Path "$path\appx_manifest.csv" | Should -Be $false
+            Get-Item "$path\fileTypeAssociations.csv" | Should -Not -BeNullOrEmpty
 
             # Call the function
             . $uwpPath
@@ -126,9 +126,9 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             Remove-Item "$path\protocolTypeAssociations.csv" -Force
             Remove-Item "$path\fileTypeAssociations.csv" -Force
 
-            Test-Path -Path "$path\protocolTypeAssociations.csv" | should -Be $false
-            Test-Path -Path "$path\fileTypeAssociations.csv" | should -Be $false
-            Get-Item "$path\appx_manifest.csv" | should -Not -BeNullOrEmpty
+            Test-Path -Path "$path\protocolTypeAssociations.csv" | Should -Be $false
+            Test-Path -Path "$path\fileTypeAssociations.csv" | Should -Be $false
+            Get-Item "$path\appx_manifest.csv" | Should -Not -BeNullOrEmpty
 
             # Both paths should be null or empty
 
@@ -144,9 +144,9 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             Remove-Item "$path\appx_manifest.csv" -Force
             Remove-Item "$path\fileTypeAssociations.csv" -Force
 
-            Test-Path -Path "$path\appx_manifest.csv" | should -Be $false
-            Test-Path -Path "$path\fileTypeAssociations.csv" | should -Be $false
-            Get-Item "$path\protocolTypeAssociations.csv" | should -Not -BeNullOrEmpty
+            Test-Path -Path "$path\appx_manifest.csv" | Should -Be $false
+            Test-Path -Path "$path\fileTypeAssociations.csv" | Should -Be $false
+            Get-Item "$path\protocolTypeAssociations.csv" | Should -Not -BeNullOrEmpty
 
             # Call the function
             . $uwpPath
@@ -158,9 +158,9 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             Remove-Item "$path\appx_manifest.csv" -Force
             Remove-Item "$path\protocolTypeAssociations.csv" -Force
-            Test-Path -Path "$path\appx_manifest.csv" | should -Be $false
-            Test-Path -Path "$path\protocolTypeAssociations.csv" | should -Be $false
-            Get-Item "$path\fileTypeAssociations.csv" | should -not -BeNullOrEmpty
+            Test-Path -Path "$path\appx_manifest.csv" | Should -Be $false
+            Test-Path -Path "$path\protocolTypeAssociations.csv" | Should -Be $false
+            Get-Item "$path\fileTypeAssociations.csv" | Should -Not -BeNullOrEmpty
 
             # Call the function
             . $uwpPath
@@ -184,6 +184,24 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             # Check if programId is wordpad
             $fta.ProgId | Should -Contain "wordpad"
             $pta.ProgId | Should -Contain "notepad"
+        }
+        It "Tests for blocked FTA (UCPD Driver should prevent these changes)" {
+            . $uwpPath
+            $blockedExtensions = ".pdf"
+
+            foreach ($blockedExtension in $blockedExtensions) {
+                # now attempt to set to MSEdgeHTM which is blocked
+                { Set-FTA -ProgId "MSEdgeHTM" -Extension $blockedExtension } | Should -Throw -ExpectedMessage "*Association blocked*"
+            }
+        }
+        It "Tests for blocked PTA (UCPD Driver should prevent these changes)" {
+            . $uwpPath
+            $blockedExtensions = "http", "https"
+
+            foreach ($blockedExtension in $blockedExtensions) {
+                # now attempt to set to MSEdgeHTM which is blocked
+                { Set-PTA -ProgId "MSEdgeHTM" -Protocol $blockedExtension } | Should -Throw -ExpectedMessage "*Association blocked*"
+            }
         }
         It -Name "Tests when all CSV files are empty" {
             # Create empty CSV files
