@@ -7,7 +7,6 @@ function Restore-ProfileACL {
         # Define the target directory for the restore
         $targetPath = "C:\Users\"
         $logStep = "Restore-ProfileACL" # Define step name once
-        $ACLRestoreLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu_ACL_Restore.log"
 
         Write-ToLog -Message "Starting Permission Restore." -Level Info -Step $logStep
 
@@ -30,8 +29,15 @@ function Restore-ProfileACL {
 
         # 3. Execute the icacls Restore Command
         try {
-            # Restore and only get this output: Successfully processed 7962 files; Failed processing 0 files
-            $restoreResult = icacls $targetPath /restore $BackupPath /T /C > $ACLRestoreLogPath 2>&1
+            # Restore
+            Write-ToLog -Message "================ ACL Restore Log ================" -Level Info -Step $logStep
+            # Save and append the log to \Windows\Temp\jcAdmu.log
+            $logPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
+            $restoreResult = icacls $targetPath /restore $BackupPath /T /C /Q 2>&1
+            # Save icacls output to log file
+            $restoreResult | Out-File -FilePath $logPath -Append -Encoding utf8
+            Write-ToLog -Message "================ End of ACL Restore Log ================" -Level Info -Step $logStep
+
             if ($LASTEXITCODE -ne 0) {
                 # Only log if there are non-filtered errors
                 Write-ToLog "Warning: icacls save operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step $logStep
