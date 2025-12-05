@@ -383,6 +383,15 @@ function Get-JcadmuGuiSha256 {
         It then iterates through the release's assets to find 'gui_jcadmu.exe' and extracts the official SHA256 hash
         directly from the asset's 'digest' field. This is the most robust method as it relies on structured API data.
 
+    .PARAMETER GitHubToken
+        Optional GitHub token for authenticated requests (helps avoid rate limiting and 403 errors)
+
+    .PARAMETER MaxRetries
+        Maximum number of retry attempts (default: 3)
+
+    .PARAMETER RetryDelaySeconds
+        Delay between retries in seconds (default: 5)
+
     .EXAMPLE
         PS C:\> Get-JcadmuGuiSha256
 
@@ -394,54 +403,121 @@ function Get-JcadmuGuiSha256 {
         [PSCustomObject] An object containing the release tag name and the corresponding SHA256 hash.
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [Parameter(Mandatory = $false)]
+        [string]$GitHubToken,
+
+        [Parameter(Mandatory = $false)]
+        [int]$MaxRetries = 3,
+
+        [Parameter(Mandatory = $false)]
+        [int]$RetryDelaySeconds = 5
+    )
     begin {
         $apiUrl = "https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/releases"
-        $releases = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers @{ "Accept" = "application/vnd.github.v3+json" }
-    }
-    process {
-        try {
-            if ($null -eq $releases -or $releases.Count -eq 0) {
-                throw "No releases were found for the repository."
-                return
-            }
 
-            $latestRelease = $releases[0]
-            $latestTag = $latestRelease.tag_name
-
-            # Find the specific asset within the 'assets' array
-            $targetAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
-
-            if ($targetAsset) {
-                $digest = $targetAsset.digest
-
-                if ($digest -and $digest.StartsWith('sha256:')) {
-                    $sha256 = $digest.Split(':')[1]
-                    return [PSCustomObject]@{
-                        TagName = $latestTag
-                        SHA256  = $sha256
-                    }
-                }
-            } else {
-                throw "Asset 'gui_jcadmu.exe' not found in the latest release (Tag: $latestTag)."
-            }
-        } catch {
-            throw "An API error or network issue occurred: $_"
+        # Setup headers for authenticated requests if token is provided
+        $headers = @{
+            "Accept" = "application/vnd.github.v3+json"
+        }
+        if (-not [string]::IsNullOrEmpty($GitHubToken)) {
+            $headers["Authorization"] = "Bearer $GitHubToken"
         }
     }
+    process {
+        $attempt = 0
+        $success = $false
+        $lastError = $null
 
+        while ($attempt -lt $MaxRetries -and -not $success) {
+            $attempt++
 
+            try {
+                if ($attempt -gt 1) {
+                    Write-Host "Retry attempt $attempt of $MaxRetries for SHA256 retrieval..." -ForegroundColor Yellow
+                }
+
+                $releases = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers -ErrorAction Stop
+
+                if ($null -eq $releases -or $releases.Count -eq 0) {
+                    throw "No releases were found for the repository."
+                }
+
+                $latestRelease = $releases[0]
+                $latestTag = $latestRelease.tag_name
+
+                # Find the specific asset within the 'assets' array
+                $targetAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
+
+                if ($targetAsset) {
+                    $digest = $targetAsset.digest
+
+                    if ($digest -and $digest.StartsWith('sha256:')) {
+                        $sha256 = $digest.Split(':')[1]
+                        $success = $true
+                        return [PSCustomObject]@{
+                            TagName = $latestTag
+                            SHA256  = $sha256
+                        }
+                    } else {
+                        throw "SHA256 digest not found or in unexpected format for 'gui_jcadmu.exe'."
+                    }
+                } else {
+                    throw "Asset 'gui_jcadmu.exe' not found in the latest release (Tag: $latestTag)."
+                }
+            } catch {
+                $lastError = $_
+                $errorMessage = $_.Exception.Message
+
+                # Check for specific error types
+                $isRateLimit = $errorMessage -match "rate limit|403|forbidden"
+                $isNetworkError = $errorMessage -match "network|connection|timeout|unable to connect"
+
+                if ($isRateLimit) {
+                    Write-Host "GitHub API access issue (rate limit or 403 Forbidden)." -ForegroundColor Yellow
+                    if ([string]::IsNullOrEmpty($GitHubToken)) {
+                        Write-Host "Hint: Provide a GitHub token via -GitHubToken parameter to avoid rate limiting." -ForegroundColor Cyan
+                    }
+                } elseif ($isNetworkError) {
+                    Write-Host "Network connectivity issue detected: $errorMessage" -ForegroundColor Yellow
+                }
+
+                if ($attempt -lt $MaxRetries) {
+                    Write-Host "Waiting $RetryDelaySeconds seconds before retry..." -ForegroundColor Yellow
+                    Start-Sleep -Seconds $RetryDelaySeconds
+                } else {
+                    # Final attempt failed
+                    $errorDetail = if ($lastError.ErrorDetails.Message) {
+                        $lastError.ErrorDetails.Message
+                    } else {
+                        $lastError.Exception.Message
+                    }
+                    throw "An API error or network issue occurred after $MaxRetries attempts: $errorDetail"
+                }
+            }
+        }
+    }
 }
 function Test-ExeSHA {
     param (
         [Parameter(Mandatory = $true)]
-        [string]$filePath
+        [string]$filePath,
+
+        [Parameter(Mandatory = $false)]
+        [string]$GitHubToken
     )
     process {
         if (-not (Test-Path -Path $filePath)) {
             throw "The gui_jcadmu.exe file was not found at: '$filePath'."
         }
-        $releaseSHA256 = Get-JcadmuGuiSha256
+
+        # Pass GitHub token to Get-JcadmuGuiSha256 if available
+        if (-not [string]::IsNullOrEmpty($GitHubToken)) {
+            $releaseSHA256 = Get-JcadmuGuiSha256 -GitHubToken $GitHubToken
+        } else {
+            $releaseSHA256 = Get-JcadmuGuiSha256
+        }
+
         $releaseSHA256 = $releaseSHA256.SHA256
 
         # Get the SHA256 of the local file
@@ -773,7 +849,6 @@ $guiJcadmuPath = "C:\Windows\Temp\gui_jcadmu.exe" # Exe path
 
 # Download the latest ADMU GUI executable
 Get-LatestADMUGUIExe
-
 # Validate the downloaded file against the official release hash
 Test-ExeSHA -filePath $guiJcadmuPath
 

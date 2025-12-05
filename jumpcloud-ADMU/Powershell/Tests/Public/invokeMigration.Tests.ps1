@@ -471,7 +471,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
     Context "Get-JcadmuGuiSha256 Function" {
         It "Should return SHA256 hash for a valid file" {
             # Gets the SHA from the recent release of the ADMU GUI from GitHub
-            $hash = Get-JcadmuGuiSha256
+            $hash = Get-JcadmuGuiSha256 -GitHubToken $GitHubToken
             Write-Host "SHA256 Hash: $hash"
             $hash | Should -Not -BeNullOrEmpty
         }
