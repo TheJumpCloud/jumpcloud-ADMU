@@ -59,7 +59,7 @@ Function Start-Reversion {
     )
 
     Begin {
-        Write-ToLog -Message "Begin Revert Migration" -MigrationStep -Level Info 
+        Write-ToLog -Message "Begin Revert Migration" -MigrationStep -Level Info
 
         # Initialize result object
         $revertResult = [PSCustomObject]@{
@@ -356,9 +356,17 @@ Function Start-Reversion {
             #region Take Ownership of Profile Directory
             if (-not $DryRun) {
                 Write-ToLog -Message "Setting ownership of profile directory: $profileImagePath" -Level Verbose -Step "Revert-Migration"
-                $ACLRestoreLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu_Revert_SetOwner.log"
 
-                $icaclsOwnerResult = icacls "$($profileImagePath)" /setowner $domainUser /T /C /Q > $ACLRestoreLogPath 2>&1
+                # Start set owner icacls command
+                Write-ToLog -Message "Setting Owner for $profileImagePath" -Level Info -Step "Revert-Migration"
+
+                $ACLRestoreLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu_Revert_SetOwner.log"
+                $logPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
+                $icaclsOwnerResult = icacls "$($profileImagePath)" /setowner $domainUser /T /C /Q 2>&1
+                $icaclsOwnerResult | Out-File -FilePath $logPath -Append -Encoding utf8
+
+                Write-ToLog -Message "End of Set Owner Log" -Level Info -Step "Revert-Migration"
+
                 # Check if any error occurred
                 if ($LASTEXITCODE -ne 0) {
                     Write-ToLog -Message "Failed to set ownership of profile directory. Check log at $ACLRestoreLogPath" -Level Warning -Step "Revert-Migration"
