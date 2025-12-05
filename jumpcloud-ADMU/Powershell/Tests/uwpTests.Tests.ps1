@@ -28,14 +28,32 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
             Write-Host "fta count: $($fileTypeAssociations.count)"
             $fileTypeAssociations | Should -Not -BeNullOrEmpty
-            # select first 5
-            $fileTypeAssociations | Select-Object -First 5 | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
+
+            # Create modified FTA list to force changes - use .txt with wordpad instead of current association
+            $modifiedFtaList = @(
+                [PSCustomObject]@{ extension = ".txt"; programId = "Applications\wordpad.exe" }
+                [PSCustomObject]@{ extension = ".log"; programId = "Applications\wordpad.exe" }
+                [PSCustomObject]@{ extension = ".xml"; programId = "Applications\notepad.exe" }
+                [PSCustomObject]@{ extension = ".ini"; programId = "Applications\notepad.exe" }
+                [PSCustomObject]@{ extension = ".cfg"; programId = "Applications\notepad.exe" }
+            )
+            $modifiedFtaList | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
+
             # set the file type protocols
             $protocolTypeAssociations = Get-ProtocolTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
             Write-Host "pta count: $($protocolTypeAssociations.count)"
             $protocolTypeAssociations | Should -Not -BeNullOrEmpty
-            # select first 5
-            $protocolTypeAssociations | Select-Object -First 5 | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
+
+            # Create modified PTA list to force changes - use mailto and news protocols
+            # Note: http/https are blocked by UCPD.sys, so use other protocols
+            $modifiedPtaList = @(
+                [PSCustomObject]@{ extension = "mailto"; programId = "Outlook.URL.mailto.15" }
+                [PSCustomObject]@{ extension = "news"; programId = "Outlook.URL.news.15" }
+                [PSCustomObject]@{ extension = "feed"; programId = "IE.AssocFile.URL" }
+                [PSCustomObject]@{ extension = "ftp"; programId = "IE.FTP" }
+                [PSCustomObject]@{ extension = "read"; programId = "ChromeHTML" }
+            )
+            $modifiedPtaList | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
             # if the user has not been migrated we need to create the registry key for this user
             $ADMUKEY = "HKEY_USERS:\$($currentUserSID)\SOFTWARE\JCADMU"
             if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
@@ -170,11 +188,11 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
         It "Tests Set-FTA/Set-PTA" {
             . $uwpPath
-            $protocol = "http"
-            $fileType = ".txt"
+            $protocol = "read"
+            $fileType = ".log"
 
             Set-FTA "wordpad" $fileType
-            Set-PTA -ProgId "notepad" -Protocol $protocol
+            Set-PTA -ProgId "ChromeHTML" -Protocol $protocol
 
             $fta = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice"
             $pta = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
@@ -183,7 +201,7 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             Write-Host "PTA: $($pta)"
             # Check if programId is wordpad
             $fta.ProgId | Should -Contain "wordpad"
-            $pta.ProgId | Should -Contain "notepad"
+            $pta.ProgId | Should -Contain "ChromeHTML"
         }
         It "Tests for blocked FTA (UCPD Driver should prevent these changes)" {
             . $uwpPath
@@ -200,7 +218,7 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             foreach ($blockedExtension in $blockedExtensions) {
                 # now attempt to set to MSEdgeHTM which is blocked
-                { Set-PTA -ProgId "MSEdgeHTM" -Protocol $blockedExtension } | Should -Throw -ExpectedMessage "*Association blocked*"
+                { Set-PTA -ProgId "ChromeHTML" -Protocol $blockedExtension } | Should -Throw -ExpectedMessage "*Association blocked*"
             }
         }
         It -Name "Tests when all CSV files are empty" {
@@ -248,7 +266,8 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
         It -Name "Tests when the PTA registration fails" {
             # Simulate PTA registration failure by providing invalid data
             $protocolTypeAssociations = @(
-                [PSCustomObject]@{ protocol = "invalid"; programId = "InvalidProgram" }
+                [PSCustomObject]@{ extension = "http"; programId = "InvalidProgram" }
+                [PSCustomObject]@{ extension = "https"; programId = "InvalidProgram2" }
             )
             $protocolTypeAssociations | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
 
