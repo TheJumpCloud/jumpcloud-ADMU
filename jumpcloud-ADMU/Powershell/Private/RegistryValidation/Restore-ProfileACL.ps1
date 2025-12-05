@@ -36,7 +36,7 @@ function Restore-ProfileACL {
             $restoreResult = icacls $targetPath /restore $BackupPath /T /C /Q 2>&1
             # Save icacls output to log file
             $restoreResult | Out-File -FilePath $logPath -Append -Encoding utf8
-            Write-ToLog -Message "================ End of ACL Restore Log ================" -Level Info -Step $logStep
+            Write-ToLog -Message "End of ACL Restore Log" -Level Info -Step $logStep -migrationStep
 
             if ($LASTEXITCODE -ne 0) {
                 # Only log if there are non-filtered errors
