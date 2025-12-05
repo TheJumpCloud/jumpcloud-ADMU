@@ -59,7 +59,7 @@ Function Start-Reversion {
     )
 
     Begin {
-        Write-ToLog -Message "Begin Revert Migration" -MigrationStep -Level Info -Step "Revert-Migration"
+        Write-ToLog -Message "Begin Revert Migration" -MigrationStep -Level Info 
 
         # Initialize result object
         $revertResult = [PSCustomObject]@{
