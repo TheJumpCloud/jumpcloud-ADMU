@@ -42,7 +42,7 @@ $systemContextBinding = $false # Bind using the systemContext API (default False
 # Do not edit below
 ################################################################################
 #region functionDefinitions
-Function Confirm-MigrationParameter {
+function Confirm-MigrationParameter {
     [CmdletBinding()]
     param(
         # --- Data Source Parameters ---
@@ -114,7 +114,7 @@ Function Confirm-MigrationParameter {
     # If all validation checks pass, return true.
     return $true
 }
-Function Get-MigrationUsersFromCsv {
+function Get-MigrationUsersFromCsv {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param(
@@ -128,7 +128,7 @@ Function Get-MigrationUsersFromCsv {
     begin {
         # Test CSV Path
         if (-not (Test-Path -Path $csvPath -PathType Leaf)) {
-            Throw "Validation Failed: The CSV file was not found at: '$csvPath'."
+            throw "Validation Failed: The CSV file was not found at: '$csvPath'."
         }
         # Import the CSV
         $ImportedCSV = Import-Csv -Path $csvPath -ErrorAction Stop
@@ -199,50 +199,126 @@ Function Get-MigrationUsersFromCsv {
         return $usersToMigrate
     }
 }
-Function Get-LatestADMUGUIExe {
+function Get-LatestADMUGUIExe {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param(
         # The full path to the discovery CSV file.
         [Parameter(Mandatory = $false)]
-        [string]$destinationPath = "C:\Windows\Temp"
+        [string]$destinationPath = "C:\Windows\Temp",
+
+        # Optional GitHub token for authenticated requests (helps avoid rate limiting)
+        [Parameter(Mandatory = $false)]
+        [string]$GitHubToken,
+
+        # Maximum number of retry attempts
+        [Parameter(Mandatory = $false)]
+        [int]$MaxRetries = 3,
+
+        # Delay between retries in seconds
+        [Parameter(Mandatory = $false)]
+        [int]$RetryDelaySeconds = 20
     )
 
     begin {
         $owner = "TheJumpCloud"
         $repo = "jumpcloud-ADMU"
         $apiUrl = "https://api.github.com/repos/$owner/$repo/releases/latest"
-    }
 
-    process {
-        try {
-            Write-Host "Querying GitHub API for the latest '$repo' release..." -ForegroundColor Yellow
-
-            # Get latest release data from the GitHub API
-            $latestRelease = Invoke-RestMethod -Uri $apiUrl -ErrorAction Stop
-
-            # Find the specific GUI executable asset
-            $exeAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
-
-            if ($exeAsset) {
-                $downloadUrl = $exeAsset.browser_download_url
-                $fileName = $exeAsset.name
-                $fullPath = Join-Path -Path $destinationPath -ChildPath $fileName
-
-                Write-Host "Downloading '$fileName' (Version $($latestRelease.tag_name))..." -ForegroundColor Yellow
-
-                Invoke-WebRequest -Uri $downloadUrl -OutFile $fullPath -ErrorAction Stop
-
-                Write-Host "Download complete! File saved to '$fullPath'." -ForegroundColor Green
-            } else {
-                Throw "Could not find 'gui_jcadmu.exe' in the latest release."
-            }
-        } catch {
-            Throw "Operation failed. The error was: $_"
+        # Setup headers for authenticated requests if token is provided
+        $headers = @{
+            "Accept" = "application/vnd.github.v3+json"
+        }
+        if (-not [string]::IsNullOrEmpty($GitHubToken)) {
+            $headers["Authorization"] = "Bearer $GitHubToken"
+            Write-Host "Using authenticated GitHub API requests" -ForegroundColor Cyan
         }
     }
 
+    process {
+        $attempt = 0
+        $success = $false
+        $lastError = $null
 
+        while ($attempt -lt $MaxRetries -and -not $success) {
+            $attempt++
+
+            try {
+                if ($attempt -gt 1) {
+                    Write-Host "Retry attempt $attempt of $MaxRetries..." -ForegroundColor Yellow
+                }
+
+                Write-Host "Querying GitHub API for the latest '$repo' release..." -ForegroundColor Yellow
+
+                # Get latest release data from the GitHub API
+                $latestRelease = Invoke-RestMethod -Uri $apiUrl -Headers $headers -ErrorAction Stop
+
+                # Find the specific GUI executable asset
+                $exeAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
+
+                if ($exeAsset) {
+                    $downloadUrl = $exeAsset.browser_download_url
+                    $fileName = $exeAsset.name
+                    $fullPath = Join-Path -Path $destinationPath -ChildPath $fileName
+
+                    Write-Host "Downloading '$fileName' (Version $($latestRelease.tag_name))..." -ForegroundColor Yellow
+
+                    # Download with retry logic
+                    $downloadAttempt = 0
+                    $downloadSuccess = $false
+
+                    while ($downloadAttempt -lt $MaxRetries -and -not $downloadSuccess) {
+                        $downloadAttempt++
+                        try {
+                            Invoke-WebRequest -Uri $downloadUrl -OutFile $fullPath -ErrorAction Stop
+                            $downloadSuccess = $true
+                        } catch {
+                            if ($downloadAttempt -lt $MaxRetries) {
+                                Write-Host "Download failed. Retrying in $RetryDelaySeconds seconds..." -ForegroundColor Yellow
+                                Start-Sleep -Seconds $RetryDelaySeconds
+                            } else {
+                                throw
+                            }
+                        }
+                    }
+
+                    Write-Host "Download complete! File saved to '$fullPath'." -ForegroundColor Green
+                    $success = $true
+                } else {
+                    throw "Could not find 'gui_jcadmu.exe' in the latest release."
+                }
+            } catch {
+                $lastError = $_
+                $errorMessage = $_.Exception.Message
+
+                # Check for specific error types
+                $isRateLimit = $errorMessage -match "rate limit"
+                $isNetworkError = $errorMessage -match "network|connection|timeout|unable to connect"
+
+                if ($isRateLimit) {
+                    Write-Host "GitHub API rate limit exceeded." -ForegroundColor Yellow
+                    if ([string]::IsNullOrEmpty($GitHubToken)) {
+                        Write-Host "Hint: Provide a GitHub token via -GitHubToken parameter for higher rate limits." -ForegroundColor Cyan
+                    }
+                } elseif ($isNetworkError) {
+                    Write-Host "Network connectivity issue detected: $errorMessage" -ForegroundColor Yellow
+                }
+
+                if ($attempt -lt $MaxRetries) {
+                    Write-Host "Waiting $RetryDelaySeconds seconds before retry..." -ForegroundColor Yellow
+                    Start-Sleep -Seconds $RetryDelaySeconds
+                } else {
+                    # Final attempt failed
+                    $errorDetail = if ($lastError.ErrorDetails.Message) {
+                        $lastError.ErrorDetails.Message
+                    } else {
+                        $lastError.Exception.Message
+                    }
+                    throw "Operation failed after $MaxRetries attempts. Last error: $errorDetail"
+                }
+            }
+        }
+    }
 }
 function ConvertTo-ArgumentList {
     <#
@@ -297,7 +373,7 @@ function ConvertTo-ArgumentList {
     # Return the completed list of arguments.
     return $argumentList
 }
-Function Get-JcadmuGuiSha256 {
+function Get-JcadmuGuiSha256 {
     <#
     .SYNOPSIS
         Dynamically finds the latest JumpCloud ADMU release and retrieves the SHA256 hash from the asset's digest.
@@ -356,14 +432,14 @@ Function Get-JcadmuGuiSha256 {
 
 
 }
-Function Test-ExeSHA {
+function Test-ExeSHA {
     param (
         [Parameter(Mandatory = $true)]
         [string]$filePath
     )
     process {
         if (-not (Test-Path -Path $filePath)) {
-            Throw "The gui_jcadmu.exe file was not found at: '$filePath'."
+            throw "The gui_jcadmu.exe file was not found at: '$filePath'."
         }
         $releaseSHA256 = Get-JcadmuGuiSha256
         $releaseSHA256 = $releaseSHA256.SHA256
@@ -382,7 +458,7 @@ Function Test-ExeSHA {
         }
     }
 }
-Function Invoke-UserMigrationBatch {
+function Invoke-UserMigrationBatch {
     <#
     .SYNOPSIS
         Executes user migrations for a batch of users with comprehensive result tracking.
@@ -510,7 +586,7 @@ Function Invoke-UserMigrationBatch {
     Write-Host "`nAll user migrations have been processed."
     return $results
 }
-Function Invoke-SingleUserMigration {
+function Invoke-SingleUserMigration {
     <#
     .SYNOPSIS
         Executes migration for a single user with error handling and result tracking.
@@ -541,9 +617,9 @@ Function Invoke-SingleUserMigration {
     # get the exit code
     $exitCode = $LASTEXITCODE
     Write-Host "[status] Migration process completed with exit code: $exitCode"
-    write-Host "`n[status] Migration output:"
+    Write-Host "`n[status] Migration output:"
     $result | Out-Host
-    write-Host "`n"
+    Write-Host "`n"
 
     if ($exitCode -eq 0) {
         # return true
@@ -558,7 +634,7 @@ Function Invoke-SingleUserMigration {
         }
     }
 }
-Function Get-DomainStatus {
+function Get-DomainStatus {
     <#
     .SYNOPSIS
         Gets current domain join status for Azure AD and local domain.
@@ -665,10 +741,10 @@ if ($UsersToMigrate) {
         }
     }
     $UsersList = $processedUsers | ConvertFrom-Csv
-    Write-host "[status] Logging off users..."
+    Write-Host "[status] Logging off users..."
     foreach ($user in $UsersList) {
-        If (($user.username)) {
-            write-host "[status] Logging off user: $($user.username) with ID: $($user.ID)"
+        if (($user.username)) {
+            Write-Host "[status] Logging off user: $($user.username) with ID: $($user.ID)"
             # Force Logout
             logoff.exe $($user.ID)
         }
@@ -696,7 +772,7 @@ if ($UsersToMigrate) {
 $guiJcadmuPath = "C:\Windows\Temp\gui_jcadmu.exe" # Exe path
 
 # Download the latest ADMU GUI executable
-Get-LatestADMUGUIExe # Download the latest ADMU GUI executable
+Get-LatestADMUGUIExe
 
 # Validate the downloaded file against the official release hash
 Test-ExeSHA -filePath $guiJcadmuPath
