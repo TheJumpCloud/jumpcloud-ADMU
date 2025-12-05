@@ -406,7 +406,7 @@ Function Start-Reversion {
         Write-ToLog -Message "ADMU migration revert process completed in $($duration.TotalSeconds) seconds" -Level Info -Step "Revert-Migration"
 
         if ($revertResult.Success) {
-            Write-ToLog -Message "Migration Revert End" -MigrationStep -Level Info -Step "Revert-Migration"
+            Write-ToLog -Message "Migration Revert End" -MigrationStep -Level Info
             Write-ToLog -message "Reverted UserSID: $UserSID" -Level Info -Step "Revert-Migration"
         } else {
             Write-ToLog -Message "Migration revert failed for SID: $UserSID. Errors: $($revertResult.Errors -join '; ')" -Level Error -Step "Revert-Migration"
