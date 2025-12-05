@@ -357,9 +357,6 @@ Function Start-Reversion {
             if (-not $DryRun) {
                 Write-ToLog -Message "Setting ownership of profile directory: $profileImagePath" -Level Verbose -Step "Revert-Migration"
 
-                # Start set owner icacls command
-                Write-ToLog -Message "Setting Owner for $profileImagePath" -Level Info -Step "Revert-Migration"
-
                 $ACLRestoreLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu_Revert_SetOwner.log"
                 $logPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
                 $icaclsOwnerResult = icacls "$($profileImagePath)" /setowner $domainUser /T /C /Q 2>&1
