@@ -30,7 +30,7 @@ function Restore-ProfileACL {
         # 3. Execute the icacls Restore Command
         try {
             # Restore
-            Write-ToLog -Message "================ ACL Restore Log ================" -Level Info -Step $logStep
+            Write-ToLog -Message "ACL Restore Log " -Level Info -Step $logStep -MigrationStep
             # Save and append the log to \Windows\Temp\jcAdmu.log
             $logPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
             $restoreResult = icacls $targetPath /restore $BackupPath /T /C /Q 2>&1
