@@ -307,7 +307,7 @@ Function Start-Reversion {
 
             try {
                 if ($DryRun) {
-                    Write-ToLog "WHAT IF: Would update registry ProfileImagePath from '$registryProfileImagePath' to '$profileImagePath'" -ForegroundColor Cyan
+                    Write-ToLog "WHAT IF: Would update registry ProfileImagePath from '$registryProfileImagePath' to '$profileImagePath'" -Level Verbose -Step "Revert-Migration"
                 } else {
                     # Update the ProfileImagePath in the registry to point to the target profile path
                     # This informs Windows where to find the restored .DAT files
