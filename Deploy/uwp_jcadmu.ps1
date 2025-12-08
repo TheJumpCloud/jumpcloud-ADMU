@@ -856,7 +856,15 @@ $signature::ShowWindow($hwnd, 1) # 0 = SW_HIDE
 # Check if we're in permission-setting mode
 if ($SetPermissionsMode -eq $true) {
     $Script:AdminDebug = $true
-    $ntfsPermissionLogPath = "C:\Windows\Temp\jcAdmu.log"
+
+    # Get system drive dynamically (not all systems use C:)
+    try {
+        $systemDrive = (Get-WmiObject Win32_OperatingSystem).SystemDrive
+    } catch {
+        $systemDrive = (Get-CimInstance Win32_OperatingSystem).SystemDrive
+    }
+
+    $ntfsPermissionLogPath = "$systemDrive\Windows\Temp\jcAdmu.log"
 
     Write-ToLog "Begin Post-Migration NFTS Task" -Path $ntfsPermissionLogPath -MigrationStep
     Write-ToLog "Running in permission-setting mode" -Path $ntfsPermissionLogPath
@@ -888,7 +896,14 @@ if ($SetPermissionsMode -eq $true) {
         $SourceAccountTranslated = $false
         $TargetAccountTranslated = $false
 
-        $ntfsPermissionLogPath = "C:\Windows\Temp\jcAdmu.log"
+        # Get system drive dynamically (not all systems use C:)
+        try {
+            $systemDrive = (Get-WmiObject Win32_OperatingSystem).SystemDrive
+        } catch {
+            $systemDrive = (Get-CimInstance Win32_OperatingSystem).SystemDrive
+        }
+
+        $ntfsPermissionLogPath = "$systemDrive\Windows\Temp\jcAdmu.log"
 
         try {
             $SourceAccount = $SourceSIDObj.Translate([System.Security.Principal.NTAccount]).Value
