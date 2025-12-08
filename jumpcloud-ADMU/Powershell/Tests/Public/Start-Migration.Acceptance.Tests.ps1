@@ -119,13 +119,13 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
             $tempPassword = "Temp123!"
             # username to migrate
             $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-            $userToMigrateFromSID = (Get-LocalUser -Name $userToMigrateFrom | Select-Object SID).SID
             # username to migrate to
             $userToMigrateTo = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-            $userToMigrateFromSID = (Get-LocalUser -Name $userToMigrateFrom | Select-Object SID).SID
 
             # Initialize-TestUser
             Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            # get SIDs for UWP testing
+            $userToMigrateFromSID = (Get-LocalUser -Name $userToMigrateFrom | Select-Object SID).SID
             # define test case input
             $testCaseInput = @{
                 JumpCloudUserName       = $userToMigrateTo
@@ -259,7 +259,8 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 $userProfilePath = "C:\Users\$($userToMigrateFrom)"
                 $subDirectories = Get-ChildItem -Path $userProfilePath -Directory
                 # run the UWP to set final permission settings:
-                . uwpPath -SetPermissions $true -sourceSID $userToMigrateFromSID -targetSID $userToMigrateToSID -profilePath $userProfilePath
+                $userToMigrateToSID = (Get-LocalUser -Name $userToMigrateTo | Select-Object SID).SID
+                . $uwpPath -SetPermissions $true -sourceSID $userToMigrateFromSID -targetSID $userToMigrateToSID -profilePath $userProfilePath
 
                 # Validate each subdirectory owner is the new user
                 foreach ($subDir in $subDirectories) {

@@ -84,7 +84,9 @@ Describe "New-RegPermissionTask Acceptance Tests" -Tag "Acceptance" {
             # Clean up any existing task first
             try {
                 Unregister-ScheduledTask -TaskName $script:expectedTaskName -Confirm:$false -ErrorAction SilentlyContinue
-            } catch {}
+            } catch {
+                Write-Host "No existing task to clean up."
+            }
 
             $result = New-RegPermissionTask -ProfilePath $testProfilePath -TargetSID $testTargetSID -SourceSID $testSourceSID -TaskUser $testTaskUser
 
