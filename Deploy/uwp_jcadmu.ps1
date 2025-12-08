@@ -931,8 +931,7 @@ if ($SetPermissionsMode -eq $true) {
 
         # Grant permissions recursively with /T flag
         Write-ToLog "Granting recursive permissions to: $TargetAccountIcacls" -Path $ntfsPermissionLogPath
-        $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /C /Q 2>&1
-
+        $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /C /Q 2>&1 | ForEach-Object { "$_" }
         # Log icacls output for debugging
         if ($icaclsGrantResult) {
             foreach ($line in $icaclsGrantResult) {
@@ -950,7 +949,7 @@ if ($SetPermissionsMode -eq $true) {
 
         # Set ownership recursively with /T flag
         Write-ToLog "Setting recursive owner to $TargetAccountIcacls" -Path $ntfsPermissionLogPath
-        $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /T /C /Q 2>&1
+        $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /T /C /L /Q 2>&1 | ForEach-Object { "$_" }
 
         # Log icacls output for debugging
         if ($icaclsOwnerResult) {
