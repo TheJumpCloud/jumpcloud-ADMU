@@ -974,11 +974,8 @@ if ($SetPermissionsMode -eq $true) {
             Write-ToLog "Warning: Could not delete scheduled task $taskName : $_" -Path $ntfsPermissionLogPath
         }
 
-        exit 0
-
     } catch {
         Write-ToLog "Error during permission setting: $_" -Path $ntfsPermissionLogPath
-        exit 1
     }
     Write-ToLog "End Post-Migration NFTS Task" -Path $ntfsPermissionLogPath -MigrationStep
 
