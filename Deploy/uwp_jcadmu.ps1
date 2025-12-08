@@ -2,7 +2,8 @@ param(
     [string]$SetPermissions = "0",
     [string]$SourceSID = "",
     [string]$TargetSID = "",
-    [string]$ProfilePath = ""
+    [string]$ProfilePath = "",
+    [string]$FullScreen = "1"
 )
 
 # Convert SetPermissions string to boolean (compiled exes pass all params as strings)
@@ -10,11 +11,18 @@ $SetPermissionsMode = $false
 if ($SetPermissions -in @("1", "true", "True", "$true", "yes")) {
     $SetPermissionsMode = $true
 }
+# convert FullScreen string to boolean
+$FullScreenMode = $true
+if ($FullScreen -in @("0", "false", "False", "$false", "no")) {
+    $FullScreenMode = $false
+}
 
 # Clean up parameters - remove quotes and whitespace that may be passed from command line
 $SourceSID = $SourceSID.Trim().Trim("'").Trim('"')
 $TargetSID = $TargetSID.Trim().Trim("'").Trim('"')
 $ProfilePath = $ProfilePath.Trim().Trim("'").Trim('"')
+
+#region Functions
 ##### MIT License #####
 # MIT License
 
@@ -137,7 +145,7 @@ function Set-FTA {
 
     #Write required Application Ids to ApplicationAssociationToasts
     #When more than one application associated with an Extension/Protocol is installed ApplicationAssociationToasts need to be updated
-    function local:Write-RequiredApplicationAssociationToasts {
+    function script:Write-RequiredApplicationAssociationToasts {
         param (
             [Parameter( Position = 0, Mandatory = $True )]
             [String]
@@ -186,7 +194,7 @@ function Set-FTA {
 
     }
 
-    function local:Update-RegistryChanges {
+    function script:Update-RegistryChanges {
         $code = @'
 [System.Runtime.InteropServices.DllImport("Shell32.dll")]
 private static extern int SHChangeNotify(int eventId, int flags, IntPtr item1, IntPtr item2);
@@ -197,15 +205,19 @@ public static void Refresh() {
 
         try {
             Add-Type -MemberDefinition $code -Namespace SHChange -Name Notify
-        } catch {}
+        } catch {
+            Write-ToLog "Failed to add type definition for SHChange Notify"
+        }
 
         try {
             [SHChange.Notify]::Refresh()
-        } catch {}
+        } catch {
+            Write-ToLog "Failed to refresh shell changes"
+        }
     }
 
 
-    function local:Set-Icon {
+    function script:Set-Icon {
         param (
             [Parameter( Position = 0, Mandatory = $True )]
             [String]
@@ -227,7 +239,7 @@ public static void Refresh() {
     }
 
 
-    function local:Write-ExtensionKeys {
+    function script:Write-ExtensionKeys {
         [OutputType([bool])]
         param (
             [Parameter( Position = 0, Mandatory = $True )]
@@ -244,7 +256,7 @@ public static void Refresh() {
         )
 
 
-        function local:Remove-UserChoiceKey {
+        function script:Remove-UserChoiceKey {
             param (
                 [Parameter( Position = 0, Mandatory = $True )]
                 [String]
@@ -275,20 +287,24 @@ namespace Registry {
 
             try {
                 Add-Type -TypeDefinition $code
-            } catch {}
+            } catch {
+                Write-ToLog "Failed to add type definition for registry utils"
+            }
 
             try {
                 [Registry.Utils]::DeleteKey($Key)
-            } catch {}
+            } catch {
+                Write-ToLog "Failed to delete UserChoice key: $Key"
+            }
         }
 
 
         try {
             $keyPath = "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$Extension\UserChoice"
-            Write-Verbose "Remove Extension UserChoice Key If Exist: $keyPath"
+            Write-ToLog "Remove Extension UserChoice Key If Exist: $keyPath"
             Remove-UserChoiceKey $keyPath
         } catch {
-            Write-Verbose "Extension UserChoice Key No Exist: $keyPath"
+            Write-ToLog "Extension UserChoice Key No Exist: $keyPath"
         }
 
 
@@ -311,7 +327,7 @@ namespace Registry {
     }
 
 
-    function local:Write-ProtocolKeys {
+    function script:Write-ProtocolKeys {
         [OutputType([bool])]
         param (
             [Parameter( Position = 0, Mandatory = $True )]
@@ -330,11 +346,11 @@ namespace Registry {
 
         try {
             $keyPath = "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$Protocol\UserChoice"
-            Write-Verbose "Remove Protocol UserChoice Key If Exist: $keyPath"
+            Write-ToLog "Remove Protocol UserChoice Key If Exist: $keyPath"
             Remove-Item -Path $keyPath -Recurse -ErrorAction Stop | Out-Null
 
         } catch {
-            Write-Verbose "Protocol UserChoice Key No Exist: $keyPath"
+            Write-ToLog "Protocol UserChoice Key No Exist: $keyPath"
         }
 
 
@@ -358,7 +374,7 @@ namespace Registry {
     }
 
 
-    function local:Get-UserExperience {
+    function script:Get-UserExperience {
         [OutputType([string])]
         $hardcodedExperience = "User Choice set via Windows User Experience {D18B6DD5-6124-4341-9318-804003BAFA0B}"
         $userExperienceSearch = "User Choice set via Windows User Experience"
@@ -380,7 +396,7 @@ namespace Registry {
     }
 
 
-    function local:Get-UserSid {
+    function script:Get-UserSid {
         [OutputType([string])]
         $userSid = ((New-Object System.Security.Principal.NTAccount([Environment]::UserName)).Translate([System.Security.Principal.SecurityIdentifier]).value).ToLower()
         Write-Output $userSid
@@ -388,7 +404,7 @@ namespace Registry {
 
     #use in this special case
     #https://github.com/DanysysTeam/PS-SFTA/pull/7
-    function local:Get-UserSidDomain {
+    function script:Get-UserSidDomain {
         if (-not ("System.DirectoryServices.AccountManagement" -as [type])) {
             Add-Type -AssemblyName System.DirectoryServices.AccountManagement
         }
@@ -399,7 +415,7 @@ namespace Registry {
 
 
 
-    function local:Get-HexDateTime {
+    function script:Get-HexDateTime {
         [OutputType([string])]
 
         $now = [DateTime]::Now
@@ -420,7 +436,7 @@ namespace Registry {
         )
 
 
-        function local:Get-ShiftRight {
+        function script:Get-ShiftRight {
             [CmdletBinding()]
             param (
                 [Parameter( Position = 0, Mandatory = $true)]
@@ -438,7 +454,7 @@ namespace Registry {
         }
 
 
-        function local:Get-Long {
+        function script:Get-Long {
             [CmdletBinding()]
             param (
                 [Parameter( Position = 0, Mandatory = $true)]
@@ -452,7 +468,7 @@ namespace Registry {
         }
 
 
-        function local:Convert-Int32 {
+        function script:Convert-Int32 {
             param (
                 [Parameter( Position = 0, Mandatory = $true)]
                 [long] $Value
@@ -640,7 +656,6 @@ function Write-ToLog {
     }
     process {
         if (!(Test-Path $Path)) {
-            Write-Verbose "Creating $Path."
             New-Item $Path -Force -ItemType File | Out-Null
         }
         $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -676,7 +691,7 @@ function Write-ToLog {
             'Error' { Write-Error $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
             'Warn' { Write-Warning $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
             'Info' { if ($Script:AdminDebug) { Write-Host $logMessage } }
-            'Verbose' { Write-Verbose $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
+            'Verbose' { Write-ToLog $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
         }
 
         if ($Script:ProgressBar) {
@@ -703,6 +718,7 @@ function DecodeBase64Image {
     $ObjBitmapImage.Freeze() #Makes the current object unmodifiable and sets its IsFrozen property to true.
     $ObjBitmapImage
 }
+#endRegion Functions
 
 $types = @(
     'PresentationFramework',
@@ -730,15 +746,14 @@ function New-UWPForm {
     $syncHash.EndUWP = $false
 
     # optionally run this app in windowed view by switching the variable below to: $false
-    $buildFullScreen = $true
-    switch ($buildFullScreen) {
+    switch ($FullScreenMode) {
         $true {
-            Write-Verbose "Running UWP in fullscreen"
+            Write-ToLog "Running UWP in fullscreen"
             $windowState = "Maximized"
             $windowStyle = "None"
         }
         $false {
-            Write-Verbose "not running in fullscreen"
+            Write-ToLog "Running UWP in windowed mode"
             $windowState = "Normal"
             $windowStyle = "SingleBorderWindow"
         }
@@ -1010,8 +1025,6 @@ if ($SetPermissionsMode -eq $true) {
         Write-ToLog -Message ("There are $($ftaCount) file type associations to be registered")
         Write-ToLog -Message ("There are $($ptaCount) protocol type associations to be registered")
         $output = @()
-        $ftaOutput = @()
-        $ptaOutput = @()
         # Create a list of all 3 CSVs to be registered
         $list = @()
         if ($appxList) {
@@ -1059,7 +1072,7 @@ if ($SetPermissionsMode -eq $true) {
                             }
                             process {
                                 if (!(Test-Path $Path)) {
-                                    Write-Verbose "Creating $Path."
+                                    Write-ToLog "Creating $Path."
                                     New-Item $Path -Force -ItemType File | Out-Null
                                 }
                                 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -1095,7 +1108,7 @@ if ($SetPermissionsMode -eq $true) {
                                     'Error' { Write-Error $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
                                     'Warn' { Write-Warning $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
                                     'Info' { if ($Script:AdminDebug) { Write-Host $logMessage } }
-                                    'Verbose' { Write-Verbose $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
+                                    'Verbose' { Write-ToLog $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
                                 }
 
                                 if ($Script:ProgressBar) {
@@ -1197,7 +1210,7 @@ if ($SetPermissionsMode -eq $true) {
                         Write-ToLog -Message ("Registering FTA Extension: $($item.extension) ProgramID: $($item.programId)")
                         # Output to the log file
                         try {
-                            $ftaOutput += Set-FTA -Extension $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
+                            Set-FTA -Extension $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
                             Write-ToLog -Message ("Success")
                             $ftaSuccessCounter++
                         } catch {
@@ -1206,7 +1219,6 @@ if ($SetPermissionsMode -eq $true) {
                         }
 
                     }
-                    $ftaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\fta_manifestLog.txt"
                     Write-ToLog -Message ("FTA Registration Complete.  $ftaSuccessCounter/$ftaCount file type associations registered successfully.")
                 }
                 "pta" {
@@ -1220,7 +1232,7 @@ if ($SetPermissionsMode -eq $true) {
                         # Update the textLabel
                         Write-ToLog -Message ("Registering PTA Extension: $($item.extension) ProgramID: $($item.programId)")
                         try {
-                            $ptaOutput += Set-PTA -Protocol $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
+                            Set-PTA -Protocol $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
                             Write-ToLog -Message ("Success")
                             $ptaSuccessCounter++
                         } catch {
@@ -1228,7 +1240,6 @@ if ($SetPermissionsMode -eq $true) {
                             Write-ToLog -Message ($ProcessError)
                         }
                     }
-                    $ptaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\pta_manifestLog.txt"
 
                     Write-ToLog -Message ("PTA Registration Complete.  $ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
                 }
