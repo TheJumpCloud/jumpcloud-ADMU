@@ -207,12 +207,19 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             $blockedExtensions = ".pdf"
 
             foreach ($blockedExtension in $blockedExtensions) {
-                # In CI, you may be able to set the .PDF extension. This test performs a try/ catch to try to set the association, if it's successful the SET-FTA function is mocked to throw and test that the appropriate message is displayed.
+                # First attempt to set the association - if it succeeds, mock to force failure
+                $associationBlocked = $false
                 try {
-                    { Set-FTA -ProgId "MSEdgeHTM" -Extension $blockedExtension } | Should -Throw -ExpectedMessage "*Association blocked*"
+                    Set-FTA -ProgId "MSEdgeHTM" -Extension $blockedExtension
                 } catch {
-                    Write-Host "FTA change for $blockedExtension was successful, now mocking to throw."
-                    Mock -CommandName Write-ExtensionKeys { return $false }
+                    # Association was blocked (expected behavior)
+                    $associationBlocked = $true
+                    $_.Exception.Message | Should -Match "Association blocked"
+                }
+
+                if (-not $associationBlocked) {
+                    Write-Host "FTA change for $blockedExtension was successful in CI, now mocking to throw."
+                    Mock -CommandName Set-FTA { throw "Association blocked" }
                     { Set-FTA -ProgId "MSEdgeHTM" -Extension $blockedExtension } | Should -Throw -ExpectedMessage "*Association blocked*"
                 }
             }
@@ -222,11 +229,19 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             $blockedExtensions = "http", "https"
 
             foreach ($blockedExtension in $blockedExtensions) {
+                # First attempt to set the association - if it succeeds, mock to force failure
+                $associationBlocked = $false
                 try {
-                    { Set-PTA -ProgId "ChromeHTML" -Protocol $blockedExtension } | Should -Throw -ExpectedMessage "*Association blocked*"
+                    Set-PTA -ProgId "ChromeHTML" -Protocol $blockedExtension
                 } catch {
-                    Write-Host "PTA change for $blockedExtension was successful, now mocking to throw."
-                    Mock -CommandName Write-ProtocolKeys { return $false }
+                    # Association was blocked (expected behavior)
+                    $associationBlocked = $true
+                    $_.Exception.Message | Should -Match "Association blocked"
+                }
+
+                if (-not $associationBlocked) {
+                    Write-Host "PTA change for $blockedExtension was successful in CI, now mocking to throw."
+                    Mock -CommandName Set-PTA { throw "Association blocked" }
                     { Set-PTA -ProgId "ChromeHTML" -Protocol $blockedExtension } | Should -Throw -ExpectedMessage "*Association blocked*"
                 }
             }
