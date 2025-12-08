@@ -890,6 +890,44 @@ if ($SetPermissionsMode -eq $true) {
             [string]$FilePath
         )
 
+        function local:Invoke-IcaclsSafe {
+            <#
+            .SYNOPSIS
+                Wraps icacls to safely capture output in CI environments where
+                $ErrorActionPreference = 'Stop' would otherwise cause a crash.
+            #>
+            param(
+                [Parameter(Mandatory = $true)]
+                [string]$Path,
+
+                [Parameter(Mandatory = $true)]
+                [string[]]$Arguments,
+
+                [Parameter(Mandatory = $false)]
+                [switch]$FilterAccessDenied
+            )
+
+            # 1. Force local error preference to 'Continue' to prevent CI from crashing
+            #    when icacls writes to stderr (even with /C).
+            $local:ErrorActionPreference = 'Continue'
+
+            # 2. Run icacls with the Call Operator (&).
+            #    2>&1 redirects stderr to stdout.
+            #    | ForEach-Object { "$_" } converts ErrorRecords to plain strings.
+            # Write-ToLog "Invoking icacls on path: $Path with arguments: $Arguments" -Path $ntfsPermissionLogPath
+            $result = & icacls.exe $Path $Arguments 2>&1 | ForEach-Object { "$_" }
+
+            # 3. Optional: Clean up the logs by removing expected failures
+            if ($FilterAccessDenied) {
+                $result = $result | Where-Object {
+                    $_ -notmatch "Access is denied" -and
+                    $_ -notmatch "Successfully processed \d+ files; Failed processing \d+ files"
+                }
+            }
+
+            return $result
+        }
+
         $SourceSIDObj = New-Object System.Security.Principal.SecurityIdentifier($SourceSID)
         $TargetSIDObj = New-Object System.Security.Principal.SecurityIdentifier($TargetSID)
 
@@ -931,8 +969,9 @@ if ($SetPermissionsMode -eq $true) {
 
         # Grant permissions recursively with /T flag
         Write-ToLog "Granting recursive permissions to: $TargetAccountIcacls" -Path $ntfsPermissionLogPath
-        $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /T /C /Q 2>&1 | ForEach-Object { "$_" }
-        # Log icacls output for debugging
+        $icaclsGrantResult = Invoke-IcaclsSafe `
+            -Path $FilePath `
+            -Arguments "/grant", "${TargetAccountIcacls}:(OI)(CI)F", "/T", "/C", "/Q"        # Log icacls output for debugging
         if ($icaclsGrantResult) {
             foreach ($line in $icaclsGrantResult) {
                 if ($line -and $line.ToString().Trim()) {
@@ -949,9 +988,9 @@ if ($SetPermissionsMode -eq $true) {
 
         # Set ownership recursively with /T flag
         Write-ToLog "Setting recursive owner to $TargetAccountIcacls" -Path $ntfsPermissionLogPath
-        $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /T /C /L /Q 2>&1 | ForEach-Object { "$_" }
-
-        # Log icacls output for debugging
+        $icaclsOwnerResult = Invoke-IcaclsSafe `
+            -Path $FilePath `
+            -Arguments "/setowner", "${TargetAccountIcacls}", "/T", "/C", "/Q"        # Log icacls output for debugging
         if ($icaclsOwnerResult) {
             foreach ($line in $icaclsOwnerResult) {
                 if ($line -and $line.ToString().Trim()) {
