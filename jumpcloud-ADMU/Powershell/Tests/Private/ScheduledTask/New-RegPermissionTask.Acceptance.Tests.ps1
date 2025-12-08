@@ -41,6 +41,7 @@ Describe "New-RegPermissionTask Acceptance Tests" -Tag "Acceptance" {
             }
         } catch {
             # Ignore cleanup errors
+            Write-Host "Task cleanup error: $($_.Exception.Message)"
         }
     }
 

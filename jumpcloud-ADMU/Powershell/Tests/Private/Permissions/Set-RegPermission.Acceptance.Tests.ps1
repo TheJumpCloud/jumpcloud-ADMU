@@ -289,6 +289,12 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
         Write-Host "####### UWP #########"
         Write-Host "running $uwpPath -SourceSID $UserSID -TargetSID $UserSIDNew -ProfilePath $userProfilePath -SetPermissions $true"
         . $uwpPath -SourceSID $UserSID -TargetSID $UserSIDNew -ProfilePath $userProfilePath -SetPermissions $true
+        # display output log file
+        $uwpLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
+        if (Test-Path $uwpLogPath) {
+            # show the last 40 lines of the log
+            Get-Content -Path $uwpLogPath -Tail 40
+        }
         Write-Host "####################"
         # test for the following directories in AppData: Roaming, Local
         foreach ($subDir in @("Roaming", "Local")) {
