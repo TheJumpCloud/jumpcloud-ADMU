@@ -25,7 +25,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
         # Test Setup
         BeforeEach {
             # sample password
-            $tempPassword = "Temp123!"
+            $tempPassword = "Temp123!Temp123!"
             # username to migrate
             $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # username to migrate to
@@ -96,7 +96,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
         # Test Setup
         BeforeEach {
             # sample password
-            $tempPassword = "Temp123!"
+            $tempPassword = "Temp123!Temp123!"
             # username to migrate
             $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # username to migrate to
@@ -355,7 +355,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
         # Test Setup
         BeforeEach {
             # sample password
-            $tempPassword = "Temp123!"
+            $tempPassword = "Temp123!Temp123!"
             # username to migrate
             $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # username to migrate to
