@@ -236,7 +236,7 @@ if (`$PSBoundParameters.Count -eq 0) {
         # add executable region to the template
         $templateString += $executableRegion + [Environment]::NewLine
         # replace the validation region [System.Management.Automation.ValidationMetadataException] lines with Write-ToLog Error Lines and exit 1
-        $replacementRegex = [regex]'Throw\s+\[System\.Management\.Automation\.ValidationMetadataException\]\s([\s\S].*)'
+        $replacementRegex = [regex]'throw\s+\[System\.Management\.Automation\.ValidationMetadataException\]\s([\s\S].*)'
         $replacementMatches = $replacementRegex.Matches($templateString)
         foreach ($match in $replacementMatches) {
             $ErrorMatchMessage = $match.Groups[1].Value.Trim()
@@ -245,7 +245,6 @@ if (`$PSBoundParameters.Count -eq 0) {
             # replace the line in the template string
             $templateString = $templateString -replace [regex]::Escape($match.Value), $replacement
         }
-
 
         # finally replace the exe exit code region
         $replacement = @'
