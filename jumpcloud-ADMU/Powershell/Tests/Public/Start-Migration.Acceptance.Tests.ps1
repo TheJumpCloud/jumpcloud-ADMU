@@ -608,7 +608,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     New-localUser -Name $userToMigrateTo -password $newUserPassword -Description "Created By JumpCloud"
 
                     # test local user description
-                    $localUser = Get-LocalUser -username $userToMigrateTo
+                    $localUser = Get-LocalUser -Name $userToMigrateTo
                     $localUser.Description | Should -Match "Created By JumpCloud"
 
                     # set the $testCaseInput
