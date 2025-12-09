@@ -1,11 +1,12 @@
 ## 2.11.0
 
-Release Date: November 5, 2025
+Release Date: December 5, 2025
 
 #### RELEASE NOTES
 
 ```
-Added functionality to backup profileImage permissions
+- Added functionality to backup profileImage permissions
+- Added Start-Reversion Function
 ```
 
 #### IMPROVEMENTS:
