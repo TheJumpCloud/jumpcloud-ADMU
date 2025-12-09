@@ -34,10 +34,10 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             $userAssociations = Get-UserFileTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
             $modifiedFtaList = @(
                 [PSCustomObject]@{ extension = ".txt"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".txt" }).programId -eq "WordPad") { "Notepad++" } else { "WordPad" } }
-                [PSCustomObject]@{ extension = ".log"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".txt" }).programId -eq "WordPad") { "Notepad++" } else { "WordPad" } }
-                [PSCustomObject]@{ extension = ".xml"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".txt" }).programId -eq "WordPad") { "Notepad++" } else { "WordPad" } }
-                [PSCustomObject]@{ extension = ".ini"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".txt" }).programId -eq "WordPad") { "Notepad++" } else { "WordPad" } }
-                [PSCustomObject]@{ extension = ".cfg"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".txt" }).programId -eq "WordPad") { "Notepad++" } else { "WordPad" } }
+                [PSCustomObject]@{ extension = ".log"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".log" }).programId -eq "WordPad") { "Notepad++" } else { "WordPad" } }
+                [PSCustomObject]@{ extension = ".xml"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".xml" }).programId -eq "WordPad") { "Notepad++" } else { "WordPad" } }
+                [PSCustomObject]@{ extension = ".ini"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".ini" }).programId -eq "WordPad") { "Notepad++" } else { "WordPad" } }
+                [PSCustomObject]@{ extension = ".cfg"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".cfg" }).programId -eq "WordPad" ) { "Notepad++" } else { "WordPad" } }
             )
             $modifiedFtaList | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
 
