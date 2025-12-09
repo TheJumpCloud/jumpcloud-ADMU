@@ -597,10 +597,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                 }
             }
             Context "When local user exists tests" {
-                It "Should throw when some local user exists and is created and managed by the JumpCloud agent" {
-                    # TODO: modify the C:\Program Files\JumpCloud\Plugins\Contrib\managedUsers.json to contain a string with the username 'userToMigrateTo'
-                    # Get the contents of the managedUsers.json, append the username to the list, and write it back
 
+                It "Should throw when some local user exists and is created and managed by the JumpCloud agent" {
                     # Create target user
                     $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
 
@@ -611,6 +609,15 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $localUser = Get-LocalUser -Name $userToMigrateTo
                     $localUser.Description | Should -Match "Created By JumpCloud"
 
+                    # Simulate entry in managedUsers.json to indicate the user is managed by JumpCloud
+                    $managedUsersPath = 'C:\Program Files\JumpCloud\Plugins\Contrib\managedUsers.json'
+                    $managedUsersDir = Split-Path -Path $managedUsersPath -Parent
+                    if (-not (Test-Path -Path $managedUsersDir)) {
+                        New-Item -Path $managedUsersDir -ItemType Directory -Force | Out-Null
+                    }
+                    $managedUsers = @(@{ username = $userToMigrateTo })
+                    $managedUsers | ConvertTo-Json | Set-Content -Path $managedUsersPath
+
                     # set the $testCaseInput
                     $testCaseInput.JumpCloudUserName = $userToMigrateTo
                     $testCaseInput.SelectedUserName = $userToMigrateFrom
@@ -618,9 +625,9 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
 
                     # TODO: update expected message with expected output from start-migration
                     # should throw a message stating that the local user exists and was created and managed by JumpCloud
-                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device is currently associated to a JumpCloud user matching the same username. To resolve the issue, unbind (remove the association
-between the JumpCloud user and this device) and remove the local user from this device before attempting migration again. User was created by JumpCloud."
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device is currently associated to a JumpCloud user matching the same username. To resolve the issue, unbind (remove the association between the JumpCloud user and this device) and remove the local user from this device before attempting migration again. User was created by JumpCloud."
                 }
+
                 It "Should throw when some local user exists and is created by the JumpCloud agent but no longer managed" {
                     # Create target user
                     $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
@@ -639,9 +646,9 @@ between the JumpCloud user and this device) and remove the local user from this 
 
                     # TODO: update expected message with expected output from start-migration
                     # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
-                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device was associated to a JumpCloud user matching the same username. To resolve the issue, remove the local user from this device
-before attempting migration again. User was created by JumpCloud."
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device was associated to a JumpCloud user matching the same username. To resolve the issue, remove the local user from this device before attempting migration again. User was created by JumpCloud."
                 }
+
                 It "Should throw when some local user exists and was previously created by the JumpCloud ADMU tool" {
                     # Create target user
                     $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
@@ -660,9 +667,9 @@ before attempting migration again. User was created by JumpCloud."
 
                     # TODO: update expected message with expected output from start-migration
                     # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
-                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device was associated to a JumpCloud user matching the same username. To resolve the issue, remove the local user from this device
-before attempting migration again. User was created by JumpCloudADMU."
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device was associated to a JumpCloud user matching the same username. To resolve the issue, remove the local user from this device before attempting migration again. User was created by JumpCloudADMU."
                 }
+
                 It "Should throw when some local user exists and does not match any known JumpCloud created user descriptions" {
                     # Create target user
                     $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
