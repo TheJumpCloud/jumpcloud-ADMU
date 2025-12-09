@@ -618,7 +618,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
 
                     # TODO: update expected message with expected output from start-migration
                     # should throw a message stating that the local user exists and was created and managed by JumpCloud
-                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "{Your Message Added to Start-Migration Function Here}"
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device is currently associated to a JumpCloud user matching the same username. To resolve the issue, unbind (remove the association
+between the JumpCloud user and this device) and remove the local user from this device before attempting migration again. User was created by JumpCloud."
                 }
                 It "Should throw when some local user exists and is created by the JumpCloud agent but no longer managed" {
                     # Create target user
@@ -638,7 +639,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
 
                     # TODO: update expected message with expected output from start-migration
                     # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
-                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "{Your Message Added to Start-Migration Function Here}"
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device was associated to a JumpCloud user matching the same username. To resolve the issue, remove the local user from this device
+before attempting migration again. User was created by JumpCloud."
                 }
                 It "Should throw when some local user exists and was previously created by the JumpCloud ADMU tool" {
                     # Create target user
@@ -658,7 +660,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
 
                     # TODO: update expected message with expected output from start-migration
                     # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
-                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "{Your Message Added to Start-Migration Function Here}"
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device was associated to a JumpCloud user matching the same username. To resolve the issue, remove the local user from this device
+before attempting migration again. User was created by JumpCloudADMU."
                 }
                 It "Should throw when some local user exists and does not match any known JumpCloud created user descriptions" {
                     # Create target user
@@ -677,7 +680,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
 
                     # TODO: update expected message with expected output from start-migration
                     # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
-                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "{Your Message Added to Start-Migration Function Here}"
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the user already exists. To resolve the issue, remove the local user from this device before attempting migration again."
                 }
             }
         }
