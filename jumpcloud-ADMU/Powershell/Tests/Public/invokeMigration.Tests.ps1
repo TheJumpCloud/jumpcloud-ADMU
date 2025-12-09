@@ -457,7 +457,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         It "Should throw an error if the download fails" {
             # Mock Invoke-WebRequest to throw an error
             Mock Invoke-WebRequest { throw "Simulated download failure" }
-            { Get-LatestADMUGUIExe -destinationPath "C:\Windows\Temp" -GitHubToken $env:GITHUB_TOKEN } | Should -Throw "Operation failed. The error was: Simulated download failure"
+            { Get-LatestADMUGUIExe -destinationPath "C:\Windows\Temp" -GitHubToken $env:GITHUB_TOKEN } | Should -Throw "Operation failed after 3 attempts. Last error: Simulated download failure"
         }
         AfterAll {
             # Clean up the test directory
