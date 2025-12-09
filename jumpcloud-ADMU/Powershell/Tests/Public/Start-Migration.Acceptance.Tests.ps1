@@ -628,7 +628,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     New-localUser -Name $userToMigrateTo -password $newUserPassword -Description "Created By JumpCloud"
 
                     # test local user description
-                    $localUser = Get-LocalUser -username $userToMigrateTo
+                    $localUser = Get-LocalUser -Name $userToMigrateTo
                     $localUser.Description | Should -Match "Created By JumpCloud"
 
                     # set the $testCaseInput
@@ -648,7 +648,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     New-localUser -Name $userToMigrateTo -password $newUserPassword -Description "Created By JumpCloud ADMU"
 
                     # test local user description
-                    $localUser = Get-LocalUser -username $userToMigrateTo
+                    $localUser = Get-LocalUser -Name $userToMigrateTo
                     $localUser.Description | Should -Match "Created By JumpCloud ADMU"
 
                     # set the $testCaseInput
@@ -667,7 +667,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # Mock creating the user with JumpCloud by setting the description like the JumpCloud agent would
                     New-localUser -Name $userToMigrateTo -password $newUserPassword
                     # test local user description
-                    $localUser = Get-LocalUser -username $userToMigrateTo
+                    $localUser = Get-LocalUser -Name $userToMigrateTo
                     $localUser.Description | Should -Not -Match "Created By JumpCloud|Created by JumpCloud ADMU"
 
                     # set the $testCaseInput
