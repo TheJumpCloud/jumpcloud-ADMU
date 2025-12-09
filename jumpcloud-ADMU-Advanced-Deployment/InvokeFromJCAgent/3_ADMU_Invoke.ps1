@@ -545,18 +545,8 @@ Function Invoke-SingleUserMigration {
     $result | Out-Host
     write-Host "`n"
 
-    # Join output into a single string for error detection
-    $outputText = $result -join "`n"
-
     if ($exitCode -eq 0) {
-        # Even if exit code is 0, check output for validation/error messages that indicate failure
-        if ($outputText | Select-String -Pattern '(Validation failed|validation error|error|failed|will not be able)' -Quiet) {
-            return [PSCustomObject]@{
-                Success      = $false
-                ErrorMessage = $outputText
-            }
-        }
-        # return true only if no errors found in output
+        #return true
         return [PSCustomObject]@{
             Success      = $true
             ErrorMessage = $null
