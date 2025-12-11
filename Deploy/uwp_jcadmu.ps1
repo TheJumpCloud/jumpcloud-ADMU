@@ -866,7 +866,7 @@ if ($SetPermissionsMode -eq $true) {
 
     $ntfsPermissionLogPath = "$systemDrive\Windows\Temp\jcAdmu.log"
 
-    Write-ToLog "Begin Post-Migration NFTS Task" -Path $ntfsPermissionLogPath -MigrationStep
+    Write-ToLog "Begin Post-Migration NTFS Task" -Path $ntfsPermissionLogPath -MigrationStep
     Write-ToLog "Running in permission-setting mode" -Path $ntfsPermissionLogPath
 
     # Validate parameters
@@ -1023,7 +1023,7 @@ if ($SetPermissionsMode -eq $true) {
     } catch {
         Write-ToLog "Warning: Could not delete scheduled task $taskName : $_" -Path $ntfsPermissionLogPath
     }
-    Write-ToLog "End Post-Migration NFTS Task" -Path $ntfsPermissionLogPath -MigrationStep
+    Write-ToLog "End Post-Migration NTFS Task" -Path $ntfsPermissionLogPath -MigrationStep
 } else {
     Write-ToLog "Running in normal UWP app registration mode"
     # Normal UWP app registration mode
