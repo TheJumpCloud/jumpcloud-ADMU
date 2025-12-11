@@ -372,7 +372,7 @@ function Start-Migration {
                 if ($localUserState.jumpCloudCreated) { $msg += " User was created by JumpCloud." }
                 if ($localUserState.admuCreated) { $msg += " User was created by JumpCloudADMU." }
                 Write-ToLog -Message:("Validation failed: $msg")
-                Throw [System.Management.Automation.ValidationMetadataException] $msg
+                throw [System.Management.Automation.ValidationMetadataException] $msg
             }
 
             # Case 2: user exists and JumpCloudCreated/admuCreated is true AND jumpCloudManaged is false
@@ -383,7 +383,7 @@ function Start-Migration {
                 if ($localUserState.jumpCloudCreated) { $msg += " User was created by JumpCloud." }
                 if ($localUserState.admuCreated) { $msg += " User was created by JumpCloudADMU." }
                 Write-ToLog -Message:("Validation failed: $msg")
-                Throw [System.Management.Automation.ValidationMetadataException] $msg
+                throw [System.Management.Automation.ValidationMetadataException] $msg
             }
 
             # Case 3: user exists and JumpCloudCreated/admuCreated is false AND jumpCloudManaged is false
@@ -393,7 +393,7 @@ function Start-Migration {
                 "To resolve the issue, remove the local user from this device before attempting migration again."
 
                 Write-ToLog -Message:("Validation failed: $msg")
-                Throw [System.Management.Automation.ValidationMetadataException] $msg
+                throw [System.Management.Automation.ValidationMetadataException] $msg
             }
 
         }
