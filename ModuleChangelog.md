@@ -1,3 +1,13 @@
+## 2.10.1
+
+Release Date: December 11, 2025
+
+#### RELEASE NOTES
+
+```
+Patch release to address several issues.
+```
+
 ## 2.10.0
 
 Release Date: November 18, 2025
