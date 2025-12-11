@@ -546,7 +546,7 @@ Function Invoke-SingleUserMigration {
     write-Host "`n"
 
     if ($exitCode -eq 0) {
-        #return true
+        # return true
         return [PSCustomObject]@{
             Success      = $true
             ErrorMessage = $null
