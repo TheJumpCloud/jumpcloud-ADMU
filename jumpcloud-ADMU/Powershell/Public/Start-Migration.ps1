@@ -360,6 +360,43 @@ function Start-Migration {
                 throw [System.Management.Automation.ValidationMetadataException] "The 'SystemContextBinding' parameter requires the 'JumpCloudUserID' parameter to be set."
             }
         }
+        # Validate if the target Jumpcloud username already exists as a local user
+        $localUserState = Test-LocalUsernameExist -JumpCloudUserName $JumpCloudUserName
+        if ($localUserState.exists) {
+
+            # Case 1: user exists and JumpCloudCreated/admuCreated is true AND jumpCloudManaged is true
+            if (($localUserState.jumpCloudCreated -or $localUserState.admuCreated) -and $localUserState.jumpCloudManaged) {
+
+                $msg = "The user will not be able to be created because the device is currently associated to a JumpCloud user matching the same username. " +
+                "To resolve the issue, unbind (remove the association between the JumpCloud user and this device) and remove the local user from this device before attempting migration again."
+                if ($localUserState.jumpCloudCreated) { $msg += " User was created by JumpCloud." }
+                if ($localUserState.admuCreated) { $msg += " User was created by JumpCloudADMU." }
+                Write-ToLog -Message:("Validation failed: $msg")
+                Throw [System.Management.Automation.ValidationMetadataException] $msg
+            }
+
+            # Case 2: user exists and JumpCloudCreated/admuCreated is true AND jumpCloudManaged is false
+            elseif (($localUserState.jumpCloudCreated -or $localUserState.admuCreated) -and -not $localUserState.jumpCloudManaged) {
+
+                $msg = "The user will not be able to be created because the device was associated to a JumpCloud user matching the same username. " +
+                "To resolve the issue, remove the local user from this device before attempting migration again."
+                if ($localUserState.jumpCloudCreated) { $msg += " User was created by JumpCloud." }
+                if ($localUserState.admuCreated) { $msg += " User was created by JumpCloudADMU." }
+                Write-ToLog -Message:("Validation failed: $msg")
+                Throw [System.Management.Automation.ValidationMetadataException] $msg
+            }
+
+            # Case 3: user exists and JumpCloudCreated/admuCreated is false AND jumpCloudManaged is false
+            elseif (-not $localUserState.jumpCloudCreated -and -not $localUserState.admuCreated -and -not $localUserState.jumpCloudManaged) {
+
+                $msg = "The user will not be able to be created because the user already exists. " +
+                "To resolve the issue, remove the local user from this device before attempting migration again."
+
+                Write-ToLog -Message:("Validation failed: $msg")
+                Throw [System.Management.Automation.ValidationMetadataException] $msg
+            }
+
+        }
         #endregion validation
         # print system info
         Write-ToLog -Message ('System Information: ')

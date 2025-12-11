@@ -10,7 +10,7 @@ This release reduces the time required to perform a migration by deferring the f
 
 #### IMPROVEMENTS:
 
-Decreased time required to perform a migration
+Decreased time required to perform a migration. Several changes and consolidation of log messages.
 
 #### BUG FIXES:
 
