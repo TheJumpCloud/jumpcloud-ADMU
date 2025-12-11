@@ -51,11 +51,8 @@ function New-RegPermissionTask {
 
     process {
         try {
-            # Determine Windows drive (usually C:)
-            $windowsDrive = $env:SystemDrive
-            if ([string]::IsNullOrEmpty($windowsDrive)) {
-                $windowsDrive = "C:"
-            }
+            # Determine Windows drive
+            $windowsDrive = Get-WindowsDrive
 
             # Build argument string with parameters (no quotes needed - they cause issues with SID parsing)
             $taskArguments = "-SetPermissions 1 -SourceSID $SourceSID -TargetSID $TargetSID -ProfilePath `"$ProfilePath`""

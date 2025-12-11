@@ -260,12 +260,6 @@ function Start-Migration {
                 }
             }
         }
-        # print system info
-        Write-ToLog -Message ('System Information: ')
-        Write-ToLog -Message ("OSName: $($systemVersion.OSName)")
-        Write-ToLog -Message ("OSVersion: $($systemVersion.OSVersion)")
-        Write-ToLog -Message ("OSBuildNumber: $($systemVersion.OsBuildNumber)")
-        Write-ToLog -Message ("OSEdition: $($systemVersion.WindowsEditionId)")
 
         #region validation
         # validate SelectedUserName is not null or empty

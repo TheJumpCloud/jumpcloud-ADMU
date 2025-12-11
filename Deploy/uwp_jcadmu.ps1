@@ -851,7 +851,7 @@ $signature = @"
 "@
 
 $signature = Add-Type -MemberDefinition $signature -Name Win32ShowWindow -Namespace Win32Functions -PassThru
-$signature::ShowWindow($hwnd, 1) # 1 = SW_SHOWNORMAL
+$signature::ShowWindow($hwnd, 0) # 1 = SW_SHOWNORMAL, 0 = SW_HIDE
 
 # Check if we're in permission-setting mode
 if ($SetPermissionsMode -eq $true) {
