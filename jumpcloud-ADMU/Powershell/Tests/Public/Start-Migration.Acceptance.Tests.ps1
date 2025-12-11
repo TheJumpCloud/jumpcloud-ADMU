@@ -623,7 +623,6 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.SelectedUserName = $userToMigrateFrom
                     $testCaseInput.TempPassword = $tempPassword
 
-                    # TODO: update expected message with expected output from start-migration
                     # should throw a message stating that the local user exists and was created and managed by JumpCloud
                     { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device is currently associated to a JumpCloud user matching the same username. To resolve the issue, unbind (remove the association between the JumpCloud user and this device) and remove the local user from this device before attempting migration again. User was created by JumpCloud."
                 }

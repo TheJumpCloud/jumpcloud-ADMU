@@ -26,12 +26,12 @@ function Test-LocalUsernameExist {
 
         if (-not [string]::IsNullOrWhiteSpace($description)) {
             # Created by JumpCloud
-            if ($description -eq 'Created by jumpcloud') {
+            if ($description -eq 'Created by Jumpcloud') {
                 $jumpCloudCreated = $true
             }
 
             # Created by JumpCloud ADMU
-            if ($description -eq 'Created by jumpcloud admu') {
+            if ($description -eq 'Created By JumpCloud ADMU') {
                 $admuCreated = $true
             }
         }
