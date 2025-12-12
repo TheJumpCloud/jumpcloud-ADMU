@@ -20,6 +20,26 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
 
         # import the init user function:
         . "$helpFunctionDir\Initialize-TestUser.ps1"
+
+        # get the uwp path:
+        # traverse up several directories to find the Deploy folder
+        $deployDirectoryName = "Deploy"
+        $currentPath = $PSScriptRoot
+        while ($currentPath -ne $null) {
+            $filePath = Join-Path -Path $currentPath $deployDirectoryName
+            if (Test-Path $filePath) {
+                # File found! Return the full path.
+                $deployPath = $filePath
+                break
+            }
+            # Move one directory up.
+            $currentPath = Split-Path $currentPath -Parent
+        }
+        # test that the uwp path exists
+        $uwpPath = Join-Path -Path $deployPath "uwp_jcadmu.ps1"
+        if (-not (Test-Path $uwpPath)) {
+            throw "UWP script not found at path: $uwpPath"
+        }
     }
     Context "SystemContext Parameter Validation for non-APIKey Migrations" {
         # Test Setup
@@ -104,6 +124,8 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
 
             # Initialize-TestUser
             Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            # get SIDs for UWP testing
+            $userToMigrateFromSID = (Get-LocalUser -Name $userToMigrateFrom | Select-Object SID).SID
             # define test case input
             $testCaseInput = @{
                 JumpCloudUserName       = $userToMigrateTo
@@ -236,6 +258,10 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 # Get the user profile subdirectory
                 $userProfilePath = "C:\Users\$($userToMigrateFrom)"
                 $subDirectories = Get-ChildItem -Path $userProfilePath -Directory
+                # run the UWP to set final permission settings:
+                $userToMigrateToSID = (Get-LocalUser -Name $userToMigrateTo | Select-Object SID).SID
+                . $uwpPath -SetPermissions $true -sourceSID $userToMigrateFromSID -targetSID $userToMigrateToSID -profilePath $userProfilePath
+
                 # Validate each subdirectory owner is the new user
                 foreach ($subDir in $subDirectories) {
                     $subDirOwner = Get-Acl -Path $subDir.FullName | Select-Object -ExpandProperty Owner

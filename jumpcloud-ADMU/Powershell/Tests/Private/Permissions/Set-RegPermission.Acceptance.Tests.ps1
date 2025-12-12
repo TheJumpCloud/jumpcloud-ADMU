@@ -15,11 +15,31 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             # Move one directory up.
             $currentPath = Split-Path $currentPath -Parent
         }
+
+        # get the uwp path:
+        # traverse up several directories to find the Deploy folder
+        $deployDirectoryName = "Deploy"
+        $currentPath = $PSScriptRoot
+        while ($currentPath -ne $null) {
+            $filePath = Join-Path -Path $currentPath $deployDirectoryName
+            if (Test-Path $filePath) {
+                # File found! Return the full path.
+                $deployPath = $filePath
+                break
+            }
+            # Move one directory up.
+            $currentPath = Split-Path $currentPath -Parent
+        }
+        # test that the uwp path exists
+        $uwpPath = Join-Path -Path $deployPath "uwp_jcadmu.ps1"
+        if (-not (Test-Path $uwpPath)) {
+            throw "UWP script not found at path: $uwpPath"
+        }
+        # init help function
         . "$helpFunctionDir\$fileName"
         $testUsername = "regTest"
         Initialize-TestUser -Username $testUsername -password "Temp123!Temp123!"
         $userSid = Test-UsernameOrSID -usernameOrSid $testUsername
-
     }
 
     Context "SID Translation Tests" {
@@ -84,7 +104,11 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             Write-Host "####################"
             # Run SetRegPermission:
             Set-RegPermission -SourceSID $domainSID -TargetSID $targetSID -FilePath $profileImagePath -ErrorAction SilentlyContinue
-
+            # Run the UWP with permission parameters to finish setting permissions recursively
+            Write-Host "####### UWP #########"
+            Write-Host "running $uwpPath -SourceSID $domainSID -TargetSID $targetSID -ProfilePath $profileImagePath -SetPermissions $true"
+            . $uwpPath -SourceSID $domainSID -TargetSID $targetSID -ProfilePath $profileImagePath -SetPermissions $true
+            Write-Host "####################"
             $items = Get-ChildItem -Path $profileImagePath -Recurse -Force
             foreach ($item in $items) {
                 $acl = Get-Acl -Path $item.FullName
@@ -144,7 +168,23 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             }
             # then attempt to update the ownership
             Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir -ErrorAction SilentlyContinue
+            # before running the UWP app, validate that the root testDir ownership has changed
+            $acl = Get-Acl $testDir
+            $acl.Owner | Should -Be ((New-Object System.Security.Principal.SecurityIdentifier($targetSID)).Translate([System.Security.Principal.NTAccount]).Value)
+            # validate that the targetSID has (OI) (object inherit) on the root testDir
+            $acl.Access | Where-Object { $_.IdentityReference -eq ((New-Object System.Security.Principal.SecurityIdentifier($targetSID)).Translate([System.Security.Principal.NTAccount]).Value) -and $_.InheritanceFlags -band [System.Security.AccessControl.InheritanceFlags]::ObjectInherit } | Should -Not -BeNullOrEmpty
+            # validate that the targetSID has (CI) (container inherit) on the root testDir
+            $acl.Access | Where-Object { $_.IdentityReference -eq ((New-Object System.Security.Principal.SecurityIdentifier($targetSID)).Translate([System.Security.Principal.NTAccount]).Value) -and $_.InheritanceFlags -band [System.Security.AccessControl.InheritanceFlags]::ContainerInherit } | Should -Not -BeNullOrEmpty
+            # validate that the targetSID has F (full access) on the root testDir
+            $acl.Access | Where-Object { $_.IdentityReference -eq ((New-Object System.Security.Principal.SecurityIdentifier($targetSID)).Translate([System.Security.Principal.NTAccount]).Value) -and $_.FileSystemRights -eq "FullControl" } | Should -Not -BeNullOrEmpty
+            # lastly validate that the targetSID is the owner of the testDir
+            $acl.Owner | Should -Be ((New-Object System.Security.Principal.SecurityIdentifier($targetSID)).Translate([System.Security.Principal.NTAccount]).Value)
 
+            # Run the UWP with permission parameters to finish setting permissions recursively
+            Write-Host "####### UWP #########"
+            Write-Host "running $uwpPath -SourceSID $sourceSID -TargetSID $targetSID -ProfilePath $testDir -SetPermissions $true"
+            . $uwpPath -SourceSID $sourceSID -TargetSID $targetSID -ProfilePath $testDir -SetPermissions $true
+            Write-Host "####################"
             $items = Get-ChildItem -Path $testDir -Recurse -Force
             foreach ($item in $items) {
                 $acl = Get-Acl $item.FullName
@@ -245,7 +285,11 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
         $newTime = $regPermStopwatchNew.Elapsed.TotalSeconds
 
         Write-Host "Set-RegPermission time: $newTime seconds"
-
+        # Run the UWP with permission parameters to finish setting permissions recursively
+        Write-Host "####### UWP #########"
+        Write-Host "running $uwpPath -SourceSID $UserSID -TargetSID $UserSIDNew -ProfilePath $userProfilePath -SetPermissions $true"
+        . $uwpPath -SourceSID $UserSID -TargetSID $UserSIDNew -ProfilePath $userProfilePath -SetPermissions $true
+        Write-Host "####################"
         # test for the following directories in AppData: Roaming, Local
         foreach ($subDir in @("Roaming", "Local")) {
             $appDataPath = Join-Path -Path "C:\Users\$($userToMigrateFrom)\AppData" -ChildPath $subDir
