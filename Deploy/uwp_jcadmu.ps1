@@ -1,3 +1,28 @@
+param(
+    [string]$SetPermissions = "0",
+    [string]$SourceSID = "",
+    [string]$TargetSID = "",
+    [string]$ProfilePath = "",
+    [string]$FullScreen = "1"
+)
+
+# Convert SetPermissions string to boolean (compiled exes pass all params as strings)
+$SetPermissionsMode = $false
+if ($SetPermissions -in @("1", "true", "True", "$true", "yes")) {
+    $SetPermissionsMode = $true
+}
+# convert FullScreen string to boolean
+$FullScreenMode = $true
+if ($FullScreen -in @("0", "false", "False", "$false", "no")) {
+    $FullScreenMode = $false
+}
+
+# Clean up parameters - remove quotes and whitespace that may be passed from command line
+$SourceSID = $SourceSID.Trim().Trim("'").Trim('"')
+$TargetSID = $TargetSID.Trim().Trim("'").Trim('"')
+$ProfilePath = $ProfilePath.Trim().Trim("'").Trim('"')
+
+#region Functions
 ##### MIT License #####
 # MIT License
 
@@ -21,6 +46,45 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+
+# Helper function to get current file type association (prevents unnecessary desktop flashing)
+function Get-FTA {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [String]$Extension
+    )
+
+    try {
+        $assocPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$Extension\UserChoice"
+        if (Test-Path $assocPath) {
+            return (Get-ItemProperty $assocPath -ErrorAction SilentlyContinue).ProgId
+        }
+    } catch {
+        return $null
+    }
+    return $null
+}
+
+# Helper function to get current protocol type association (prevents unnecessary desktop flashing)
+function Get-PTA {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [String]$Protocol
+    )
+
+    try {
+        $assocPath = "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$Protocol\UserChoice"
+        if (Test-Path $assocPath) {
+            return (Get-ItemProperty $assocPath -ErrorAction SilentlyContinue).ProgId
+        }
+    } catch {
+        return $null
+    }
+    return $null
+}
+
 # Get user file type associations
 function Set-FTA {
 
@@ -46,13 +110,42 @@ function Set-FTA {
         $ProgId = "SFTA." + [System.IO.Path]::GetFileNameWithoutExtension($ProgId).replace(" ", "") + $Extension
     }
 
-    Write-Verbose "ProgId: $ProgId"
-    Write-Verbose "Extension/Protocol: $Extension"
+    Write-ToLog "ProgId: $ProgId"
+    Write-ToLog "Extension/Protocol: $Extension"
 
+    # Check if association is already set correctly to avoid desktop flashing (GitHub issue #34)
+    # Determine if this is a file extension or protocol based on presence of dot
+    if ($Extension.StartsWith(".")) {
+        # File extension
+        try {
+            $currentProgId = Get-FTA -Extension $Extension -ErrorAction Stop
+            if ($currentProgId -eq $ProgId) {
+                Write-ToLog "Extension $Extension is already set to $ProgId - skipping"
+                return
+            } else {
+                Write-ToLog "Extension $Extension needs to be changed from '$currentProgId' to '$ProgId'"
+            }
+        } catch {
+            Write-ToLog "Unable to determine current FTA for $Extension - will proceed with setting"
+        }
+    } else {
+        # Protocol
+        try {
+            $currentProgId = Get-PTA -Protocol $Extension -ErrorAction Stop
+            if ($currentProgId -eq $ProgId) {
+                Write-ToLog "Protocol $Extension is already set to $ProgId - skipping"
+                return
+            } else {
+                Write-ToLog "Protocol $Extension needs to be changed from '$currentProgId' to '$ProgId'"
+            }
+        } catch {
+            Write-ToLog "Unable to determine current PTA for $Extension - will proceed with setting"
+        }
+    }
 
     #Write required Application Ids to ApplicationAssociationToasts
     #When more than one application associated with an Extension/Protocol is installed ApplicationAssociationToasts need to be updated
-    function local:Write-RequiredApplicationAssociationToasts {
+    function script:Write-RequiredApplicationAssociationToasts {
         param (
             [Parameter( Position = 0, Mandatory = $True )]
             [String]
@@ -66,9 +159,9 @@ function Set-FTA {
         try {
             $keyPath = "HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts"
             [Microsoft.Win32.Registry]::SetValue($keyPath, $ProgId + "_" + $Extension, 0x0)
-            Write-Verbose ("Write Reg ApplicationAssociationToasts OK: " + $ProgId + "_" + $Extension)
+            Write-ToLog ("Write Reg ApplicationAssociationToasts OK: " + $ProgId + "_" + $Extension)
         } catch {
-            Write-Verbose ("Write Reg ApplicationAssociationToasts FAILED: " + $ProgId + "_" + $Extension)
+            Write-ToLog ("Write Reg ApplicationAssociationToasts FAILED: " + $ProgId + "_" + $Extension)
         }
 
         $allApplicationAssociationToasts = Get-ChildItem -Path HKLM:\SOFTWARE\Classes\$Extension\OpenWithList\* -ErrorAction SilentlyContinue |
@@ -77,7 +170,7 @@ function Set-FTA {
         }
 
         $allApplicationAssociationToasts += @(
-            ForEach ($item in (Get-ItemProperty -Path HKLM:\SOFTWARE\Classes\$Extension\OpenWithProgids -ErrorAction SilentlyContinue).PSObject.Properties ) {
+            foreach ($item in (Get-ItemProperty -Path HKLM:\SOFTWARE\Classes\$Extension\OpenWithProgids -ErrorAction SilentlyContinue).PSObject.Properties ) {
                 if ([string]::IsNullOrEmpty($item.Value) -and $item -ne "(default)") {
                     $item.Name
                 }
@@ -92,16 +185,16 @@ function Set-FTA {
         $allApplicationAssociationToasts |
         ForEach-Object { if ($_) {
                 if (Set-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\ApplicationAssociationToasts $_"_"$Extension -Value 0 -Type DWord -ErrorAction SilentlyContinue -PassThru) {
-                    Write-Verbose  ("Write Reg ApplicationAssociationToastsList OK: " + $_ + "_" + $Extension)
+                    Write-ToLog ("Write Reg ApplicationAssociationToastsList OK: " + $_ + "_" + $Extension)
                 } else {
-                    Write-Verbose  ("Write Reg ApplicationAssociationToastsList FAILED: " + $_ + "_" + $Extension)
+                    Write-ToLog ("Write Reg ApplicationAssociationToastsList FAILED: " + $_ + "_" + $Extension)
                 }
             }
         }
 
     }
 
-    function local:Update-RegistryChanges {
+    function script:Update-RegistryChanges {
         $code = @'
 [System.Runtime.InteropServices.DllImport("Shell32.dll")]
 private static extern int SHChangeNotify(int eventId, int flags, IntPtr item1, IntPtr item2);
@@ -112,15 +205,19 @@ public static void Refresh() {
 
         try {
             Add-Type -MemberDefinition $code -Namespace SHChange -Name Notify
-        } catch {}
+        } catch {
+            Write-ToLog "Failed to add type definition for SHChange Notify"
+        }
 
         try {
             [SHChange.Notify]::Refresh()
-        } catch {}
+        } catch {
+            Write-ToLog "Failed to refresh shell changes"
+        }
     }
 
 
-    function local:Set-Icon {
+    function script:Set-Icon {
         param (
             [Parameter( Position = 0, Mandatory = $True )]
             [String]
@@ -134,15 +231,16 @@ public static void Refresh() {
         try {
             $keyPath = "HKEY_CURRENT_USER\SOFTWARE\Classes\$ProgId\DefaultIcon"
             [Microsoft.Win32.Registry]::SetValue($keyPath, "", $Icon)
-            Write-Verbose "Write Reg Icon OK"
-            Write-Verbose "Reg Icon: $keyPath"
+            Write-ToLog "Write Reg Icon OK"
+            Write-ToLog "Reg Icon: $keyPath"
         } catch {
-            Write-Verbose "Write Reg Icon FAILED"
+            Write-ToLog "Write Reg Icon FAILED"
         }
     }
 
 
-    function local:Write-ExtensionKeys {
+    function script:Write-ExtensionKeys {
+        [OutputType([bool])]
         param (
             [Parameter( Position = 0, Mandatory = $True )]
             [String]
@@ -158,7 +256,7 @@ public static void Refresh() {
         )
 
 
-        function local:Remove-UserChoiceKey {
+        function script:Remove-UserChoiceKey {
             param (
                 [Parameter( Position = 0, Mandatory = $True )]
                 [String]
@@ -189,20 +287,24 @@ namespace Registry {
 
             try {
                 Add-Type -TypeDefinition $code
-            } catch {}
+            } catch {
+                Write-ToLog "Failed to add type definition for registry utils"
+            }
 
             try {
                 [Registry.Utils]::DeleteKey($Key)
-            } catch {}
+            } catch {
+                Write-ToLog "Failed to delete UserChoice key: $Key"
+            }
         }
 
 
         try {
             $keyPath = "Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$Extension\UserChoice"
-            Write-Verbose "Remove Extension UserChoice Key If Exist: $keyPath"
+            Write-ToLog "Remove Extension UserChoice Key If Exist: $keyPath"
             Remove-UserChoiceKey $keyPath
         } catch {
-            Write-Verbose "Extension UserChoice Key No Exist: $keyPath"
+            Write-ToLog "Extension UserChoice Key No Exist: $keyPath"
         }
 
 
@@ -210,14 +312,23 @@ namespace Registry {
             $keyPath = "HKEY_CURRENT_USER\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$Extension\UserChoice"
             [Microsoft.Win32.Registry]::SetValue($keyPath, "Hash", $ProgHash)
             [Microsoft.Win32.Registry]::SetValue($keyPath, "ProgId", $ProgId)
-            Write-Verbose "Write Reg Extension UserChoice OK"
+            Write-ToLog "Write Reg Extension UserChoice OK"
+            return $true
         } catch {
-            throw "Write Reg Extension UserChoice FAILED"
+            # Check if this is UCPD.sys blocking (unauthorized operation)
+            if ($_.Exception.Message -match "unauthorized|access.*denied") {
+                Write-ToLog "Write Reg Extension UserChoice BLOCKED by UCPD.sys (UserChoice Protection Driver) - This is expected on newer Windows versions"
+            } else {
+                Write-ToLog "Write Reg Extension UserChoice FAILED: $($_.Exception.Message)"
+            }
+            # Return false to indicate failure
+            return $false
         }
     }
 
 
-    function local:Write-ProtocolKeys {
+    function script:Write-ProtocolKeys {
+        [OutputType([bool])]
         param (
             [Parameter( Position = 0, Mandatory = $True )]
             [String]
@@ -235,11 +346,11 @@ namespace Registry {
 
         try {
             $keyPath = "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$Protocol\UserChoice"
-            Write-Verbose "Remove Protocol UserChoice Key If Exist: $keyPath"
+            Write-ToLog "Remove Protocol UserChoice Key If Exist: $keyPath"
             Remove-Item -Path $keyPath -Recurse -ErrorAction Stop | Out-Null
 
         } catch {
-            Write-Verbose "Protocol UserChoice Key No Exist: $keyPath"
+            Write-ToLog "Protocol UserChoice Key No Exist: $keyPath"
         }
 
 
@@ -247,15 +358,23 @@ namespace Registry {
             $keyPath = "HKEY_CURRENT_USER\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$Protocol\UserChoice"
             [Microsoft.Win32.Registry]::SetValue( $keyPath, "Hash", $ProgHash)
             [Microsoft.Win32.Registry]::SetValue($keyPath, "ProgId", $ProgId)
-            Write-Verbose "Write Reg Protocol UserChoice OK"
+            Write-ToLog "Write Reg Protocol UserChoice OK"
+            return $true
         } catch {
-            throw "Write Reg Protocol UserChoice FAILED"
+            # Check if this is UCPD.sys blocking (unauthorized operation)
+            if ($_.Exception.Message -match "unauthorized|access.*denied") {
+                Write-ToLog "Write Reg Protocol UserChoice BLOCKED by UCPD.sys (UserChoice Protection Driver) - Protocol associations for $Protocol cannot be set programmatically on this system"
+            } else {
+                Write-ToLog "Write Reg Protocol UserChoice FAILED: $($_.Exception.Message)"
+            }
+            # Return false to indicate failure
+            return $false
         }
 
     }
 
 
-    function local:Get-UserExperience {
+    function script:Get-UserExperience {
         [OutputType([string])]
         $hardcodedExperience = "User Choice set via Windows User Experience {D18B6DD5-6124-4341-9318-804003BAFA0B}"
         $userExperienceSearch = "User Choice set via Windows User Experience"
@@ -277,7 +396,7 @@ namespace Registry {
     }
 
 
-    function local:Get-UserSid {
+    function script:Get-UserSid {
         [OutputType([string])]
         $userSid = ((New-Object System.Security.Principal.NTAccount([Environment]::UserName)).Translate([System.Security.Principal.SecurityIdentifier]).value).ToLower()
         Write-Output $userSid
@@ -285,7 +404,7 @@ namespace Registry {
 
     #use in this special case
     #https://github.com/DanysysTeam/PS-SFTA/pull/7
-    function local:Get-UserSidDomain {
+    function script:Get-UserSidDomain {
         if (-not ("System.DirectoryServices.AccountManagement" -as [type])) {
             Add-Type -AssemblyName System.DirectoryServices.AccountManagement
         }
@@ -296,7 +415,7 @@ namespace Registry {
 
 
 
-    function local:Get-HexDateTime {
+    function script:Get-HexDateTime {
         [OutputType([string])]
 
         $now = [DateTime]::Now
@@ -317,7 +436,7 @@ namespace Registry {
         )
 
 
-        function local:Get-ShiftRight {
+        function script:Get-ShiftRight {
             [CmdletBinding()]
             param (
                 [Parameter( Position = 0, Mandatory = $true)]
@@ -330,12 +449,12 @@ namespace Registry {
             if ($iValue -band 0x80000000) {
                 Write-Output (( $iValue -shr $iCount) -bxor 0xFFFF0000)
             } else {
-                Write-Output  ($iValue -shr $iCount)
+                Write-Output ($iValue -shr $iCount)
             }
         }
 
 
-        function local:Get-Long {
+        function script:Get-Long {
             [CmdletBinding()]
             param (
                 [Parameter( Position = 0, Mandatory = $true)]
@@ -349,7 +468,7 @@ namespace Registry {
         }
 
 
-        function local:Convert-Int32 {
+        function script:Convert-Int32 {
             param (
                 [Parameter( Position = 0, Mandatory = $true)]
                 [long] $Value
@@ -366,7 +485,7 @@ namespace Registry {
         [Byte[]] $bytesMD5 = $MD5.ComputeHash($bytesBaseInfo)
 
         $lengthBase = ($baseInfo.Length * 2) + 2
-        $length = (($lengthBase -band 4) -le 1) + (Get-ShiftRight $lengthBase  2) - 1
+        $length = (($lengthBase -band 4) -le 1) + (Get-ShiftRight $lengthBase 2) - 1
         $base64Hash = ""
 
         if ($length -gt 1) {
@@ -455,9 +574,9 @@ namespace Registry {
         Write-Output $base64Hash
     }
 
-    Write-Verbose "Getting Hash For $ProgId   $Extension"
-    If ($DomainSID.IsPresent) { Write-Verbose  "Use Get-UserSidDomain" } Else { Write-Verbose  "Use Get-UserSid" }
-    $userSid = If ($DomainSID.IsPresent) { Get-UserSidDomain } Else { Get-UserSid }
+    Write-ToLog "Getting Hash For $ProgId   $Extension"
+    if ($DomainSID.IsPresent) { Write-ToLog "Use Get-UserSidDomain" } else { Write-ToLog "Use Get-UserSid" }
+    $userSid = if ($DomainSID.IsPresent) { Get-UserSidDomain } else { Get-UserSid }
     $userExperience = Get-UserExperience
     $userDateTime = Get-HexDateTime
     Write-Debug "UserDateTime: $userDateTime"
@@ -465,33 +584,43 @@ namespace Registry {
     Write-Debug "UserExperience: $userExperience"
 
     $baseInfo = "$Extension$userSid$ProgId$userDateTime$userExperience".ToLower()
-    Write-Verbose "baseInfo: $baseInfo"
+    Write-ToLog "baseInfo: $baseInfo"
 
     $progHash = Get-Hash $baseInfo
-    Write-Verbose "Hash: $progHash"
+    Write-ToLog "Hash: $progHash"
 
     #Write AssociationToasts List
     Write-RequiredApplicationAssociationToasts $ProgId $Extension
 
-    #Handle Extension Or Protocol
+    # Attempt to set association via registry
+    # Note: http/https/pdf protocols are typically blocked by UCPD.sys (UserChoice Protection Driver)
+    # on Windows 10 1703+ and cannot be set programmatically
+    $registrySuccess = $false
     if ($Extension.Contains(".")) {
-        Write-Verbose "Write Registry Extension: $Extension"
-        Write-ExtensionKeys $ProgId $Extension $progHash
+        Write-ToLog "Write Registry Extension: $Extension"
+        $registrySuccess = Write-ExtensionKeys $ProgId $Extension $progHash
 
     } else {
-        Write-Verbose "Write Registry Protocol: $Extension"
-        Write-ProtocolKeys $ProgId $Extension $progHash
+        Write-ToLog "Write Registry Protocol: $Extension"
+        $registrySuccess = Write-ProtocolKeys $ProgId $Extension $progHash
+    }
+
+    # Log failure if registry method was blocked
+    if (-not $registrySuccess) {
+        Write-ToLog "FAILURE: Association for $Extension -> $ProgId could not be set (likely blocked by UCPD.sys)"
+        throw "Association blocked"
     }
 
 
     if ($Icon) {
-        Write-Verbose  "Set Icon: $Icon"
+        Write-ToLog "Set Icon: $Icon"
         Set-Icon $ProgId $Icon
     }
 
     Update-RegistryChanges
 
 }
+
 
 function Set-PTA {
     [CmdletBinding()]
@@ -512,49 +641,66 @@ function Set-PTA {
 }
 ##### END MIT License #####
 
-Function Write-ToLog {
+function Write-ToLog {
     [CmdletBinding()]
-    Param
+    param
     (
-        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
-        , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$($HOME)\AppData\Local\JumpCloudADMU\log.txt"
+        [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message,
+        [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$($HOME)\AppData\Local\JumpCloudADMU\log.txt",
+        [Parameter(Mandatory = $false)][ValidateSet("Error", "Warning", "Info", "Verbose")][string]$Level = "Info",
+        [Parameter(Mandatory = $false)][string]$Step,
+        [Parameter(Mandatory = $false)][switch]$MigrationStep
     )
-    Begin {
-        $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-        # If attempting to write to a log file in a folder/path that doesn't exist create the file including the path.
-        If (!(Test-Path $Path)) {
-            Write-Verbose "Creating $Path."
-            New-Item $Path -Force -ItemType File
-        }
-        # check that the log file is not too large:
-        $currentLog = get-item $path
-        if ($currentLog.Length -ge 5000000) {
-            # if log is larger than 5MB, rename the log to log.old.txt and create a new log file
-            copy-item -path $path -destination "$path.old" -force
-            New-Item $Path -Force -ItemType File
-        }
-
+    begin {
+        $VerbosePreference = 'Continue'
     }
     process {
-        Switch ($Level) {
-            'Error' {
-                Write-Error $Message
-                $LevelText = 'ERROR:'
+        if (!(Test-Path $Path)) {
+            New-Item $Path -Force -ItemType File | Out-Null
+        }
+        $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        $levelText = $Level.ToUpper()
+        $stepText = if ($Step) { "[$Step]" } else { "" }
+
+        # Handle MigrationStep formatting
+        if ($MigrationStep) {
+            $totalWidth = 52
+            $messageText = $Message
+            $availableWidth = $totalWidth - $messageText.Length - 2  # -2 for spaces around message
+            $paddingEach = [math]::Floor($availableWidth / 2)
+            $paddingLeft = "=" * $paddingEach
+            $paddingRight = "=" * ($availableWidth - $paddingEach)
+            $formattedMessage = "$paddingLeft $messageText $paddingRight"
+            # remove stepText if empty
+            if ([string]::IsNullOrEmpty($stepText)) {
+                $logMessage = "[$timestamp] [$levelText] $formattedMessage"
+            } else {
+                $logMessage = "[$timestamp] [$levelText] $stepText $formattedMessage"
             }
-            'Warn' {
-                Write-Warning $Message
-                $LevelText = 'WARNING:'
-            }
-            'Info' {
-                Write-Verbose $Message
-                $LevelText = 'INFO:'
+        } else {
+            # remove stepText if empty
+            if ([string]::IsNullOrEmpty($stepText)) {
+                $logMessage = "[$timestamp] [$levelText] $Message"
+            } else {
+                $logMessage = "[$timestamp] [$levelText] $stepText $Message"
             }
         }
+
+        # Write to appropriate pipeline and optionally to console
+        switch ($Level) {
+            'Error' { Write-Error $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
+            'Warn' { Write-Warning $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
+            'Info' { if ($Script:AdminDebug) { Write-Host $logMessage } }
+            'Verbose' { Write-ToLog $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
+        }
+
+        if ($Script:ProgressBar) {
+            # add a new line to each of the log messages in the UI log stream
+            Update-LogTextBlock -LogText "$logMessage`r`n" -ProgressBar $Script:ProgressBar
+        }
+        Add-Content -Value $logMessage -Path $Path -Encoding utf8
     }
-    end {
-        # Write log entry to $Path
-        "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
-    }
+    end {}
 }
 
 $newJCLogoBase64 = "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"
@@ -572,6 +718,7 @@ function DecodeBase64Image {
     $ObjBitmapImage.Freeze() #Makes the current object unmodifiable and sets its IsFrozen property to true.
     $ObjBitmapImage
 }
+#endRegion Functions
 
 $types = @(
     'PresentationFramework',
@@ -599,15 +746,14 @@ function New-UWPForm {
     $syncHash.EndUWP = $false
 
     # optionally run this app in windowed view by switching the variable below to: $false
-    $buildFullScreen = $true
-    switch ($buildFullScreen) {
+    switch ($FullScreenMode) {
         $true {
-            Write-Verbose "Running UWP in fullscreen"
+            Write-ToLog "Running UWP in fullscreen"
             $windowState = "Maximized"
             $windowStyle = "None"
         }
         $false {
-            Write-Verbose "not running in fullscreen"
+            Write-ToLog "Running UWP in windowed mode"
             $windowState = "Normal"
             $windowStyle = "SingleBorderWindow"
         }
@@ -666,7 +812,7 @@ function New-UWPForm {
 
             # Time to update the form
             $syncHash.Window.Add_SourceInitialized( {
-                    $timer = new-object System.Windows.Threading.DispatcherTimer
+                    $timer = New-Object System.Windows.Threading.DispatcherTimer
                     $timer.Interval = [TimeSpan]"0:0:0.01"
                     $timer.Add_Tick( $updateForm )
                     $timer.Start()
@@ -705,248 +851,455 @@ $signature = @"
 "@
 
 $signature = Add-Type -MemberDefinition $signature -Name Win32ShowWindow -Namespace Win32Functions -PassThru
-$signature::ShowWindow($hwnd, 0) # 0 = SW_HIDE
+$signature::ShowWindow($hwnd, 0) # 1 = SW_SHOWNORMAL, 0 = SW_HIDE
 
-$ADMUKEY = "HKCU:\SOFTWARE\JCADMU"
-if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
-    Write-ToLog "Initializing UWP FORM....."
-    # Initialize the form
-    $UWPForm = New-UWPForm
-    Write-ToLog "New runspace form on runspaceID: $($UWPForm.Runspace.Id)"
-    # init log
-    Write-ToLog -Message ('########### Begin UWP App ###########')
-    # set files:
-    $appxManifest = ($HOME + '\AppData\Local\JumpCloudADMU\appx_manifest.csv')
-    $ftaManifest = ($HOME + '\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv')
-    $ptaManifest = ($HOME + '\AppData\Local\JumpCloudADMU\protocolTypeAssociations.csv')
-    # import CSVs
+# Check if we're in permission-setting mode
+if ($SetPermissionsMode -eq $true) {
+    $Script:AdminDebug = $true
+
+    # Get system drive dynamically (not all systems use C:)
     try {
-        $appxList = Import-CSV $appxManifest
-        $appxCount = $appxList.Count
+        $systemDrive = (Get-WmiObject Win32_OperatingSystem).SystemDrive
     } catch {
-        $appxList = $null
-        $appxCount = 0
-    }
-    try {
-        $ftaList = Import-CSV $ftaManifest
-        $ftaCount = $ftaList.Count
-    } catch {
-        $ftaList = $null
-        $ftaCount = 0
-    }
-    try {
-        $ptaList = Import-CSV $ptaManifest
-        $ptaCount = $ptaList.Count
-    } catch {
-        $ptaList = $null
-        $ptaCount = 0
+        $systemDrive = (Get-CimInstance Win32_OperatingSystem).SystemDrive
     }
 
-    Write-ToLog -Message ("There are $($appxCount) appx to be registered")
-    Write-ToLog -Message ("There are $($ftaCount) file type associations to be registered")
-    Write-ToLog -Message ("There are $($ptaCount) protocol type associations to be registered")
-    $output = @()
-    $ftaOutput = @()
-    $ptaOutput = @()
-    # Create a list of all 3 CSVs to be registered
-    $list = @()
-    if ($appxList) {
-        $list += "appx"
-    }
-    if ($ftaList) {
-        $list += "fta"
-    }
-    if ($ptaList) {
-        $list += "pta"
+    $ntfsPermissionLogPath = "$systemDrive\Windows\Temp\jcAdmu.log"
+
+    Write-ToLog "Begin Post-Migration NTFS Task" -Path $ntfsPermissionLogPath -MigrationStep
+    Write-ToLog "Running in permission-setting mode" -Path $ntfsPermissionLogPath
+
+    # Validate parameters
+    if ([string]::IsNullOrEmpty($SourceSID) -or [string]::IsNullOrEmpty($TargetSID) -or [string]::IsNullOrEmpty($ProfilePath)) {
+        Write-ToLog "Error: Missing required parameters. SourceSID, TargetSID, and ProfilePath must be provided." -Path $ntfsPermissionLogPath
+        exit 1
     }
 
-    $allListsCount = $appxCount + $ftaCount + $ptaCount
-    $curAllListCount = 0
-    # Foreach list to register
-    foreach ($item in $list) {
-        # Switch to the correct type of registration
-        Write-ToLog "### Registering $item ###"
-        switch ($item) {
-            "appx" {
-                Write-ToLog -Message ("Begin Appx File Registration")
-                $logFile = "$HOME\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
-                $homepath = $HOME
-                # Remove existing log file to ensure a fresh start.
-                if (Test-Path $logFile) {
-                    Remove-Item $logFile -Force
+    Write-ToLog "Setting recursive permissions for profile: $ProfilePath" -Path $ntfsPermissionLogPath
+    Write-ToLog "Source SID: $SourceSID" -Path $ntfsPermissionLogPath
+    Write-ToLog "Target SID: $TargetSID" -Path $ntfsPermissionLogPath
+
+    # Load Set-RegPermission function with recursive /T flags
+    function Set-RegPermission {
+        param (
+            [Parameter(Mandatory)]
+            [string]$SourceSID,
+            [Parameter(Mandatory)]
+            [string]$TargetSID,
+            [Parameter(Mandatory)]
+            [string]$FilePath
+        )
+
+        function local:Invoke-IcaclsSafe {
+            <#
+            .SYNOPSIS
+                Wraps icacls to safely capture output in CI environments where
+                $ErrorActionPreference = 'Stop' would otherwise cause a crash.
+            #>
+            param(
+                [Parameter(Mandatory = $true)]
+                [string]$Path,
+
+                [Parameter(Mandatory = $true)]
+                [string[]]$Arguments,
+
+                [Parameter(Mandatory = $false)]
+                [switch]$FilterAccessDenied
+            )
+
+            # 1. Force local error preference to 'Continue' to prevent CI from crashing
+            #    when icacls writes to stderr (even with /C).
+            $local:ErrorActionPreference = 'Continue'
+
+            # 2. Run icacls with the Call Operator (&).
+            #    2>&1 redirects stderr to stdout.
+            #    | ForEach-Object { "$_" } converts ErrorRecords to plain strings.
+            # Write-ToLog "Invoking icacls on path: $Path with arguments: $Arguments" -Path $ntfsPermissionLogPath
+            $result = & icacls.exe $Path $Arguments 2>&1 | ForEach-Object { "$_" }
+
+            # 3. Optional: Clean up the logs by removing expected failures
+            if ($FilterAccessDenied) {
+                $result = $result | Where-Object {
+                    $_ -notmatch "Access is denied" -and
+                    $_ -notmatch "Successfully processed \d+ files; Failed processing \d+ files"
                 }
-
-                # TODO: IF appx is null do not start
-                $j = Start-Job -ScriptBlock {
-                    param($homepath)
-
-                    Function Write-ToLog {
-                        [CmdletBinding()]
-                        Param
-                        (
-                            [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message
-                            , [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$($HOME)\AppData\Local\JumpCloudADMU\log.txt"
-                        )
-                        Begin {
-                            $FormattedDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-                            # If attempting to write to a log file in a folder/path that doesn't exist create the file including the path.
-                            If (!(Test-Path $Path)) {
-                                Write-Verbose "Creating $Path."
-                                New-Item $Path -Force -ItemType File
-                            }
-                            # check that the log file is not too large:
-                            $currentLog = get-item $path
-                            if ($currentLog.Length -ge 5000000) {
-                                # if log is larger than 5MB, rename the log to log.old.txt and create a new log file
-                                copy-item -path $path -destination "$path.old" -force
-                                New-Item $Path -Force -ItemType File
-                            }
-                        }
-                        end {
-                            # Write log entry to $Path
-                            "$FormattedDate $LevelText $Message" | Out-File -FilePath $Path -Append
-                        }
-                    }
-                    try {
-                        $appxList = Import-CSV "$homepath\AppData\Local\JumpCloudADMU\appx_manifest.csv"
-                        # Create the log file.  The `-Force` parameter ensures overwriting.
-                        $logFile = "$HOME\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
-                        "Starting Appx Package Registration" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                        $appxCount = $appxList.Count
-                        "There are $($appxCount) appx to be registered" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-
-                        #success Counter
-                        $appxSuccessCounter = 0
-                        foreach ($item in $appxList) {
-                            try {
-                                Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml" -ErrorAction SilentlyContinue
-                                "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                            } catch {
-                                <#Do this if a terminating exception happens#>
-                                "Error registering $($item.InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                            }
-                            $appxSuccessCounter++
-                        }
-                        "Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                        Write-ToLog -Message ("Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully")
-                    } catch {
-                        "A critical error occurred: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                    }
-                    # lastly re-register the cloudExperience host appx package
-                    try {
-                        # TODO: review if this is necessary
-                        "Attempting to re-register the cloudExperience host appx package" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                        Get-AppxPackage *windows.cloudexperience* | Reset-AppxPackage
-                        "Successfully re-registered the cloudExperience host appx package" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                    } catch {
-                        "Failed to re-register the cloudExperience host appx package: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                    }
-                } -ArgumentList $homepath
-
-                # Monitor progress
-                $UWPForm.Text = "Registering Default Windows Apps"
-                # While the job is running, update the progress bar else exit the job
-                $UWPForm.Percent = 0
-
-                Write-ToLog -Message ("There are $($allListsCount) items to be registered")
-                $timeoutSeconds = 120  # Set the maximum wait time in seconds for the APPX job
-                $startTime = Get-Date
-
-                while (($j.State -ne "Completed") -and ($j.State -ne "Failed") -and (((Get-Date).Subtract($startTime).TotalSeconds) -lt $timeoutSeconds)) {
-                    if (Test-Path "$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") {
-                        $lines = Get-Content -Path:("$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") -Raw
-                        # Count the number of lines in the log file
-                        $lines = $lines -split "`r`n" | Where-Object { $_ -ne "" }
-                        # If $lines.count is greater than or equal to appxCount
-                        if ($lines.count -le $appxCount) {
-                            $curAllListCount = $lines.count
-                            $percent = [Math]::Round([Math]::Ceiling(($curAllListCount / $allListsCount) * 100))
-                            $UWPForm.Percent = $percent
-                        }
-                    }
-                    Start-Sleep -Seconds 1
-                }
-                # Get the final result (if needed)
-                Receive-Job -Job $j
-
-                # Check the job state after the timeout
-                if ($j.State -eq "Completed") {
-                    Write-ToLog "AppX job completed successfully."
-                    Stop-Job $j
-                    Remove-Job $j
-                } elseif ($j.State -eq "Failed") {
-                    Write-ToLog "AppX job failed."
-                    Stop-Job $j
-                    Remove-Job $j
-                } else {
-                    Write-ToLog "AppX job timed out after $($timeoutSeconds) seconds."
-                    Stop-Job $j
-                    Remove-Job $j
-                }
-                $curAllListCount = $appxCount
             }
-            "fta" {
-                Write-ToLog -Message ("Begin FTA Registration")
-                $ftaSuccessCounter = 0
-                $UWPForm.Text = "Registering File Type Associations"
 
-                foreach ($item in $ftaList) {
-                    $curAllListCount += 1
-                    $percent = [Math]::Round([Math]::Ceiling(($curAllListCount / $allListsCount) * 100))
-                    $UWPForm.Percent = $percent
+            return $result
+        }
 
-                    Write-ToLog -Message ("Registering FTA Extension: $($item.extension) ProgramID: $($item.programId)")
-                    # Output to the log file
-                    try {
-                        $ftaOutput += Set-FTA -Extension $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
-                        Write-ToLog -Message ("Success")
-                        $ftaSuccessCounter++
-                    } catch {
-                        Write-ToLog -Message ("Failure")
-                        Write-ToLog -Message ($ProcessError)
-                    }
+        $SourceSIDObj = New-Object System.Security.Principal.SecurityIdentifier($SourceSID)
+        $TargetSIDObj = New-Object System.Security.Principal.SecurityIdentifier($TargetSID)
 
+        $SourceAccountTranslated = $false
+        $TargetAccountTranslated = $false
+
+        # Get system drive dynamically (not all systems use C:)
+        try {
+            $systemDrive = (Get-WmiObject Win32_OperatingSystem).SystemDrive
+        } catch {
+            $systemDrive = (Get-CimInstance Win32_OperatingSystem).SystemDrive
+        }
+
+        $ntfsPermissionLogPath = "$systemDrive\Windows\Temp\jcAdmu.log"
+
+        try {
+            $SourceAccount = $SourceSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+            $SourceAccountTranslated = $true
+        } catch {
+            Write-ToLog "Warning: Could not translate SourceSID $SourceSID to NTAccount. Using SID string instead." -Path $ntfsPermissionLogPath
+            $SourceAccount = $SourceSID
+        }
+        try {
+            $TargetAccount = $TargetSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+            $TargetAccountTranslated = $true
+        } catch {
+            Write-ToLog "Warning: Could not translate TargetSID $TargetSID to NTAccount. Using SID string instead." -Path $ntfsPermissionLogPath
+            $TargetAccount = $TargetSID
+        }
+
+        try {
+            Write-ToLog "Starting recursive permission migration from $SourceAccount to $TargetAccount on path: $FilePath" -Path $ntfsPermissionLogPath
+        } catch {
+            Write-ToLog "Failed to initialize NTFS permission log at $ntfsPermissionLogPath" -Path $ntfsPermissionLogPath
+        }
+
+        $SourceAccountIcacls = if ($SourceAccountTranslated) { $SourceAccount } else { "*$SourceAccount" }
+        $TargetAccountIcacls = if ($TargetAccountTranslated) { $TargetAccount } else { "*$TargetAccount" }
+
+        # Grant permissions recursively with /T flag
+        Write-ToLog "Granting recursive permissions to: $TargetAccountIcacls" -Path $ntfsPermissionLogPath
+        $icaclsGrantResult = Invoke-IcaclsSafe `
+            -Path $FilePath `
+            -Arguments "/grant", "${TargetAccountIcacls}:(OI)(CI)F", "/T", "/C", "/Q"        # Log icacls output for debugging
+        if ($icaclsGrantResult) {
+            foreach ($line in $icaclsGrantResult) {
+                if ($line -and $line.ToString().Trim()) {
+                    Write-ToLog "  icacls grant output: $line" -Path $ntfsPermissionLogPath
                 }
-                $ftaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\fta_manifestLog.txt"
-                Write-ToLog -Message ("FTA Registration Complete.  $ftaSuccessCounter/$ftaCount file type associations registered successfully.")
-            }
-            "pta" {
-                $ptaSuccessCounter = 0
-                $UWPForm.Text = "Registering Protocol Type Associations"
-
-                foreach ($item in $ptaList) {
-                    $curAllListCount += 1
-                    $percent = [Math]::Round([Math]::Ceiling(($curAllListCount / $allListsCount) * 100))
-                    $UWPForm.Percent = $percent
-                    # Update the textLabel
-                    Write-ToLog -Message ("Registering PTA Extension: $($item.extension) ProgramID: $($item.programId)")
-                    try {
-                        $ptaOutput += Set-PTA -Protocol $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
-                        Write-ToLog -Message ("Success")
-                        $ptaSuccessCounter++
-                    } catch {
-                        Write-ToLog -Message ("Failure")
-                        Write-ToLog -Message ($ProcessError)
-                    }
-                }
-                $ptaOutput | Out-File "$HOME\AppData\Local\JumpCloudADMU\pta_manifestLog.txt"
-
-                Write-ToLog -Message ("PTA Registration Complete.  $ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
             }
         }
-    }
-    # Log the pta/appx/fta registration completion
-    Write-ToLog -Message ("$ftaSuccessCounter/$ftaCount file type associations registered successfully.")
-    Write-ToLog -Message ("$ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
 
-    Write-ToLog -Message ('########### End UWP App ###########')
-    $UWPForm.EndUWP = $true
-    # Exit the runspace after two seconds
-    Start-Sleep -Seconds 2
-    $UWPForm.Runspace.Close()
-    $UWPForm.Runspace.Dispose()
-    exit
+        if ($LASTEXITCODE -ne 0) {
+            Write-ToLog "Warning: icacls grant operation had issues. Exit code: $LASTEXITCODE" -Path $ntfsPermissionLogPath
+        } else {
+            Write-ToLog "Successfully granted recursive permissions to $TargetAccountIcacls" -Path $ntfsPermissionLogPath
+        }
+
+        # Set ownership recursively with /T flag
+        Write-ToLog "Setting recursive owner to $TargetAccountIcacls" -Path $ntfsPermissionLogPath
+        $icaclsOwnerResult = Invoke-IcaclsSafe `
+            -Path $FilePath `
+            -Arguments "/setowner", "${TargetAccountIcacls}", "/T", "/C", "/Q"        # Log icacls output for debugging
+        if ($icaclsOwnerResult) {
+            foreach ($line in $icaclsOwnerResult) {
+                if ($line -and $line.ToString().Trim()) {
+                    Write-ToLog "  icacls setowner output: $line" -Path $ntfsPermissionLogPath
+                }
+            }
+        }
+
+        if ($LASTEXITCODE -ne 0) {
+            Write-ToLog "Warning: icacls setowner operation had issues. Exit code: $LASTEXITCODE" -Path $ntfsPermissionLogPath
+        } else {
+            Write-ToLog "Successfully set recursive owner to $TargetAccountIcacls" -Path $ntfsPermissionLogPath
+        }
+
+        Write-ToLog "Recursive permission migration completed for path: $FilePath" -Path $ntfsPermissionLogPath
+    }
+    $regPermStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+    # Execute permission setting
+    Set-RegPermission -sourceSID $SourceSID -targetSID $TargetSID -filePath $ProfilePath
+    $regPermStopwatch.Stop()
+    Write-ToLog "Set-RegPermission (recursive level) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds." -Path $ntfsPermissionLogPath
+
+    Write-ToLog "Permission migration completed successfully" -Path $ntfsPermissionLogPath
+
+    # Delete the scheduled task that triggered this
+    $taskName = "ADMU-SetPermissions-$TargetSID"
+    try {
+        Unregister-ScheduledTask -TaskName $taskName -Confirm:$false -ErrorAction Stop
+        Write-ToLog "Successfully deleted scheduled task: $taskName" -Path $ntfsPermissionLogPath
+    } catch {
+        Write-ToLog "Warning: Could not delete scheduled task $taskName : $_" -Path $ntfsPermissionLogPath
+    }
+    Write-ToLog "End Post-Migration NTFS Task" -Path $ntfsPermissionLogPath -MigrationStep
 } else {
-    Write-ToLog -Message ("The registry key $ADMUKEY does not exist. The UWP app will not run.")
-    exit
+    Write-ToLog "Running in normal UWP app registration mode"
+    # Normal UWP app registration mode
+    $ADMUKEY = "HKCU:\SOFTWARE\JCADMU"
+    if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
+        Write-ToLog "Initializing UWP FORM....."
+        # Initialize the form
+        $UWPForm = New-UWPForm
+        Write-ToLog "New runspace form on runspaceID: $($UWPForm.Runspace.Id)"
+        # init log
+        Write-ToLog "Begin UWP App" -MigrationStep
+        # set files:
+        $appxManifest = ($HOME + '\AppData\Local\JumpCloudADMU\appx_manifest.csv')
+        $ftaManifest = ($HOME + '\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv')
+        $ptaManifest = ($HOME + '\AppData\Local\JumpCloudADMU\protocolTypeAssociations.csv')
+        # import CSVs
+        try {
+            $appxList = Import-Csv $appxManifest
+            $appxCount = $appxList.Count
+        } catch {
+            $appxList = $null
+            $appxCount = 0
+        }
+        try {
+            $ftaList = Import-Csv $ftaManifest
+            $ftaCount = $ftaList.Count
+        } catch {
+            $ftaList = $null
+            $ftaCount = 0
+        }
+        try {
+            $ptaList = Import-Csv $ptaManifest
+            $ptaCount = $ptaList.Count
+        } catch {
+            $ptaList = $null
+            $ptaCount = 0
+        }
+
+        Write-ToLog -Message ("There are $($appxCount) appx to be registered")
+        Write-ToLog -Message ("There are $($ftaCount) file type associations to be registered")
+        Write-ToLog -Message ("There are $($ptaCount) protocol type associations to be registered")
+        $output = @()
+        # Create a list of all 3 CSVs to be registered
+        $list = @()
+        if ($appxList) {
+            $list += "appx"
+        }
+        if ($ftaList) {
+            $list += "fta"
+        }
+        if ($ptaList) {
+            $list += "pta"
+        }
+
+        $allListsCount = $appxCount + $ftaCount + $ptaCount
+        $curAllListCount = 0
+        # Foreach list to register
+        foreach ($item in $list) {
+            # Switch to the correct type of registration
+            Write-ToLog "### Registering $item ###"
+            switch ($item) {
+                "appx" {
+                    Write-ToLog -Message ("Begin Appx File Registration")
+                    $logFile = "$HOME\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
+                    $homepath = $HOME
+                    # Remove existing log file to ensure a fresh start.
+                    if (Test-Path $logFile) {
+                        Remove-Item $logFile -Force
+                    }
+
+                    # TODO: IF appx is null do not start
+                    $j = Start-Job -ScriptBlock {
+                        param($homepath)
+
+                        function Write-ToLog {
+                            [CmdletBinding()]
+                            param
+                            (
+                                [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message,
+                                [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$($HOME)\AppData\Local\JumpCloudADMU\log.txt",
+                                [Parameter(Mandatory = $false)][ValidateSet("Error", "Warning", "Info", "Verbose")][string]$Level = "Info",
+                                [Parameter(Mandatory = $false)][string]$Step,
+                                [Parameter(Mandatory = $false)][switch]$MigrationStep
+                            )
+                            begin {
+                                $VerbosePreference = 'Continue'
+                            }
+                            process {
+                                if (!(Test-Path $Path)) {
+                                    Write-ToLog "Creating $Path."
+                                    New-Item $Path -Force -ItemType File | Out-Null
+                                }
+                                $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                                $levelText = $Level.ToUpper()
+                                $stepText = if ($Step) { "[$Step]" } else { "" }
+
+                                # Handle MigrationStep formatting
+                                if ($MigrationStep) {
+                                    $totalWidth = 52
+                                    $messageText = $Message
+                                    $availableWidth = $totalWidth - $messageText.Length - 2  # -2 for spaces around message
+                                    $paddingEach = [math]::Floor($availableWidth / 2)
+                                    $paddingLeft = "=" * $paddingEach
+                                    $paddingRight = "=" * ($availableWidth - $paddingEach)
+                                    $formattedMessage = "$paddingLeft $messageText $paddingRight"
+                                    # remove stepText if empty
+                                    if ([string]::IsNullOrEmpty($stepText)) {
+                                        $logMessage = "[$timestamp] [$levelText] $formattedMessage"
+                                    } else {
+                                        $logMessage = "[$timestamp] [$levelText] $stepText $formattedMessage"
+                                    }
+                                } else {
+                                    # remove stepText if empty
+                                    if ([string]::IsNullOrEmpty($stepText)) {
+                                        $logMessage = "[$timestamp] [$levelText] $Message"
+                                    } else {
+                                        $logMessage = "[$timestamp] [$levelText] $stepText $Message"
+                                    }
+                                }
+
+                                # Write to appropriate pipeline and optionally to console
+                                switch ($Level) {
+                                    'Error' { Write-Error $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
+                                    'Warn' { Write-Warning $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
+                                    'Info' { if ($Script:AdminDebug) { Write-Host $logMessage } }
+                                    'Verbose' { Write-ToLog $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
+                                }
+
+                                if ($Script:ProgressBar) {
+                                    # add a new line to each of the log messages in the UI log stream
+                                    Update-LogTextBlock -LogText "$logMessage`r`n" -ProgressBar $Script:ProgressBar
+                                }
+                                Add-Content -Value $logMessage -Path $Path -Encoding utf8
+                            }
+                            end {}
+                        }
+                        try {
+                            $appxList = Import-Csv "$homepath\AppData\Local\JumpCloudADMU\appx_manifest.csv"
+                            # Create the log file.  The `-Force` parameter ensures overwriting.
+                            $logFile = "$HOME\AppData\Local\JumpCloudADMU\appx_statusLog.txt"
+                            "Starting Appx Package Registration" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                            $appxCount = $appxList.Count
+                            "There are $($appxCount) appx to be registered" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+
+                            #success Counter
+                            $appxSuccessCounter = 0
+                            foreach ($item in $appxList) {
+                                try {
+                                    Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml" -ErrorAction SilentlyContinue
+                                    "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                                } catch {
+                                    <#Do this if a terminating exception happens#>
+                                    "Error registering $($item.InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                                }
+                                $appxSuccessCounter++
+                            }
+                            "Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                            Write-ToLog -Message ("Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully")
+                        } catch {
+                            "A critical error occurred: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                        }
+                        # lastly re-register the cloudExperience host appx package
+                        try {
+                            # TODO: review if this is necessary
+                            "Attempting to re-register the cloudExperience host appx package" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                            Get-AppxPackage *windows.cloudexperience* | Reset-AppxPackage
+                            "Successfully re-registered the cloudExperience host appx package" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                        } catch {
+                            "Failed to re-register the cloudExperience host appx package: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                        }
+                    } -ArgumentList $homepath
+
+                    # Monitor progress
+                    $UWPForm.Text = "Registering Default Windows Apps"
+                    # While the job is running, update the progress bar else exit the job
+                    $UWPForm.Percent = 0
+
+                    Write-ToLog -Message ("There are $($allListsCount) items to be registered")
+                    $timeoutSeconds = 120  # Set the maximum wait time in seconds for the APPX job
+                    $startTime = Get-Date
+
+                    while (($j.State -ne "Completed") -and ($j.State -ne "Failed") -and (((Get-Date).Subtract($startTime).TotalSeconds) -lt $timeoutSeconds)) {
+                        if (Test-Path "$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") {
+                            $lines = Get-Content -Path:("$homepath\AppData\Local\JumpCloudADMU\appx_statusLog.txt") -Raw
+                            # Count the number of lines in the log file
+                            $lines = $lines -split "`r`n" | Where-Object { $_ -ne "" }
+                            # If $lines.count is greater than or equal to appxCount
+                            if ($lines.count -le $appxCount) {
+                                $curAllListCount = $lines.count
+                                $percent = [Math]::Round([Math]::Ceiling(($curAllListCount / $allListsCount) * 100))
+                                $UWPForm.Percent = $percent
+                            }
+                        }
+                        Start-Sleep -Seconds 1
+                    }
+                    # Get the final result (if needed)
+                    Receive-Job -Job $j
+
+                    # Check the job state after the timeout
+                    if ($j.State -eq "Completed") {
+                        Write-ToLog "AppX job completed successfully."
+                        Stop-Job $j
+                        Remove-Job $j
+                    } elseif ($j.State -eq "Failed") {
+                        Write-ToLog "AppX job failed."
+                        Stop-Job $j
+                        Remove-Job $j
+                    } else {
+                        Write-ToLog "AppX job timed out after $($timeoutSeconds) seconds."
+                        Stop-Job $j
+                        Remove-Job $j
+                    }
+                    $curAllListCount = $appxCount
+                }
+                "fta" {
+                    Write-ToLog -Message ("Begin FTA Registration")
+                    $ftaSuccessCounter = 0
+                    $UWPForm.Text = "Registering File Type Associations"
+
+                    foreach ($item in $ftaList) {
+                        $curAllListCount += 1
+                        $percent = [Math]::Round([Math]::Ceiling(($curAllListCount / $allListsCount) * 100))
+                        $UWPForm.Percent = $percent
+
+                        Write-ToLog -Message ("Registering FTA Extension: $($item.extension) ProgramID: $($item.programId)")
+                        # Output to the log file
+                        try {
+                            Set-FTA -Extension $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
+                            Write-ToLog -Message ("Success")
+                            $ftaSuccessCounter++
+                        } catch {
+                            Write-ToLog -Message ("Failure")
+                            Write-ToLog -Message ($ProcessError)
+                        }
+
+                    }
+                    Write-ToLog -Message ("FTA Registration Complete.  $ftaSuccessCounter/$ftaCount file type associations registered successfully.")
+                }
+                "pta" {
+                    $ptaSuccessCounter = 0
+                    $UWPForm.Text = "Registering Protocol Type Associations"
+
+                    foreach ($item in $ptaList) {
+                        $curAllListCount += 1
+                        $percent = [Math]::Round([Math]::Ceiling(($curAllListCount / $allListsCount) * 100))
+                        $UWPForm.Percent = $percent
+                        # Update the textLabel
+                        Write-ToLog -Message ("Registering PTA Extension: $($item.extension) ProgramID: $($item.programId)")
+                        try {
+                            Set-PTA -Protocol $item.extension -ProgID $item.programId -ErrorAction Stop -ErrorVariable ProcessError -Verbose *>&1
+                            Write-ToLog -Message ("Success")
+                            $ptaSuccessCounter++
+                        } catch {
+                            Write-ToLog -Message ("Failure")
+                            Write-ToLog -Message ($ProcessError)
+                        }
+                    }
+
+                    Write-ToLog -Message ("PTA Registration Complete.  $ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
+                }
+            }
+        }
+        # Log the pta/appx/fta registration completion
+        Write-ToLog -Message ("$ftaSuccessCounter/$ftaCount file type associations registered successfully.")
+        Write-ToLog -Message ("$ptaSuccessCounter/$ptaCount protocol type associations registered successfully.")
+
+
+        Write-ToLog -Message ('End UWP App') -MigrationStep
+        $UWPForm.EndUWP = $true
+        # Exit the runspace after two seconds
+        Start-Sleep -Seconds 2
+        $UWPForm.Runspace.Close()
+        $UWPForm.Runspace.Dispose()
+        exit
+    } else {
+        Write-ToLog -Message ("The registry key $ADMUKEY does not exist. The UWP app will not run.")
+        exit
+    }
 }
