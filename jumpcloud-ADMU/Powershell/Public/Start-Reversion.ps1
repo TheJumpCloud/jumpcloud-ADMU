@@ -428,7 +428,7 @@ Function Start-Reversion {
                     }
                 }
             }
-            #emdregion Remove JumpCloud ADMU Created User
+            #endregion Remove JumpCloud ADMU Created User
 
             #region Final Validation
             if (-not $DryRun) {
