@@ -398,7 +398,7 @@ Function Start-Reversion {
                     # Compare the profile path with the $profileImagePath
                     if ($jcUserProfilePath -eq $profileImagePath) {
                         Write-ToLog -message "Removing JumpCloud created user: $($jcUser.Name)" -Level Info -Step "Revert-Migration"
-                        Write-ToProgress -form $form -Status "RemoveJCUserArtifacts" -ProgressBar $ProgressBar -StatusType $StatusType
+                        Write-ToProgress -form $form -Status "RevertRemoveJCUserArtifacts" -ProgressBar $ProgressBar -StatusType $StatusType
                         Remove-LocalUser -Name $jcUser.Name -ErrorAction Stop
                         Write-ToLog -message "Successfully removed JumpCloud created user: $($jcUser.Name)" -Level Info -Step "Revert-Migration"
                         # Remove it from the Registry
