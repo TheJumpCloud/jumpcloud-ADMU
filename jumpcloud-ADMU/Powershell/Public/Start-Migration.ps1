@@ -200,11 +200,20 @@ Function Start-Migration {
             $InstallJCAgent = $inputObject.InstallJCAgent
             $AutoBindJCUser = $inputObject.AutoBindJCUser
 
+            # Prefer the progress form created in Form.ps1 so updates apply to the first window the user sees
+            $ProgressBar = $inputObject.ProgressBar
+            if (-not $ProgressBar -and $script:ProgressBar) {
+                $ProgressBar = $script:ProgressBar
+            }
+            if (-not $ProgressBar) {
+                $ProgressBar = New-ProgressForm
+                $script:ProgressBar = $ProgressBar
+            }
+
             # Validate JumpCloudSystemUserName to write to the GUI
             $ret, $script:JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
             $TempPassword = $inputObject.TempPassword
             # Write to progress bar
-            $script:ProgressBar = New-ProgressForm
             if ($JumpCloudSystemUserName) {
                 Write-ToProgress -form $isForm -ProgressBar $ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudSystemUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath
             } else {
@@ -220,6 +229,7 @@ Function Start-Migration {
         } else {
             $userAgent = "JumpCloud_ADMU.Powershell/$($admuVersion)"
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
+            $ProgressBar = $null
         }
 
 
@@ -233,14 +243,14 @@ Function Start-Migration {
         switch ($PSCmdlet.ParameterSetName) {
             'cmd' {
                 # print all parameters except sensitive info
-        $PSBoundParameters.GetEnumerator() | ForEach-Object {
-            if (($_.Key -eq 'TempPassword') -or
-                ($_.Key -eq 'JumpCloudAPIKey') -or
-                ($_.Key -eq 'JumpCloudOrgID') -or
-                ($_.Key -eq 'JumpCloudConnectKey')) {
-                Write-ToLog -Message ("Parameter: $($_.Key) = <hidden>")
-            } else {
-                Write-ToLog -Message ("Parameter: $($_.Key) = $($_.Value)")
+                $PSBoundParameters.GetEnumerator() | ForEach-Object {
+                    if (($_.Key -eq 'TempPassword') -or
+                        ($_.Key -eq 'JumpCloudAPIKey') -or
+                        ($_.Key -eq 'JumpCloudOrgID') -or
+                        ($_.Key -eq 'JumpCloudConnectKey')) {
+                        Write-ToLog -Message ("Parameter: $($_.Key) = <hidden>")
+                    } else {
+                        Write-ToLog -Message ("Parameter: $($_.Key) = $($_.Value)")
                     }
                 }
             }

@@ -333,6 +333,7 @@ Function Show-SelectionForm {
         $AzureADStatus = 'N/A'
         $Workplace_join = 'N/A'
         $TenantName = 'N/A'
+        $AzureDomainStatus = 'N/A'
     }
 
     # define return object:
@@ -350,6 +351,7 @@ Function Show-SelectionForm {
         JumpCloudConnectKey = $null
         JumpCloudAPIKey     = $null
         JumpCloudOrgID      = $null
+        ProgressBar         = $null
     }
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..' -PercentComplete 50
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
@@ -713,6 +715,17 @@ Function Show-SelectionForm {
                     Write-ToLog "User $($tb_JumpCloudUserName.Text) does not have a local account on this system"
                 }
             }
+            if ([string]::IsNullOrEmpty($SelectedUserName)) {
+                $SelectedUserName = $($lvProfileList.SelectedItem.username)
+            }
+
+            # Preload progress form to shrink perceived wait between click and display
+            $profilePath = $lvProfileList.SelectedItem.LocalPath
+            $displayUsername = if ([string]::IsNullOrWhiteSpace($tb_JumpCloudUserName.Text)) { $SelectedUserName } else { $tb_JumpCloudUserName.Text }
+            $script:ProgressBar = New-ProgressForm
+            $FormResults.ProgressBar = $script:ProgressBar
+            Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $displayUsername -profileSize "Calculating" -LocalPath $profilePath
+
             # Build FormResults object
             Write-ToLog "Building Form Results"
 
@@ -735,6 +748,9 @@ Function Show-SelectionForm {
             $FormResults.JumpCloudConnectKey = $tb_JumpCloudConnectKey.Password
             $FormResults.JumpCloudAPIKey = $tb_JumpCloudAPIKey.Password
             $FormResults.JumpCloudOrgID = $script:selectedOrgID
+            if (-not $FormResults.ProgressBar) {
+                $FormResults.ProgressBar = $script:ProgressBar
+            }
             # Close form
             $Form.Close()
         })

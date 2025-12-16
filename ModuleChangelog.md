@@ -1,3 +1,13 @@
+## 2.10.1
+
+Release Date: December 17, 2025
+
+#### RELEASE NOTES
+
+```
+Patch release focused on reducing GUI wait times and preloading the migration progress form.
+```
+
 ## 2.10.0
 
 Release Date: November 18, 2025
