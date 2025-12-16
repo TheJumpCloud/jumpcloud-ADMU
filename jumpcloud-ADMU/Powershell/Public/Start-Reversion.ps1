@@ -166,7 +166,6 @@ Function Start-Reversion {
             # Get the most recent ACL backup file path
 
             if ($aclBackupFiles.Count -eq 0) {
-                # TODO: Should we throw?
                 Throw "No ACL backup files found in directory: $aclBackupDir for SID: $UserSID. Cannot proceed with revert."
             } else {
                 Write-ToLog -Message "Found ACL backup files in $aclBackupDir" -Level Info -Step "Revert-Migration"

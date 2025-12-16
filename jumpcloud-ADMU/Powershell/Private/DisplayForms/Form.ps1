@@ -725,7 +725,6 @@ Function Show-SelectionForm {
             if ($MainTabControl.SelectedIndex -eq 1) {
                 # Tab 1 is Migrated Accounts
                 $btn_migrateProfile.Content = "Restore Profile"
-                Write-ToLog "Switched to Restore Profile Tab."
                 # Disable all the checkbox and textboxes not needed for reversion
                 $tb_JumpCloudUserName.IsEnabled = $false
                 $tb_JumpCloudConnectKey.IsEnabled = $false
@@ -747,7 +746,6 @@ Function Show-SelectionForm {
             } else {
                 # Tab 0 is System Accounts
                 $btn_migrateProfile.Content = "Migrate Profile"
-                Write-ToLog "Switched to Migrate Profile Tab."
                 # Enable all the checkbox and textboxes not needed for reversion
                 $tb_JumpCloudUserName.IsEnabled = $true
                 $tb_JumpCloudConnectKey.IsEnabled = $true
