@@ -175,7 +175,7 @@ Function Start-Reversion {
             #region Identify Registry Files to Revert
             $registryFiles = @()
 
-            # NTUSER.DAT files in profile roo\t
+            # NTUSER.DAT files in profile root
             $ntuserCurrent = Join-Path $profileImagePath "NTUSER.DAT"
             $ntuserOriginalFiles = Get-ChildItem -Path $profileImagePath -Force | Where-Object { $_.Name -match "NTUSER_original_*" }
 
