@@ -324,8 +324,6 @@ function Update-ProgressForm {
         # If newLocalUsername is null or empty, set to 'N/A'
         if ([string]::IsNullOrEmpty($newLocalUsername)) {
             $newLocalUsername = 'N/A'
-        } else {
-            $newLocalUsername = $newLocalUsername
         }
         $ProgressBar.NewLocalUsernameInput = $newLocalUsername
     }
