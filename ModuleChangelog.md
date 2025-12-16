@@ -1,12 +1,30 @@
-## 2.10.1
+## 2.10.2
 
 Release Date: December 17, 2025
 
 #### RELEASE NOTES
 
 ```
-Patch release focused on reducing GUI wait times and preloading the migration progress form.
+Patch release focused on reducing GUI and Progress bar wait times and preloading the migration progress form.
 ```
+
+## 2.10.1
+
+Release Date: December 15, 2025
+
+#### RELEASE NOTES
+
+```
+This release reduces the time required to perform a migration by deferring the file permission traversal and setting to a scheduled task that runs in the background after migration completes. This should significantly reduce the time required to perform a migration on systems with large user profiles. This release includes a bug fix for flashing icons post-migration due to Windows UCPD preventing process from changing certain file default preferences like https/http/.
+```
+
+#### IMPROVEMENTS:
+
+Decreased time required to perform a migration. Several changes and consolidation of log messages.
+
+#### BUG FIXES:
+
+Resolves an issue with flashing icons post-migration due to Windows UCPD preventing process from changing certain file default preferences like https/http/.
 
 ## 2.10.0
 
