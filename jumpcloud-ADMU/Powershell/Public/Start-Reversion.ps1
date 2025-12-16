@@ -388,6 +388,48 @@ Function Start-Reversion {
             }
             #endregion Take Ownership of Profile Directory
 
+            #region Remove JumpCloud ADMU Created User
+            $jcUsers = Get-LocalUser | Where-Object { $_.Description -eq 'Created by JumpCloud ADMU' }
+            if (-not $DryRun) {
+                # Check if the user have the $profileImagePath as profile path
+                foreach ($jcUser in $jcUsers) {
+                    #Get the profile path of the user
+                    $jcUserProfilePath = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($jcUser.SID.Value)" -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
+                    # Compare the profile path with the $profileImagePath
+                    if ($jcUserProfilePath -eq $profileImagePath) {
+                        Write-ToLog -message "Removing JumpCloud created user: $($jcUser.Name)" -Level Info -Step "Revert-Migration"
+                        Write-ToProgress -form $form -Status "RemoveJCUserArtifacts" -ProgressBar $ProgressBar -StatusType $StatusType
+                        Remove-LocalUser -Name $jcUser.Name -ErrorAction Stop
+                        Write-ToLog -message "Successfully removed JumpCloud created user: $($jcUser.Name)" -Level Info -Step "Revert-Migration"
+                        # Remove it from the Registry
+                        $jcUserRegPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($jcUser.SID.Value)"
+                        if (Test-Path $jcUserRegPath) {
+                            try {
+                                Remove-Item -Path $jcUserRegPath -Recurse -Force -ErrorAction Stop
+                                Write-ToLog -message "Successfully removed JumpCloud created user registry entry for SID: $($jcUser.SID.Value)" -Level Info -Step "Revert-Migration"
+                            } catch {
+                                $errorMsg = "Failed to remove JumpCloud created user registry entry for SID: $($jcUser.SID.Value): $($_.Exception.Message)"
+                                Write-ToLog -Message $errorMsg -Level Error -Step "Revert-Migration"
+                                $revertResult.Errors += $errorMsg
+                            }
+                        } else {
+                            Write-ToLog -message "No registry entry found for JumpCloud created user SID: $($jcUser.SID.Value)" -Level Warning -Step "Revert-Migration"
+                        }
+                    }
+                }
+            } else {
+                Write-ToLog -Message "WHAT IF: Would check for JumpCloud created users to remove" -Level Verbose -Step "Revert-Migration"
+                foreach ($jcUser in $jcUsers) {
+                    #Get the profile path of the user
+                    $jcUserProfilePath = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($jcUser.SID.Value)" -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
+                    # Compare the profile path with the $profileImagePath
+                    if ($jcUserProfilePath -eq $profileImagePath) {
+                        Write-ToLog -message "WHAT IF: Would remove JumpCloud created user: $($jcUser.Name)" -Level Verbose -Step "Revert-Migration"
+                    }
+                }
+            }
+            #emdregion Remove JumpCloud ADMU Created User
+
             #region Final Validation
             if (-not $DryRun) {
                 Write-ToLog -Message "Performing post-revert validation" -Level Info -Step "Revert-Migration"

@@ -36,6 +36,7 @@ function Write-ToProgress {
             "RevertProfileImagePath"      = "Restoring ProfileImagePath in registry"
             "RevertProfileACLs"           = "Restoring profile ACLs from backup"
             "RevertTakeOwnership"         = "Taking ownership of profile directory"
+            "RemoveJCUserArtifacts"      = "Removing JumpCloud user artifacts"
             "RevertComplete"              = "Profile Reversion completed successfully"
         }
     } else {
