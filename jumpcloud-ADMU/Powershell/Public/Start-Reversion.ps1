@@ -391,7 +391,7 @@ Function Start-Reversion {
             #region Remove JumpCloud ADMU Created User
             $jcUsers = Get-LocalUser | Where-Object { $_.Description -eq 'Created by JumpCloud ADMU' }
             if (-not $DryRun) {
-                # Check if the user have the $profileImagePath as profile path
+                # Check if the user has the $profileImagePath as profile path
                 foreach ($jcUser in $jcUsers) {
                     #Get the profile path of the user
                     $jcUserProfilePath = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($jcUser.SID.Value)" -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
