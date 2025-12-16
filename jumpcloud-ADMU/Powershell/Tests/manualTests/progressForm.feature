@@ -21,3 +21,20 @@ Feature Progress form displays an error when migration can not complete
         And the "Migrate Profile" button has been clicked
         When the progress form window appears
         Then migration progress should halt after the script identifies that the user has a redirected account, the window should should the error message and point the user to click the link for more information
+
+Feature: GUI Element State Management
+    Scenario: UI elements are disabled when switching to Migrated Accounts tab
+        Given the ADMU GUI is open
+        When the user clicks on the "Migrated Accounts" tab
+        Then the input labels, textboxes, and user selection controls should be disabled (greyed out)
+        And the user should be restricted from editing those fields while on this tab
+
+Feature: Dynamic UI Label Validation
+    Scenario: Restore/Migrate button label updates based on selected tab
+        Given the ADMU GUI is open
+        When the user is on the "Migration" (or default) tab
+        Then the main action button should be labeled "Migrate Profile"
+        When the user switches to the "Migrated Accounts" tab
+        Then the main action button label should change to "Restore" (or "Restore Profile")
+        When the user switches back to the "Migration" tab
+        Then the main action button label should revert to "Migrate Profile"
