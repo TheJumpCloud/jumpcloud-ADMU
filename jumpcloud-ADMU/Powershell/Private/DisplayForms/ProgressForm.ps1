@@ -321,6 +321,12 @@ function Update-ProgressForm {
         $ProgressBar.UsernameInput = $username
         $ProgressBar.ProfileSizeInput = "$($profileSize)GB"
         $ProgressBar.LocalPathInput = $localPath
+        # If newLocalUsername is null or empty, set to 'N/A'
+        if ([string]::IsNullOrEmpty($newLocalUsername)) {
+            $newLocalUsername = 'N/A'
+        } else {
+            $newLocalUsername = $newLocalUsername
+        }
         $ProgressBar.NewLocalUsernameInput = $newLocalUsername
     }
 

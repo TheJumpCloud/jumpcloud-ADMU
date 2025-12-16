@@ -163,31 +163,79 @@ Function Show-SelectionForm {
                     <Grid.RowDefinitions>
                         <RowDefinition Height="180"/>
                     </Grid.RowDefinitions>
-                    <Label HorizontalAlignment="Left" VerticalAlignment="Top" FontWeight="SemiBold" Foreground="#202D38" Content="Select a domain or Entra ID account to be migrated" Margin="0,5,0,0" Grid.RowSpan="2" Height="26" Width="297"/>
-                    <!-- ListView -->
-                    <ListView Name="lvProfileList" Grid.Row="1" BorderBrush="White" MinWidth="670" HorizontalAlignment="Left" Margin="0,36,0,0" Grid.ColumnSpan="2">
-                        <ListView.View>
-                            <GridView AllowsColumnReorder="True">
-                                <GridView.ColumnHeaderContainerStyle>
-                                    <Style TargetType="{x:Type GridViewColumnHeader}">
-                                        <Setter Property="HorizontalContentAlignment" Value="Left"/>
-                                        <Setter Property="BorderBrush" Value="White"/>
-                                        <Setter Property="Background" Value="White"/>
-                                        <Setter Property="FontSize" Value="11"/>
-                                        <Setter Property="FontFamily" Value="Segoe UI"/>
-                                        <Setter Property="FontWeight" Value="SemiBold"/>
-                                        <Setter Property="Foreground" Value="#202D38"/>
-                                        <Setter Property="Margin" Value="5,0,0,0"/>
-                                    </Style>
-                                </GridView.ColumnHeaderContainerStyle>
-                                <GridViewColumn Header="System Accounts" DisplayMemberBinding="{Binding UserName}" Width="auto" />
-                                <GridViewColumn Header="Last Login" DisplayMemberBinding="{Binding LastLogin}" Width="auto"/>
-                                <GridViewColumn Header="Currently Active" DisplayMemberBinding="{Binding Loaded}" Width="auto" />
-                                <GridViewColumn Header="Local Admin" DisplayMemberBinding="{Binding IsLocalAdmin}" Width="auto"/>
-                                <GridViewColumn Header="Local Path" DisplayMemberBinding="{Binding LocalPath}" Width="auto"/>
-                            </GridView>
-                        </ListView.View>
-                    </ListView>
+
+                    <Label HorizontalAlignment="Left"
+               VerticalAlignment="Top"
+               FontWeight="SemiBold"
+               Foreground="#202D38"
+               Content="{Binding ElementName=MainTabControl, Path=SelectedItem.Tag, FallbackValue='Select a domain or Entra ID account to be migrated'}"
+               Margin="0,5,0,0"
+               Height="26"
+               Width="400"/>
+                    <TabControl Name="MainTabControl" Grid.Row="0" Margin="0,35,0,0" BorderThickness="0" Background="Transparent">
+
+                        <TabItem Header="System Accounts"
+                     FontFamily="Segoe UI"
+                     FontSize="12"
+                     Tag="Select a domain or Entra ID account to be migrated">
+
+                            <ListView Name="lvProfileList" BorderBrush="White" MinWidth="660" HorizontalAlignment="Left" BorderThickness="0">
+                                <ListView.View>
+                                    <GridView AllowsColumnReorder="True">
+                                        <GridView.ColumnHeaderContainerStyle>
+                                            <Style TargetType="{x:Type GridViewColumnHeader}">
+                                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                                <Setter Property="BorderBrush" Value="White"/>
+                                                <Setter Property="Background" Value="White"/>
+                                                <Setter Property="FontSize" Value="11"/>
+                                                <Setter Property="FontFamily" Value="Segoe UI"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Foreground" Value="#202D38"/>
+                                                <Setter Property="Margin" Value="5,0,0,0"/>
+                                            </Style>
+                                        </GridView.ColumnHeaderContainerStyle>
+                                        <GridViewColumn Header="System Accounts" DisplayMemberBinding="{Binding UserName}" Width="auto" />
+                                        <GridViewColumn Header="Last Login" DisplayMemberBinding="{Binding LastLogin}" Width="auto"/>
+                                        <GridViewColumn Header="Currently Active" DisplayMemberBinding="{Binding Loaded}" Width="auto" />
+                                        <GridViewColumn Header="Local Admin" DisplayMemberBinding="{Binding IsLocalAdmin}" Width="auto"/>
+                                        <GridViewColumn Header="Local Path" DisplayMemberBinding="{Binding LocalPath}" Width="auto"/>
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </TabItem>
+
+                        <TabItem Header="Migrated Accounts"
+         FontFamily="Segoe UI"
+         FontSize="12"
+         Tag="View the status of accounts that have been migrated">
+
+                            <ListView BorderBrush="White" MinWidth="660" HorizontalAlignment="Left" BorderThickness="0" Name="lvMigratedAccounts">
+                                <ListView.View>
+                                    <GridView AllowsColumnReorder="True">
+                                        <GridView.ColumnHeaderContainerStyle>
+                                            <Style TargetType="{x:Type GridViewColumnHeader}">
+                                                <Setter Property="HorizontalContentAlignment" Value="Left"/>
+                                                <Setter Property="BorderBrush" Value="White"/>
+                                                <Setter Property="Background" Value="White"/>
+                                                <Setter Property="FontSize" Value="11"/>
+                                                <Setter Property="FontFamily" Value="Segoe UI"/>
+                                                <Setter Property="FontWeight" Value="SemiBold"/>
+                                                <Setter Property="Foreground" Value="#202D38"/>
+                                                <Setter Property="Margin" Value="5,0,0,0"/>
+                                            </Style>
+                                        </GridView.ColumnHeaderContainerStyle>
+                                        <GridViewColumn Header="System Accounts" DisplayMemberBinding="{Binding UserName}" Width="auto" />
+                                        <GridViewColumn Header="Last Login" DisplayMemberBinding="{Binding LastLogin}" Width="auto"/>
+                                        <GridViewColumn Header="Currently Active" DisplayMemberBinding="{Binding Loaded}" Width="auto" />
+                                        <GridViewColumn Header="Local Admin" DisplayMemberBinding="{Binding IsLocalAdmin}" Width="auto"/>
+                                        <GridViewColumn Header="Local Path" DisplayMemberBinding="{Binding LocalPath}" Width="auto"/>
+
+                                    </GridView>
+                                </ListView.View>
+                            </ListView>
+                        </TabItem>
+
+                    </TabControl>
                 </Grid>
             </Border>
 
@@ -359,15 +407,18 @@ Function Show-SelectionForm {
     foreach ($profile in $registryProfiles) {
         $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
     }
-    # List to store users
-    $users = @()
+
+    # 1. Initialize TWO lists
+    $systemUsers = @()
+    $migratedUsers = @()
+
     foreach ($listItem in $profileList) {
         $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+$"
         $isValidFormat = [regex]::IsMatch($($listItem.PSChildName), $sidPattern);
-        # Get Valid SIDs
+
         if ($isValidFormat) {
-            # Populate Users List
-            $users += [PSCustomObject]@{
+            # Create the Object first
+            $userObj = [PSCustomObject]@{
                 Name              = Convert-SecurityIdentifier $listItem.PSChildName
                 LocalPath         = $listItem.ProfileImagePath
                 SID               = $listItem.PSChildName
@@ -377,18 +428,29 @@ Function Show-SelectionForm {
                 RoamingConfigured = $null
                 LastLogin         = $null
             }
+
+            # 2. Sort into the correct list based on path extension
+            if ($listItem.ProfileImagePath -like "*.ADMU") {
+                $migratedUsers += $userObj
+            } else {
+                $systemUsers += $userObj
+            }
         }
     }
+
     # Get Win32 Profiles to merge data with valid SIDs
     Try {
         $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
     } Catch {
         $win32UserProfiles = Get-CimInstance -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
     }
-    # get localUsers (can contain users who have not logged in yet/ do not have a SID)
+
     $nonSIDLocalUsers = Get-LocalUser
     $date_format = "yyyy-MM-dd HH:mm"
-    foreach ($user in $users) {
+
+    # 3. Process BOTH lists combined so we don't duplicate logic
+    # Note: Since objects are reference types, updating $user here updates it in the original arrays
+    foreach ($user in ($systemUsers + $migratedUsers)) {
         # Get Data from Win32Profile
         foreach ($win32user in $win32UserProfiles) {
             if ($($user.SID) -eq $($win32user.SID)) {
@@ -417,7 +479,10 @@ Function Show-SelectionForm {
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Building Profile Group Box Query..' -PercentComplete 85
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Building Profile Group Box Query..'
 
-    $Profiles = $users | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, LastLogin, @{Name = "UserName"; EXPRESSION = { $_.Name } }
+    $Profiles = $systemUsers | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, LastLogin, @{Name = "UserName"; EXPRESSION = { $_.Name } }
+
+    # Bind lvMigratedAccounts.ItemsSource to 'MigratedProfiles'
+    $MigratedProfiles = $migratedUsers | Select-Object SID, RoamingConfigured, Loaded, IsLocalAdmin, LocalPath, LocalProfileSize, LastLogin, @{Name = "UserName"; EXPRESSION = { $_.Name } }
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Done!' -PercentComplete 100
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Done!'
 
@@ -653,85 +718,156 @@ Function Show-SelectionForm {
         })
     $SelectedUserName = $($lvProfileList.SelectedItem.username)
 
+    #===========================================================================
+    # NEW: Handle Tab Switching (Migrate vs Restore)
+    #===========================================================================
+    $MainTabControl.Add_SelectionChanged({
+            if ($MainTabControl.SelectedIndex -eq 1) {
+                # Tab 1 is Migrated Accounts
+                $btn_migrateProfile.Content = "Restore Profile"
+                Write-ToLog "Switched to Restore Profile Tab."
+                # Disable all the checkbox and textboxes not needed for reversion
+                $tb_JumpCloudUserName.IsEnabled = $false
+                $tb_JumpCloudConnectKey.IsEnabled = $false
+                $tb_JumpCloudAPIKey.IsEnabled = $false
+                $tb_tempPassword.IsEnabled = $false
+                $cb_installJCAgent.IsEnabled = $false
+                $cb_autobindJCUser.IsEnabled = $false
+                $cb_leaveDomain.IsEnabled = $false
+                $cb_forceReboot.IsEnabled = $false
+                $img_localAccountValid.Visibility = 'Hidden'
+                $img_localAccountPasswordValid.Visibility = 'Hidden'
+
+                # Disable button initially until a user is selected in the migrated list
+                if ($lvMigratedAccounts.SelectedItems.Count -eq 0) {
+                    $btn_migrateProfile.IsEnabled = $false
+                } else {
+                    $btn_migrateProfile.IsEnabled = $true
+                }
+            } else {
+                # Tab 0 is System Accounts
+                $btn_migrateProfile.Content = "Migrate Profile"
+                Write-ToLog "Switched to Migrate Profile Tab."
+                # Enable all the checkbox and textboxes not needed for reversion
+                $tb_JumpCloudUserName.IsEnabled = $true
+                $tb_JumpCloudConnectKey.IsEnabled = $true
+                $tb_JumpCloudAPIKey.IsEnabled = $true
+                $tb_tempPassword.IsEnabled = $true
+                $cb_installJCAgent.IsEnabled = $true
+                $cb_autobindJCUser.IsEnabled = $true
+                $cb_leaveDomain.IsEnabled = $true
+                $cb_forceReboot.IsEnabled = $true
+                $img_localAccountValid.Visibility = 'Visible'
+                $img_localAccountPasswordValid.Visibility = 'Visible'
+
+                # Re-run the standard validation logic for the Migration tab
+                Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
+            }
+        })
+
+    $lvMigratedAccounts.Add_SelectionChanged({
+            # Only enable the button if we are on the Restore tab and an item is selected
+            if ($MainTabControl.SelectedIndex -eq 1) {
+                if ($lvMigratedAccounts.SelectedItems.Count -gt 0) {
+                    $btn_migrateProfile.IsEnabled = $true
+                } else {
+                    $btn_migrateProfile.IsEnabled = $false
+                }
+            }
+        })
     # Validate Migrate Profile & return $formResults
     $btn_migrateProfile.Add_Click( {
-            if ($tb_JumpCloudAPIKey.Password -And $tb_JumpCloudUserName.Text -And $cb_autobindJCUser.IsChecked) {
-                # If text field is epmty continue
-                if ((Test-IsNotEmpty $tb_JumpCloudConnectKey.Password)) {
-                    # Validate the the JumpCLoud Agent Conf File exists:
-                    $keyResult = Test-JumpCloudSystemKey -WindowsDrive $(Get-WindowsDrive)
-                    if (!$keyResult) {
-                        # If we catch here, the system conf file does not exist. User is prompted to enter connect key; log below
-                        Write-ToLog "The JumpCloud agent has not be registered on this system, to please specify a valid Connect Key to continue."
-                        return
-                    }
-                } else {
-                    Write-ToLog "ConnectKey is populated, JumpCloud agent will be installed"
-                }
 
-                $testResult, $JumpCloudUserId, $JCSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $tb_JumpCloudAPIKey.Password -JumpCloudOrgID $script:selectedOrgID -Username $tb_JumpCloudUserName.Text -Prompt $true
-                if ($testResult) {
-                    Write-ToLog "Matched $($tb_JumpCloudUserName.Text) with user in the JumpCloud Console"
-                } else {
-                    Write-ToLog "$($tb_JumpCloudUserName.Text) not found in the JumpCloud console"
-                    return
-                }
-                if ( -not [string]::IsNullOrEmpty($JCSystemUsername) ) {
-                    # Regex to get the username from the domain\username string and compare it to JCSystemUsername
-                    #Get all the local users
-                    $registryProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
-                    $profileList = @()
-                    foreach ($profile in $registryProfiles) {
-                        $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath, @{ Name = "username"; Expression = { $sysUsername = Convert-SecurityIdentifier -sid $_.PSChildName; $sysUsername.Split('\')[1] } }
-                    }
-                    # If the JumpCloud found username was identified to exist locally, throw message
-                    if ($JCSystemUsername -in $profileList.username) {
-                        # Create a pop up that warns user then press ok to continue
-                        Write-ToLog "JCSystemUsername $($JCSystemUsername) is the same as the another profile on this system"
-                        $wshell = New-Object -ComObject Wscript.Shell
-                        $message = "The JumpCloud User: $($tb_JumpCloudUserName.Text) has a local account username of: $($JCSystemUsername). A local account already exists on this system with username: $($JCSystemUsername), please consider removing either the local account on this system or removing the local user account field from the JumpCloud user."
-                        $var = $wshell.Popup("$message", 0, "JumpCloud SystemUsername and Local Computer Username Validation", 0)
-                        # the user can not continue with migration at this stage
-                        return
-                    }
-                    $wshell = New-Object -ComObject Wscript.Shell
-                    $message = "The JumpCloud User: $($tb_JumpCloudUserName.Text) has a local account username of: $($JCSystemUsername). After migration $($SelectedUserName) would be migrated and accessible with the local account username of: $($JCSystemUsername) Would you like to continue?"
-                    $var = $wshell.Popup("$message", 0, "JumpCloud Local User Validation", 64 + 4)
-                    # If user selects yes then migrate the local user profile to the JumpCloud User
+            # RESTORE LOGIC
+            if ($btn_migrateProfile.Content -eq "Restore Profile") {
+                Write-ToLog "Restore Profile Initiated..."
 
-                    if ($var -eq 6) {
-                        Write-ToLog -Message "User selected 'Yes', continuing with migration of $($SelectedUserName) to $($JCSystemUsername)"
+                # Reversion Logic Here
+                # Get the SID of the selected migrated account
+                Write-ToLog "Restoring profile for SID: $($lvMigratedAccounts.SelectedItem.SID)"
+                $Form.Close()
+                # Calculate profile size by the local path and removing the .ADMU extension and find the SID of the original profile
+                $localPath = $($lvMigratedAccounts.SelectedItem.LocalPath -replace '\.ADMU$', '')
+                $profileSize = Get-ProfileSize -ProfilePath $localPath
+                Start-Reversion -UserSid $($lvMigratedAccounts.SelectedItem.SID) -form $true -UserName $($lvMigratedAccounts.SelectedItem.UserName) -ProfileSize $profileSize -LocalPath $localPath -force
+            } else {
+                # MIGRATION LOGIC
+                # Only runs if button text is NOT "Restore Profile"
+                if ($tb_JumpCloudAPIKey.Password -And $tb_JumpCloudUserName.Text -And $cb_autobindJCUser.IsChecked) {
+                    if ((Test-IsNotEmpty $tb_JumpCloudConnectKey.Password)) {
+                        # Validate the the JumpCLoud Agent Conf File exists:
+                        $keyResult = Test-JumpCloudSystemKey -WindowsDrive $(Get-WindowsDrive)
+                        if (!$keyResult) {
+                            Write-ToLog "The JumpCloud agent has not be registered on this system, to please specify a valid Connect Key to continue."
+                            return
+                        }
                     } else {
-                        Write-ToLog -Message "User selected 'No', returning to form"
+                        Write-ToLog "ConnectKey is populated, JumpCloud agent will be installed"
+                    }
+
+                    $testResult, $JumpCloudUserId, $JCSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $tb_JumpCloudAPIKey.Password -JumpCloudOrgID $script:selectedOrgID -Username $tb_JumpCloudUserName.Text -Prompt $true
+                    if ($testResult) {
+                        Write-ToLog "Matched $($tb_JumpCloudUserName.Text) with user in the JumpCloud Console"
+                    } else {
+                        Write-ToLog "$($tb_JumpCloudUserName.Text) not found in the JumpCloud console"
                         return
                     }
-                } else {
-                    Write-ToLog "User $($tb_JumpCloudUserName.Text) does not have a local account on this system"
+                    if ( -not [string]::IsNullOrEmpty($JCSystemUsername) ) {
+                        $registryProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
+                        $profileList = @()
+                        foreach ($profile in $registryProfiles) {
+                            $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath, @{ Name = "username"; Expression = { $sysUsername = Convert-SecurityIdentifier -sid $_.PSChildName; $sysUsername.Split('\')[1] } }
+                        }
+                        if ($JCSystemUsername -in $profileList.username) {
+                            Write-ToLog "JCSystemUsername $($JCSystemUsername) is the same as the another profile on this system"
+                            $wshell = New-Object -ComObject Wscript.Shell
+                            $message = "The JumpCloud User: $($tb_JumpCloudUserName.Text) has a local account username of: $($JCSystemUsername). A local account already exists on this system with username: $($JCSystemUsername), please consider removing either the local account on this system or removing the local user account field from the JumpCloud user."
+                            $var = $wshell.Popup("$message", 0, "JumpCloud SystemUsername and Local Computer Username Validation", 0)
+                            return
+                        }
+                        $wshell = New-Object -ComObject Wscript.Shell
+                        $message = "The JumpCloud User: $($tb_JumpCloudUserName.Text) has a local account username of: $($JCSystemUsername). After migration $($SelectedUserName) would be migrated and accessible with the local account username of: $($JCSystemUsername) Would you like to continue?"
+                        $var = $wshell.Popup("$message", 0, "JumpCloud Local User Validation", 64 + 4)
+
+                        if ($var -eq 6) {
+                            Write-ToLog -Message "User selected 'Yes', continuing with migration of $($SelectedUserName) to $($JCSystemUsername)"
+                        } else {
+                            Write-ToLog -Message "User selected 'No', returning to form"
+                            return
+                        }
+                    } else {
+                        Write-ToLog "User $($tb_JumpCloudUserName.Text) does not have a local account on this system"
+                    }
                 }
-            }
-            # Build FormResults object
-            Write-ToLog "Building Form Results"
+                # Build FormResults object
+                Write-ToLog "Building Form Results"
 
-            if ([System.String]::IsNullOrEmpty($SelectedUserName)) {
-                # TODO: I've broken the conversion for the username here, need to figure out why this no longer works.
-                $SelectedUserName = $($lvProfileList.SelectedItem.username)
+                if ([System.String]::IsNullOrEmpty($SelectedUserName)) {
+                    $SelectedUserName = $($lvProfileList.SelectedItem.username)
+                }
+
+                # Set the options selected/ inputs to the $formResults object
+                $FormResults.InstallJCAgent = $cb_installJCAgent.IsChecked
+                $FormResults.AutoBindJCUser = $cb_autobindJCUser.IsChecked
+                $FormResults.BindAsAdmin = $cb_bindAsAdmin.IsChecked
+                $FormResults.LeaveDomain = $cb_leaveDomain.IsChecked
+                $FormResults.RemoveMDM = $cb_removeMDM.IsChecked
+                $FormResults.ForceReboot = $cb_forceReboot.IsChecked
+                $FormResults.SelectedUserName = $SelectedUserName
+                $FormResults.JumpCloudUserName = $tb_JumpCloudUserName.Text
+                $FormResults.TempPassword = $tb_tempPassword.Text
+                $FormResults.JumpCloudConnectKey = $tb_JumpCloudConnectKey.Password
+                $FormResults.JumpCloudAPIKey = $tb_JumpCloudAPIKey.Password
+                $FormResults.JumpCloudOrgID = $script:selectedOrgID
+
+                # Ensure IsRestore is false if not set
+                $FormResults | Add-Member -MemberType NoteProperty -Name "IsRestore" -Value $false -Force
+
+                # Close form
+                $Form.Close()
             }
 
-            # Set the options selected/ inputs to the $formResults object
-            $FormResults.InstallJCAgent = $cb_installJCAgent.IsChecked
-            $FormResults.AutoBindJCUser = $cb_autobindJCUser.IsChecked
-            $FormResults.BindAsAdmin = $cb_bindAsAdmin.IsChecked
-            $FormResults.LeaveDomain = $cb_leaveDomain.IsChecked
-            $FormResults.RemoveMDM = $cb_removeMDM.IsChecked
-            $FormResults.ForceReboot = $cb_forceReboot.IsChecked
-            $FormResults.SelectedUserName = $SelectedUserName
-            $FormResults.JumpCloudUserName = $tb_JumpCloudUserName.Text
-            $FormResults.TempPassword = $tb_tempPassword.Text
-            $FormResults.JumpCloudConnectKey = $tb_JumpCloudConnectKey.Password
-            $FormResults.JumpCloudAPIKey = $tb_JumpCloudAPIKey.Password
-            $FormResults.JumpCloudOrgID = $script:selectedOrgID
-            # Close form
-            $Form.Close()
+
         })
 
     # $tb_JumpCloudUserName.add_GotFocus( {
@@ -802,6 +938,7 @@ Function Show-SelectionForm {
         })
     # Put the list of profiles in the profile box
     $Profiles | ForEach-Object { $lvProfileList.Items.Add($_) | Out-Null }
+    $MigratedProfiles | ForEach-Object { $lvMigratedAccounts.Items.Add($_) | Out-Null }
     #===========================================================================
     # Shows the form & allow move
     #===========================================================================
@@ -811,7 +948,7 @@ Function Show-SelectionForm {
     }
 
     # if the migrate button is enabled and it is clicked, send formResults to Start-Migration
-    If (($btn_migrateProfile.IsEnabled -eq $true) -AND $btn_migrateProfile.Add_Click) {
+    If (($btn_migrateProfile.IsEnabled -eq $true) -AND $btn_migrateProfile.Add_Click -And ($btn_migrateProfile.Content -ne "Restore Profile")) {
         Return $FormResults
     }
 }
