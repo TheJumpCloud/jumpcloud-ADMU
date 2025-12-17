@@ -330,8 +330,10 @@ Function Show-SelectionForm {
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..'
 
     #Update Progress Bar
-    $bar.Value = 30
-    $bar.Refresh()
+    if($loadingForm -and $bar) {
+        $bar.Value = 30
+        $bar.Refresh()
+    }
 
     if ($WmiComputerSystem.PartOfDomain) {
         Try {
@@ -365,8 +367,10 @@ Function Show-SelectionForm {
     }
 
     #Update Progress Bar
-    $bar.Value = 60
-    $bar.Refresh()
+    if($loadingForm -and $bar) {
+        $bar.Value = 60
+        $bar.Refresh()
+    }
 
     if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
         $AzureADInfo = dsregcmd.exe /status
@@ -392,8 +396,10 @@ Function Show-SelectionForm {
     }
 
     #Update Progress Bar
-    $bar.Value = 90
-    $bar.Refresh()
+    if($loadingForm -and $bar) {
+        $bar.Value = 90
+        $bar.Refresh()
+    }
 
     # define return object:
     $FormResults = [PSCustomObject]@{
@@ -419,8 +425,10 @@ Function Show-SelectionForm {
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
 
     #Update Progress Bar
-    $bar.Value = 100
-    $bar.Refresh()
+    if($loadingForm -and $bar) {
+        $bar.Value = 100
+        $bar.Refresh()
+    }
 
     # Get Valid SIDs from the Registry and build user object
     $registryProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
