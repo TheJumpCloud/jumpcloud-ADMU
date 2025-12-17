@@ -274,7 +274,52 @@ Function Show-SelectionForm {
     $img_localAccountValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
     $img_localAccountPasswordInfo.Source = Get-ImageFromB64 -ImageBase64 $BlueBase64
     $img_localAccountPasswordValid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
-    # Define misc static variables
+
+    $loadingForm = New-Object System.Windows.Forms.Form
+    $loadingForm.Text = "Loading"
+    $loadingForm.StartPosition = 'CenterScreen'
+    $loadingForm.FormBorderStyle = 'None'
+    $loadingForm.BackColor = [System.Drawing.Color]::FromArgb(9, 26, 56)
+    $loadingForm.ClientSize = New-Object System.Drawing.Size(840, 320)
+    $loadingForm.TopMost = $true
+    $loadingForm.ShowInTaskbar = $false
+
+    # ---- Title ----
+    $title = New-Object System.Windows.Forms.Label
+    $title.Dock = 'Top'
+    $title.Height = 150
+    $title.TextAlign = 'MiddleCenter'
+    $title.Text = "JumpCloud ADMU"
+    $title.ForeColor = [System.Drawing.Color]::White
+    $title.Font = New-Object System.Drawing.Font("Segoe UI", 24, [System.Drawing.FontStyle]::Bold)
+
+    # ---- Message ----
+    $msg = New-Object System.Windows.Forms.Label
+    $msg.Dock = 'Bottom'
+    $msg.Height = 145
+    $msg.TextAlign = 'MiddleCenter'
+    $msg.Text = "Please wait while gathering system information..."
+    $msg.ForeColor = [System.Drawing.Color]::FromArgb(220, 230, 255)
+    $msg.Font = New-Object System.Drawing.Font("Segoe UI", 14)
+
+    # ---- Progress Bar ----
+    $bar = New-Object System.Windows.Forms.ProgressBar
+    $bar.Style = 'Continuous'
+    $bar.Minimum = 0
+    $bar.Maximum = 100
+    $bar.Value = 0
+    $bar.Width = 320
+    $bar.Height = 12
+    $bar.Left = [int](($loadingForm.ClientSize.Width - $bar.Width) / 2)
+    $bar.Top = 155
+
+    # ---- Add controls ----
+    $loadingForm.Controls.Add($bar)
+    $loadingForm.Controls.Add($msg)
+    $loadingForm.Controls.Add($title)
+
+    $loadingForm.Add_Shown({ $loadingForm.Activate() })
+    $null = $loadingForm.Show()   # non-blocking
 
     Try {
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
@@ -283,6 +328,11 @@ Function Show-SelectionForm {
     }
     Write-progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..' -PercentComplete 25
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..'
+
+    #Update Progress Bar
+    $bar.Value = 30
+    $bar.Refresh()
+
     if ($WmiComputerSystem.PartOfDomain) {
         Try {
             $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
@@ -313,6 +363,11 @@ Function Show-SelectionForm {
         $NetBiosName = 'N/A'
         $secureChannelStatus = 'N/A'
     }
+
+    #Update Progress Bar
+    $bar.Value = 60
+    $bar.Refresh()
+
     if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
         $AzureADInfo = dsregcmd.exe /status
         foreach ($line in $AzureADInfo) {
@@ -336,6 +391,10 @@ Function Show-SelectionForm {
         $AzureDomainStatus = 'N/A'
     }
 
+    #Update Progress Bar
+    $bar.Value = 90
+    $bar.Refresh()
+
     # define return object:
     $FormResults = [PSCustomObject]@{
         InstallJCAgent      = $false
@@ -353,10 +412,16 @@ Function Show-SelectionForm {
         JumpCloudOrgID      = $null
         ProgressBar         = $null
     }
+
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..' -PercentComplete 50
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..' -PercentComplete 70
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
+
+    #Update Progress Bar
+    $bar.Value = 100
+    $bar.Refresh()
+
     # Get Valid SIDs from the Registry and build user object
     $registryProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
     $profileList = @()
@@ -425,6 +490,10 @@ Function Show-SelectionForm {
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Done!' -PercentComplete 100
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Done!'
 
+    if ($loadingForm) {
+        $loadingForm.Close()
+        $loadingForm.Dispose()
+    }
     #load UI Labels
 
     #SystemInformation

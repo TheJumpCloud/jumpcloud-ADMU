@@ -12,6 +12,7 @@ Patch release focused on reducing GUI and Progress bar wait times and preloading
 
 - Progress form now displays immediately when the migrate button is clicked, showing placeholder values while calculations are performed
 - Migration progress form is preloaded with user information before Start-Migration begins
+- Added GUI loading progress bar
 
 ## 2.10.1
 
