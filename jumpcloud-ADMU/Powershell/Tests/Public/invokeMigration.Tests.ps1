@@ -447,7 +447,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 New-Item -Path $folderDest -ItemType Directory | Out-Null
             }
             # Call the function to download the file
-            Get-LatestADMUGUIExe -destinationPath $folderDest
+            Get-LatestADMUGUIExe -destinationPath $folderDest -GitHubToken $env:GITHUB_TOKEN
 
             # Validate the file was downloaded
             $downloadedFile = Join-Path -Path $folderDest -ChildPath "gui_jcadmu.exe"
@@ -457,7 +457,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         It "Should throw an error if the download fails" {
             # Mock Invoke-WebRequest to throw an error
             Mock Invoke-WebRequest { throw "Simulated download failure" }
-            { Get-LatestADMUGUIExe -destinationPath "C:\Windows\Temp" } | Should -Throw "Operation failed. The error was: Simulated download failure"
+            { Get-LatestADMUGUIExe -destinationPath "C:\Windows\Temp" -GitHubToken $env:GITHUB_TOKEN } | Should -Throw "Operation failed after 3 attempts. Last error: Simulated download failure"
         }
         AfterAll {
             # Clean up the test directory
@@ -471,7 +471,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
     Context "Get-JcadmuGuiSha256 Function" {
         It "Should return SHA256 hash for a valid file" {
             # Gets the SHA from the recent release of the ADMU GUI from GitHub
-            $hash = Get-JcadmuGuiSha256
+            $hash = Get-JcadmuGuiSha256 -GitHubToken $GitHubToken
             Write-Host "SHA256 Hash: $hash"
             $hash | Should -Not -BeNullOrEmpty
         }
@@ -679,7 +679,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
         BeforeAll {
             # for these tests, the jumpCloud agent needs to be installed:
             $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
-            If (-Not $AgentService) {
+            if (-not $AgentService) {
                 # set install variables
                 $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
                 $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
@@ -693,14 +693,14 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
             }
 
             # Auth to the JumpCloud Module
-            Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
+            Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -force
 
             # get the org details
             $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
             $OrgName = "$($OrgSelection[1])"
             $OrgID = "$($OrgSelection[0])"
             # get the system key
-            $config = get-content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
+            $config = Get-Content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
             $regex = 'systemKey\":\"(\w+)\"'
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
 
