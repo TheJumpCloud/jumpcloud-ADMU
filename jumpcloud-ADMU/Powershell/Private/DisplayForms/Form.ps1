@@ -279,7 +279,7 @@ Function Show-SelectionForm {
     $loadingForm.Text = "Loading"
     $loadingForm.StartPosition = 'CenterScreen'
     $loadingForm.FormBorderStyle = 'None'
-    $loadingForm.BackColor = [System.Drawing.Color]::FromArgb(9, 26, 56)
+    $loadingForm.BackColor = [System.Drawing.Color]::FromArgb(65, 200, 195)
     $loadingForm.ClientSize = New-Object System.Drawing.Size(840, 320)
     $loadingForm.TopMost = $true
     $loadingForm.ShowInTaskbar = $false
@@ -290,7 +290,7 @@ Function Show-SelectionForm {
     $title.Height = 150
     $title.TextAlign = 'MiddleCenter'
     $title.Text = "JumpCloud ADMU"
-    $title.ForeColor = [System.Drawing.Color]::White
+    $title.ForeColor = [System.Drawing.Color]::FromArgb(0, 0, 0)
     $title.Font = New-Object System.Drawing.Font("Segoe UI", 24, [System.Drawing.FontStyle]::Bold)
 
     # ---- Message ----
@@ -299,7 +299,7 @@ Function Show-SelectionForm {
     $msg.Height = 145
     $msg.TextAlign = 'MiddleCenter'
     $msg.Text = "Please wait while gathering system information..."
-    $msg.ForeColor = [System.Drawing.Color]::FromArgb(220, 230, 255)
+    $msg.ForeColor = [System.Drawing.Color]::FromArgb(0, 0, 0)
     $msg.Font = New-Object System.Drawing.Font("Segoe UI", 14)
 
     # ---- Progress Bar ----
@@ -312,6 +312,7 @@ Function Show-SelectionForm {
     $bar.Height = 12
     $bar.Left = [int](($loadingForm.ClientSize.Width - $bar.Width) / 2)
     $bar.Top = 155
+    $bar.BackColor = [System.Drawing.Color]::FromArgb(0, 0, 0)
 
     # ---- Add controls ----
     $loadingForm.Controls.Add($bar)
@@ -330,7 +331,7 @@ Function Show-SelectionForm {
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..'
 
     #Update Progress Bar
-    if($loadingForm -and $bar) {
+    if ($loadingForm -and $bar) {
         $bar.Value = 30
         $bar.Refresh()
     }
@@ -367,7 +368,7 @@ Function Show-SelectionForm {
     }
 
     #Update Progress Bar
-    if($loadingForm -and $bar) {
+    if ($loadingForm -and $bar) {
         $bar.Value = 60
         $bar.Refresh()
     }
@@ -396,7 +397,7 @@ Function Show-SelectionForm {
     }
 
     #Update Progress Bar
-    if($loadingForm -and $bar) {
+    if ($loadingForm -and $bar) {
         $bar.Value = 90
         $bar.Refresh()
     }
@@ -416,7 +417,6 @@ Function Show-SelectionForm {
         JumpCloudConnectKey = $null
         JumpCloudAPIKey     = $null
         JumpCloudOrgID      = $null
-        ProgressBar         = $null
     }
 
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..' -PercentComplete 50
@@ -425,7 +425,7 @@ Function Show-SelectionForm {
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
 
     #Update Progress Bar
-    if($loadingForm -and $bar) {
+    if ($loadingForm -and $bar) {
         $bar.Value = 100
         $bar.Refresh()
     }
@@ -800,7 +800,6 @@ Function Show-SelectionForm {
             $profilePath = $lvProfileList.SelectedItem.LocalPath
             $displayUsername = if ([string]::IsNullOrWhiteSpace($tb_JumpCloudUserName.Text)) { $SelectedUserName } else { $tb_JumpCloudUserName.Text }
             $script:ProgressBar = New-ProgressForm
-            $FormResults.ProgressBar = $script:ProgressBar
             Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $displayUsername -profileSize "Calculating" -LocalPath $profilePath
 
             # Build FormResults object
@@ -825,9 +824,6 @@ Function Show-SelectionForm {
             $FormResults.JumpCloudConnectKey = $tb_JumpCloudConnectKey.Password
             $FormResults.JumpCloudAPIKey = $tb_JumpCloudAPIKey.Password
             $FormResults.JumpCloudOrgID = $script:selectedOrgID
-            if (-not $FormResults.ProgressBar) {
-                $FormResults.ProgressBar = $script:ProgressBar
-            }
             # Close form
             $Form.Close()
         })

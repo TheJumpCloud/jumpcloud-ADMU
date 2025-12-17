@@ -201,13 +201,8 @@ Function Start-Migration {
             $AutoBindJCUser = $inputObject.AutoBindJCUser
 
             # Prefer the progress form created in Form.ps1 so updates apply to the first window the user sees
-            $ProgressBar = $inputObject.ProgressBar
-            if (-not $ProgressBar -and $script:ProgressBar) {
-                $ProgressBar = $script:ProgressBar
-            }
-            if (-not $ProgressBar) {
-                $ProgressBar = New-ProgressForm
-                $script:ProgressBar = $ProgressBar
+            if ((-not $script:ProgressBar) -and ($isForm)) {
+                $script:ProgressBar = New-ProgressForm
             }
 
             # Validate JumpCloudSystemUserName to write to the GUI
