@@ -8,6 +8,11 @@ Release Date: December 17, 2025
 Patch release focused on reducing GUI and Progress bar wait times and preloading the migration progress form.
 ```
 
+#### IMPROVEMENTS:
+
+- Progress form now displays immediately when the migrate button is clicked, showing placeholder values while calculations are performed
+- Migration progress form is preloaded with user information before Start-Migration begins
+
 ## 2.10.1
 
 Release Date: December 15, 2025
