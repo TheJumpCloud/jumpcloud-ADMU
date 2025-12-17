@@ -100,10 +100,8 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
 
                 $revertResult.FilesReverted.Count | Should -BeGreaterThan 0
 
-
-
-                # 5. Validate that the original user exists (System Check)
-                { Get-LocalUser -Name $userToMigrateFrom } | Should -Not -Throw
+                { Get-LocalUser -Name $userToMigrateFrom } | Should -Not -Throw # Original User should exist
+                { Get-LocalUser -Name $userToMigrateTo } | Should -Throw # Created JC User should not exist anymore
             }
         }
         Context "Reversion Failure" {
