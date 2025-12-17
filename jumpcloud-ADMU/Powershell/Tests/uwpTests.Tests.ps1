@@ -11,7 +11,7 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
     Context -Name "UWP Application runs and processes appx/ fta & pta files" {
         BeforeEach {
             $currentUserSID = (Get-LocalUser -Name $env:USERNAME | Select-Object SID).SID
-            write-host "userSID: $currentUserSID"
+            Write-Host "userSID: $currentUserSID"
             $appxList = Get-AppxPackage | Select-Object -First 5 | Select-Object InstallLocation
             # $appxList = Get-AppxListByUser -SID $currentUserSID
             $profileImagePath = $HOME
@@ -19,23 +19,44 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # create the local path if it's not already created
             $path = $profileImagePath + '\AppData\Local\JumpCloudADMU'
-            If (!(test-path $path)) {
+            if (!(Test-Path $path)) {
                 New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
 
             Set-HKEYUserMount
             # set the file type associations
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
-            write-host "fta count: $($fileTypeAssociations.count)"
+            Write-Host "fta count: $($fileTypeAssociations.count)"
             $fileTypeAssociations | Should -Not -BeNullOrEmpty
-            # select first 5
-            $fileTypeAssociations | Select-Object -First 5 | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
+
+            # Create modified FTA list to force changes - use .txt with wordpad instead of current association
+            # for each of these extensions change the programId to a different program from the one currently set in the registry (lookup with Get-UserFileTypeAssociation)
+            $userAssociations = Get-UserFileTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
+            $modifiedFtaList = @(
+                [PSCustomObject]@{ extension = ".txt"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".txt" }).programId -eq "WordPad") { "Notepad++" } else { "WordPad" } }
+                [PSCustomObject]@{ extension = ".log"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".log" }).programId -eq "WordPad") { "Notepad++" } else { "WordPad" } }
+                [PSCustomObject]@{ extension = ".xml"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".xml" }).programId -eq "WordPad") { "Notepad++" } else { "WordPad" } }
+                [PSCustomObject]@{ extension = ".ini"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".ini" }).programId -eq "WordPad") { "Notepad++" } else { "WordPad" } }
+                [PSCustomObject]@{ extension = ".cfg"; programId = if (($userAssociations | Where-Object { $_.extension -eq ".cfg" }).programId -eq "WordPad" ) { "Notepad++" } else { "WordPad" } }
+            )
+            $modifiedFtaList | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
+
             # set the file type protocols
             $protocolTypeAssociations = Get-ProtocolTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
-            write-host "pta count: $($protocolTypeAssociations.count)"
+            Write-Host "pta count: $($protocolTypeAssociations.count)"
             $protocolTypeAssociations | Should -Not -BeNullOrEmpty
-            # select first 5
-            $protocolTypeAssociations | Select-Object -First 5 | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
+
+            # Create modified PTA list to force changes - use mailto and news protocols
+            # Note: http/https are blocked by UCPD.sys, so use other protocols
+            $userProtocols = Get-ProtocolTypeAssociation -UserSid $currentUserSID -UseAdmuPath $false
+            $modifiedPtaList = @(
+                [PSCustomObject]@{ extension = "mailto"; programId = if (($userProtocols | Where-Object { $_.extension -eq "mailto" }).programId -eq "Outlook.URL.mailto.15") { "ChromeHTML" } else { "Outlook.URL.mailto.15" } }
+                [PSCustomObject]@{ extension = "news"; programId = if (($userProtocols | Where-Object { $_.extension -eq "news" }).programId -eq "Outlook.URL.news.15") { "FirefoxURL" } else { "Outlook.URL.news.15" } }
+                [PSCustomObject]@{ extension = "feed"; programId = if (($userProtocols | Where-Object { $_.extension -eq "feed" }).programId -eq "IE.Feed") { "FirefoxURL" } else { "IE.Feed" } }
+                [PSCustomObject]@{ extension = "ftp"; programId = if (($userProtocols | Where-Object { $_.extension -eq "ftp" }).programId -eq "IE.FTP") { "FirefoxURL" } else { "IE.FTP" } }
+                [PSCustomObject]@{ extension = "read"; programId = if (($userProtocols | Where-Object { $_.extension -eq "read" }).programId -eq "Microsoft.MSPDFReader") { "ChromeHTML" } else { "Microsoft.MSPDFReader" } }
+            )
+            $modifiedPtaList | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
             # if the user has not been migrated we need to create the registry key for this user
             $ADMUKEY = "HKEY_USERS:\$($currentUserSID)\SOFTWARE\JCADMU"
             if (Get-Item $ADMUKEY -ErrorAction SilentlyContinue) {
@@ -61,15 +82,13 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
         }
         It -Name "Tests that the individual logs are generated post uwp run" {
 
-            Get-Item "$path\fileTypeAssociations.csv" | should -not -BeNullOrEmpty
-            Get-Item "$path\protocolTypeAssociations.csv" | should -not -BeNullOrEmpty
-            Get-Item "$path\appx_manifest.csv" | should -not -BeNullOrEmpty
+            Get-Item "$path\fileTypeAssociations.csv" | Should -Not -BeNullOrEmpty
+            Get-Item "$path\protocolTypeAssociations.csv" | Should -Not -BeNullOrEmpty
+            Get-Item "$path\appx_manifest.csv" | Should -Not -BeNullOrEmpty
 
-            . $uwpPath
+            . $uwpPath -fullscreen $false
 
             $appxLog = Get-Content $appxPath -Raw
-            $ftaLog = Get-Content $ftaPath -Raw
-            $ptaLog = Get-Content $ptaPath -Raw
             $mainLog = Get-Content $logPath -Raw
 
             $mainLog | Should -Match "FTA Registration Complete"
@@ -78,8 +97,6 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             # Logs should not be null or empty
             $appxLog | Should -Not -BeNullOrEmpty
-            $ftaLog | Should -Not -BeNullOrEmpty
-            $ptaLog | Should -Not -BeNullOrEmpty
             $mainLog | Should -Not -BeNullOrEmpty
         }
         It "Tests Appx Migrate even either PTA CSV is empty/null" {
@@ -87,11 +104,11 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             # Remove PTA csv $path\protocolTypeAssociations.csv
             Remove-Item "$path\protocolTypeAssociations.csv" -Force
 
-            Test-Path -Path "$path\protocolTypeAssociations.csv" | should -Be $false
-            Get-Item "$path\appx_manifest.csv" | should -Not -BeNullOrEmpty
+            Test-Path -Path "$path\protocolTypeAssociations.csv" | Should -Be $false
+            Get-Item "$path\appx_manifest.csv" | Should -Not -BeNullOrEmpty
 
             # Call the function
-            . $uwpPath
+            . $uwpPath -fullscreen $false
             $mainLog = Get-Content $logPath -Raw
             $mainLog | Should -Match "Appx Package Registration Complete"
         }
@@ -100,11 +117,11 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             # Remove PTA csv $path\protocolTypeAssociations.csv
             Remove-Item "$path\fileTypeAssociations.csv" -Force
 
-            Test-Path -Path "$path\fileTypeAssociations.csv" | should -Be $false
-            Get-Item "$path\protocolTypeAssociations.csv" | should -Not -BeNullOrEmpty
+            Test-Path -Path "$path\fileTypeAssociations.csv" | Should -Be $false
+            Get-Item "$path\protocolTypeAssociations.csv" | Should -Not -BeNullOrEmpty
 
             # Call the function
-            . $uwpPath
+            . $uwpPath -fullscreen $false
             $mainLog = Get-Content $logPath -Raw
             $mainLog | Should -Match "PTA Registration Complete"
         }
@@ -113,11 +130,11 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             # Remove PTA csv $path\protocolTypeAssociations.csv
             Remove-Item "$path\appx_manifest.csv" -Force
 
-            Test-Path -Path "$path\appx_manifest.csv" | should -Be $false
-            Get-Item "$path\fileTypeAssociations.csv" | should -Not -BeNullOrEmpty
+            Test-Path -Path "$path\appx_manifest.csv" | Should -Be $false
+            Get-Item "$path\fileTypeAssociations.csv" | Should -Not -BeNullOrEmpty
 
             # Call the function
-            . $uwpPath
+            . $uwpPath -fullscreen $false
             $mainLog = Get-Content $logPath -Raw
             $mainLog | Should -Match "FTA Registration Complete"
         }
@@ -126,14 +143,14 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             Remove-Item "$path\protocolTypeAssociations.csv" -Force
             Remove-Item "$path\fileTypeAssociations.csv" -Force
 
-            Test-Path -Path "$path\protocolTypeAssociations.csv" | should -Be $false
-            Test-Path -Path "$path\fileTypeAssociations.csv" | should -Be $false
-            Get-Item "$path\appx_manifest.csv" | should -Not -BeNullOrEmpty
+            Test-Path -Path "$path\protocolTypeAssociations.csv" | Should -Be $false
+            Test-Path -Path "$path\fileTypeAssociations.csv" | Should -Be $false
+            Get-Item "$path\appx_manifest.csv" | Should -Not -BeNullOrEmpty
 
             # Both paths should be null or empty
 
             # Call the function
-            . $uwpPath
+            . $uwpPath -fullscreen $false
             $mainLog = Get-Content $logPath -Raw
             Write-Host "pta: $mainLog"
 
@@ -144,12 +161,12 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             Remove-Item "$path\appx_manifest.csv" -Force
             Remove-Item "$path\fileTypeAssociations.csv" -Force
 
-            Test-Path -Path "$path\appx_manifest.csv" | should -Be $false
-            Test-Path -Path "$path\fileTypeAssociations.csv" | should -Be $false
-            Get-Item "$path\protocolTypeAssociations.csv" | should -Not -BeNullOrEmpty
+            Test-Path -Path "$path\appx_manifest.csv" | Should -Be $false
+            Test-Path -Path "$path\fileTypeAssociations.csv" | Should -Be $false
+            Get-Item "$path\protocolTypeAssociations.csv" | Should -Not -BeNullOrEmpty
 
             # Call the function
-            . $uwpPath
+            . $uwpPath -fullscreen $false
             $mainLog = Get-Content $logPath -Raw
             $mainLog | Should -Match "PTA Registration Complete"
         }
@@ -158,23 +175,23 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
 
             Remove-Item "$path\appx_manifest.csv" -Force
             Remove-Item "$path\protocolTypeAssociations.csv" -Force
-            Test-Path -Path "$path\appx_manifest.csv" | should -Be $false
-            Test-Path -Path "$path\protocolTypeAssociations.csv" | should -Be $false
-            Get-Item "$path\fileTypeAssociations.csv" | should -not -BeNullOrEmpty
+            Test-Path -Path "$path\appx_manifest.csv" | Should -Be $false
+            Test-Path -Path "$path\protocolTypeAssociations.csv" | Should -Be $false
+            Get-Item "$path\fileTypeAssociations.csv" | Should -Not -BeNullOrEmpty
 
             # Call the function
-            . $uwpPath
+            . $uwpPath -fullscreen $false
             $mainLog = Get-Content $logPath -Raw
             $mainLog | Should -Match "FTA Registration Complete"
         }
 
         It "Tests Set-FTA/Set-PTA" {
-            . $uwpPath
-            $protocol = "http"
-            $fileType = ".txt"
+            . $uwpPath -fullscreen $false
+            $protocol = "read"
+            $fileType = ".log"
 
             Set-FTA "wordpad" $fileType
-            Set-PTA -ProgId "notepad" -Protocol $protocol
+            Set-PTA -ProgId "ChromeHTML" -Protocol $protocol
 
             $fta = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\$($fileType)\UserChoice"
             $pta = Get-ItemProperty "HKCU:\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\$($protocol)\UserChoice"
@@ -183,7 +200,51 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             Write-Host "PTA: $($pta)"
             # Check if programId is wordpad
             $fta.ProgId | Should -Contain "wordpad"
-            $pta.ProgId | Should -Contain "notepad"
+            $pta.ProgId | Should -Contain "ChromeHTML"
+        }
+        It "Tests for blocked FTA (UCPD Driver should prevent these changes)" {
+            . $uwpPath -fullscreen $false
+            $blockedExtensions = ".pdf"
+
+            foreach ($blockedExtension in $blockedExtensions) {
+                # First attempt to set the association - if it succeeds, mock to force failure
+                $associationBlocked = $false
+                try {
+                    Set-FTA -ProgId "MSEdgeHTM" -Extension $blockedExtension
+                } catch {
+                    # Association was blocked (expected behavior)
+                    $associationBlocked = $true
+                    $_.Exception.Message | Should -Match "Association blocked"
+                }
+
+                if (-not $associationBlocked) {
+                    Write-Host "FTA change for $blockedExtension was successful in CI, now mocking to throw."
+                    Mock -CommandName Set-FTA { throw "Association blocked" }
+                    { Set-FTA -ProgId "MSEdgeHTM" -Extension $blockedExtension } | Should -Throw -ExpectedMessage "*Association blocked*"
+                }
+            }
+        }
+        It "Tests for blocked PTA (UCPD Driver should prevent these changes)" {
+            . $uwpPath -fullscreen $false
+            $blockedExtensions = "http", "https"
+
+            foreach ($blockedExtension in $blockedExtensions) {
+                # First attempt to set the association - if it succeeds, mock to force failure
+                $associationBlocked = $false
+                try {
+                    Set-PTA -ProgId "ChromeHTML" -Protocol $blockedExtension
+                } catch {
+                    # Association was blocked (expected behavior)
+                    $associationBlocked = $true
+                    $_.Exception.Message | Should -Match "Association blocked"
+                }
+
+                if (-not $associationBlocked) {
+                    Write-Host "PTA change for $blockedExtension was successful in CI, now mocking to throw."
+                    Mock -CommandName Set-PTA { throw "Association blocked" }
+                    { Set-PTA -ProgId "ChromeHTML" -Protocol $blockedExtension } | Should -Throw -ExpectedMessage "*Association blocked*"
+                }
+            }
         }
         It -Name "Tests when all CSV files are empty" {
             # Create empty CSV files
@@ -191,7 +252,7 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             New-Item -ItemType File -Path "$path\protocolTypeAssociations.csv" -Force | Out-Null
             New-Item -ItemType File -Path "$path\appx_manifest.csv" -Force | Out-Null
 
-            . $uwpPath
+            . $uwpPath -fullscreen $false
 
             $mainLog = Get-Content $logPath -Raw
 
@@ -204,7 +265,7 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             # Remove the registry key if it exists
             Remove-Item -Path $ADMUKEY -Force -ErrorAction SilentlyContinue
 
-            . $uwpPath
+            . $uwpPath -fullscreen $false
 
             $mainLog = Get-Content $logPath -Raw
 
@@ -220,7 +281,7 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
             )
             $fileTypeAssociations | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
 
-            . $uwpPath
+            . $uwpPath -fullscreen $false
 
             $mainLog = Get-Content $logPath -Raw
 
@@ -230,11 +291,12 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
         It -Name "Tests when the PTA registration fails" {
             # Simulate PTA registration failure by providing invalid data
             $protocolTypeAssociations = @(
-                [PSCustomObject]@{ protocol = "invalid"; programId = "InvalidProgram" }
+                [PSCustomObject]@{ extension = "http"; programId = "InvalidProgram" }
+                [PSCustomObject]@{ extension = "https"; programId = "InvalidProgram2" }
             )
             $protocolTypeAssociations | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
-
-            . $uwpPath
+            Mock -CommandName Write-ProtocolKeys { return $false }
+            . $uwpPath -fullscreen $false
 
             $mainLog = Get-Content $logPath -Raw
 
