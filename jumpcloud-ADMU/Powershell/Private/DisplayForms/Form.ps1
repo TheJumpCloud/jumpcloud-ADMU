@@ -275,49 +275,111 @@ Function Show-SelectionForm {
     $img_localAccountPasswordInfo.Source = Get-ImageFromB64 -ImageBase64 $BlueBase64
     $img_localAccountPasswordValid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
 
+    #loading form
     $loadingForm = New-Object System.Windows.Forms.Form
     $loadingForm.Text = "Loading"
     $loadingForm.StartPosition = 'CenterScreen'
     $loadingForm.FormBorderStyle = 'None'
-    $loadingForm.BackColor = [System.Drawing.Color]::FromArgb(65, 200, 195)
-    $loadingForm.ClientSize = New-Object System.Drawing.Size(840, 320)
+    $loadingForm.BackColor = [System.Drawing.Color]::FromArgb(255, 255, 255)
+    $loadingForm.ClientSize = New-Object System.Drawing.Size(840, 280)
     $loadingForm.TopMost = $true
     $loadingForm.ShowInTaskbar = $false
 
-    # ---- Title ----
-    $title = New-Object System.Windows.Forms.Label
-    $title.Dock = 'Top'
-    $title.Height = 150
-    $title.TextAlign = 'MiddleCenter'
-    $title.Text = "JumpCloud ADMU"
-    $title.ForeColor = [System.Drawing.Color]::FromArgb(0, 0, 0)
-    $title.Font = New-Object System.Drawing.Font("Segoe UI", 24, [System.Drawing.FontStyle]::Bold)
+    # Add rounded corners to form
+    $loadingForm.Add_Paint({
+            param($sender, $e)
+            $radius = 15
+            $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+            $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+            $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
+            $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
+            $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
+            $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
+            $path.CloseFigure()
+            $sender.Region = New-Object System.Drawing.Region($path)
+            $path.Dispose()
+        })
+
+    # ---- JumpCloud Logo ----
+    $bytes = [Convert]::FromBase64String($JCLogoBase64)
+    $ms = New-Object System.IO.MemoryStream(, $bytes)
+    $jcLogoImage = [System.Drawing.Image]::FromStream($ms)
+
+    $loadingLogo = New-Object System.Windows.Forms.PictureBox
+    $loadingLogo.Image = $jcLogoImage
+    $loadingLogo.SizeMode = 'Zoom'
+    $loadingLogo.Width = 240
+    $loadingLogo.Height = 70
+    $loadingLogo.Left = [int](($loadingForm.ClientSize.Width - $loadingLogo.Width) / 2)
+    $loadingLogo.Top = 40
+
+    # ---- Progress Bar (custom rounded) ----
+    # Background panel for progress bar
+    $barBackground = New-Object System.Windows.Forms.Panel
+    $barBackground.Width = 400
+    $barBackground.Height = 10
+    $barBackground.Left = [int](($loadingForm.ClientSize.Width - $barBackground.Width) / 2)
+    $barBackground.Top = 145
+    $barBackground.BackColor = [System.Drawing.Color]::FromArgb(230, 230, 230)
+
+    # Add rounded corners to background
+    $barBackground.Add_Paint({
+            param($sender, $e)
+            $radius = 5
+            $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+            $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+            $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
+            $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
+            $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
+            $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
+            $path.CloseFigure()
+            $sender.Region = New-Object System.Drawing.Region($path)
+            $path.Dispose()
+        })
+
+    # Foreground panel for progress
+    $bar = New-Object System.Windows.Forms.Panel
+    $bar.Width = 0
+    $bar.Height = 10
+    $bar.Left = 0
+    $bar.Top = 0
+    $bar.BackColor = [System.Drawing.Color]::FromArgb(65, 200, 195)
+
+    # Add rounded corners to progress bar
+    $bar.Add_Paint({
+            param($sender, $e)
+            if ($sender.Width -gt 0) {
+                $radius = 5
+                $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+                $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+                $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
+                $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
+                $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
+                $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
+                $path.CloseFigure()
+                $sender.Region = New-Object System.Drawing.Region($path)
+                $path.Dispose()
+            }
+        })
+
+    $barBackground.Controls.Add($bar)
 
     # ---- Message ----
     $msg = New-Object System.Windows.Forms.Label
-    $msg.Dock = 'Bottom'
-    $msg.Height = 145
+    $msg.AutoSize = $false
+    $msg.Width = $loadingForm.ClientSize.Width - 40
+    $msg.Height = 50
+    $msg.Left = 20
+    $msg.Top = 175
     $msg.TextAlign = 'MiddleCenter'
     $msg.Text = "Please wait while gathering system information..."
-    $msg.ForeColor = [System.Drawing.Color]::FromArgb(0, 0, 0)
-    $msg.Font = New-Object System.Drawing.Font("Segoe UI", 14)
+    $msg.ForeColor = [System.Drawing.Color]::FromArgb(32, 45, 56)
+    $msg.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Regular)
 
-    # ---- Progress Bar ----
-    $bar = New-Object System.Windows.Forms.ProgressBar
-    $bar.Style = 'Continuous'
-    $bar.Minimum = 0
-    $bar.Maximum = 100
-    $bar.Value = 0
-    $bar.Width = 320
-    $bar.Height = 12
-    $bar.Left = [int](($loadingForm.ClientSize.Width - $bar.Width) / 2)
-    $bar.Top = 155
-    $bar.BackColor = [System.Drawing.Color]::FromArgb(0, 0, 0)
-
-    # ---- Add controls ----
-    $loadingForm.Controls.Add($bar)
+    # ---- Add controls in order ----
     $loadingForm.Controls.Add($msg)
-    $loadingForm.Controls.Add($title)
+    $loadingForm.Controls.Add($barBackground)
+    $loadingForm.Controls.Add($loadingLogo)
 
     $loadingForm.Add_Shown({ $loadingForm.Activate() })
     $null = $loadingForm.Show()   # non-blocking
@@ -332,7 +394,7 @@ Function Show-SelectionForm {
 
     #Update Progress Bar
     if ($loadingForm -and $bar) {
-        $bar.Value = 30
+        $bar.Width = [int]($barBackground.Width * 0.30)
         $bar.Refresh()
     }
 
@@ -369,7 +431,7 @@ Function Show-SelectionForm {
 
     #Update Progress Bar
     if ($loadingForm -and $bar) {
-        $bar.Value = 60
+        $bar.Width = [int]($barBackground.Width * 0.60)
         $bar.Refresh()
     }
 
@@ -398,7 +460,7 @@ Function Show-SelectionForm {
 
     #Update Progress Bar
     if ($loadingForm -and $bar) {
-        $bar.Value = 90
+        $bar.Width = [int]($barBackground.Width * 0.90)
         $bar.Refresh()
     }
 
@@ -426,7 +488,7 @@ Function Show-SelectionForm {
 
     #Update Progress Bar
     if ($loadingForm -and $bar) {
-        $bar.Value = 100
+        $bar.Width = $barBackground.Width
         $bar.Refresh()
     }
 
