@@ -281,7 +281,7 @@ Function Show-SelectionForm {
     $loadingForm.StartPosition = 'CenterScreen'
     $loadingForm.FormBorderStyle = 'None'
     $loadingForm.BackColor = [System.Drawing.Color]::FromArgb(255, 255, 255)
-    $loadingForm.ClientSize = New-Object System.Drawing.Size(840, 280)
+    $loadingForm.ClientSize = New-Object System.Drawing.Size(275, 140)
     $loadingForm.TopMost = $true
     $loadingForm.ShowInTaskbar = $false
 
@@ -308,18 +308,18 @@ Function Show-SelectionForm {
     $loadingLogo = New-Object System.Windows.Forms.PictureBox
     $loadingLogo.Image = $jcLogoImage
     $loadingLogo.SizeMode = 'Zoom'
-    $loadingLogo.Width = 240
-    $loadingLogo.Height = 70
+    $loadingLogo.Width = 120
+    $loadingLogo.Height = 35
     $loadingLogo.Left = [int](($loadingForm.ClientSize.Width - $loadingLogo.Width) / 2)
-    $loadingLogo.Top = 40
+    $loadingLogo.Top = 5
 
     # ---- Progress Bar (custom rounded) ----
     # Background panel for progress bar
     $barBackground = New-Object System.Windows.Forms.Panel
-    $barBackground.Width = 400
-    $barBackground.Height = 10
+    $barBackground.Width = 200
+    $barBackground.Height = 5
     $barBackground.Left = [int](($loadingForm.ClientSize.Width - $barBackground.Width) / 2)
-    $barBackground.Top = 145
+    $barBackground.Top = 60
     $barBackground.BackColor = [System.Drawing.Color]::FromArgb(230, 230, 230)
 
     # Add rounded corners to background
@@ -340,7 +340,7 @@ Function Show-SelectionForm {
     # Foreground panel for progress
     $bar = New-Object System.Windows.Forms.Panel
     $bar.Width = 0
-    $bar.Height = 10
+    $bar.Height = 5
     $bar.Left = 0
     $bar.Top = 0
     $bar.BackColor = [System.Drawing.Color]::FromArgb(65, 200, 195)
@@ -367,14 +367,14 @@ Function Show-SelectionForm {
     # ---- Message ----
     $msg = New-Object System.Windows.Forms.Label
     $msg.AutoSize = $false
-    $msg.Width = $loadingForm.ClientSize.Width - 40
-    $msg.Height = 50
-    $msg.Left = 20
-    $msg.Top = 175
+    $msg.Width = $loadingForm.ClientSize.Width - 20
+    $msg.Height = 30
+    $msg.Left = 10
+    $msg.Top = 75
     $msg.TextAlign = 'MiddleCenter'
     $msg.Text = "Please wait while gathering system information..."
     $msg.ForeColor = [System.Drawing.Color]::FromArgb(32, 45, 56)
-    $msg.Font = New-Object System.Drawing.Font("Segoe UI", 12, [System.Drawing.FontStyle]::Regular)
+    $msg.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
 
     # ---- Add controls in order ----
     $loadingForm.Controls.Add($msg)
