@@ -208,11 +208,8 @@ function New-ProgressForm {
 
                 # Migration Details
 
-                # Refresh migration detail labels from shared state so later updates (e.g., profile size) are reflected
-                $syncHash.Username.Content = $syncHash.UsernameInput
+                # Refresh profile size
                 $syncHash.ProfileSize.Content = $syncHash.ProfileSizeInput
-                $syncHash.LocalPath.Content = $syncHash.LocalPathInput
-                $syncHash.NewLocalUsername.Content = $syncHash.NewLocalUsernameInput
 
                 if ($SyncHash.closeWindow -eq $True) {
                     $syncHash.Window.Close()
