@@ -367,14 +367,14 @@ Function Show-SelectionForm {
     # ---- Message ----
     $msg = New-Object System.Windows.Forms.Label
     $msg.AutoSize = $false
-    $msg.Width = $loadingForm.ClientSize.Width - 20
+    $msg.Width = $loadingForm.ClientSize.Width - 10
     $msg.Height = 30
-    $msg.Left = 10
+    $msg.Left = 5
     $msg.Top = 75
     $msg.TextAlign = 'MiddleCenter'
-    $msg.Text = "Please wait while gathering system information..."
+    $msg.Text = "Gathering system info..."
     $msg.ForeColor = [System.Drawing.Color]::FromArgb(32, 45, 56)
-    $msg.Font = New-Object System.Drawing.Font("Segoe UI", 9, [System.Drawing.FontStyle]::Regular)
+    $msg.Font = New-Object System.Drawing.Font("Segoe UI", 8, [System.Drawing.FontStyle]::Regular)
 
     # ---- Add controls in order ----
     $loadingForm.Controls.Add($msg)
