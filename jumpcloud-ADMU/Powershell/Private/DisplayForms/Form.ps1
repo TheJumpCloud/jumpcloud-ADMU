@@ -274,7 +274,115 @@ Function Show-SelectionForm {
     $img_localAccountValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
     $img_localAccountPasswordInfo.Source = Get-ImageFromB64 -ImageBase64 $BlueBase64
     $img_localAccountPasswordValid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
-    # Define misc static variables
+
+    #loading form
+    $loadingForm = New-Object System.Windows.Forms.Form
+    $loadingForm.Text = "Loading"
+    $loadingForm.StartPosition = 'CenterScreen'
+    $loadingForm.FormBorderStyle = 'None'
+    $loadingForm.BackColor = [System.Drawing.Color]::FromArgb(255, 255, 255)
+    $loadingForm.ClientSize = New-Object System.Drawing.Size(275, 140)
+    $loadingForm.TopMost = $true
+    $loadingForm.ShowInTaskbar = $false
+
+    # Add rounded corners to form
+    $loadingForm.Add_Paint({
+            param($sender, $e)
+            $radius = 15
+            $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+            $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+            $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
+            $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
+            $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
+            $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
+            $path.CloseFigure()
+            $sender.Region = New-Object System.Drawing.Region($path)
+            $path.Dispose()
+        })
+
+    # ---- JumpCloud Logo ----
+    $bytes = [Convert]::FromBase64String($JCLogoBase64)
+    $ms = New-Object System.IO.MemoryStream(, $bytes)
+    $jcLogoImage = [System.Drawing.Image]::FromStream($ms)
+
+    $loadingLogo = New-Object System.Windows.Forms.PictureBox
+    $loadingLogo.Image = $jcLogoImage
+    $loadingLogo.SizeMode = 'Zoom'
+    $loadingLogo.Width = 120
+    $loadingLogo.Height = 35
+    $loadingLogo.Left = [int](($loadingForm.ClientSize.Width - $loadingLogo.Width) / 2)
+    $loadingLogo.Top = 5
+
+    # ---- Progress Bar (custom rounded) ----
+    # Background panel for progress bar
+    $barBackground = New-Object System.Windows.Forms.Panel
+    $barBackground.Width = 200
+    $barBackground.Height = 5
+    $barBackground.Left = [int](($loadingForm.ClientSize.Width - $barBackground.Width) / 2)
+    $barBackground.Top = 60
+    $barBackground.BackColor = [System.Drawing.Color]::FromArgb(230, 230, 230)
+
+    # Add rounded corners to background
+    $barBackground.Add_Paint({
+            param($sender, $e)
+            $radius = 5
+            $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+            $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+            $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
+            $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
+            $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
+            $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
+            $path.CloseFigure()
+            $sender.Region = New-Object System.Drawing.Region($path)
+            $path.Dispose()
+        })
+
+    # Foreground panel for progress
+    $bar = New-Object System.Windows.Forms.Panel
+    $bar.Width = 0
+    $bar.Height = 5
+    $bar.Left = 0
+    $bar.Top = 0
+    $bar.BackColor = [System.Drawing.Color]::FromArgb(65, 200, 195)
+
+    # Add rounded corners to progress bar
+    $bar.Add_Paint({
+            param($sender, $e)
+            if ($sender.Width -gt 0) {
+                $radius = 5
+                $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+                $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+                $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
+                $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
+                $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
+                $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
+                $path.CloseFigure()
+                $sender.Region = New-Object System.Drawing.Region($path)
+                $path.Dispose()
+            }
+        })
+
+    $barBackground.Controls.Add($bar)
+
+    # ---- Message ----
+    $msg = New-Object System.Windows.Forms.Label
+    $msg.AutoSize = $false
+    $msg.Width = $loadingForm.ClientSize.Width - 10
+    $msg.Height = 30
+    $msg.Left = 5
+    $msg.Top = 75
+    $msg.TextAlign = 'MiddleCenter'
+    $msg.Text = "Gathering system info..."
+    $msg.ForeColor = [System.Drawing.Color]::FromArgb(32, 45, 56)
+    $msg.Font = New-Object System.Drawing.Font("Segoe UI", 8, [System.Drawing.FontStyle]::Regular)
+
+    # ---- Add controls in order ----
+    $loadingForm.Controls.Add($msg)
+    $loadingForm.Controls.Add($barBackground)
+    $loadingForm.Controls.Add($loadingLogo)
+
+    $loadingForm.Add_Shown({ $loadingForm.Activate() })
+    $null = $loadingForm.Show()   # non-blocking
 
     Try {
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
@@ -283,6 +391,13 @@ Function Show-SelectionForm {
     }
     Write-progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..' -PercentComplete 25
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..'
+
+    #Update Progress Bar
+    if ($loadingForm -and $bar) {
+        $bar.Width = [int]($barBackground.Width * 0.30)
+        $bar.Refresh()
+    }
+
     if ($WmiComputerSystem.PartOfDomain) {
         Try {
             $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
@@ -313,6 +428,13 @@ Function Show-SelectionForm {
         $NetBiosName = 'N/A'
         $secureChannelStatus = 'N/A'
     }
+
+    #Update Progress Bar
+    if ($loadingForm -and $bar) {
+        $bar.Width = [int]($barBackground.Width * 0.60)
+        $bar.Refresh()
+    }
+
     if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
         $AzureADInfo = dsregcmd.exe /status
         foreach ($line in $AzureADInfo) {
@@ -333,6 +455,13 @@ Function Show-SelectionForm {
         $AzureADStatus = 'N/A'
         $Workplace_join = 'N/A'
         $TenantName = 'N/A'
+        $AzureDomainStatus = 'N/A'
+    }
+
+    #Update Progress Bar
+    if ($loadingForm -and $bar) {
+        $bar.Width = [int]($barBackground.Width * 0.90)
+        $bar.Refresh()
     }
 
     # define return object:
@@ -351,10 +480,18 @@ Function Show-SelectionForm {
         JumpCloudAPIKey     = $null
         JumpCloudOrgID      = $null
     }
+
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..' -PercentComplete 50
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..' -PercentComplete 70
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
+
+    #Update Progress Bar
+    if ($loadingForm -and $bar) {
+        $bar.Width = $barBackground.Width
+        $bar.Refresh()
+    }
+
     # Get Valid SIDs from the Registry and build user object
     $registryProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
     $profileList = @()
@@ -423,6 +560,10 @@ Function Show-SelectionForm {
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Done!' -PercentComplete 100
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Done!'
 
+    if ($loadingForm) {
+        $loadingForm.Close()
+        $loadingForm.Dispose()
+    }
     #load UI Labels
 
     #SystemInformation
@@ -713,6 +854,16 @@ Function Show-SelectionForm {
                     Write-ToLog "User $($tb_JumpCloudUserName.Text) does not have a local account on this system"
                 }
             }
+            if ([string]::IsNullOrEmpty($SelectedUserName)) {
+                $SelectedUserName = $($lvProfileList.SelectedItem.username)
+            }
+
+            # Preload progress form to shrink perceived wait between click and display
+            $profilePath = $lvProfileList.SelectedItem.LocalPath
+            $displayUsername = if ([string]::IsNullOrWhiteSpace($tb_JumpCloudUserName.Text)) { $SelectedUserName } else { $tb_JumpCloudUserName.Text }
+            $script:ProgressBar = New-ProgressForm
+            Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $displayUsername -profileSize "Calculating" -LocalPath $profilePath
+
             # Build FormResults object
             Write-ToLog "Building Form Results"
 

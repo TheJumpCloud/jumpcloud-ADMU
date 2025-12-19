@@ -200,11 +200,15 @@ function Start-Migration {
             $InstallJCAgent = $inputObject.InstallJCAgent
             $AutoBindJCUser = $inputObject.AutoBindJCUser
 
+            # Prefer the progress form created in Form.ps1 so updates apply to the first window the user sees
+            if ((-not $script:ProgressBar) -and ($isForm)) {
+                $script:ProgressBar = New-ProgressForm
+            }
+
             # Validate JumpCloudSystemUserName to write to the GUI
             $ret, $script:JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
             $TempPassword = $inputObject.TempPassword
             # Write to progress bar
-            $script:ProgressBar = New-ProgressForm
             if ($JumpCloudSystemUserName) {
                 Write-ToProgress -form $isForm -ProgressBar $ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $JumpCloudSystemUserName -profileSize $profileSize -LocalPath $oldUserProfileImagePath
             } else {

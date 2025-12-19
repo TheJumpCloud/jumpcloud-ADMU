@@ -208,6 +208,9 @@ function New-ProgressForm {
 
                 # Migration Details
 
+                # Refresh profile size
+                $syncHash.ProfileSize.Content = $syncHash.ProfileSizeInput
+
                 if ($SyncHash.closeWindow -eq $True) {
                     $syncHash.Window.Close()
                     [System.Windows.Forms.Application]::Exit()
@@ -317,11 +320,25 @@ function Update-ProgressForm {
     )
 
     if ($username -or $profileSize -or $localPath -or $newLocalUsername) {
-        #Write-toLog -message "Migration details updated: Username: $username, ProfileSize: $profileSize, LocalPath: $localPath, NewLocalUsername: $newLocalUsername"
-        $ProgressBar.UsernameInput = $username
-        $ProgressBar.ProfileSizeInput = "$($profileSize)GB"
-        $ProgressBar.LocalPathInput = $localPath
-        $ProgressBar.NewLocalUsernameInput = $newLocalUsername
+        if ($PSBoundParameters.ContainsKey('username')) {
+            $ProgressBar.UsernameInput = $username
+        }
+        if ($PSBoundParameters.ContainsKey('localPath')) {
+            $ProgressBar.LocalPathInput = $localPath
+        }
+        if ($PSBoundParameters.ContainsKey('newLocalUsername')) {
+            $ProgressBar.NewLocalUsernameInput = $newLocalUsername
+        }
+        if ($PSBoundParameters.ContainsKey('profileSize')) {
+            $parsedSize = 0
+            if ([double]::TryParse([string]$profileSize, [ref]$parsedSize)) {
+                $ProgressBar.ProfileSizeInput = "{0:N2}GB" -f $parsedSize
+            } elseif ($profileSize) {
+                $ProgressBar.ProfileSizeInput = $profileSize
+            } else {
+                $ProgressBar.ProfileSizeInput = ''
+            }
+        }
     }
 
 
