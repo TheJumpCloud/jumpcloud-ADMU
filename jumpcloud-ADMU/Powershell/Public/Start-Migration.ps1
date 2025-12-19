@@ -224,7 +224,6 @@ function Start-Migration {
         } else {
             $userAgent = "JumpCloud_ADMU.Powershell/$($admuVersion)"
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
-            $ProgressBar = $null
         }
 
 
