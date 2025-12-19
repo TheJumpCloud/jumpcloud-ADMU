@@ -26,8 +26,7 @@ Feature: GUI Element State Management
     Scenario: UI elements are disabled when switching to Migrated Accounts tab
         Given the ADMU GUI is open
         When the user clicks on the "Migrated Accounts" tab
-        Then the input labels, textboxes, and user selection controls should be disabled (greyed out)
-        And the user should be restricted from editing those fields while on this tab
+        Then System Information and Account Migration Information groupboxes should be hidden
 
 Feature: Dynamic UI Label Validation
     Scenario: Restore/Migrate button label updates based on selected tab

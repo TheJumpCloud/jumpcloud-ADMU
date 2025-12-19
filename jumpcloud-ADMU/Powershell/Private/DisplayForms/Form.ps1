@@ -240,7 +240,7 @@ Function Show-SelectionForm {
             </Border>
 
             <!-- Account Migration Information -->
-            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" Grid.Row="1" Grid.Column="2" Margin="10,10,10,0">
+            <GroupBox Header="" Name="gb_AccountMigrationInformation" Style="{StaticResource NoHeaderGroupBoxStyle}" Grid.Row="1" Grid.Column="2" Margin="10,10,10,0">
                 <Grid HorizontalAlignment="Left" VerticalAlignment="Top" Width="461">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
@@ -262,7 +262,7 @@ Function Show-SelectionForm {
             </GroupBox>
 
             <!-- System Migration Information -->
-            <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" MinHeight="145" Margin="0,10,0,0" Grid.Row="1" Grid.Column="0">
+            <GroupBox Header="" Name="gb_SystemMigrationInformation" Style="{StaticResource NoHeaderGroupBoxStyle}" MinHeight="145" Margin="0,10,0,0" Grid.Row="1" Grid.Column="0">
                 <Grid HorizontalAlignment="Left" Width="Auto" Height="Auto">
                     <Label FontWeight="SemiBold" Foreground="#202D38" Content="System Migration Options" Margin="5,0,328,211"/>
                     <TextBlock Name="lbl_connectKey" HorizontalAlignment="Left" Margin="10,111,0,0" Text="JumpCloud Connect Key :" VerticalAlignment="Top" TextDecorations="Underline" Foreground="#FF000CFF"/>
@@ -725,17 +725,9 @@ Function Show-SelectionForm {
             if ($MainTabControl.SelectedIndex -eq 1) {
                 # Tab 1 is Migrated Accounts
                 $btn_migrateProfile.Content = "Restore Profile"
-                # Disable all the checkbox and textboxes not needed for reversion
-                $tb_JumpCloudUserName.IsEnabled = $false
-                $tb_JumpCloudConnectKey.IsEnabled = $false
-                $tb_JumpCloudAPIKey.IsEnabled = $false
-                $tb_tempPassword.IsEnabled = $false
-                $cb_installJCAgent.IsEnabled = $false
-                $cb_autobindJCUser.IsEnabled = $false
-                $cb_leaveDomain.IsEnabled = $false
-                $cb_forceReboot.IsEnabled = $false
-                $img_localAccountValid.Visibility = 'Hidden'
-                $img_localAccountPasswordValid.Visibility = 'Hidden'
+                # Hide the Groupboxes
+                $gb_AccountMigrationInformation.Visibility = 'Hidden'
+                $gb_SystemMigrationInformation.Visibility = 'Hidden'
 
                 # Disable button initially until a user is selected in the migrated list
                 if ($lvMigratedAccounts.SelectedItems.Count -eq 0) {
@@ -746,17 +738,9 @@ Function Show-SelectionForm {
             } else {
                 # Tab 0 is System Accounts
                 $btn_migrateProfile.Content = "Migrate Profile"
-                # Enable all the checkbox and textboxes not needed for reversion
-                $tb_JumpCloudUserName.IsEnabled = $true
-                $tb_JumpCloudConnectKey.IsEnabled = $true
-                $tb_JumpCloudAPIKey.IsEnabled = $true
-                $tb_tempPassword.IsEnabled = $true
-                $cb_installJCAgent.IsEnabled = $true
-                $cb_autobindJCUser.IsEnabled = $true
-                $cb_leaveDomain.IsEnabled = $true
-                $cb_forceReboot.IsEnabled = $true
-                $img_localAccountValid.Visibility = 'Visible'
-                $img_localAccountPasswordValid.Visibility = 'Visible'
+                # Show the Groupboxes
+                $gb_AccountMigrationInformation.Visibility = 'Visible'
+                $gb_SystemMigrationInformation.Visibility = 'Visible'
 
                 # Re-run the standard validation logic for the Migration tab
                 Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
