@@ -207,7 +207,7 @@ Function Show-SelectionForm {
                         <TabItem Header="Migrated Accounts"
          FontFamily="Segoe UI"
          FontSize="12"
-         Tag="View the status of accounts that have been migrated">
+         Tag="Select an account that has been previously migrated to restore">
 
                             <ListView BorderBrush="White" MinWidth="660" HorizontalAlignment="Left" BorderThickness="0" Name="lvMigratedAccounts">
                                 <ListView.View>
