@@ -1,12 +1,13 @@
 ## 2.11.0
 
-Release Date: December 5, 2025
+Release Date: December 19, 2025
 
 #### RELEASE NOTES
 
 ```
 - Added functionality to backup profileImage permissions
 - Added Start-Reversion Function
+- Integrated Reverse Migration functionality in the GUI
 ```
 
 #### IMPROVEMENTS:

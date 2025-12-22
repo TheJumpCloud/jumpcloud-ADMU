@@ -50,10 +50,16 @@ Function Start-Reversion {
                 else { throw "Target profile path does not exist: $_" }
             })]
         [string]$TargetProfileImagePath,
-
+        [Parameter(Mandatory = $false)]
+        [bool]$form = $false,
+        [Parameter(Mandatory = $false)]
+        [string]$UserName,
+        [Parameter(Mandatory = $false)]
+        [string]$ProfileSize,
+        [Parameter(Mandatory = $false)]
+        [string]$LocalPath,
         [Parameter(Mandatory = $false)]
         [switch]$DryRun,
-
         [Parameter(Mandatory = $false)]
         [switch]$Force
     )
@@ -82,16 +88,22 @@ Function Start-Reversion {
         $admuPathPattern = '\.ADMU$'
 
         Write-ToLog -Message "Validating user SID: $UserSID" -Level Verbose -Step "Revert-Migration"
+        if ($form) {
+            $script:ProgressBar = New-ProgressForm
+            $StatusType = "Reversion"
+        }
     }
 
     Process {
         try {
             #region Validate Registry and Determine Profile Path
             Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
+            Write-ToProgress -form $form -Status "RevertInit" -ProgressBar $ProgressBar -StatusType $StatusType -Username $UserName -ProfileSize $ProfileSize -LocalPath $LocalPath
 
             # Get profile information from registry for validation
             $profileRegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"
 
+            Write-ToProgress -form $form -Status "RevertValidateProfilePath" -ProgressBar $ProgressBar -StatusType $StatusType
             if (-not (Test-Path $profileRegistryPath)) {
                 throw "Profile registry path not found for SID: $UserSID"
             }
@@ -142,6 +154,7 @@ Function Start-Reversion {
             #endregion Validate Profile Directory
 
             #region Validate ProfileImagePath ACL Backup in $profileImagePath\AppData\Local\JumpCloudADMU
+            Write-ToProgress -form $form -Status "RevertValidateACLBackups" -ProgressBar $ProgressBar -StatusType $StatusType
             # Regex pattern to identify ACL backup files: S-1-12-1-3466645622-1152519358-2404555438-459629385_permission_backup_20251117-1353
             $aclBackupPattern = "^{0}_permission_backup_\d{{8}}-\d{{4}}$" -f [Regex]::Escape($UserSID)
             $aclBackupDir = Join-Path -Path $profileImagePath -ChildPath "AppData\Local\JumpCloudADMU"
@@ -152,16 +165,11 @@ Function Start-Reversion {
             $latestAclBackupFile = $aclBackupFiles | Sort-Object LastWriteTime -Descending | Select-Object -First 1
             # Get the most recent ACL backup file path
 
-
-
-
             if ($aclBackupFiles.Count -eq 0) {
-                # TODO: Should we throw?
                 Throw "No ACL backup files found in directory: $aclBackupDir for SID: $UserSID. Cannot proceed with revert."
             } else {
                 Write-ToLog -Message "Found ACL backup files in $aclBackupDir" -Level Info -Step "Revert-Migration"
             }
-
             #endregion Validate ProfileImagePath ACL Backup
 
             #region Identify Registry Files to Revert
@@ -222,6 +230,7 @@ Function Start-Reversion {
             #endregion Identify Registry Files to Revert
 
             #region Validate Files Before Revert
+            Write-ToProgress -form $form -Status "RevertValidateRegistryFiles" -ProgressBar $ProgressBar -StatusType $StatusType
             Write-ToLog -Message "Validating registry files before revert operation" -Level Info -Step "Revert-Migration"
 
             foreach ($regFile in $registryFiles) {
@@ -265,6 +274,7 @@ Function Start-Reversion {
             #endregion Confirmation Prompt
 
             #region Perform Registry File Revert
+            Write-ToProgress -form $form -Status "RevertRegistryFiles" -ProgressBar $ProgressBar -StatusType $StatusType
             Write-ToLog -Message "Beginning registry file revert operations" -Level Info -Step "Revert-Migration"
 
             foreach ($regFile in $registryFiles) {
@@ -303,6 +313,7 @@ Function Start-Reversion {
             #endregion Perform Registry File Revert
 
             #region Update Registry ProfileImagePath
+            Write-ToProgress -form $form -Status "RevertProfileImagePath" -ProgressBar $ProgressBar -StatusType $StatusType
             Write-ToLog -Message "Updating registry ProfileImagePath to point to reverted profile location" -Level Info -Step "Revert-Migration"
 
             try {
@@ -334,6 +345,7 @@ Function Start-Reversion {
 
             #region Restore Profile ACLs
             if (-not $DryRun) {
+                Write-ToProgress -form $form -Status "RevertProfileACLs" -ProgressBar $ProgressBar -StatusType $StatusType
                 Write-ToLog -Message "Restoring profile ACLs from backup" -Level Info -Step "Revert-Migration"
                 try {
                     if ($latestAclBackupFile) {
@@ -355,6 +367,7 @@ Function Start-Reversion {
 
             #region Take Ownership of Profile Directory
             if (-not $DryRun) {
+                Write-ToProgress -form $form -Status "RevertTakeOwnership" -ProgressBar $ProgressBar -StatusType $StatusType
                 Write-ToLog -Message "Setting ownership of profile directory: $profileImagePath" -Level Verbose -Step "Revert-Migration"
 
                 $ACLRestoreLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu_Revert_SetOwner.log"
@@ -375,6 +388,48 @@ Function Start-Reversion {
             }
             #endregion Take Ownership of Profile Directory
 
+            #region Remove JumpCloud ADMU Created User
+            $jcUsers = Get-LocalUser | Where-Object { $_.Description -eq 'Created by JumpCloud ADMU' }
+            if (-not $DryRun) {
+                # Check if the user has the $profileImagePath as profile path
+                foreach ($jcUser in $jcUsers) {
+                    #Get the profile path of the user
+                    $jcUserProfilePath = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($jcUser.SID.Value)" -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
+                    # Compare the profile path with the $profileImagePath
+                    if ($jcUserProfilePath -eq $profileImagePath) {
+                        Write-ToLog -message "Removing JumpCloud created user: $($jcUser.Name)" -Level Info -Step "Revert-Migration"
+                        Write-ToProgress -form $form -Status "RevertRemoveJCUserArtifacts" -ProgressBar $ProgressBar -StatusType $StatusType
+                        Remove-LocalUser -Name $jcUser.Name -ErrorAction Stop
+                        Write-ToLog -message "Successfully removed JumpCloud created user: $($jcUser.Name)" -Level Info -Step "Revert-Migration"
+                        # Remove it from the Registry
+                        $jcUserRegPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($jcUser.SID.Value)"
+                        if (Test-Path $jcUserRegPath) {
+                            try {
+                                Remove-Item -Path $jcUserRegPath -Recurse -Force -ErrorAction Stop
+                                Write-ToLog -message "Successfully removed JumpCloud created user registry entry for SID: $($jcUser.SID.Value)" -Level Info -Step "Revert-Migration"
+                            } catch {
+                                $errorMsg = "Failed to remove JumpCloud created user registry entry for SID: $($jcUser.SID.Value): $($_.Exception.Message)"
+                                Write-ToLog -Message $errorMsg -Level Error -Step "Revert-Migration"
+                                $revertResult.Errors += $errorMsg
+                            }
+                        } else {
+                            Write-ToLog -message "No registry entry found for JumpCloud created user SID: $($jcUser.SID.Value)" -Level Warning -Step "Revert-Migration"
+                        }
+                    }
+                }
+            } else {
+                Write-ToLog -Message "WHAT IF: Would check for JumpCloud created users to remove" -Level Verbose -Step "Revert-Migration"
+                foreach ($jcUser in $jcUsers) {
+                    #Get the profile path of the user
+                    $jcUserProfilePath = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$($jcUser.SID.Value)" -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
+                    # Compare the profile path with the $profileImagePath
+                    if ($jcUserProfilePath -eq $profileImagePath) {
+                        Write-ToLog -message "WHAT IF: Would remove JumpCloud created user: $($jcUser.Name)" -Level Verbose -Step "Revert-Migration"
+                    }
+                }
+            }
+            #endregion Remove JumpCloud ADMU Created User
+
             #region Final Validation
             if (-not $DryRun) {
                 Write-ToLog -Message "Performing post-revert validation" -Level Info -Step "Revert-Migration"
@@ -386,6 +441,7 @@ Function Start-Reversion {
                 if ($revertedCount -eq $totalFiles -and $registryUpdated) {
                     $revertResult.Success = $true
                     Write-ToLog -Message "Migration revert completed successfully. $revertedCount of $totalFiles registry files reverted and registry ProfileImagePath updated." -Level Info -Step "Revert-Migration"
+                    Write-ToProgress -form $form -Status "RevertComplete" -ProgressBar $ProgressBar -StatusType $StatusType
                 } elseif ($revertedCount -eq $totalFiles -and -not $registryUpdated) {
                     Write-ToLog -Message "Migration revert completed with registry update error. $revertedCount of $totalFiles registry files reverted but ProfileImagePath update failed." -Level Warning -Step "Revert-Migration"
                 } else {
@@ -401,6 +457,7 @@ Function Start-Reversion {
             $errorMsg = "Migration revert failed: $($_.Exception.Message)"
             Write-ToLog -Message $errorMsg -Level Error -Step "Revert-Migration"
             $revertResult.Errors += $errorMsg
+            Write-ToProgress -ProgressBar $ProgressBar -Status $errorMsg -form $form -logLevel "Error"
         }
     }
 
