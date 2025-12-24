@@ -145,7 +145,12 @@ function Get-MigrationUsersFromCsv {
         # Create a new list
         $usersToMigrate = New-Object System.Collections.ArrayList
         # To validate the users on the CSV get the local computer name and serial number
-        $computerName = $env:COMPUTERNAME
+        # Using hostname instead of $env:COMPUTERNAME to support hostnames longer than 15 characters (NetBIOS limit)
+        # set to hostname, fallback to $env:COMPUTERNAME if empty
+        $computerName = hostname
+        if ([string]::IsNullOrWhiteSpace($computerName)) {
+            $computerName = $env:COMPUTERNAME
+        }
         try {
             $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
         } catch {
