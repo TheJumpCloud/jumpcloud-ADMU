@@ -401,7 +401,6 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 Start-Migration @testCaseInput
             }
             $devADMUPath = "$PSScriptRoot\..\..\..\JumpCloud.ADMU.psd1"  # CI/CD relative path
-            $devADMUPath = "C:\Users\jworkman\Desktop\jumpcloud-ADMU\JumpCloud.ADMU.psd1"  # Local testing override
             $migrationJob = Start-Job -ScriptBlock $MigrationScriptBlock -ArgumentList @($devADMUPath, $testCaseInput)
 
             # check the registry path in a loop until we see it loaded
@@ -440,7 +439,6 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 Start-Migration @testCaseInput
             }
             $devADMUPath = "$PSScriptRoot\..\..\..\JumpCloud.ADMU.psd1"  # CI/CD relative path
-            $devADMUPath = "C:\Users\jworkman\Desktop\jumpcloud-ADMU\JumpCloud.ADMU.psd1"  # Local testing override
             $migrationJob = Start-Job -ScriptBlock $MigrationScriptBlock -ArgumentList @($devADMUPath, $testCaseInput)
 
             # check the registry path in a loop until we see it loaded
