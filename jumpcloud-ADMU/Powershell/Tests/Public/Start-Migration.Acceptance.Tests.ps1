@@ -324,6 +324,171 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
             }
         }
     }
+    Context "Registry Load/Unload Recovery" {
+        # tests in this context will validate the Close/Process recovery functions in the Start-Migration function
+        # during migration it's possible some user will have a process that is loaded in memory and has a handle on the user's registry hive. The Close/Process recovery functions attempt to unload the registry hive by terminating processes that have a handle on the user's registry hive.
+        # Test Setup
+        BeforeEach {
+            # sample password
+            $tempPassword = "Temp123!Temp123!"
+            # username to migrate
+            $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # username to migrate to
+            $userToMigrateTo = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+
+            # Initialize-TestUser
+            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            # get SIDs for UWP testing
+            $userToMigrateFromSID = (Get-LocalUser -Name $userToMigrateFrom | Select-Object SID).SID
+            # define test case input
+            $testCaseInput = @{
+                JumpCloudUserName       = $userToMigrateTo
+                SelectedUserName        = $userToMigrateFrom
+                TempPassword            = $tempPassword
+                LeaveDomain             = $false
+                ForceReboot             = $false
+                UpdateHomePath          = $false
+                InstallJCAgent          = $false
+                AutoBindJCUser          = $false
+                BindAsAdmin             = $false
+                SetDefaultWindowsUser   = $true
+                AdminDebug              = $false
+                # JumpCloudConnectKey     = $null
+                # JumpCloudAPIKey         = $null
+                # JumpCloudOrgID          = $null
+                ValidateUserShellFolder = $true
+            }
+            # remove the log
+            $logPath = "C:\Windows\Temp\jcadmu.log"
+            if (Test-Path -Path $logPath) {
+                Remove-Item $logPath
+                New-Item $logPath -Force -ItemType File
+            }
+            # define a process to lock user registry hive
+            $userProfilePath = "C:\Users\$($userToMigrateFrom)"
+            # Start notepad.exe as the UserToMigrateFrom user, opening the NTUSER.DAT file to lock the registry hive
+            $securePassword = ConvertTo-SecureString $tempPassword -AsPlainText -Force
+            $credential = New-Object System.Management.Automation.PSCredential("$env:COMPUTERNAME\$userToMigrateFrom", $securePassword)
+            $scriptBlock = {
+                Start-Process -FilePath "notepad.exe"
+            }
+        }
+        It "When a user has a process locking their registry before migration, the Close/Process recovery function should unload the registry hive and allow migration to complete" {
+            # start the process that locks a users registry hive
+            $job = Start-Job -ScriptBlock $scriptBlock -Credential $credential
+            # validate that the user's registry hive is loaded
+            # validate we can load HKEY_USERS drive from powershell context
+            Set-HKEYUserMount
+            # validate the users registry hive is loaded
+            $regKeyPath = "HKEY_USERS:\$userToMigrateFromSID"
+            $regKey = Get-Item -Path $regKeyPath -ErrorAction SilentlyContinue
+            $regKey | Should -Not -Be $null
+
+            # Migrate the initialized user to the second username
+            { Start-Migration @testCaseInput } | Should -Not -Throw
+
+            # Stop the job
+            Stop-Job -Job $job
+            Remove-Job -Job $job
+        }
+        It "When a migration task is started and a process is loaded during migration, the Close/Process recovery function should unload the registry hive and allow migration to complete" {
+            # run start-migration in a job that starts a process during migration
+            $MigrationScriptBlock = {
+                param ($moduleLocation, $testCaseInput)
+                # import the Module
+                Import-Module $moduleLocation -Force
+                # run migration from testCaseInput
+                Start-Migration @testCaseInput
+            }
+            $devADMUPath = "$PSScriptRoot\..\..\..\JumpCloud.ADMU.psd1"  # CI/CD relative path
+            $devADMUPath = "C:\Users\jworkman\Desktop\jumpcloud-ADMU\JumpCloud.ADMU.psd1"  # Local testing override
+            $migrationJob = Start-Job -ScriptBlock $MigrationScriptBlock -ArgumentList @($devADMUPath, $testCaseInput)
+
+            # check the registry path in a loop until we see it loaded
+            $regKeyPath = "HKEY_USERS:\$($userToMigrateFromSID)_admu"
+            # wait until the registry hive is loaded
+            Set-HKEYUserMount
+            do {
+                $regKey = Get-Item -Path $regKeyPath -ErrorAction SilentlyContinue
+            } while ($regKey -eq $null)
+            # write the last 10 lines of the log
+            Write-Host "Migration Log so far:"
+            Get-Content -Path C:\windows\temp\jcadmu.log -Tail 10 | ForEach-Object { Write-Host $_ }
+            # once the backup is done, start a process that locks the user's registry hive
+            $job = Start-Job -ScriptBlock $scriptBlock -Credential $credential
+
+            # wait for the migration job to complete or fail:
+            do {
+                Start-Sleep -Seconds 2
+                $migrationJob = Get-Job -Id $migrationJob.Id
+            } while ($migrationJob.State -eq "Running" -or $migrationJob.State -eq "NotStarted")
+            # the migration job should complete successfully and not have thrown an error
+            $migrationJob.State | Should -Not -Be "Failed"
+            # Stop the job
+            foreach ($job in @($migrationJob, $job)) {
+                Stop-Job -Job $job
+                Remove-Job -Job $job
+            }
+        }
+        It "When a migration task is started and a system owned process is loaded during migration as the migration user, the Close/Process recovery function should unload the registry hive and allow migration to complete" {
+            # run start-migration in a job that starts a process during migration
+            $MigrationScriptBlock = {
+                param ($moduleLocation, $testCaseInput)
+                # import the Module
+                Import-Module $moduleLocation -Force
+                # run migration from testCaseInput
+                Start-Migration @testCaseInput
+            }
+            $devADMUPath = "$PSScriptRoot\..\..\..\JumpCloud.ADMU.psd1"  # CI/CD relative path
+            $devADMUPath = "C:\Users\jworkman\Desktop\jumpcloud-ADMU\JumpCloud.ADMU.psd1"  # Local testing override
+            $migrationJob = Start-Job -ScriptBlock $MigrationScriptBlock -ArgumentList @($devADMUPath, $testCaseInput)
+
+            # check the registry path in a loop until we see it loaded
+            Set-HKEYUserMount
+            $regKeyPath = "HKEY_USERS:\$($userToMigrateFromSID)_admu"
+            # wait until the registry hive is loaded
+            do {
+                $regKey = Get-Item -Path $regKeyPath -ErrorAction SilentlyContinue
+            } while ($regKey -eq $null)
+            # write the last 10 lines of the log
+            Write-Host "Migration Log so far:"
+            Get-Content -Path C:\windows\temp\jcadmu.log -Tail 10 -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_ }
+
+            # Create a script block that runs as SYSTEM and continuously accesses the user's registry hive
+            # This simulates what an antivirus or system scanner would do - keep a handle open on the registry
+            $registryAccessBlock = {
+                param($userSID)
+                $regPath = "Registry::HKEY_USERS\$userSID`_admu"
+                # Keep accessing the registry to hold a handle open (simulating antivirus scanning)
+                while ($true) {
+                    try {
+                        Get-Item -Path $regPath -ErrorAction SilentlyContinue | Out-Null
+                        Get-ChildItem -Path $regPath -Recurse -ErrorAction SilentlyContinue | Out-Null
+                        Start-Sleep -Milliseconds 500
+                    } catch {
+                        # If the hive is unloaded, exit the loop
+                        break
+                    }
+                }
+            }
+
+            # Start a SYSTEM process that continuously reads the user's registry hive
+            $systemJob = Start-Job -ScriptBlock $registryAccessBlock -ArgumentList @($userToMigrateFromSID) -RunAs32:$false
+
+            # wait for the migration job to complete or fail:
+            do {
+                Start-Sleep -Seconds 2
+                $migrationJob = Get-Job -Id $migrationJob.Id
+            } while ($migrationJob.State -eq "Running" -or $migrationJob.State -eq "NotStarted")
+            # the migration job should complete successfully and not have thrown an error
+            $migrationJob.State | Should -Not -Be "Failed"
+            # Stop the jobs
+            foreach ($job in @($migrationJob, $systemJob)) {
+                Stop-Job -Job $job -ErrorAction SilentlyContinue
+                Remove-Job -Job $job -ErrorAction SilentlyContinue
+            }
+        }
+    }
 }
 Describe "Start-Migration Tests" -Tag "InstallJC" {
     # Import Functions
