@@ -913,10 +913,13 @@ Function Show-SelectionForm {
                 # Get the SID of the selected migrated account
                 Write-ToLog "Restoring profile for SID: $($lvMigratedAccounts.SelectedItem.SID)"
                 $Form.Close()
-                # Calculate profile size by the local path and removing the .ADMU extension and find the SID of the original profile
+
+                # Initialize Progress Bar
                 $localPath = $($lvMigratedAccounts.SelectedItem.LocalPath -replace '\.ADMU$', '')
-                $profileSize = Get-ProfileSize -ProfilePath $localPath
-                Start-Reversion -UserSid $($lvMigratedAccounts.SelectedItem.SID) -form $true -UserName $($lvMigratedAccounts.SelectedItem.UserName) -ProfileSize $profileSize -LocalPath $localPath -force
+                $script:ProgressBar = New-ProgressForm
+                Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Init" -username $($lvMigratedAccounts.SelectedItem.UserName) -newLocalUsername "N/A" -profileSize "Calculating" -LocalPath $localPath
+
+                Start-Reversion -UserSid $($lvMigratedAccounts.SelectedItem.SID) -form $true -LocalPath $localPath -force
             } else {
                 # MIGRATION LOGIC
                 # Only runs if button text is NOT "Restore Profile"
@@ -977,34 +980,15 @@ Function Show-SelectionForm {
                 $SelectedUserName = $($lvProfileList.SelectedItem.username)
             }
 
-            # Preload progress form to shrink perceived wait between click and display
-            $profilePath = $lvProfileList.SelectedItem.LocalPath
-            $displayUsername = if ([string]::IsNullOrWhiteSpace($tb_JumpCloudUserName.Text)) { $SelectedUserName } else { $tb_JumpCloudUserName.Text }
-            $script:ProgressBar = New-ProgressForm
-            Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $displayUsername -profileSize "Calculating" -LocalPath $profilePath
-
             # Build FormResults object
             Write-ToLog "Building Form Results"
-
-                # Set the options selected/ inputs to the $formResults object
-                $FormResults.InstallJCAgent = $cb_installJCAgent.IsChecked
-                $FormResults.AutoBindJCUser = $cb_autobindJCUser.IsChecked
-                $FormResults.BindAsAdmin = $cb_bindAsAdmin.IsChecked
-                $FormResults.LeaveDomain = $cb_leaveDomain.IsChecked
-                $FormResults.RemoveMDM = $cb_removeMDM.IsChecked
-                $FormResults.ForceReboot = $cb_forceReboot.IsChecked
-                $FormResults.SelectedUserName = $SelectedUserName
-                $FormResults.JumpCloudUserName = $tb_JumpCloudUserName.Text
-                $FormResults.TempPassword = $tb_tempPassword.Text
-                $FormResults.JumpCloudConnectKey = $tb_JumpCloudConnectKey.Password
-                $FormResults.JumpCloudAPIKey = $tb_JumpCloudAPIKey.Password
-                $FormResults.JumpCloudOrgID = $script:selectedOrgID
-
-                # Ensure IsRestore is false if not set
-                $FormResults | Add-Member -MemberType NoteProperty -Name "IsRestore" -Value $false -Force
-
-                # Close form
-                $Form.Close()
+            if ($btn_migrateProfile.Content -ne "Restore Profile") {
+                # Initialize Progress Bar
+                # Preload progress form to shrink perceived wait between click and display
+                $profilePath = $lvProfileList.SelectedItem.LocalPath
+                $displayUsername = if ([string]::IsNullOrWhiteSpace($tb_JumpCloudUserName.Text)) { $SelectedUserName } else { $tb_JumpCloudUserName.Text }
+                $script:ProgressBar = New-ProgressForm
+                Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $displayUsername -profileSize "Calculating" -LocalPath $profilePath
             }
 
             # Set the options selected/ inputs to the $formResults object
@@ -1013,7 +997,6 @@ Function Show-SelectionForm {
             $FormResults.BindAsAdmin = $cb_bindAsAdmin.IsChecked
             $FormResults.LeaveDomain = $cb_leaveDomain.IsChecked
             $FormResults.RemoveMDM = $cb_removeMDM.IsChecked
-            $FormResults.PrimaryUser = $cb_primaryUser.IsChecked
             $FormResults.ForceReboot = $cb_forceReboot.IsChecked
             $FormResults.SelectedUserName = $SelectedUserName
             $FormResults.JumpCloudUserName = $tb_JumpCloudUserName.Text
@@ -1021,8 +1004,13 @@ Function Show-SelectionForm {
             $FormResults.JumpCloudConnectKey = $tb_JumpCloudConnectKey.Password
             $FormResults.JumpCloudAPIKey = $tb_JumpCloudAPIKey.Password
             $FormResults.JumpCloudOrgID = $script:selectedOrgID
+
+            # Ensure IsRestore is false if not set
+            $FormResults | Add-Member -MemberType NoteProperty -Name "IsRestore" -Value $false -Force
+
             # Close form
             $Form.Close()
+
         })
 
     # $tb_JumpCloudUserName.add_GotFocus( {
@@ -1106,4 +1094,5 @@ Function Show-SelectionForm {
     If (($btn_migrateProfile.IsEnabled -eq $true) -AND $btn_migrateProfile.Add_Click -And ($btn_migrateProfile.Content -ne "Restore Profile")) {
         Return $FormResults
     }
+
 }

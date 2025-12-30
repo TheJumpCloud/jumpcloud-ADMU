@@ -88,17 +88,20 @@ Function Start-Reversion {
         $admuPathPattern = '\.ADMU$'
 
         Write-ToLog -Message "Validating user SID: $UserSID" -Level Verbose -Step "Revert-Migration"
-        if ($form) {
+        $profileSize = Get-ProfileSize -ProfilePath $LocalPath
+
+        # Prefer the progress form created in Form.ps1 so updates apply to the first window the user sees
+        if ((-not $script:ProgressBar) -and ($form)) {
             $script:ProgressBar = New-ProgressForm
-            $StatusType = "Reversion"
         }
+        $StatusType = "Reversion"
     }
 
     Process {
         try {
             #region Validate Registry and Determine Profile Path
             Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
-            Write-ToProgress -form $form -Status "RevertInit" -ProgressBar $ProgressBar -StatusType $StatusType -Username $UserName -ProfileSize $ProfileSize -LocalPath $LocalPath
+            Write-ToProgress -form $form -Status "RevertInit" -ProgressBar $ProgressBar -StatusType $StatusType -ProfileSize $profileSize -LocalPath $LocalPath
 
             # Get profile information from registry for validation
             $profileRegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"
