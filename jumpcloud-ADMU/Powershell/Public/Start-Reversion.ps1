@@ -88,14 +88,57 @@ Function Start-Reversion {
         $admuPathPattern = '\.ADMU$'
 
         Write-ToLog -Message "Validating user SID: $UserSID" -Level Verbose -Step "Revert-Migration"
+
+        # Status message map for reversion steps
+        $revertMessageMap = [Ordered]@{
+            revertInit                  = @{
+                step = "Initializing Reversion"
+                desc = "Initializing the profile reversion process."
+            }
+            revertValidateProfilePath   = @{
+                step = "Validating Profile Registry Path"
+                desc = "Validating the profile path exists in the registry."
+            }
+            revertValidateACLBackups    = @{
+                step = "Validating ACL Backups"
+                desc = "Verifying that valid ACL backups exist before proceeding."
+            }
+            revertValidateRegistryFiles = @{
+                step = "Validating Registry Files"
+                desc = "Validating the integrity of the registry files to be reverted."
+            }
+            revertRegistryFiles         = @{
+                step = "Restoring Registry Files"
+                desc = "Restoring the original registry files."
+            }
+            revertProfileImagePath      = @{
+                step = "Restoring ProfileImagePath"
+                desc = "Restoring the ProfileImagePath value in the registry."
+            }
+            revertProfileACLs           = @{
+                step = "Restoring Profile ACLs"
+                desc = "Restoring the profile Access Control Lists (ACLs) from backup."
+            }
+            revertTakeOwnership         = @{
+                step = "Taking Ownership"
+                desc = "Taking ownership of the profile directory."
+            }
+            revertRemoveJCUserArtifacts = @{
+                step = "Removing JumpCloud Artifacts"
+                desc = "Removing JumpCloud user artifacts created during the initial process."
+            }
+            revertComplete              = @{
+                step = "Reversion Complete"
+                desc = "Profile Reversion completed successfully."
+            }
+        }
+
+
         $profileSize = Get-ProfileSize -ProfilePath $LocalPath
 
         # Prefer the progress form created in Form.ps1 so updates apply to the first window the user sees
         if ((-not $script:ProgressBar) -and ($form)) {
             $script:ProgressBar = New-ProgressForm
-        }
-        if ($form) {
-            $StatusType = "Reversion"
         }
     }
 
@@ -103,12 +146,14 @@ Function Start-Reversion {
         try {
             #region Validate Registry and Determine Profile Path
             Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
-            Write-ToProgress -form $form -Status "RevertInit" -ProgressBar $ProgressBar -StatusType $StatusType -ProfileSize $profileSize -LocalPath $LocalPath
+            # Casing fixed to 'revertInit'
+            Write-ToProgress -form $form -Status "revertInit" -ProgressBar $ProgressBar -ProfileSize $profileSize -LocalPath $LocalPath -StatusMap $revertMessageMap
 
             # Get profile information from registry for validation
             $profileRegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"
 
-            Write-ToProgress -form $form -Status "RevertValidateProfilePath" -ProgressBar $ProgressBar -StatusType $StatusType
+            # Casing fixed to 'revertValidateProfilePath', removed -StatusType, added -StatusMap
+            Write-ToProgress -form $form -Status "revertValidateProfilePath" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
             if (-not (Test-Path $profileRegistryPath)) {
                 throw "Profile registry path not found for SID: $UserSID"
             }
@@ -159,7 +204,8 @@ Function Start-Reversion {
             #endregion Validate Profile Directory
 
             #region Validate ProfileImagePath ACL Backup in $profileImagePath\AppData\Local\JumpCloudADMU
-            Write-ToProgress -form $form -Status "RevertValidateACLBackups" -ProgressBar $ProgressBar -StatusType $StatusType
+            # Casing fixed to 'revertValidateACLBackups', removed -StatusType, added -StatusMap
+            Write-ToProgress -form $form -Status "revertValidateACLBackups" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
             # Regex pattern to identify ACL backup files: S-1-12-1-3466645622-1152519358-2404555438-459629385_permission_backup_20251117-1353
             $aclBackupPattern = "^{0}_permission_backup_\d{{8}}-\d{{4}}$" -f [Regex]::Escape($UserSID)
             $aclBackupDir = Join-Path -Path $profileImagePath -ChildPath "AppData\Local\JumpCloudADMU"
@@ -235,7 +281,8 @@ Function Start-Reversion {
             #endregion Identify Registry Files to Revert
 
             #region Validate Files Before Revert
-            Write-ToProgress -form $form -Status "RevertValidateRegistryFiles" -ProgressBar $ProgressBar -StatusType $StatusType
+            # Casing fixed to 'revertValidateRegistryFiles', removed -StatusType, added -StatusMap
+            Write-ToProgress -form $form -Status "revertValidateRegistryFiles" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
             Write-ToLog -Message "Validating registry files before revert operation" -Level Info -Step "Revert-Migration"
 
             foreach ($regFile in $registryFiles) {
@@ -279,7 +326,8 @@ Function Start-Reversion {
             #endregion Confirmation Prompt
 
             #region Perform Registry File Revert
-            Write-ToProgress -form $form -Status "RevertRegistryFiles" -ProgressBar $ProgressBar -StatusType $StatusType
+            # Casing fixed to 'revertRegistryFiles', removed -StatusType, added -StatusMap
+            Write-ToProgress -form $form -Status "revertRegistryFiles" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
             Write-ToLog -Message "Beginning registry file revert operations" -Level Info -Step "Revert-Migration"
 
             foreach ($regFile in $registryFiles) {
@@ -318,7 +366,8 @@ Function Start-Reversion {
             #endregion Perform Registry File Revert
 
             #region Update Registry ProfileImagePath
-            Write-ToProgress -form $form -Status "RevertProfileImagePath" -ProgressBar $ProgressBar -StatusType $StatusType
+            # Casing fixed to 'revertProfileImagePath', removed -StatusType, added -StatusMap
+            Write-ToProgress -form $form -Status "revertProfileImagePath" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
             Write-ToLog -Message "Updating registry ProfileImagePath to point to reverted profile location" -Level Info -Step "Revert-Migration"
 
             try {
@@ -350,7 +399,8 @@ Function Start-Reversion {
 
             #region Restore Profile ACLs
             if (-not $DryRun) {
-                Write-ToProgress -form $form -Status "RevertProfileACLs" -ProgressBar $ProgressBar -StatusType $StatusType
+                # Casing fixed to 'revertProfileACLs', removed -StatusType, added -StatusMap
+                Write-ToProgress -form $form -Status "revertProfileACLs" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
                 Write-ToLog -Message "Restoring profile ACLs from backup" -Level Info -Step "Revert-Migration"
                 try {
                     if ($latestAclBackupFile) {
@@ -372,7 +422,8 @@ Function Start-Reversion {
 
             #region Take Ownership of Profile Directory
             if (-not $DryRun) {
-                Write-ToProgress -form $form -Status "RevertTakeOwnership" -ProgressBar $ProgressBar -StatusType $StatusType
+                # Casing fixed to 'revertTakeOwnership', removed -StatusType, added -StatusMap
+                Write-ToProgress -form $form -Status "revertTakeOwnership" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
                 Write-ToLog -Message "Setting ownership of profile directory: $profileImagePath" -Level Verbose -Step "Revert-Migration"
 
                 $ACLRestoreLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu_Revert_SetOwner.log"
@@ -403,7 +454,8 @@ Function Start-Reversion {
                     # Compare the profile path with the $profileImagePath
                     if ($jcUserProfilePath -eq $profileImagePath) {
                         Write-ToLog -message "Removing JumpCloud created user: $($jcUser.Name)" -Level Info -Step "Revert-Migration"
-                        Write-ToProgress -form $form -Status "RevertRemoveJCUserArtifacts" -ProgressBar $ProgressBar -StatusType $StatusType
+                        # Casing fixed to 'revertRemoveJCUserArtifacts', removed -StatusType, added -StatusMap
+                        Write-ToProgress -form $form -Status "revertRemoveJCUserArtifacts" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
                         Remove-LocalUser -Name $jcUser.Name -ErrorAction Stop
                         Write-ToLog -message "Successfully removed JumpCloud created user: $($jcUser.Name)" -Level Info -Step "Revert-Migration"
                         # Remove it from the Registry
@@ -446,7 +498,8 @@ Function Start-Reversion {
                 if ($revertedCount -eq $totalFiles -and $registryUpdated) {
                     $revertResult.Success = $true
                     Write-ToLog -Message "Migration revert completed successfully. $revertedCount of $totalFiles registry files reverted and registry ProfileImagePath updated." -Level Info -Step "Revert-Migration"
-                    Write-ToProgress -form $form -Status "RevertComplete" -ProgressBar $ProgressBar -StatusType $StatusType
+                    # Casing fixed to 'revertComplete', removed -StatusType, added -StatusMap
+                    Write-ToProgress -form $form -Status "revertComplete" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
                 } elseif ($revertedCount -eq $totalFiles -and -not $registryUpdated) {
                     Write-ToLog -Message "Migration revert completed with registry update error. $revertedCount of $totalFiles registry files reverted but ProfileImagePath update failed." -Level Warning -Step "Revert-Migration"
                 } else {
@@ -482,4 +535,3 @@ Function Start-Reversion {
         return $revertResult
     }
 }
-

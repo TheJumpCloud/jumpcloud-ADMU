@@ -18,49 +18,26 @@ function Write-ToProgress {
         [Parameter(Mandatory = $false)]
         $LocalPath,
         [Parameter(Mandatory = $false)] # TODO: Eventually change this for the V2 update CUT-4862
-        $SystemDescription,
-        [Parameter(Mandatory = $false)]
-        # Validate Migration or Reversion
-        [ValidateSet("Migration", "Reversion")]
-        $StatusType = "Migration"
-
+        $SystemDescription
     )
-    # Create a hashtable of all status messages
-    if ($StatusType -eq "Reversion") {
-        $statusMessages = [ordered]@{
-            "RevertInit"                  = "Initializing Reversion"
-            "RevertValidateProfilePath"   = "Validating profile registry path"
-            "RevertValidateACLBackups"    = "Validating ACL backups"
-            "RevertValidateRegistryFiles" = "Validating Registry files to revert"
-            "RevertRegistryFiles"         = "Restoring registry files"
-            "RevertProfileImagePath"      = "Restoring ProfileImagePath in registry"
-            "RevertProfileACLs"           = "Restoring profile ACLs from backup"
-            "RevertTakeOwnership"         = "Taking ownership of profile directory"
-            "RevertRemoveJCUserArtifacts" = "Removing JumpCloud user artifacts"
-            "RevertComplete"              = "Profile Reversion completed successfully"
+    # Define Status Maps
+    if ($StatusMap) {
+        $statusMessages = $StatusMap
+        $rawStatusEntry = $statusMessages.$status # Extract the Status Message (Logic Updated for 'desc')
+    }
+
+    if ($null -ne $rawStatusEntry) {
+        # Check if the entry is a Hashtable (Migration) or a String (Reversion)
+        if ($rawStatusEntry -is [System.Collections.IDictionary] -and $rawStatusEntry.Contains("desc")) {
+            # Use the 'desc' field for the progress message
+            $statusMessage = $rawStatusEntry.step
+        } else {
+            # Use the raw string value (for Reversion or legacy maps)
+            $statusMessage = $rawStatusEntry
         }
     } else {
-        $statusMessages = [ordered]@{
-            "Init"                    = "Initializing Migration"
-            "Install"                 = "Installing JumpCloud Agent"
-            "BackupUserFiles"         = "Backing up user profile"
-            "UserProfileUnit"         = "Initializing new user profile"
-            "BackupRegHive"           = "Backing up registry hive"
-            "VerifyRegHive"           = "Verifying registry hive"
-            "CopyLocalReg"            = "Copying local user registry"
-            "GetACL"                  = "Getting ACLs"
-            "CopyUser"                = "Copying selected user to new user"
-            "CopyUserRegFiles"        = "Copying user registry files"
-            "CopyMergedProfile"       = "Copying merged profiles to destination profile path"
-            "CopyDefaultProtocols"    = "Copying default protocol associations"
-            "NTFS"                    = "Setting NTFS permissions, this may take several minutes"
-            "ValidateUserPermissions" = "Validating user permissions"
-            "CreateRegEntries"        = "Creating registry entries"
-            "DownloadUWPApps"         = "Downloading UWP Apps"
-            "CheckADStatus"           = "Checking AD Status"
-            "ConversionComplete"      = "Profile conversion complete"
-            "MigrationComplete"       = "Migration completed successfully"
-        }
+        # Fallback if the status key is not found in the map
+        $statusMessage = $status
     }
 
     # If status is error message, write to log
