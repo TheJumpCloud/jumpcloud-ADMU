@@ -246,9 +246,11 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
             Write-Host $Docs
             foreach ($item in $Docs) {
                 Write-Host "Validating documentation for doc file: $($item)"
-                $diff = git diff -- $item.fullname
+                # Use git diff with --ignore-cr-at-eol to ignore line ending differences to account for docs being generated on different OSes
+                $diff = git diff --ignore-cr-at-eol -- $item.fullname
                 if ($diff) {
-                    write-warning "diff found in file: $($item.fullname) when we expected none to exist; have you run build.ps1 and committed the resulting changes?"
+                    write-warning "Diff found in file: $($item.fullname) when we expected none to exist; have you run build.ps1 and committed the resulting changes?"
+                    Write-Warning "Diff output: $diff"
                 }
                 $diff | Should -BeNullOrEmpty
             }

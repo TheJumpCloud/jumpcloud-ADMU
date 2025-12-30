@@ -20,12 +20,32 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
 
         # import the init user function:
         . "$helpFunctionDir\Initialize-TestUser.ps1"
+
+        # get the uwp path:
+        # traverse up several directories to find the Deploy folder
+        $deployDirectoryName = "Deploy"
+        $currentPath = $PSScriptRoot
+        while ($currentPath -ne $null) {
+            $filePath = Join-Path -Path $currentPath $deployDirectoryName
+            if (Test-Path $filePath) {
+                # File found! Return the full path.
+                $deployPath = $filePath
+                break
+            }
+            # Move one directory up.
+            $currentPath = Split-Path $currentPath -Parent
+        }
+        # test that the uwp path exists
+        $uwpPath = Join-Path -Path $deployPath "uwp_jcadmu.ps1"
+        if (-not (Test-Path $uwpPath)) {
+            throw "UWP script not found at path: $uwpPath"
+        }
     }
     Context "SystemContext Parameter Validation for non-APIKey Migrations" {
         # Test Setup
         BeforeEach {
             # sample password
-            $tempPassword = "Temp123!"
+            $tempPassword = "Temp123!Temp123!"
             # username to migrate
             $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # username to migrate to
@@ -38,6 +58,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 JumpCloudUserName       = $userToMigrateTo
                 SelectedUserName        = $userToMigrateFrom
                 TempPassword            = $tempPassword
+                PrimaryUser             = $false
                 LeaveDomain             = $false
                 ForceReboot             = $false
                 UpdateHomePath          = $false
@@ -95,7 +116,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
         # Test Setup
         BeforeEach {
             # sample password
-            $tempPassword = "Temp123!"
+            $tempPassword = "Temp123!Temp123!"
             # username to migrate
             $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # username to migrate to
@@ -103,6 +124,8 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
 
             # Initialize-TestUser
             Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            # get SIDs for UWP testing
+            $userToMigrateFromSID = (Get-LocalUser -Name $userToMigrateFrom | Select-Object SID).SID
             # define test case input
             $testCaseInput = @{
                 JumpCloudUserName       = $userToMigrateTo
@@ -200,13 +223,13 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 # Get the registry for LogonUI
                 $logonUI = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Authentication\LogonUI
                 # The default user should not be the migrated user
-                $logonUI.LastLoggedOnUser | Should -not -Be ".\$userToMigrateTo"
-                $logonUi.LastLoggedOnSAMUser | Should -not -Be ".\$userToMigrateTo"
+                $logonUI.LastLoggedOnUser | Should -Not -Be ".\$userToMigrateTo"
+                $logonUi.LastLoggedOnSAMUser | Should -Not -Be ".\$userToMigrateTo"
 
                 #Check SID
                 $UserSID = Get-LocalUser -Name $userToMigrateTo | Select-Object -ExpandProperty SID
-                $logonUI.LastLoggedOnUserSID | Should -not -Be $UserSID
-                $logonUI.SelectedUserSID | Should -not -Be $UserSID
+                $logonUI.LastLoggedOnUserSID | Should -Not -Be $UserSID
+                $logonUI.SelectedUserSID | Should -Not -Be $UserSID
             }
         }
         Context "Update Home Path" {
@@ -235,6 +258,10 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 # Get the user profile subdirectory
                 $userProfilePath = "C:\Users\$($userToMigrateFrom)"
                 $subDirectories = Get-ChildItem -Path $userProfilePath -Directory
+                # run the UWP to set final permission settings:
+                $userToMigrateToSID = (Get-LocalUser -Name $userToMigrateTo | Select-Object SID).SID
+                . $uwpPath -SetPermissions $true -sourceSID $userToMigrateFromSID -targetSID $userToMigrateToSID -profilePath $userProfilePath
+
                 # Validate each subdirectory owner is the new user
                 foreach ($subDir in $subDirectories) {
                     $subDirOwner = Get-Acl -Path $subDir.FullName | Select-Object -ExpandProperty Owner
@@ -260,7 +287,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
             } else {
                 $UserHome = "C:\Users\$($userToMigrateFrom)"
             }
-            if (-Not $testFailureExpected) {
+            if (-not $testFailureExpected) {
                 # Read the log and get date data
                 $regex = [regex]"ntuser_original_([0-9]+-[0-9]+-[0-9]+-[0-9]+[0-9]+[0-9]+)"
                 $match = Select-String -Path:($logPath) -Pattern:($regex)
@@ -292,7 +319,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
 
             # remove the users:
             Remove-LocalUserProfile -username $userToMigrateFrom
-            if (-Not $testFailureExpected) {
+            if (-not $testFailureExpected) {
                 Remove-LocalUserProfile -username $userToMigrateTo
             }
         }
@@ -326,7 +353,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
         BeforeAll {
             # for these tests, the jumpCloud agent needs to be installed:
             $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
-            If (-Not $AgentService) {
+            if (-not $AgentService) {
                 # set install variables
                 $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
                 $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
@@ -340,21 +367,21 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
             }
 
             # Auth to the JumpCloud Module
-            Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
+            Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -force
 
             # get the org details
             $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
             $OrgName = "$($OrgSelection[1])"
             $OrgID = "$($OrgSelection[0])"
             # get the system key
-            $config = get-content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
+            $config = Get-Content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
             $regex = 'systemKey\":\"(\w+)\"'
             $systemKey = [regex]::Match($config, $regex).Groups[1].Value
         }
         # Test Setup
         BeforeEach {
             # sample password
-            $tempPassword = "Temp123!"
+            $tempPassword = "Temp123!Temp123!"
             # username to migrate
             $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # username to migrate to
@@ -372,6 +399,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                 UpdateHomePath          = $false
                 InstallJCAgent          = $false
                 AutoBindJCUser          = $false
+                PrimaryUser             = $false
                 BindAsAdmin             = $false
                 SetDefaultWindowsUser   = $true
                 AdminDebug              = $false
@@ -414,7 +442,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     { Start-Migration @testCaseInput } | Should -Not -Throw
 
                     # get the system description
-                    $systemDesc = Get-JcSdkSystem -id $systemKey | Select-Object -ExpandProperty Description
+                    $systemDesc = Get-JcSdkSystem -Id $systemKey | Select-Object -ExpandProperty Description
                     # Should have this value: {"MigrationStatus":"Migration completed successfully","MigrationPercentage":100,"UserSID":"S-1-12-1-3466645622-1152519358-2404555438-459629385","MigrationUsername":"test1","UserID":"61e9de2fac31c01519042fe1","DeviceID":"6894eaab354d2a9865a44c74"}
                     $systemDesc | Should -Not -BeNullOrEmpty
                     Write-Host $systemDesc
@@ -431,10 +459,42 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
                     # the system should be associated to the user
-                    $association | Should -not -BeNullOrEmpty
+                    $association | Should -Not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
 
+                }
+                It "Associates a JumpCloud user using 'AutoBindJCUser' and sets the user as PrimaryUser" {
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutoBindJCUser = $true
+                    $testCaseInput.PrimaryUser = $true
+                    # Migrate the initialized user to the second username
+                    { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                    # get the system association:
+                    $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                    # the system should be associated to the user
+                    $association | Should -Not -BeNullOrEmpty
+                    # the association should NOT be sudo enabled
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
+
+
+                    # get the system primary user
+                    $primarySystemUser = Get-JcSdkSystem -Id $systemKey | Select-Object PrimarySystemUserId
+                    $primarySystemUser.PrimarySystemUserId | Should -Be $GeneratedUser.Id
+                }
+                It "'AutoBindJCUser' set to false and 'PrimaryUser' set to true should throw an error" {
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutoBindJCUser = $false
+                    $testCaseInput.PrimaryUser = $true
+
+                    { Start-Migration @testCaseInput } | Should -Throw
                 }
                 It "Associates a JumpCloud user as 'admin' using 'AutoBindJCUser'" {
                     # set the $testCaseInput
@@ -449,7 +509,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
                     # the system should be associated to the user
-                    $association | Should -not -BeNullOrEmpty
+                    $association | Should -Not -BeNullOrEmpty
                     # the association should be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
                 }
@@ -471,9 +531,51 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
                     # the system should be associated to the user
-                    $association | Should -not -BeNullOrEmpty
+                    $association | Should -Not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $false
+                }
+                It "'AutoBindJCUser' set to false and 'PrimaryUser' set to true should throw an error" {
+                    # set the $testCaseInput
+                    $testCaseInput.Remove('JumpCloudApiKey')
+                    $testCaseInput.Remove('JumpCloudOrgID')
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutoBindJCUser = $false
+                    $testCaseInput.PrimaryUser = $true
+                    $testCaseInput.SystemContextBinding = $false
+                    # Add the JumpCloudUserID parameter
+                    $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
+
+                    { Start-Migration @testCaseInput } | Should -Throw
+                }
+                It "Associates a JumpCloud user using 'systemContextBinding' and sets the user as PrimaryUser" {
+                    # set the $testCaseInput
+                    # For systemContextBinding, remove the APIKey/ ORgID params
+                    $testCaseInput.Remove('JumpCloudApiKey')
+                    $testCaseInput.Remove('JumpCloudOrgID')
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.AutoBindJCUser = $false
+                    $testCaseInput.PrimaryUser = $true
+                    $testCaseInput.SystemContextBinding = $true
+                    # Add the JumpCloudUserID parameter
+                    $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
+                    # Migrate the initialized user to the second username
+                    { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                    # get the system association:
+                    $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+                    # the system should be associated to the user
+                    $association | Should -Not -BeNullOrEmpty
+                    # the association should NOT be sudo enabled
+                    $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $false
+
+                    # get the system primary user
+                    $primarySystemUser = Get-JcSdkSystem -Id $systemKey | Select-Object PrimarySystemUserId
+                    $primarySystemUser.PrimarySystemUserId | Should -Be $GeneratedUser.Id
                 }
                 It "Associates a JumpCloud user as an 'admin' using 'systemContextBinding'" {
                     # set the $testCaseInput
@@ -495,7 +597,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # get the system association:
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
                     # the system should be associated to the user
-                    $association | Should -not -BeNullOrEmpty
+                    $association | Should -Not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
                 }
@@ -518,6 +620,99 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
                     # the system should NOT be associated to the user
                     $association | Should -BeNullOrEmpty
+                }
+            }
+            Context "When local user exists tests" {
+
+                It "Should throw when some local user exists and is created and managed by the JumpCloud agent" {
+                    # Create target user
+                    $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
+
+                    # Mock creating the user with JumpCloud by setting the description like the JumpCloud agent would
+                    New-localUser -Name $userToMigrateTo -password $newUserPassword -Description "Created By JumpCloud"
+
+                    # test local user description
+                    $localUser = Get-LocalUser -Name $userToMigrateTo
+                    $localUser.Description | Should -Match "Created By JumpCloud"
+
+                    # Simulate entry in managedUsers.json to indicate the user is managed by JumpCloud
+                    $managedUsersPath = 'C:\Program Files\JumpCloud\Plugins\Contrib\managedUsers.json'
+                    $managedUsersDir = Split-Path -Path $managedUsersPath -Parent
+                    if (-not (Test-Path -Path $managedUsersDir)) {
+                        New-Item -Path $managedUsersDir -ItemType Directory -Force | Out-Null
+                    }
+                    $managedUsers = @(@{ username = $userToMigrateTo })
+                    $managedUsers | ConvertTo-Json | Set-Content -Path $managedUsersPath
+
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+
+                    # should throw a message stating that the local user exists and was created and managed by JumpCloud
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device is currently associated to a JumpCloud user matching the same username. To resolve the issue, unbind (remove the association between the JumpCloud user and this device) and remove the local user from this device before attempting migration again. User was created by JumpCloud."
+                }
+
+                It "Should throw when some local user exists and is created by the JumpCloud agent but no longer managed" {
+                    # Create target user
+                    $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
+
+                    # Mock creating the user with JumpCloud by setting the description like the JumpCloud agent would
+                    New-localUser -Name $userToMigrateTo -password $newUserPassword -Description "Created By JumpCloud"
+
+                    # test local user description
+                    $localUser = Get-LocalUser -Name $userToMigrateTo
+                    $localUser.Description | Should -Match "Created By JumpCloud"
+
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+
+                    # TODO: update expected message with expected output from start-migration
+                    # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device was associated to a JumpCloud user matching the same username. To resolve the issue, remove the local user from this device before attempting migration again. User was created by JumpCloud."
+                }
+
+                It "Should throw when some local user exists and was previously created by the JumpCloud ADMU tool" {
+                    # Create target user
+                    $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
+
+                    # Mock creating the user with JumpCloud by setting the description like the JumpCloud agent would
+                    New-localUser -Name $userToMigrateTo -password $newUserPassword -Description "Created By JumpCloud ADMU"
+
+                    # test local user description
+                    $localUser = Get-LocalUser -Name $userToMigrateTo
+                    $localUser.Description | Should -Match "Created By JumpCloud ADMU"
+
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+
+                    # TODO: update expected message with expected output from start-migration
+                    # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device was associated to a JumpCloud user matching the same username. To resolve the issue, remove the local user from this device before attempting migration again. User was created by JumpCloudADMU."
+                }
+
+                It "Should throw when some local user exists and does not match any known JumpCloud created user descriptions" {
+                    # Create target user
+                    $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
+
+                    # Mock creating the user with JumpCloud by setting the description like the JumpCloud agent would
+                    New-localUser -Name $userToMigrateTo -password $newUserPassword
+                    # test local user description
+                    $localUser = Get-LocalUser -Name $userToMigrateTo
+                    $localUser.Description | Should -Not -Match "Created By JumpCloud|Created by JumpCloud ADMU"
+
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.TempPassword = $tempPassword
+
+                    # TODO: update expected message with expected output from start-migration
+                    # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the user already exists. To resolve the issue, remove the local user from this device before attempting migration again."
                 }
             }
         }

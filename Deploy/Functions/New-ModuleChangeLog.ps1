@@ -7,9 +7,13 @@ Function New-ModuleChangelog {
         , [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 3)][ValidateNotNullOrEmpty()][System.String]$Improvements
         , [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true, Position = 4)][ValidateNotNullOrEmpty()][System.String]$BugFixes
     )
+    $todayDate = Get-Date -UFormat "%B %d, %Y"
+    if ($todayDate | Select-String -Pattern "0\d,") {
+        $todayDate = "$(Get-Date -UFormat %B) $($(Get-Date -Uformat %d) -replace '0', ''), $(Get-Date -UFormat %Y)"
+    }
     $Content = "## {0}
 
-Release Date: $(Get-Date -UFormat:('%B %d, %Y'))
+Release Date: $($todayDate)
 
 #### RELEASE NOTES
 

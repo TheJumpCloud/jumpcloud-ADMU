@@ -277,6 +277,7 @@ Function Show-SelectionForm {
                     <CheckBox Name="cb_bindAsAdmin" Content="Bind As Admin" HorizontalAlignment="Left" Margin="10,76,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
                     <CheckBox Name="cb_leaveDomain" ToolTipService.ShowOnDisabled="True" Content="Leave Domain" HorizontalAlignment="Left" Margin="125,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                     <CheckBox Name="cb_removeMDM" Content="Remove MDM" HorizontalAlignment="Left" Margin="125,56,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
+                    <CheckBox Name="cb_primaryUser" Content="Primary User" HorizontalAlignment="Left" Margin="125,76,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False" IsEnabled="False"/>
                     <CheckBox Name="cb_forceReboot" Content="Force Reboot" HorizontalAlignment="Left" Margin="240,36,0,0" VerticalAlignment="Top" FontWeight="Normal" IsChecked="False"/>
                     <Image Name="img_connectKeyValid" HorizontalAlignment="Left" Height="23" Margin="446,135,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="Connect Key must not be empty &amp; not contain spaces" />
                     <Image Name="img_connectKeyInfo" HorizontalAlignment="Left" Height="14" Margin="152,114,0,0" VerticalAlignment="Top" Width="14" Visibility="Hidden" ToolTip="The Connect Key provides you with a means of associating this system with your JumpCloud organization. The Key is used to deploy the agent to this system." />
@@ -321,7 +322,115 @@ Function Show-SelectionForm {
     $img_localAccountValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
     $img_localAccountPasswordInfo.Source = Get-ImageFromB64 -ImageBase64 $BlueBase64
     $img_localAccountPasswordValid.Source = Get-ImageFromB64 -ImageBase64 $ActiveBase64
-    # Define misc static variables
+
+    #loading form
+    $loadingForm = New-Object System.Windows.Forms.Form
+    $loadingForm.Text = "Loading"
+    $loadingForm.StartPosition = 'CenterScreen'
+    $loadingForm.FormBorderStyle = 'None'
+    $loadingForm.BackColor = [System.Drawing.Color]::FromArgb(255, 255, 255)
+    $loadingForm.ClientSize = New-Object System.Drawing.Size(275, 140)
+    $loadingForm.TopMost = $true
+    $loadingForm.ShowInTaskbar = $false
+
+    # Add rounded corners to form
+    $loadingForm.Add_Paint({
+            param($sender, $e)
+            $radius = 15
+            $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+            $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+            $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
+            $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
+            $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
+            $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
+            $path.CloseFigure()
+            $sender.Region = New-Object System.Drawing.Region($path)
+            $path.Dispose()
+        })
+
+    # ---- JumpCloud Logo ----
+    $bytes = [Convert]::FromBase64String($JCLogoBase64)
+    $ms = New-Object System.IO.MemoryStream(, $bytes)
+    $jcLogoImage = [System.Drawing.Image]::FromStream($ms)
+
+    $loadingLogo = New-Object System.Windows.Forms.PictureBox
+    $loadingLogo.Image = $jcLogoImage
+    $loadingLogo.SizeMode = 'Zoom'
+    $loadingLogo.Width = 120
+    $loadingLogo.Height = 35
+    $loadingLogo.Left = [int](($loadingForm.ClientSize.Width - $loadingLogo.Width) / 2)
+    $loadingLogo.Top = 5
+
+    # ---- Progress Bar (custom rounded) ----
+    # Background panel for progress bar
+    $barBackground = New-Object System.Windows.Forms.Panel
+    $barBackground.Width = 200
+    $barBackground.Height = 5
+    $barBackground.Left = [int](($loadingForm.ClientSize.Width - $barBackground.Width) / 2)
+    $barBackground.Top = 60
+    $barBackground.BackColor = [System.Drawing.Color]::FromArgb(230, 230, 230)
+
+    # Add rounded corners to background
+    $barBackground.Add_Paint({
+            param($sender, $e)
+            $radius = 5
+            $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+            $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+            $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
+            $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
+            $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
+            $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
+            $path.CloseFigure()
+            $sender.Region = New-Object System.Drawing.Region($path)
+            $path.Dispose()
+        })
+
+    # Foreground panel for progress
+    $bar = New-Object System.Windows.Forms.Panel
+    $bar.Width = 0
+    $bar.Height = 5
+    $bar.Left = 0
+    $bar.Top = 0
+    $bar.BackColor = [System.Drawing.Color]::FromArgb(65, 200, 195)
+
+    # Add rounded corners to progress bar
+    $bar.Add_Paint({
+            param($sender, $e)
+            if ($sender.Width -gt 0) {
+                $radius = 5
+                $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+                $path = New-Object System.Drawing.Drawing2D.GraphicsPath
+                $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
+                $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
+                $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
+                $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
+                $path.CloseFigure()
+                $sender.Region = New-Object System.Drawing.Region($path)
+                $path.Dispose()
+            }
+        })
+
+    $barBackground.Controls.Add($bar)
+
+    # ---- Message ----
+    $msg = New-Object System.Windows.Forms.Label
+    $msg.AutoSize = $false
+    $msg.Width = $loadingForm.ClientSize.Width - 10
+    $msg.Height = 30
+    $msg.Left = 5
+    $msg.Top = 75
+    $msg.TextAlign = 'MiddleCenter'
+    $msg.Text = "Gathering system info..."
+    $msg.ForeColor = [System.Drawing.Color]::FromArgb(32, 45, 56)
+    $msg.Font = New-Object System.Drawing.Font("Segoe UI", 8, [System.Drawing.FontStyle]::Regular)
+
+    # ---- Add controls in order ----
+    $loadingForm.Controls.Add($msg)
+    $loadingForm.Controls.Add($barBackground)
+    $loadingForm.Controls.Add($loadingLogo)
+
+    $loadingForm.Add_Shown({ $loadingForm.Activate() })
+    $null = $loadingForm.Show()   # non-blocking
 
     Try {
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
@@ -330,6 +439,13 @@ Function Show-SelectionForm {
     }
     Write-progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..' -PercentComplete 25
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..'
+
+    #Update Progress Bar
+    if ($loadingForm -and $bar) {
+        $bar.Width = [int]($barBackground.Width * 0.30)
+        $bar.Refresh()
+    }
+
     if ($WmiComputerSystem.PartOfDomain) {
         Try {
             $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
@@ -360,6 +476,13 @@ Function Show-SelectionForm {
         $NetBiosName = 'N/A'
         $secureChannelStatus = 'N/A'
     }
+
+    #Update Progress Bar
+    if ($loadingForm -and $bar) {
+        $bar.Width = [int]($barBackground.Width * 0.60)
+        $bar.Refresh()
+    }
+
     if ((Get-CimInstance Win32_OperatingSystem).Version -match '10') {
         $AzureADInfo = dsregcmd.exe /status
         foreach ($line in $AzureADInfo) {
@@ -380,6 +503,13 @@ Function Show-SelectionForm {
         $AzureADStatus = 'N/A'
         $Workplace_join = 'N/A'
         $TenantName = 'N/A'
+        $AzureDomainStatus = 'N/A'
+    }
+
+    #Update Progress Bar
+    if ($loadingForm -and $bar) {
+        $bar.Width = [int]($barBackground.Width * 0.90)
+        $bar.Refresh()
     }
 
     # define return object:
@@ -388,6 +518,7 @@ Function Show-SelectionForm {
         AutoBindJCUser      = $false
         BindAsAdmin         = $false
         LeaveDomain         = $false
+        PrimaryUser         = $false
         removeMDM           = $false
         ForceReboot         = $false
         SelectedUserName    = $null
@@ -397,10 +528,18 @@ Function Show-SelectionForm {
         JumpCloudAPIKey     = $null
         JumpCloudOrgID      = $null
     }
+
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..' -PercentComplete 50
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Verifying Local Accounts & Group Membership..'
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..' -PercentComplete 70
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Getting C:\ & Local Profile Data..'
+
+    #Update Progress Bar
+    if ($loadingForm -and $bar) {
+        $bar.Width = $barBackground.Width
+        $bar.Refresh()
+    }
+
     # Get Valid SIDs from the Registry and build user object
     $registryProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
     $profileList = @()
@@ -486,6 +625,10 @@ Function Show-SelectionForm {
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Done!' -PercentComplete 100
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Done!'
 
+    if ($loadingForm) {
+        $loadingForm.Close()
+        $loadingForm.Dispose()
+    }
     #load UI Labels
 
     #SystemInformation
@@ -546,6 +689,7 @@ Function Show-SelectionForm {
     $cb_autobindJCUser.Add_Checked( { $img_apiKeyInfo.Visibility = 'Visible' })
     $cb_autobindJCUser.Add_Checked( { $img_apiKeyValid.Visibility = 'Visible' })
     $cb_autobindJCUser.Add_Checked( { $cb_bindAsAdmin.IsEnabled = $true })
+    $cb_autobindJCUser.Add_Checked( { $cb_primaryUser.IsEnabled = $true })
     # $cb_bindAsAdmin.Add_Checked( { $BindAsAdmin = $true })
     $cb_autobindJCUser.Add_Checked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
@@ -568,6 +712,8 @@ Function Show-SelectionForm {
     $cb_autobindJCUser.Add_Unchecked( { $lbl_selectOrgName.Visibility = 'Hidden' })
     $cb_autobindJCUser.Add_Unchecked( { $cb_bindAsAdmin.IsEnabled = $false })
     $cb_autobindJCUser.Add_Unchecked( { $cb_bindAsAdmin.IsChecked = $false })
+    $cb_autobindJCUser.Add_Unchecked( { $cb_primaryUser.IsEnabled = $false })
+    $cb_autobindJCUser.Add_Unchecked( { $cb_primaryUser.IsChecked = $false })
     # $cb_bindAsAdmin.Add_Unchecked( { $BindAsAdmin = $false })
     $cb_autobindJCUser.Add_Unchecked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
@@ -581,7 +727,6 @@ Function Show-SelectionForm {
                 $tb_JumpCloudAPIKey.BorderBrush = "#FFC6CBCF"
             }
         })
-
 
     # Leave Domain checkbox
     if (($AzureADStatus -eq 'Yes') -or ($AzureDomainStatus -eq 'Yes')) {
@@ -768,10 +913,13 @@ Function Show-SelectionForm {
                 # Get the SID of the selected migrated account
                 Write-ToLog "Restoring profile for SID: $($lvMigratedAccounts.SelectedItem.SID)"
                 $Form.Close()
-                # Calculate profile size by the local path and removing the .ADMU extension and find the SID of the original profile
+
+                # Initialize Progress Bar
                 $localPath = $($lvMigratedAccounts.SelectedItem.LocalPath -replace '\.ADMU$', '')
-                $profileSize = Get-ProfileSize -ProfilePath $localPath
-                Start-Reversion -UserSid $($lvMigratedAccounts.SelectedItem.SID) -form $true -UserName $($lvMigratedAccounts.SelectedItem.UserName) -ProfileSize $profileSize -LocalPath $localPath -force
+                $script:ProgressBar = New-ProgressForm
+                Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Init" -username $($lvMigratedAccounts.SelectedItem.UserName) -newLocalUsername "N/A" -profileSize "Calculating" -LocalPath $localPath
+
+                Start-Reversion -UserSid $($lvMigratedAccounts.SelectedItem.SID) -form $true -LocalPath $localPath -force
             } else {
                 # MIGRATION LOGIC
                 # Only runs if button text is NOT "Restore Profile"
@@ -827,28 +975,41 @@ Function Show-SelectionForm {
                 if ([System.String]::IsNullOrEmpty($SelectedUserName)) {
                     $SelectedUserName = $($lvProfileList.SelectedItem.username)
                 }
-
-                # Set the options selected/ inputs to the $formResults object
-                $FormResults.InstallJCAgent = $cb_installJCAgent.IsChecked
-                $FormResults.AutoBindJCUser = $cb_autobindJCUser.IsChecked
-                $FormResults.BindAsAdmin = $cb_bindAsAdmin.IsChecked
-                $FormResults.LeaveDomain = $cb_leaveDomain.IsChecked
-                $FormResults.RemoveMDM = $cb_removeMDM.IsChecked
-                $FormResults.ForceReboot = $cb_forceReboot.IsChecked
-                $FormResults.SelectedUserName = $SelectedUserName
-                $FormResults.JumpCloudUserName = $tb_JumpCloudUserName.Text
-                $FormResults.TempPassword = $tb_tempPassword.Text
-                $FormResults.JumpCloudConnectKey = $tb_JumpCloudConnectKey.Password
-                $FormResults.JumpCloudAPIKey = $tb_JumpCloudAPIKey.Password
-                $FormResults.JumpCloudOrgID = $script:selectedOrgID
-
-                # Ensure IsRestore is false if not set
-                $FormResults | Add-Member -MemberType NoteProperty -Name "IsRestore" -Value $false -Force
-
-                # Close form
-                $Form.Close()
+            }
+            if ([string]::IsNullOrEmpty($SelectedUserName)) {
+                $SelectedUserName = $($lvProfileList.SelectedItem.username)
             }
 
+            # Build FormResults object
+            Write-ToLog "Building Form Results"
+            if ($btn_migrateProfile.Content -ne "Restore Profile") {
+                # Initialize Progress Bar
+                # Preload progress form to shrink perceived wait between click and display
+                $profilePath = $lvProfileList.SelectedItem.LocalPath
+                $displayUsername = if ([string]::IsNullOrWhiteSpace($tb_JumpCloudUserName.Text)) { $SelectedUserName } else { $tb_JumpCloudUserName.Text }
+                $script:ProgressBar = New-ProgressForm
+                Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $displayUsername -profileSize "Calculating" -LocalPath $profilePath
+            }
+
+            # Set the options selected/ inputs to the $formResults object
+            $FormResults.InstallJCAgent = $cb_installJCAgent.IsChecked
+            $FormResults.AutoBindJCUser = $cb_autobindJCUser.IsChecked
+            $FormResults.BindAsAdmin = $cb_bindAsAdmin.IsChecked
+            $FormResults.LeaveDomain = $cb_leaveDomain.IsChecked
+            $FormResults.RemoveMDM = $cb_removeMDM.IsChecked
+            $FormResults.ForceReboot = $cb_forceReboot.IsChecked
+            $FormResults.SelectedUserName = $SelectedUserName
+            $FormResults.JumpCloudUserName = $tb_JumpCloudUserName.Text
+            $FormResults.TempPassword = $tb_tempPassword.Text
+            $FormResults.JumpCloudConnectKey = $tb_JumpCloudConnectKey.Password
+            $FormResults.JumpCloudAPIKey = $tb_JumpCloudAPIKey.Password
+            $FormResults.JumpCloudOrgID = $script:selectedOrgID
+
+            # Ensure IsRestore is false if not set
+            $FormResults | Add-Member -MemberType NoteProperty -Name "IsRestore" -Value $false -Force
+
+            # Close form
+            $Form.Close()
 
         })
 
@@ -926,11 +1087,12 @@ Function Show-SelectionForm {
     #===========================================================================
 
     if (-Not $hideForm) {
-        $Form.ShowDialog()
+        $Form.ShowDialog() | Out-Null
     }
 
     # if the migrate button is enabled and it is clicked, send formResults to Start-Migration
     If (($btn_migrateProfile.IsEnabled -eq $true) -AND $btn_migrateProfile.Add_Click -And ($btn_migrateProfile.Content -ne "Restore Profile")) {
         Return $FormResults
     }
+
 }

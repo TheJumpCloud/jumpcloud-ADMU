@@ -9,7 +9,7 @@ This function combines all the the private functions, forms, their assets and th
 This parameter optionally adds the code snippet to run the forms with or without the debug window. The default behavior is to hide these windows but when debugging it can be helpful to show these windows.
 
 #>
-Function New-ADMUTemplate {
+function New-ADMUTemplate {
 
     [CmdletBinding()]
     param (
@@ -30,7 +30,7 @@ Function New-ADMUTemplate {
         # Public Functions
         $Public = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Public/*.ps1" -Recurse)
         # Load all functions from private folders except for the forms and assets
-        $Private = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/*.ps1" -Recurse | Where-Object { ($_.fullname -notmatch "DisplayForms") -AND ($_.fullname -notmatch "DisplayAssets") } )
+        $Private = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/*.ps1" -Recurse | Where-Object { ($_.fullname -notmatch "DisplayForms") -and ($_.fullname -notmatch "DisplayAssets") } )
     }
     process {
 
@@ -69,6 +69,10 @@ Function New-ADMUTemplate {
         [Parameter()]
         [bool]
         `$AutoBindJCUser,
+
+        [Parameter()]
+        [bool]
+        `$PrimaryUser,
 
         [Parameter()]
         [bool]
@@ -231,6 +235,17 @@ if (`$PSBoundParameters.Count -eq 0) {
 "@
         # add executable region to the template
         $templateString += $executableRegion + [Environment]::NewLine
+        # replace the validation region [System.Management.Automation.ValidationMetadataException] lines with Write-ToLog Error Lines and exit 1
+        $replacementRegex = [regex]'throw\s+\[System\.Management\.Automation\.ValidationMetadataException\]\s([\s\S].*)'
+        $replacementMatches = $replacementRegex.Matches($templateString)
+        foreach ($match in $replacementMatches) {
+            $ErrorMatchMessage = $match.Groups[1].Value.Trim()
+            # build the replacement string
+            $replacement = "Write-ToLog -Message $ErrorMatchMessage -Level Error;exit 1"
+            # replace the line in the template string
+            $templateString = $templateString -replace [regex]::Escape($match.Value), $replacement
+        }
+
         # finally replace the exe exit code region
         $replacement = @'
 #region exeExitCode
