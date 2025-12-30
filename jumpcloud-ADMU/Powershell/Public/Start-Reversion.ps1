@@ -94,7 +94,9 @@ Function Start-Reversion {
         if ((-not $script:ProgressBar) -and ($form)) {
             $script:ProgressBar = New-ProgressForm
         }
-        $StatusType = "Reversion"
+        if ($form) {
+            $StatusType = "Reversion"
+        }
     }
 
     Process {
