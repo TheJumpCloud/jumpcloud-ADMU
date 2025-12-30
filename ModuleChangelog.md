@@ -1,4 +1,4 @@
-## 2.10.2
+## 2.11.0
 
 Release Date: December 19, 2025
 
@@ -6,6 +6,9 @@ Release Date: December 19, 2025
 
 ```
 Patch release focused on reducing GUI and Progress bar wait times and preloading the migration progress form.
+- Added functionality to backup profileImage permissions
+- Added Start-Reversion Function
+- Integrated Reverse Migration functionality in the GUI
 ```
 
 #### IMPROVEMENTS:
@@ -51,6 +54,8 @@ Patch release to address several issues.
 #### FEATURES:
 
 - This release introduces the ability to set a device's primary user using the PrimaryUser parameter. This can only be done when using the AutoBindJCUser feature as well as using SystemContext.
+- Profile image permission backup functionality added
+
 
 ## 2.9.4
 

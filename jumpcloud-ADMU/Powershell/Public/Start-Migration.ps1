@@ -177,7 +177,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.10.1"
+        $admuVersion = "2.11.0"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -647,7 +647,6 @@ function Start-Migration {
         while ($MigrateUser) {
             Write-ToProgress -ProgressBar $ProgressBar -Status "BackupUserFiles" -form $isForm -SystemDescription $systemDescription
 
-
             #region backupOldUserReg
             Write-ToLog -Message $admuTracker.backupOldUserReg.step -MigrationStep
             ### Begin Backup Registry for source user ###
@@ -658,6 +657,9 @@ function Start-Migration {
                 $admuTracker.backupOldUserReg.fail = $true
                 break
             }
+
+            # Backup UserProfile ACL Permissions
+            Backup-ProfileImageACL -ProfileImagePath $oldUserProfileImagePath -sourceSID $SelectedUserSID
 
             #### Begin check for Registry system attribute
             if (Test-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System") {
@@ -1287,7 +1289,7 @@ function Start-Migration {
             }
             #endregion renameHomeDirectory
 
-            Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ("$windowsDrive\Users\" + $JumpCloudUsername + '.' + "ADMU")
+            Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath + '.' + "ADMU")
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
             $trackAccountMerge = $true
             # logging
