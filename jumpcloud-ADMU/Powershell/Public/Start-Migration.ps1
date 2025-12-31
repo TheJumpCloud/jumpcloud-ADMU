@@ -786,7 +786,7 @@ function Start-Migration {
             Write-ToLog -Message $admuTracker.backupNewUserReg.step -MigrationStep
             ### Begin backup user registry for target user
             try {
-                Write-ToProgress -ProgressBar $ProgressBar -Status "backupNewUserReg" -form $isForm -SystemDescription $systemDescription
+                Write-ToProgress -ProgressBar $ProgressBar -Status "backupNewUserReg" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
 
                 Backup-RegistryHive -profileImagePath $newUserProfileImagePath -SID $NewUserSID
             } catch {
