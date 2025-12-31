@@ -181,7 +181,7 @@ function Start-Migration {
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
-        trackAccountMerge = $false
+        $trackAccountMerge = $false
         # Track migration steps
         $admuTracker = [Ordered]@{
             init                          = @{
