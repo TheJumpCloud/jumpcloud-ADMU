@@ -652,6 +652,7 @@ function Start-Migration {
         if ($AgentService -and $autobindJCUser) {
             # Object to pass in to the Write-
             Write-ToLog -Message ("JumpCloud Agent is installed, confirming connectivity to JumpCloud...")
+            Write-ToProgress -ProgressBar $ProgressBar -Status "validateJCConnectivity" -form $isForm -StatusMap $admuTracker
             $confirmAPIResult = Confirm-API -JcApiKey $JumpCloudAPIKey -JcOrgId $JumpCloudOrgID -SystemContextBinding $systemContextBinding
 
             Write-ToLog -Message ("Confirm-API Results:`nType: $($confirmAPIResult.type)`nValid: $($confirmAPIResult.isValid)`nSystemID: $($confirmAPIResult.ValidatedID)")
@@ -665,8 +666,8 @@ function Start-Migration {
                 $validatedSystemID = $confirmAPIResult.ValidatedID
             } else {
                 Write-ToLog -Message ("Could not validate API Key or SystemContext API, please check your parameters and try again.") -Level Error
-                Write-ToProgress -ProgressBar $ProgressBar -Status "Could not validate API Key or SystemContext API" -form $isForm -logLevel Error
-                $admuTracker.validateJCConnectivity.fail = $true
+                Write-ToProgress -ProgressBar $ProgressBar -Status "Could not validate API Key or SystemContext API" -form $isForm
+                #$admuTracker.validateJCConnectivity.fail = $true
                 break
             }
             $admuTracker.validateJCConnectivity.pass = $true
