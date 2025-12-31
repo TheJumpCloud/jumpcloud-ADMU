@@ -917,7 +917,7 @@ Function Show-SelectionForm {
                 # Initialize Progress Bar
                 $localPath = $($lvMigratedAccounts.SelectedItem.LocalPath -replace '\.ADMU$', '')
                 $script:ProgressBar = New-ProgressForm
-                Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Init" -username $($lvMigratedAccounts.SelectedItem.UserName) -newLocalUsername "N/A" -profileSize "Calculating" -LocalPath $localPath
+                Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Initializing" -username $($lvMigratedAccounts.SelectedItem.UserName) -newLocalUsername "N/A" -profileSize "Calculating" -LocalPath $localPath
 
                 Start-Reversion -UserSid $($lvMigratedAccounts.SelectedItem.SID) -form $true -LocalPath $localPath -force
             } else {
@@ -988,7 +988,7 @@ Function Show-SelectionForm {
                 $profilePath = $lvProfileList.SelectedItem.LocalPath
                 $displayUsername = if ([string]::IsNullOrWhiteSpace($tb_JumpCloudUserName.Text)) { $SelectedUserName } else { $tb_JumpCloudUserName.Text }
                 $script:ProgressBar = New-ProgressForm
-                Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Init" -username $SelectedUserName -newLocalUsername $displayUsername -profileSize "Calculating" -LocalPath $profilePath
+                Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Initializing" -username $SelectedUserName -newLocalUsername $displayUsername -profileSize "Calculating" -LocalPath $profilePath
             }
 
             # Set the options selected/ inputs to the $formResults object
