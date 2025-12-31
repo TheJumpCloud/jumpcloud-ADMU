@@ -198,6 +198,13 @@ function Start-Migration {
                 pass     = $false
                 fail     = $false
             }
+            validateJCConnectivity        = @{
+                step     = "Validating JumpCloud Connectivity"
+                desc     = "Validating JumpCloud Connectivity"
+                required = $true
+                pass     = $false
+                fail     = $false
+            }
             backupOldUserReg              = @{
                 step     = "Backup Source User Registry"
                 desc     = "Backing up the source user's registry hive to ensure that no data is lost during the migration process."
@@ -206,28 +213,28 @@ function Start-Migration {
                 fail     = $false
             }
             newUserCreate                 = @{
-                step     = "Create Local User"
+                step     = "Creating Local User"
                 desc     = "Creating a new local user account in JumpCloud."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             newUserInit                   = @{
-                step     = "Initialize Local User"
+                step     = "Initializing Local User"
                 desc     = "Initializing the new local user account."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             backupNewUserReg              = @{
-                step     = "Backup Target User Registry"
+                step     = "Backing Up Target User Registry"
                 desc     = "Backing up the new local user's registry hive."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             testRegLoadUnload             = @{
-                step     = "Validate Registry Load/Unload"
+                step     = "Validating Registry Load/Unload"
                 desc     = "Validating that the registry for both the migration and new local user accounts can be loaded and unloaded."
                 required = $true
                 pass     = $false
@@ -241,77 +248,77 @@ function Start-Migration {
                 fail     = $false
             }
             loadBeforeCopyRegistry        = @{
-                step     = "Load User Registries"
+                step     = "Loading User Registries"
                 desc     = "Loading both the migration and new local user account registries before copying."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             copyRegistry                  = @{
-                step     = "Copy User Registry Source to Target"
+                step     = "Copying User Registry Source to Target"
                 desc     = "Copying the contents of the migration user's registry to the new local user's registry."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             copyMergedProfile             = @{
-                step     = "Copy Merged Profile Source to Target"
+                step     = "Copying Merged Profile Source to Target"
                 desc     = "Copying merged profiles to destination profile path"
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             copyDefaultProtocols          = @{
-                step     = "Copy Default Protocols"
+                step     = "Copying Default Protocols"
                 desc     = "Copying default protocols to destination profile path"
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             unloadBeforeCopyRegistryFiles = @{
-                step     = "Unload User Registries"
+                step     = "Unloading User Registries"
                 desc     = "Unloading the migration and the local user's registries before copying files."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             copyRegistryFiles             = @{
-                step     = "Move Registry Files"
+                step     = "Copying Registry Files"
                 desc     = "Copying the registry files."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             renameOriginalFiles           = @{
-                step     = "Rename Registry Files"
+                step     = "Renaming Registry Files"
                 desc     = "Renaming the original files."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             renameBackupFiles             = @{
-                step     = "Rename Registry Backup Files"
+                step     = "Renaming Registry Backup Files"
                 desc     = "Renaming the backup files."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             renameHomeDirectory           = @{
-                step     = "Naming the home directory"
-                desc     = "Naming the home directory."
+                step     = "Renaming the home directory"
+                desc     = "Renaming the home directory."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             ntfsAccess                    = @{
-                step     = "Setting File Permissions"
+                step     = "Setting NTFS File Permissions"
                 desc     = "Setting NTFS access permissions."
                 required = $true
                 pass     = $false
                 fail     = $false
             }
             validateDatPermissions        = @{
-                step     = "Validate dat Permissions"
+                step     = "Validating .dat Permissions"
                 desc     = "Validating .dat permissions."
                 required = $true
                 pass     = $false
@@ -630,15 +637,18 @@ function Start-Migration {
             if ($agentInstallStatus) {
                 Write-ToLog -Message ("JumpCloud Agent Install Done")
             } else {
-                Write-ToLog -Message ("JumpCloud Agent Install Failed") -Level Warning
+                Write-ToLog -Message ("JumpCloud Agent Install Failed") -Level error
                 Write-ToProgress -ProgressBar $ProgressBar -Status "JC Agent Install failed " -form $isForm -logLevel Error
-                exit
+                $admuTracker.install.fail = $true
+                break
             }
         } elseif ($InstallJCAgent -eq $true -and ($AgentService)) {
             Write-ToLog -Message ('JumpCloud agent is already installed on the system.')
         }
+        $admuTracker.install.pass = $true
 
         Write-ToLog -Message ("Validating JumpCloud Connectivity...")
+        # Validate JumpCloud Connectivity if Agent is installed and AutoBindJCUser is selected
         if ($AgentService -and $autobindJCUser) {
             # Object to pass in to the Write-
             Write-ToLog -Message ("JumpCloud Agent is installed, confirming connectivity to JumpCloud...")
@@ -654,9 +664,12 @@ function Start-Migration {
                 $validatedApiKey = $true
                 $validatedSystemID = $confirmAPIResult.ValidatedID
             } else {
-                Write-ToLog -Message ("Could not validate API Key or SystemContext API, please check your parameters and try again.") -Level Warning
-                Write-ToProgress -ProgressBar $ProgressBar -Status "Could not validate API Key or SystemContext API" -form $isForm -logLevel Warning
+                Write-ToLog -Message ("Could not validate API Key or SystemContext API, please check your parameters and try again.") -Level Error
+                Write-ToProgress -ProgressBar $ProgressBar -Status "Could not validate API Key or SystemContext API" -form $isForm -logLevel Error
+                $admuTracker.validateJCConnectivity.fail = $true
+                break
             }
+            $admuTracker.validateJCConnectivity.pass = $true
             if ($reportStatus) {
                 # build the report status object
                 $systemDescription = [PSCustomObject]@{
@@ -672,6 +685,7 @@ function Start-Migration {
                 }
             }
         }
+        # endRegion Validate JumpCloud Connectivity
 
         # While loop for breaking out of log gracefully:
         $MigrateUser = $true

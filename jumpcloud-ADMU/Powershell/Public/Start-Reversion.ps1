@@ -92,7 +92,7 @@ Function Start-Reversion {
         # Status message map for reversion steps
         $revertMessageMap = [Ordered]@{
             revertInit                  = @{
-                step = "Initializing Reversion"
+                step = "Initializing"
                 desc = "Initializing the profile reversion process."
             }
             revertValidateProfilePath   = @{

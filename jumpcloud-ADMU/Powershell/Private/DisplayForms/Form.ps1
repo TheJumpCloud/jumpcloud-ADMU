@@ -917,7 +917,7 @@ Function Show-SelectionForm {
                 # Initialize Progress Bar
                 $localPath = $($lvMigratedAccounts.SelectedItem.LocalPath -replace '\.ADMU$', '')
                 $script:ProgressBar = New-ProgressForm
-                Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Init" -username $($lvMigratedAccounts.SelectedItem.UserName) -newLocalUsername "N/A" -profileSize "Calculating" -LocalPath $localPath
+                Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Initializing" -username $($lvMigratedAccounts.SelectedItem.UserName) -newLocalUsername "N/A" -profileSize "Calculating" -LocalPath $localPath
 
                 Start-Reversion -UserSid $($lvMigratedAccounts.SelectedItem.SID) -form $true -LocalPath $localPath -force
             } else {
