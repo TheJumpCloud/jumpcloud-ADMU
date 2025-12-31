@@ -666,8 +666,8 @@ function Start-Migration {
                 $validatedSystemID = $confirmAPIResult.ValidatedID
             } else {
                 Write-ToLog -Message ("Could not validate API Key or SystemContext API, please check your parameters and try again.") -Level Error
-                Write-ToProgress -ProgressBar $ProgressBar -Status "Could not validate API Key or SystemContext API" -form $isForm
-                #$admuTracker.validateJCConnectivity.fail = $true
+                Write-ToProgress -ProgressBar $ProgressBar -Status "Could not validate API Key or SystemContext API" -form $isForm -logLevel Error
+                $admuTracker.validateJCConnectivity.fail = $true
                 break
             }
             $admuTracker.validateJCConnectivity.pass = $true
