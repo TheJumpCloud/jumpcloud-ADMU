@@ -1,6 +1,6 @@
 ## 2.11.0
 
-Release Date: December 31, 2025
+Release Date: January 2, 2025
 
 #### RELEASE NOTES
 
