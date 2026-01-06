@@ -120,6 +120,7 @@ $userObject = @{
     sid       = ''
     localPath = ''
     un        = ''
+    uid       = ''
 }
 $admuUsers = @()
 
@@ -131,6 +132,7 @@ foreach ($adUser in $adUsers) {
     $user.sid = $adUser.uuid
     $user.localPath = $adUser.directory
     $user.un = ''
+    $user.uid = ''
     $admuUsers += $user
 }
 
