@@ -141,8 +141,6 @@ function Start-Migration {
             if ($invalidStringParams -or $trueBoolParams) {
                 $allInvalidParams = $invalidStringParams + $trueBoolParams
                 throw "The 'SystemContextBinding' parameter cannot be used with the following parameters: $($allInvalidParams -join ', '). Please remove these parameters when running SystemContextBinding and try again."
-
-
             }
             if (-not $PSBoundParameters.ContainsKey('JumpCloudUserID')) {
                 throw "The 'SystemContextBinding' parameter requires the 'JumpCloudUserID' parameter to be set."
@@ -647,12 +645,13 @@ function Start-Migration {
         }
         $admuTracker.install.pass = $true
 
-        Write-ToLog -Message ("Validating JumpCloud Connectivity...")
         # Validate JumpCloud Connectivity if Agent is installed and AutoBindJCUser is selected
-        if ($AgentService -and $autobindJCUser) {
+        if ($AgentService -and ($autobindJCUser -or $systemContextBinding)) {
+            Write-ToLog -Message ("Validating JumpCloud Connectivity...") -MigrationStep
+
             # Object to pass in to the Write-
-            Write-ToLog -Message ("JumpCloud Agent is installed, confirming connectivity to JumpCloud...")
-            Write-ToProgress -ProgressBar $ProgressBar -Status "validateJCConnectivity" -form $isForm -StatusMap $admuTracker
+            Write-ToLog -Message ("JumpCloud Agent is installed, confirming connectivity to JumpCloud...") -level Info
+            Write-ToProgress -ProgressBar $ProgressBar -Status "validateJCConnectivity" -form $isForm -StatusMap $admuTracker -localPath $oldUserProfileImagePath
             $confirmAPIResult = Confirm-API -JcApiKey $JumpCloudAPIKey -JcOrgId $JumpCloudOrgID -SystemContextBinding $systemContextBinding
 
             Write-ToLog -Message ("Confirm-API Results:`nType: $($confirmAPIResult.type)`nValid: $($confirmAPIResult.isValid)`nSystemID: $($confirmAPIResult.ValidatedID)")
