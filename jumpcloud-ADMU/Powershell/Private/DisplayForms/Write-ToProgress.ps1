@@ -67,11 +67,13 @@ function Write-ToProgress {
             Update-ProgressForm -progressBar $progressBar -percentComplete $PercentComplete -Status $statusMessage -logLevel $logLevel
         }
     } else {
-        Write-Progress -Activity "Migration Progress" -percentComplete $PercentComplete -status $statusMessage
+        Write-Progress -Activity "Migration Progress" -PercentComplete $PercentComplete -Status $statusMessage
         if ($SystemDescription.reportStatus) {
             if ($logLevel -eq "Error") {
                 $statusMessage = "Error occurred during migration. Please check (C:\Windows\Temp\jcadmu.log) for more information."
                 $Percent = "ERROR"
+                # TODO: get system description and report error msg
+                # TODO: set admu attribute state to "Failed"
             } else {
                 # We use the clean string we extracted in Step 2.
                 $percent = [math]::Round($PercentComplete)
@@ -88,7 +90,12 @@ function Write-ToProgress {
                 DeviceID            = $SystemDescription.DeviceID
             }
             if ($SystemDescription.ValidatedSystemContextAPI) {
+                #TODO: Get the existing description, update it, or create new object if none exists
+                # only update the msg, and state to be "InProgress"
                 Invoke-SystemContextAPI -Method PUT -Endpoint 'Systems' -Body @{'description' = ($description | ConvertTo-Json -Compress) } | Out-Null
+
+                # TODO: set admu attribute state to "InProgress" if not already
+
             } elseif ($SystemDescription.ValidatedApiKey) {
                 try {
                     Invoke-SystemPut -JcApiKey $SystemDescription.JCApiKey -jcOrgID $SystemDescription.JumpCloudOrgID -systemId $SystemDescription.DeviceID -Body @{'description' = ($description | ConvertTo-Json -Compress) }
