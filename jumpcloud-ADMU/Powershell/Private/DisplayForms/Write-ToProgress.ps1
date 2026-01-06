@@ -71,9 +71,7 @@ function Write-ToProgress {
         if ($SystemDescription.reportStatus) {
             if ($logLevel -eq "Error") {
                 $statusMessage = "Error occurred during migration. Please check (C:\Windows\Temp\jcadmu.log) for more information."
-                $Percent = "ERROR"
-                # TODO: get system description and report error msg
-                # TODO: set admu attribute state to "Failed"
+                $percent = "ERROR"
             } else {
                 # We use the clean string we extracted in Step 2.
                 $percent = [math]::Round($PercentComplete)
@@ -81,23 +79,51 @@ function Write-ToProgress {
             }
             Write-ToLog -Message "Migration status updated: $statusMessage" -level Info
 
-            $description = [PSCustomObject]@{
-                MigrationStatus     = $statusMessage
-                MigrationPercentage = $percent
-                UserSID             = $SystemDescription.UserSID
-                MigrationUsername   = $SystemDescription.MigrationUsername
-                UserID              = $SystemDescription.UserID
-                DeviceID            = $SystemDescription.DeviceID
-            }
-            if ($SystemDescription.ValidatedSystemContextAPI) {
-                #TODO: Get the existing description, update it, or create new object if none exists
-                # only update the msg, and state to be "InProgress"
-                Invoke-SystemContextAPI -Method PUT -Endpoint 'Systems' -Body @{'description' = ($description | ConvertTo-Json -Compress) } | Out-Null
 
-                # TODO: set admu attribute state to "InProgress" if not already
+            if ($SystemDescription.ValidatedSystemContextAPI) {
+                $existingDescription = Invoke-SystemContextAPI -Method GET -Endpoint 'Systems' | Select-Object -ExpandProperty description
+                # If $existingDescription is notEmpy
+                if (-not [string]::IsNullOrEmpty($existingDescription)) {
+                    try {
+                        $description = $existingDescription | ConvertFrom-Json
+                    } catch {
+                        Write-ToLog -Message "Error parsing existing system description JSON: $_" -Level Warning
+                    }
+                } else {
+                    $description = [PSCustomObject]@{
+                        sid       = $SystemDescription.UserSID
+                        un        = $SystemDescription.MigrationUsername
+                        localPath = $LocalPath.Replace('\', '/')
+                        msg       = $statusMessage
+                        st        = 'Pending'
+                    }
+                }
+                $description.msg = $statusMessage
+                $description.un = $SystemDescription.MigrationUsername
+
+                # If ERROR, set state to Failed
+                if ($percent -eq "ERROR") {
+                    $description.st = "Failed"
+                } elseif ($percent -eq "100%") {
+                    $description.st = "Completed"
+                } else {
+                    $description.st = "InProgress"
+                }
+                # only update the msg, and state to be "InProgress"
+
+                Invoke-SystemContextAPI -Method PUT -Endpoint 'Systems' -Body @{'description' = ($description | ConvertTo-Json -Compress) } | Out-Null
 
             } elseif ($SystemDescription.ValidatedApiKey) {
                 try {
+                    $description = [PSCustomObject]@{
+                        MigrationStatus     = $statusMessage
+                        MigrationPercentage = $percent
+                        UserSID             = $SystemDescription.UserSID
+                        MigrationUsername   = $SystemDescription.MigrationUsername
+                        UserID              = $SystemDescription.UserID
+                        DeviceID            = $SystemDescription.DeviceID
+                    }
+
                     Invoke-SystemPut -JcApiKey $SystemDescription.JCApiKey -jcOrgID $SystemDescription.JumpCloudOrgID -systemId $SystemDescription.DeviceID -Body @{'description' = ($description | ConvertTo-Json -Compress) }
                 } catch {
                     Write-ToLog -Message "Error occurred while reporting migration progress to API: $_" -Level Error
