@@ -141,7 +141,7 @@ $mergedUsers = @()
 
 if ([system.string]::IsNullOrEmpty($systemDescription)) {
     Write-Host "[status] No existing system description found, creating new ADMU attribute..."
-    $mergedUsers = $admuUsers
+    $mergedUsers = @($admuUsers)
     $descriptionNeedsUpdate = $true
 } else {
     # try to parse the existing description as json
@@ -191,7 +191,7 @@ if ([system.string]::IsNullOrEmpty($systemDescription)) {
 # Update system description only if needed
 if ($descriptionNeedsUpdate -and $mergedUsers.Count -gt 0) {
     Write-Host "[status] Updating system description with $($mergedUsers.Count) user(s)..."
-    $descSet = Set-System -property "Description" -payload ($mergedUsers | ConvertTo-Json -Depth 5)
+    $descSet = Set-System -property "Description" -payload (@($mergedUsers) | ConvertTo-Json -Depth 5)
 }
 
 # Get and set the ADMU attribute on the system
