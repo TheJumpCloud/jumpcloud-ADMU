@@ -684,6 +684,11 @@ function Start-Migration {
                     OrgID                     = $JumpCloudOrgID
                     reportStatus              = $reportStatus
                 }
+
+                if ($validatedSystemContextAPI) {
+                    # update the 'admu' attribute object to inform dynamic groups that the system migration status is "InProgress"
+                    $attributeSet = Set-System -property 'attributes' -payload @{ admu = "InProgress" }
+                }
             }
         }
         # endRegion Validate JumpCloud Connectivity
@@ -1723,11 +1728,24 @@ function Start-Migration {
             Write-ToLog -Message "User $selectedUserName was migrated to $JumpCloudUserName"
             Write-ToLog -Message "Please login as $JumpCloudUserName to complete the migration and initialize the windows built in app setup."
             Write-ToProgress -ProgressBar $ProgressBar -Status "migrationComplete" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+            if ($reportStatus) {
+                if ($validatedSystemContextAPI) {
+                    # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Complete"
+                    $attributeSet = Set-System -property 'attributes' -payload @{ admu = "Complete" }
+                }
+            }
         } else {
             Write-ToLog -Message ("ADMU encountered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warning
             Write-ToLog -Message ("The following migration steps were reverted to their original state: $FixedErrors") -Level Warning
             Write-ToLog -Message ('Script finished with errors; Log file location: ' + $jcAdmuLogFile) -Level Warning
             Write-ToProgress -ProgressBar $ProgressBar -Status $Script:ErrorMessage -form $isForm -logLevel "Error" -SystemDescription $systemDescription
+
+            if ($reportStatus) {
+                if ($validatedSystemContextAPI) {
+                    # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Error"
+                    $attributeSet = Set-System -property 'attributes' -payload @{ admu = "Error" }
+                }
+            }
             #region exeExitCode
             throw "JumpCloud ADMU was unable to migrate $selectedUserName"
             #endregion exeExitCode
