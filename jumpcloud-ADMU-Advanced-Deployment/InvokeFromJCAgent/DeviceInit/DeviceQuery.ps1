@@ -136,44 +136,84 @@ foreach ($adUser in $adUsers) {
 
 # Get the system description to check for existing userObject data
 $systemDescription = Get-System -property "Description"
+$descriptionNeedsUpdate = $false
+$mergedUsers = @()
 
-# compare the $systemDescription data to admuUsers data
-# if #systemDescription is null or empty, we can create populate it with the json version of $admuUsers
-if ([system.string]::IsNullOrEmpty($systemDescription.description)) {
+if ([system.string]::IsNullOrEmpty($systemDescription)) {
     Write-Host "[status] No existing system description found, creating new ADMU attribute..."
-    $descSet = Set-System -property "Description" -payload ($admuUsers | ConvertTo-Json -Depth 5)
+    $mergedUsers = $admuUsers
+    $descriptionNeedsUpdate = $true
 } else {
     # try to parse the existing description as json
-    # validate that the data is json, if not, we will overwrite it
     try {
-        $existingData = $systemDescription.description | ConvertFrom-Json
-        if ($existingData.GetType().Name -eq 'Object[]' -or $existingData.GetType().Name -eq 'PSCustomObject') {
-            # existing data is valid json
-            Write-Host "[status] Existing system description found, checking for existing ADMU users..."
-            # validate that the json data is a list and contains the same properties as the userObject
-            $existingUsers = @()
-            if ($existingData.GetType().Name -eq 'PSCustomObject') {
-                $existingUsers += $existingData
-            } else {
-                $existingUsers += $existingData
-            }
+        $existingData = $systemDescription | ConvertFrom-Json
+        $existingUsers = @()
+
+        if ($existingData.GetType().Name -eq 'PSCustomObject') {
+            $existingUsers += $existingData
         } else {
-            throw "Existing system description is not a valid ADMU user list."
+            $existingUsers += $existingData
         }
+
+        Write-Host "[status] Existing system description found, merging with new AD user discoveries..."
+
+        # Start with all existing users (preserves their migration status)
+        $mergedUsers = $existingUsers.PSObject.Copy()
+
+        # Find new AD users not in the existing description
+        $newUsersToAdd = @()
+        foreach ($adUser in $admuUsers) {
+            $existingUser = $existingUsers | Where-Object { $_.sid -eq $adUser.sid }
+            if (-not $existingUser) {
+                $newUsersToAdd += $adUser
+                Write-Host "[status] New AD user discovered: $($adUser.un) ($($adUser.localPath))"
+                $descriptionNeedsUpdate = $true
+            }
+        }
+
+        # Add new users to the merged list
+        $mergedUsers += $newUsersToAdd
+
+        # Filter out users marked as "Skip"
+        $mergedUsers = $mergedUsers | Where-Object { $_.st -ne 'Skip' }
+
+        if (-not $descriptionNeedsUpdate) {
+            Write-Host "[status] No new AD users found. Device description will not be updated."
+        }
+
     } catch {
         Write-Host "[status] Existing system description is not valid JSON, overwriting with new ADMU attribute..."
-        $descSet = Set-System -Description -property "Description" -payload ($admuUsers | ConvertTo-Json -Depth 5)
+        $mergedUsers = $admuUsers
+        $descriptionNeedsUpdate = $true
     }
+}
+
+# Update system description only if needed
+if ($descriptionNeedsUpdate -and $mergedUsers.Count -gt 0) {
+    Write-Host "[status] Updating system description with $($mergedUsers.Count) user(s)..."
+    $descSet = Set-System -property "Description" -payload ($mergedUsers | ConvertTo-Json -Depth 5)
 }
 
 # Get and set the ADMU attribute on the system
 $attributes = Get-System -property "Attributes"
-# if the admu attribute exists, update it, otherwise create it
 $admuAttribute = $attributes | Where-Object { $_.name -eq 'admu' }
+
+# Determine the ADMU status based on current user states
+$pendingUsers = $mergedUsers | Where-Object { $_.st -eq 'Pending' }
+$completeUsers = $mergedUsers | Where-Object { $_.st -eq 'Complete' }
+$admuStatus = if ($pendingUsers.Count -gt 0) { 'Pending' } else { 'Complete' }
+
 if ($admuAttribute) {
-    Write-Host "[status] Existing ADMU attribute found on system, updating from $($admuAttribute.value) to 'Pending'..."
-    $attributeSet = Set-System -property 'attributes' -payload @{ admu = 'Pending' }
+    $currentStatus = $admuAttribute.value
+    Write-Host "[status] Existing ADMU attribute found. Current status: $currentStatus"
+
+    if ($currentStatus -ne $admuStatus) {
+        Write-Host "[status] Updating ADMU attribute to '$admuStatus' (Pending: $($pendingUsers.Count), Complete: $($completeUsers.Count))..."
+        $attributeSet = Set-System -property 'attributes' -payload @{ admu = $admuStatus }
+    } else {
+        Write-Host "[status] ADMU attribute status is already '$admuStatus', no update needed."
+    }
 } else {
-    Write-Host "[status] No existing ADMU attribute found on system, creating..."
-    $attributeSet = Set-System -property 'attributes' -payload @{ admu = 'Pending' }
+    Write-Host "[status] No existing ADMU attribute found. Creating with status: $admuStatus..."
+    $attributeSet = Set-System -property 'attributes' -payload @{ admu = $admuStatus }
 }
