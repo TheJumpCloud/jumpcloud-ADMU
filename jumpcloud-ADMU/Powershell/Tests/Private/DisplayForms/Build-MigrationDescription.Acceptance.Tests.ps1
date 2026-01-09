@@ -21,6 +21,8 @@ Describe "Build-MigrationDescription Acceptance Tests" -Tag "InstallJC" {
         $config = Get-Content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
         $regex = 'systemKey\":\"(\w+)\"'
         $systemKey = [regex]::Match($config, $regex).Groups[1].Value
+
+        Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -force
     }
     Context "When the system description is null" {
         BeforeEach {
