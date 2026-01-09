@@ -59,11 +59,13 @@ function Build-MigrationDescription {
     switch ($authMethod) {
         "systemcontextapi" {
             # get the systemDescription with system context api
-            $ExistingDescription = { Invoke-SystemContextAPI -Method GET -Endpoint 'Systems' | Select-Object -ExpandProperty description }
+            $sysContextResult = Invoke-SystemContextAPI -Method GET -Endpoint 'Systems'
+            $ExistingDescription = $sysContextResult.description
         }
         "apikey" {
             # get the systemDescription with api key
-            $ExistingDescription = { Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -jcOrgID $script:JumpCloudOrgID -systemId $script:validatedSystemID -method "GET" | Select-Object -ExpandProperty description }
+            $apiKeyResult = Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -jcOrgID $script:JumpCloudOrgID -systemId $script:validatedSystemID -method "GET"
+            $ExistingDescription = $apiKeyResult.description
         }
         "none" {
             # if no auth method, exit function return null
@@ -75,42 +77,23 @@ function Build-MigrationDescription {
     if (-not [string]::IsNullOrEmpty($ExistingDescription)) {
         try {
             $description = $ExistingDescription | ConvertFrom-Json
-            $foundUser = $null
-            $userIndex = -1
-
-            # Find existing user by SID
-            foreach ($userObj in $description) {
-                $userIndex++
-                if ($userObj.sid -eq $UserSID) {
-                    $foundUser = $userObj
-                    break
-                }
-            }
-
+            # Ensure it's always an array
+            if ($description -isnot [array]) { $description = @($description) }
+            # find the userSID in the existing description
+            $foundUser = $description | Where-Object { $_.sid -eq $UserSID }
             if ($foundUser) {
-                # Update existing user object
-                $updatedUser = @{
-                    sid       = $foundUser.sid
-                    un        = $MigrationUsername
-                    localPath = $foundUser.localPath
-                    msg       = $StatusMessage
-                    st        = $statusValue
-                }
-
-                # Preserve uid if it exists
-                if ($foundUser.uid) {
-                    $updatedUser.uid = $foundUser.uid
-                }
-
-                $description[$userIndex] = $updatedUser
+                # only update the message and status
+                $foundUser.msg = $StatusMessage
+                $foundUser.st = $statusValue
             } else {
                 # User not found in existing description, add new entry
-                $description += @{
+                $description += [PSCustomObject]@{
                     sid       = $UserSID
                     un        = $MigrationUsername
                     localPath = if ($LocalPath) { $LocalPath.Replace('\', '/') } else { $null }
                     msg       = $StatusMessage
                     st        = $statusValue
+                    uid       = $null
                 }
             }
         } catch {
@@ -119,18 +102,17 @@ function Build-MigrationDescription {
             $description = $null
         }
     }
-
-    # Create new description if not already initialized
+    # Create new description if not already initialized - always as array
     if (-not $description) {
-        $description = @(
-            @{
+        $description = @([PSCustomObject]@{
                 sid       = $UserSID
                 un        = $MigrationUsername
                 localPath = if ($LocalPath) { $LocalPath.Replace('\', '/') } else { $null }
                 msg       = $StatusMessage
                 st        = $statusValue
-            }
-        )
+                uid       = $null
+            })
     }
-    return $description
+    # Ensure return is always an array
+    return @($description)
 }

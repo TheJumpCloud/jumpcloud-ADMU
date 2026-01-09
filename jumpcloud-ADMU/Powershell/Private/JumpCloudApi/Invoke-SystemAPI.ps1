@@ -6,7 +6,7 @@ function Invoke-SystemAPI {
         [string]$jcOrgID,
         [Parameter(Mandatory = $true)]
         [string]$systemId,
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory = $false)]
         [object]$Body,
         [Parameter(Mandatory = $false)]
         [string]$method = "PUT"
@@ -25,7 +25,12 @@ function Invoke-SystemAPI {
     $retryCount = 0
     do {
         try {
-            $response = Invoke-RestMethod -Uri $uri -Method $method -Headers $Headers -Body ($Body | ConvertTo-Json)
+            if ($Body) {
+                $bodyContent = $Body | ConvertTo-Json
+            } else {
+                $bodyContent = $null
+            }
+            $response = Invoke-RestMethod -Uri $uri -Method $method -Headers $Headers -Body $bodyContent
             $retry = $false
         } catch {
             if ($_.Exception.Message -like "*The remote name could not be resolved*") {
@@ -44,5 +49,8 @@ function Invoke-SystemAPI {
     } while ($retry -and $retryCount -lt $maxRetries)
     if ($retryCount -eq $maxRetries) {
         Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Warning -Step "Invoke-SystemAPI"
+    }
+    if ($response) {
+        return $response
     }
 }
