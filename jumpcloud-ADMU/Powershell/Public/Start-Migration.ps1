@@ -175,7 +175,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.11.0"
+        $admuVersion = "2.11.1"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -657,12 +657,15 @@ function Start-Migration {
             Write-ToLog -Message ("Confirm-API Results:`nType: $($confirmAPIResult.type)`nValid: $($confirmAPIResult.isValid)`nSystemID: $($confirmAPIResult.ValidatedID)")
             if ($confirmAPIResult.type -eq 'SystemContext' -and $confirmAPIResult.isValid -and $confirmAPIResult.ValidatedID) {
                 Write-ToLog -Message ("Validated SystemContext API with ID: $($confirmAPIResult.ValidatedID)")
-                $validatedSystemID = $confirmAPIResult.ValidatedID
-                $validatedSystemContextAPI = $true
+                $script:validatedSystemID = $confirmAPIResult.ValidatedID
+                $script:validatedSystemContextAPI = $true
             } elseif ($confirmAPIResult.type -eq 'API' -and $confirmAPIResult.isValid -and $confirmAPIResult.ValidatedID) {
                 Write-ToLog -Message ("Validated JC API Key")
-                $validatedApiKey = $true
-                $validatedSystemID = $confirmAPIResult.ValidatedID
+                $script:validatedApiKey = $true
+                $script:validatedSystemID = $confirmAPIResult.ValidatedID
+                # set script variables for APIKEY + ORGID
+                $script:JumpCloudAPIKey = $JumpCloudAPIKey
+                $script:JumpCloudOrgID = $JumpCloudOrgID
             } else {
                 Write-ToLog -Message ("Could not validate API Key or SystemContext API, please check your parameters and try again.") -Level Error
                 Write-ToProgress -ProgressBar $ProgressBar -Status "Could not validate API Key or SystemContext API" -form $isForm -logLevel Error
@@ -676,15 +679,15 @@ function Start-Migration {
                     UserSID                   = $SelectedUserSID
                     MigrationUsername         = $JumpCloudUserName
                     UserID                    = $script:JumpCloudUserID
-                    DeviceID                  = $validatedSystemID
-                    ValidatedSystemContextAPI = $validatedSystemContextAPI
-                    ValidatedApiKey           = $validatedApiKey
-                    JCApiKey                  = $JumpCloudAPIKey
-                    OrgID                     = $JumpCloudOrgID
+                    DeviceID                  = $script:validatedSystemID
+                    ValidatedSystemContextAPI = $script:validatedSystemContextAPI
+                    ValidatedApiKey           = $script:validatedApiKey
+                    JCApiKey                  = $script:JumpCloudAPIKey
+                    OrgID                     = $script:JumpCloudOrgID
                     reportStatus              = $reportStatus
                 }
 
-                if ($validatedSystemContextAPI) {
+                if ($script:validatedSystemContextAPI) {
                     # update the 'admu' attribute object to inform dynamic groups that the system migration status is "InProgress"
                     $attributeSet = Set-System -property 'attributes' -payload @{ admu = "InProgress" }
                 }
@@ -1487,7 +1490,7 @@ function Start-Migration {
 
             #region AutoBindUserToJCSystem
             if ($AutoBindJCUser -eq $true) {
-                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $script:JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
+                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $script:JumpCloudAPIKey -JcOrgId $script:ValidatedJumpCloudOrgId -JcUserID $script:JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
                 Write-ToProgress -ProgressBar $ProgressBar -Status "autoBind" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
                 if ($bindResult) {
                     Write-ToLog -Message:('JumpCloud automatic bind step succeeded for user ' + $JumpCloudUserName)
@@ -1499,7 +1502,7 @@ function Start-Migration {
                         $primaryUserBody = @{
                             "primarySystemUser.id" = $script:JumpCloudUserId
                         }
-                        Invoke-SystemPut -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemID $validatedSystemID -Body $primaryUserBody
+                        Invoke-SystemPut -JcApiKey $script:JumpCloudAPIKey -JcOrgId $script:ValidatedJumpCloudOrgId -systemID $script:validatedSystemID -Body $primaryUserBody
                     }
                 } else {
                     Write-ToLog -Message:('JumpCloud automatic bind step failed, Api Key or JumpCloud username is incorrect.') -Level Warning

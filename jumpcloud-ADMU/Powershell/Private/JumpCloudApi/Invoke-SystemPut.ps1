@@ -7,7 +7,9 @@ function Invoke-SystemPut {
         [Parameter(Mandatory = $true)]
         [string]$systemId,
         [Parameter(Mandatory = $true)]
-        [object]$Body
+        [object]$Body,
+        [Parameter(Mandatory = $false)]
+        [string]$method = "PUT"
     )
     $uri = "$($global:JCUrl)/api/systems/$systemId"
 
@@ -23,7 +25,7 @@ function Invoke-SystemPut {
     $retryCount = 0
     do {
         try {
-            $response = Invoke-RestMethod -Uri $uri -Method Put -Headers $Headers -Body ($Body | ConvertTo-Json)
+            $response = Invoke-RestMethod -Uri $uri -Method $method -Headers $Headers -Body ($Body | ConvertTo-Json)
             $retry = $false
         } catch {
             if ($_.Exception.Message -like "*The remote name could not be resolved*") {

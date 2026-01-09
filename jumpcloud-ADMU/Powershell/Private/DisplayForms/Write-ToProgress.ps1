@@ -73,80 +73,31 @@ function Write-ToProgress {
                 $statusMessage = "Error occurred during migration. Please check (C:\Windows\Temp\jcadmu.log) for more information."
                 $percent = "ERROR"
             } else {
-                # We use the clean string we extracted in Step 2.
                 $percent = [math]::Round($PercentComplete)
                 $percent = "$percent%"
             }
             Write-ToLog -Message "Migration status updated: $statusMessage" -level Info
 
-
+            # Build the migration description object
             if ($SystemDescription.ValidatedSystemContextAPI) {
-                $existingDescription = Invoke-SystemContextAPI -Method GET -Endpoint 'Systems' | Select-Object -ExpandProperty description
-                # If $existingDescription is not empty
-                if (-not [string]::IsNullOrEmpty($existingDescription)) {
-                    try {
-                        $description = $existingDescription | ConvertFrom-Json
-                        $foundUser = $null
-                        $userIndex = -1
+                $authMethod = "SystemContextAPI"
+            } elseif ($SystemDescription.ValidatedApiKey) {
+                $authMethod = "ApiKey"
+            } else {
+                $authMethod = "None"
+            }
+            $descriptionArray = Build-MigrationDescription -UserSID $SystemDescription.UserSID -MigrationUsername $SystemDescription.MigrationUsername -StatusMessage $statusMessage -Percent $percent -LocalPath $LocalPath -AuthMethod $authMethod
 
-                        # identify if the userSID is in the description json
-                        foreach ($userObj in $description) {
-                            $userIndex++
-                            if ($userObj.sid -eq $SystemDescription.UserSID) {
-                                $foundUser = $userObj
-                                break
-                            }
-                        }
-
-                        if ($foundUser) {
-                            # Create a new mutable object with updated values
-                            $updatedUser = @{
-                                sid       = $foundUser.sid
-                                un        = $SystemDescription.MigrationUsername
-                                localPath = $foundUser.localPath
-                                msg       = $statusMessage
-                                st        = if ($percent -eq "ERROR") { "Failed" } elseif ($percent -eq "100%") { "Completed" } else { "InProgress" }
-                            }
-
-                            # Preserve uid if it exists
-                            if ($foundUser.uid) {
-                                $updatedUser.uid = $foundUser.uid
-                            }
-
-                            # Replace the user object in the array
-                            $description[$userIndex] = $updatedUser
-                        }
-                    } catch {
-                        Write-ToLog -Message "Error parsing existing system description JSON: $_" -Level Warning
-                    }
-                } else {
-                    # create a new description array with one object
-                    $description = @(
-                        @{
-                            sid       = $SystemDescription.UserSID
-                            un        = $SystemDescription.MigrationUsername
-                            localPath = $LocalPath.Replace('\', '/')
-                            msg       = $statusMessage
-                            st        = if ($percent -eq "ERROR") { "Failed" } elseif ($percent -eq "100%") { "Completed" } else { "InProgress" }
-                        }
-                    )
+            # Send to appropriate API endpoint
+            if ($SystemDescription.ValidatedSystemContextAPI) {
+                try {
+                    Invoke-SystemContextAPI -Method PUT -Endpoint 'Systems' -Body @{'description' = ($descriptionArray | ConvertTo-Json) } | Out-Null
+                } catch {
+                    Write-ToLog -Message "Error occurred while reporting migration progress via SystemContextAPI: $_" -Level Error
                 }
-
-                # Convert the updated description array to JSON and send to API
-                Invoke-SystemContextAPI -Method PUT -Endpoint 'Systems' -Body @{'description' = ($description | ConvertTo-Json) } | Out-Null
-
             } elseif ($SystemDescription.ValidatedApiKey) {
                 try {
-                    $description = [PSCustomObject]@{
-                        MigrationStatus     = $statusMessage
-                        MigrationPercentage = $percent
-                        UserSID             = $SystemDescription.UserSID
-                        MigrationUsername   = $SystemDescription.MigrationUsername
-                        UserID              = $SystemDescription.UserID
-                        DeviceID            = $SystemDescription.DeviceID
-                    }
-
-                    Invoke-SystemPut -JcApiKey $SystemDescription.JCApiKey -jcOrgID $SystemDescription.JumpCloudOrgID -systemId $SystemDescription.DeviceID -Body @{'description' = ($description | ConvertTo-Json) }
+                    Invoke-SystemPut -JcApiKey $SystemDescription.JCApiKey -jcOrgID $SystemDescription.JumpCloudOrgID -systemId $SystemDescription.DeviceID -Body @{'description' = ($descriptionArray | ConvertTo-Json) }
                 } catch {
                     Write-ToLog -Message "Error occurred while reporting migration progress to API: $_" -Level Error
                 }

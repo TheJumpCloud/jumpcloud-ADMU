@@ -1,4 +1,4 @@
-Function Invoke-SystemContextAPI {
+function Invoke-SystemContextAPI {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
@@ -33,12 +33,12 @@ Function Invoke-SystemContextAPI {
 
     )
     begin {
-        # validate body
+        # validate body - property-based updates have special handling
         if ($PSBoundParameters.ContainsKey('body') -and $endpoint -ne 'systems') {
             throw "The 'body' parameter can only be used with the 'systems' endpoint."
         }
         try {
-            $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
+            $config = Get-Content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
             $systemKeyRegex = 'systemKey":"(\w+)"'
             $systemKey = [regex]::Match($config, $systemKeyRegex).Groups[1].Value
             $agentServerHostRegex = '"agentServerHost":"agent\.(\w+)\.jumpcloud\.com"'
@@ -49,7 +49,7 @@ Function Invoke-SystemContextAPI {
                     Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: EU."
                     Set-JCUrl -Region "EU"
                 }
-                Default {
+                default {
                     Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: US."
                     Set-JCUrl -Region "US"
                 }
@@ -60,7 +60,7 @@ Function Invoke-SystemContextAPI {
         }
 
         # Referenced Library for RSA
-        Switch ($PSVersionTable.PSVersion.Major) {
+        switch ($PSVersionTable.PSVersion.Major) {
             '5' {
                 # https://github.com/wing328/PSPetstore/blob/87a2c455a7c62edcfc927ff5bf4955b287ef483b/src/PSOpenAPITools/Private/RSAEncryptionProvider.cs
                 Add-Type -typedef @"
@@ -338,11 +338,123 @@ Function Invoke-SystemContextAPI {
 
 "@
             }
-            Default {
+            default {
                 Write-Verbose "PowerShell version: $($PSVersionTable.PSVersion)"
             }
         }
 
+        # Handle property-based updates by detecting properties in body
+        if ($PSBoundParameters.ContainsKey('body') -and $endpoint -eq 'systems') {
+            # Parse body to detect which property is being updated
+            $detectedProperty = $null
+
+            if ($body -is [hashtable]) {
+                if ($body.ContainsKey('description')) {
+                    $detectedProperty = 'description'
+                    $bodyContent = $body.description
+                } elseif ($body.ContainsKey('attributes')) {
+                    $detectedProperty = 'attributes'
+                    $bodyContent = $body.attributes
+                }
+            } elseif ($body -is [string]) {
+                try {
+                    $parsedBody = ConvertFrom-Json $body
+                    if ($parsedBody.PSObject.Properties.Name -contains 'description') {
+                        $detectedProperty = 'description'
+                        $bodyContent = $parsedBody.description
+                    } elseif ($parsedBody.PSObject.Properties.Name -contains 'attributes') {
+                        $detectedProperty = 'attributes'
+                        $bodyContent = $parsedBody.attributes
+                    }
+                } catch {
+                    # If parsing fails, treat as generic body
+                }
+            }
+
+            # Special handling for attributes - must GET current, merge, then PUT
+            if ($detectedProperty -eq 'attributes' -and $method -eq 'PUT') {
+                Write-ToLog -Message "Processing attributes update - fetching current attributes..." -Level Verbose
+
+                $requestURL = "/api/systems/$systemKey"
+                $PrivateKeyFilePath = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
+
+                $getMethod = "GET"
+                $now = (Get-Date -Date ((Get-Date).ToUniversalTime()) -UFormat "+%a, %d %h %Y %H:%M:%S GMT")
+                $signstr = "$getMethod $requestURL HTTP/1.1`ndate: $now"
+                $enc = [system.Text.Encoding]::UTF8
+                $data = $enc.GetBytes($signstr)
+                $sha = New-Object System.Security.Cryptography.SHA256CryptoServiceProvider
+                $hashResult = $sha.ComputeHash($data)
+                $hashAlgo = [System.Security.Cryptography.HashAlgorithmName]::SHA256
+
+                switch ($PSVersionTable.PSVersion.Major) {
+                    '5' {
+                        [System.Security.Cryptography.RSA]$rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($PrivateKeyFilePath)
+                    }
+                    default {
+                        $pem = Get-Content -Path $PrivateKeyFilePath -Raw
+                        $rsa = [System.Security.Cryptography.RSA]::Create()
+                        $rsa.ImportFromPem($pem)
+                    }
+                }
+
+                $signedBytes = $rsa.SignHash($hashResult, $hashAlgo, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+                $signature = [Convert]::ToBase64String($signedBytes)
+
+                $headers = @{
+                    Accept        = "application/json"
+                    Date          = "$now"
+                    Authorization = "Signature keyId=`"system/$($systemKey)`",headers=`"request-line date`",algorithm=`"rsa-sha256`",signature=`"$($signature)`""
+                }
+
+                try {
+                    $currentSystem = Invoke-RestMethod -Method GET -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers
+                    $currentAttributes = $currentSystem.attributes
+                    Write-ToLog -Message "Current attributes retrieved successfully" -Level Verbose
+                } catch {
+                    Write-ToLog -Message "Failed to retrieve current system attributes: $_" -Level Error
+                    throw "Failed to retrieve current system attributes: $_"
+                }
+
+                # Parse incoming attributes to map format
+                $newAttributesMap = @{}
+                if ($bodyContent -is [string]) {
+                    $newAttributesMap = ConvertFrom-Json $bodyContent
+                } else {
+                    $newAttributesMap = $bodyContent
+                }
+
+                # Start with existing attributes
+                $mergedAttributes = @()
+                if ($null -ne $currentAttributes) {
+                    foreach ($attr in $currentAttributes) {
+                        $mergedAttributes += $attr
+                    }
+                }
+
+                # Update or add new attributes
+                foreach ($key in $newAttributesMap.Keys) {
+                    $existingAttr = $mergedAttributes | Where-Object { $_.name -eq $key }
+
+                    if ($existingAttr) {
+                        # Update existing attribute - convert value to string
+                        $existingAttr.value = [string]$newAttributesMap[$key]
+                        Write-ToLog -Message "Updated attribute: $key = $($existingAttr.value)" -Level Verbose
+                    } else {
+                        # Add new attribute - convert value to string
+                        $newAttr = @{
+                            name  = $key
+                            value = [string]$newAttributesMap[$key]
+                        }
+                        $mergedAttributes += $newAttr
+                        Write-ToLog -Message "Added new attribute: $key = $($newAttr.value)" -Level Verbose
+                    }
+                }
+
+                # Replace body with merged attributes for the PUT request
+                $body = @{ attributes = $mergedAttributes }
+            }
+        }
 
         # Validate the method and endpoint combination
         switch ($endpoint) {
@@ -389,7 +501,7 @@ Function Invoke-SystemContextAPI {
         if ($PSCmdlet.ParameterSetName -eq 'association') {
             switch ($endpoint) {
                 "systems/associations" {
-                    If ($method -eq 'POST') {
+                    if ($method -eq 'POST') {
                         $form = @{
                             "id"         = "$id"
                             "type"       = "$type"
@@ -409,7 +521,7 @@ Function Invoke-SystemContextAPI {
                 }
 
                 "systemgroups/members" {
-                    If ($method -eq 'POST') {
+                    if ($method -eq 'POST') {
                         $form = @{
                             "id"   = "$id"
                             "type" = "$type"
@@ -421,7 +533,7 @@ Function Invoke-SystemContextAPI {
                         }
                     }
                 }
-                Default {}
+                default {}
             }
         }
         # convert body to JSON
@@ -451,7 +563,7 @@ Function Invoke-SystemContextAPI {
                 # Load the RSA Encryption Provider
                 [System.Security.Cryptography.RSA]$rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($PrivateKeyFilePath)
             }
-            Default {
+            default {
                 # For PowerShell 7+ we can use the native RSA
                 $pem = Get-Content -Path $PrivateKeyFilePath -Raw
                 $rsa = [System.Security.Cryptography.RSA]::Create()
@@ -566,7 +678,7 @@ Function Invoke-SystemContextAPI {
                     Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Verbose -Step "Invoke-SystemContextAPI"
                 }
             }
-            Default {
+            default {
                 'Invalid method specified. Valid methods are: GET, PUT, POST, DELETE.'
             }
         }
