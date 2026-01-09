@@ -6,6 +6,13 @@
 ################################################################################
 #region variables
 
+# Data source for migration users: "CSV" or "Description"
+$dataSource = 'CSV'
+
+# CSV variables - only required if dataSource is set to 'CSV'
+# This is the name of the CSV uploaded to the JumpCloud command
+$csvName = 'jcdiscovery.csv'
+
 # ADMU variables
 $TempPassword = 'Temp123!Temp123!'
 $LeaveDomain = $true
@@ -41,6 +48,11 @@ $systemContextBinding = $false # Bind using the systemContext API (default False
 function Confirm-MigrationParameter {
     [CmdletBinding()]
     param(
+        [ValidateSet('CSV', 'Description')]
+        [string]$dataSource = 'Description',
+
+        [string]$csvName = 'jcdiscovery.csv',
+
         [string]$TempPassword = 'Temp123!Temp123!',
         [bool]$LeaveDomain = $true,
         [bool]$ForceReboot = $true,
@@ -59,6 +71,11 @@ function Confirm-MigrationParameter {
         [ValidateSet('Restart', 'Shutdown')]
         [string]$postMigrationBehavior = 'Restart'
     )
+    if ($dataSource -eq 'CSV') {
+        if ([string]::IsNullOrWhiteSpace($csvName)) {
+            throw "Parameter Validation Failed: When dataSource is 'CSV', the 'csvName' parameter cannot be empty."
+        }
+    }
     if ([string]::IsNullOrEmpty($TempPassword)) {
         throw "Parameter Validation Failed: The 'TempPassword' parameter cannot be empty."
     }
@@ -73,6 +90,106 @@ function Confirm-MigrationParameter {
     }
     return $true
 }
+function Get-MigrationUsers {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject[]])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('CSV', 'Description')]
+        [string]$source,
+
+        [Parameter(Mandatory = $false)]
+        [string]$csvName = 'jcdiscovery.csv',
+
+        [Parameter(Mandatory = $false)]
+        [string]$GetSystemScriptPath = 'C:\Windows\Temp\Get-System.ps1',
+
+        [Parameter(Mandatory = $true)]
+        [boolean]$systemContextBinding
+    )
+
+    if ($source -eq 'CSV') {
+        # CSV-based migration
+        return Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $systemContextBinding
+    } elseif ($source -eq 'Description') {
+        # System description-based migration
+        return Get-MigrationUsersFromSystemDescription -GetSystemScriptPath $GetSystemScriptPath -systemContextBinding $systemContextBinding
+    }
+}
+
+function Get-MigrationUsersFromCsv {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject[]])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$csvName,
+
+        [Parameter(Mandatory = $true)]
+        [boolean]$systemContextBinding
+    )
+    begin {
+        $csvPath = "C:\Windows\Temp\$csvName"
+        if (-not (Test-Path -Path $csvPath -PathType Leaf)) {
+            throw "Validation Failed: The CSV file was not found at: '$csvPath'."
+        }
+        $ImportedCSV = Import-Csv -Path $csvPath -ErrorAction Stop
+    }
+    process {
+        # Begin by processing the CSV content headers, these should include the required values
+        $requiredHeaders = @("LocalComputerName", "SerialNumber", "JumpCloudUserName", "SID", "LocalPath")
+        $csvHeaders = $ImportedCSV[0].PSObject.Properties.Name
+        foreach ($header in $requiredHeaders) {
+            if ($header -notin $csvHeaders) {
+                throw "Validation Failed: The CSV is missing the required header: '$header'."
+            }
+        }
+        $usersToMigrate = New-Object System.Collections.ArrayList
+        $computerName = hostname
+        if ([string]::IsNullOrWhiteSpace($computerName)) {
+            $computerName = $env:COMPUTERNAME
+        }
+        try {
+            $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+        } catch {
+            $serialNumber = (Get-CimInstance -Class Win32_BIOS).SerialNumber
+        }
+        $ValidDeviceRows = $ImportedCSV | Where-Object {
+            ((-not [string]::IsNullOrWhiteSpace($_.JumpCloudUserName))) -and
+            ($_.LocalComputerName -eq $computerName) -and
+            ($_.SerialNumber -eq $serialNumber)
+        }
+        $duplicateSids = $ValidDeviceRows | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
+        if ($duplicateSids) {
+            throw "Validation Failed: Duplicate SID '$($duplicateSids[0].Name)' found for LocalComputerName '$($computerName)'."
+        }
+        foreach ($row in $ValidDeviceRows) {
+            if (($row.LocalComputerName -eq $computerName) -and ($row.SerialNumber -eq $serialNumber)) {
+                if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
+                    throw "VALIDATION FAILED: on row : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
+                }
+                $requiredFields = "LocalPath", "SID"
+                foreach ($field in $requiredFields) {
+                    if ([string]::IsNullOrWhiteSpace($row.$field)) {
+                        throw "Validation Failed: Required field '$field' is empty for user '$($row.JumpCloudUserName)'."
+                    }
+                }
+                $usersToMigrate.Add([PSCustomObject]@{
+                        SelectedUsername  = $row.SID
+                        LocalPath         = $row.LocalPath
+                        JumpCloudUserName = $row.JumpCloudUserName
+                        JumpCloudUserID   = $row.JumpCloudUserID
+                    }) | Out-Null
+            }
+        }
+    }
+    end {
+        if ($usersToMigrate.Count -eq 0) {
+            throw "Validation Failed: No users were found in the CSV matching this computer's configuration."
+        }
+        return $usersToMigrate
+    }
+}
+
 function Get-MigrationUsersFromSystemDescription {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
@@ -147,7 +264,7 @@ function Get-MigrationUsersFromSystemDescription {
 
             # Build user object for migration
             $migrationUser = [PSCustomObject]@{
-                SID               = $user.sid
+                SelectedUsername  = $user.sid
                 JumpCloudUserName = $user.un
                 LocalPath         = $user.localPath
                 JumpCloudUserID   = $user.uid
@@ -574,6 +691,8 @@ function Get-DomainStatus {
 #region validation
 # validate migration parameters
 $confirmMigrationParameters = Confirm-MigrationParameter `
+    -dataSource $dataSource `
+    -csvName $csvName `
     -TempPassword $TempPassword `
     -LeaveDomain $LeaveDomain `
     -ForceReboot $ForceReboot `
@@ -593,18 +712,22 @@ if ($confirmMigrationParameters) {
 }
 #endregion validation
 #region dataImport
-Write-Host "[status] Importing Get-System function for system description retrieval..."
-$getSystemScriptPath = "C:\Windows\Temp\Get-System.ps1"
-if (-not (Test-Path -Path $getSystemScriptPath)) {
-    Write-Host "[status] Get-System script not found at $getSystemScriptPath, exiting..."
-    exit 1
+if ($dataSource -eq 'CSV') {
+    Write-Host "[status] Using CSV source for migration users..."
+    if (-not $csvName) {
+        Write-Host "[status] Required script variable 'csvName' not set, exiting..."
+        exit 1
+    }
+} elseif ($dataSource -eq 'Description') {
+    Write-Host "[status] Using system description source for migration users..."
+    Write-Host "[status] Importing Get-System function for system description retrieval..."
 }
 
-# Call the function and store the result (which is either an array of users or $null)
+# Call the unified function and store the result (which is either an array of users or $null)
 try {
-    $UsersToMigrate = Get-MigrationUsersFromSystemDescription -GetSystemScriptPath $getSystemScriptPath -systemContextBinding $systemContextBinding
+    $UsersToMigrate = Get-MigrationUsers -source $dataSource -csvName $csvName -systemContextBinding $systemContextBinding
 } catch {
-    Write-Host "[ERROR] Failed to retrieve migration users from system description: $_"
+    Write-Host "[ERROR] Failed to retrieve migration users: $_"
     exit 1
 }
 #endregion dataImport
