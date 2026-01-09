@@ -1,4 +1,4 @@
-function Invoke-SystemPut {
+function Invoke-SystemAPI {
     param (
         [Parameter(Mandatory = $true)]
         [string]$jcApiKey,
@@ -35,7 +35,7 @@ function Invoke-SystemPut {
                 $retry = $true
             } else {
                 $ErrorMessage = $_.Exception.Message
-                Write-ToLog "Failed to update system: $($ErrorMessage)" -Level Warning -Step "Invoke-SystemPut"
+                Write-ToLog "Failed to update system: $($ErrorMessage)" -Level Warning -Step "Invoke-SystemAPI"
                 # exit the loop
                 $retry = $false
                 $success = $false
@@ -43,6 +43,6 @@ function Invoke-SystemPut {
         }
     } while ($retry -and $retryCount -lt $maxRetries)
     if ($retryCount -eq $maxRetries) {
-        Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Warning -Step "Invoke-SystemPut"
+        Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Warning -Step "Invoke-SystemAPI"
     }
 }

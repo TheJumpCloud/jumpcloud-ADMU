@@ -63,7 +63,7 @@ function Build-MigrationDescription {
         }
         "apikey" {
             # get the systemDescription with api key
-            $ExistingDescription = { Invoke-SystemPut -JcApiKey $script:JumpCloudAPIKey -jcOrgID $script:JumpCloudOrgID -systemId $script:validatedSystemID -method "GET" | Select-Object -ExpandProperty description }
+            $ExistingDescription = { Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -jcOrgID $script:JumpCloudOrgID -systemId $script:validatedSystemID -method "GET" | Select-Object -ExpandProperty description }
         }
         "none" {
             # if no auth method, exit function return null
