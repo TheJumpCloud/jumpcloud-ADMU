@@ -1,42 +1,16 @@
-function Invoke-SystemContextAPI {
+function Set-System {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory = $true)]
-        [string]
-        [validateSet('GET', 'POST', 'PUT', 'DELETE')]
-        $method,
-        [Parameter(Mandatory = $true)]
-        [string]
-        [validateSet('systems/memberof', 'systems', 'systems/associations', 'systems/users', 'systemgroups/members')]
-        $endpoint,
-        [Parameter(Mandatory = $false)]
-        [Parameter(ParameterSetName = "association")]
-        [string]
-        [validateSet('add', 'remove', 'update')]
-        $op,
-        [Parameter(Mandatory = $false)]
-        [System.Object]
-        $body,
-        [Parameter(Mandatory = $false)]
-        [Parameter(ParameterSetName = "association")]
-        [string]
-        [validateSet('user', 'systemgroup')]
-        $type,
-        [Parameter(Mandatory = $false)]
-        [Parameter(ParameterSetName = "association")]
-        [bool]
-        $admin,
-        [Parameter(Mandatory = $false)]
-        [Parameter(ParameterSetName = "association")]
-        [string]
-        $id
+        [System.String]
+        $property,
 
+        [Parameter(Mandatory = $true)]
+        [System.Object]
+        $payload
     )
     begin {
-        # validate body - property-based updates have special handling
-        if ($PSBoundParameters.ContainsKey('body') -and $endpoint -ne 'systems') {
-            throw "The 'body' parameter can only be used with the 'systems' endpoint."
-        }
+        # Get system key from JumpCloud agent config
         try {
             $config = Get-Content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
             $systemKeyRegex = 'systemKey":"(\w+)"'
@@ -44,26 +18,40 @@ function Invoke-SystemContextAPI {
             $agentServerHostRegex = '"agentServerHost":"agent\.(\w+)\.jumpcloud\.com"'
             $agentServerHost = [regex]::Match($config, $agentServerHostRegex).Groups[1].Value
 
-            switch ($agentServerHost) {
-                "eu" {
-                    Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: EU."
-                    Set-JCUrl -Region "EU"
-                }
-                default {
-                    Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: US."
-                    Set-JCUrl -Region "US"
-                }
+            if ([string]::IsNullOrWhiteSpace($systemKey)) {
+                throw "Could not extract systemKey from jcagent.conf"
             }
 
+            switch ($agentServerHost) {
+                "eu" {
+                    Write-Verbose "Determined JumpCloud Region: EU"
+                    $baseUrl = "https://console.jumpcloud.eu"
+                }
+                default {
+                    Write-Verbose "Determined JumpCloud Region: US"
+                    $baseUrl = "https://console.jumpcloud.com"
+                }
+            }
         } catch {
-            throw "Could not get systemKey from jcagent.conf or determine JumpCloud Region."
+            throw "Could not get systemKey from jcagent.conf: $_"
         }
 
-        # Referenced Library for RSA
+        # Verify private key file exists
+        $PrivateKeyFilePath = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
+        if (-not (Test-Path $PrivateKeyFilePath)) {
+            throw "Private key file not found at: $PrivateKeyFilePath"
+        }
+
+        # Load RSA encryption for signing
         switch ($PSVersionTable.PSVersion.Major) {
             '5' {
-                # https://github.com/wing328/PSPetstore/blob/87a2c455a7c62edcfc927ff5bf4955b287ef483b/src/PSOpenAPITools/Private/RSAEncryptionProvider.cs
-                Add-Type -typedef @"
+                # Remove existing type if it exists to force reload
+                if ([AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GetName().Name -eq 'RSAEncryption' }) {
+                    Write-Verbose "RSAEncryption type already loaded, proceeding..."
+                }
+
+                try {
+                    Add-Type -typedef @"
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -335,52 +323,40 @@ function Invoke-SystemContextAPI {
             }
         }
     }
-
-"@
+"@ -ErrorAction Stop -WarningAction SilentlyContinue
+                } catch {
+                    if ($_.Exception.Message -like "*already exists*" -or $_.Exception.Message -like "*Unauthorized*") {
+                        Write-Verbose "Type definition already loaded or access issue, continuing..."
+                    } else {
+                        throw "Failed to load RSA encryption type: $_"
+                    }
+                }
             }
             default {
-                Write-Verbose "PowerShell version: $($PSVersionTable.PSVersion)"
+                Write-Verbose "PowerShell version: $($PSVersionTable.PSVersion) - using native RSA"
             }
         }
+    }
 
-        # Handle property-based updates by detecting properties in body
-        if ($PSBoundParameters.ContainsKey('body') -and $endpoint -eq 'systems') {
-            # Parse body to detect which property is being updated
-            $detectedProperty = $null
+    process {
+        # Step 1: Build the payload for the property being updated
+        Write-Verbose "Preparing to update system property: $property"
 
-            if ($body -is [hashtable]) {
-                if ($body.ContainsKey('description')) {
-                    $detectedProperty = 'description'
-                    $bodyContent = $body.description
-                } elseif ($body.ContainsKey('attributes')) {
-                    $detectedProperty = 'attributes'
-                    $bodyContent = $body.attributes
-                }
-            } elseif ($body -is [string]) {
-                try {
-                    $parsedBody = ConvertFrom-Json $body
-                    if ($parsedBody.PSObject.Properties.Name -contains 'description') {
-                        $detectedProperty = 'description'
-                        $bodyContent = $parsedBody.description
-                    } elseif ($parsedBody.PSObject.Properties.Name -contains 'attributes') {
-                        $detectedProperty = 'attributes'
-                        $bodyContent = $parsedBody.attributes
-                    }
-                } catch {
-                    # If parsing fails, treat as generic body
-                }
+        $body = @{}
+
+        # Handle different property types
+        switch ($property) {
+            'description' {
+                $body['description'] = $payload
             }
-
-            # Special handling for attributes - must GET current, merge, then PUT
-            if ($detectedProperty -eq 'attributes' -and $method -eq 'PUT') {
-                Write-ToLog -Message "Processing attributes update - fetching current attributes..." -Level Verbose
+            'attributes' {
+                # For attributes, we need to GET current attributes first and merge
+                Write-Verbose "Fetching current system attributes..."
 
                 $requestURL = "/api/systems/$systemKey"
-                $PrivateKeyFilePath = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
-
-                $getMethod = "GET"
+                $method = "GET"
                 $now = (Get-Date -Date ((Get-Date).ToUniversalTime()) -UFormat "+%a, %d %h %Y %H:%M:%S GMT")
-                $signstr = "$getMethod $requestURL HTTP/1.1`ndate: $now"
+                $signstr = "$method $requestURL HTTP/1.1`ndate: $now"
                 $enc = [system.Text.Encoding]::UTF8
                 $data = $enc.GetBytes($signstr)
                 $sha = New-Object System.Security.Cryptography.SHA256CryptoServiceProvider
@@ -408,20 +384,19 @@ function Invoke-SystemContextAPI {
                 }
 
                 try {
-                    $currentSystem = Invoke-RestMethod -Method GET -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers
+                    $currentSystem = Invoke-RestMethod -Method GET -Uri "$baseUrl$requestURL" -ContentType 'application/json' -Headers $headers
                     $currentAttributes = $currentSystem.attributes
-                    Write-ToLog -Message "Current attributes retrieved successfully" -Level Verbose
+                    Write-Verbose "Current attributes retrieved: $($currentAttributes | ConvertTo-Json)"
                 } catch {
-                    Write-ToLog -Message "Failed to retrieve current system attributes: $_" -Level Error
                     throw "Failed to retrieve current system attributes: $_"
                 }
 
-                # Parse incoming attributes to map format
+                # Convert incoming payload to attributes format
                 $newAttributesMap = @{}
-                if ($bodyContent -is [string]) {
-                    $newAttributesMap = ConvertFrom-Json $bodyContent
+                if ($payload -is [string]) {
+                    $newAttributesMap = ConvertFrom-Json $payload
                 } else {
-                    $newAttributesMap = $bodyContent
+                    $newAttributesMap = $payload
                 }
 
                 # Start with existing attributes
@@ -439,7 +414,7 @@ function Invoke-SystemContextAPI {
                     if ($existingAttr) {
                         # Update existing attribute - convert value to string
                         $existingAttr.value = [string]$newAttributesMap[$key]
-                        Write-ToLog -Message "Updated attribute: $key = $($existingAttr.value)" -Level Verbose
+                        Write-Verbose "Updated attribute: $key = $($existingAttr.value)"
                     } else {
                         # Add new attribute - convert value to string
                         $newAttr = @{
@@ -447,243 +422,79 @@ function Invoke-SystemContextAPI {
                             value = [string]$newAttributesMap[$key]
                         }
                         $mergedAttributes += $newAttr
-                        Write-ToLog -Message "Added new attribute: $key = $($newAttr.value)" -Level Verbose
+                        Write-Verbose "Added new attribute: $key = $($newAttr.value)"
                     }
                 }
 
-                # Replace body with merged attributes for the PUT request
-                $body = @{ attributes = $mergedAttributes }
-            }
-        }
-
-        # Validate the method and endpoint combination
-        switch ($endpoint) {
-            "systems" {
-                if ($method -notin @("GET", "PUT", "DELETE")) {
-                    throw "Invalid method '$method' for endpoint '$endpoint'. Valid methods are: GET, PUT, DELETE."
-                } else {
-                    $requestURL = "/api/systems/$systemKey"
-                }
-            }
-            "systems/memberof" {
-                if ($method -ne "GET") {
-                    throw "Invalid method '$method' for endpoint '$endpoint'. The only valid method is: GET."
-                } else {
-                    $requestURL = "/api/v2/systems/$systemKey/memberof"
-                }
-            }
-            "systems/associations" {
-                if ($method -notin "GET", "POST") {
-                    throw "Invalid method '$method' for endpoint '$endpoint'. The only valid method is: GET."
-                } else {
-                    $requestURL = "/api/v2/systems/$systemKey/associations?targets=user"
-                }
-            }
-            "systems/users" {
-                if ($method -ne "GET") {
-                    throw "Invalid method '$method' for endpoint '$endpoint'. The only valid method is: GET."
-                } else {
-                    $requestURL = "/api/v2/systems/$systemKey/users"
-                }
-            }
-            "systemgroups/members" {
-                if ($method -ne "POST") {
-                    throw "Invalid method '$method' for endpoint '$endpoint'. The only valid method is: POST."
-                } else {
-                    $requestURL = "/api/v2/systemgroups/$systemKey/members"
-                }
+                $body['attributes'] = $mergedAttributes
             }
             default {
-                throw "Invalid endpoint '$endpoint'."
+                # Generic property setter
+                $body[$property] = $payload
             }
         }
 
-        if ($PSCmdlet.ParameterSetName -eq 'association') {
-            switch ($endpoint) {
-                "systems/associations" {
-                    if ($method -eq 'POST') {
-                        $form = @{
-                            "id"         = "$id"
-                            "type"       = "$type"
-                            "op"         = "$op"
-                            "attributes" = @{
-                                "sudo" = @{
-                                    "enabled"         = $admin
-                                    "withoutPassword" = $false
-                                }
-                            }
-                        } | ConvertTo-Json -Depth 10
-                    } else {
-                        if ($id -or $admin -or $type -or $op) {
-                            throw "The parameters 'id,', 'admin', 'type', and 'op' can only be used with the endpoint 'systems/associations' and method 'POST'."
-                        }
-                    }
-                }
+        $bodyJson = $body | ConvertTo-Json -Depth 10
+        Write-Verbose "Request body: $bodyJson"
 
-                "systemgroups/members" {
-                    if ($method -eq 'POST') {
-                        $form = @{
-                            "id"   = "$id"
-                            "type" = "$type"
-                            "op"   = "$op"
-                        } | ConvertTo-Json -Depth 10
-                    } else {
-                        if ($id -or $type -or $op) {
-                            throw "The parameters 'id', 'type', and 'op' can only be used with the endpoint 'systemgroups/members' and method 'POST'."
-                        }
-                    }
-                }
-                default {}
-            }
-        }
-        # convert body to JSON
-        if ($body) {
-            $form = $body | ConvertTo-Json -Depth 10
-        }
+        # Step 2: Prepare the PUT request
+        $requestURL = "/api/systems/$systemKey"
+        $method = "PUT"
 
-    }
-    process {
-        # Format and create the signature request
         $now = (Get-Date -Date ((Get-Date).ToUniversalTime()) -UFormat "+%a, %d %h %Y %H:%M:%S GMT")
-        # create the string to sign from the request-line and the date
         $signstr = "$method $requestURL HTTP/1.1`ndate: $now"
         $enc = [system.Text.Encoding]::UTF8
         $data = $enc.GetBytes($signstr)
-        # Create a New SHA256 Crypto Provider
         $sha = New-Object System.Security.Cryptography.SHA256CryptoServiceProvider
-        # Now hash and display results
-        $result = $sha.ComputeHash($data)
-        # Private Key Path
-        $PrivateKeyFilePath = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
-        # set the Hash Algorithm
+        $hashResult = $sha.ComputeHash($data)
+
         $hashAlgo = [System.Security.Cryptography.HashAlgorithmName]::SHA256
-        # depending on the powershell version 5 or 7 we need to load the RSA provider
+
         switch ($PSVersionTable.PSVersion.Major) {
             '5' {
-                # Load the RSA Encryption Provider
-                [System.Security.Cryptography.RSA]$rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($PrivateKeyFilePath)
+                Write-Verbose "Loading RSA provider from PEM file: $PrivateKeyFilePath"
+                try {
+                    [System.Security.Cryptography.RSA]$rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($PrivateKeyFilePath)
+                } catch {
+                    throw "C# RSA provider error: $($_.Exception.Message)"
+                }
+
+                if ($null -eq $rsa) {
+                    throw "Failed to load RSA provider. C# returned null."
+                }
             }
             default {
-                # For PowerShell 7+ we can use the native RSA
+                Write-Verbose "Loading RSA provider using native PowerShell 7+ method from: $PrivateKeyFilePath"
+                if (-not (Test-Path $PrivateKeyFilePath)) {
+                    throw "Private key file not found at: $PrivateKeyFilePath"
+                }
+
                 $pem = Get-Content -Path $PrivateKeyFilePath -Raw
                 $rsa = [System.Security.Cryptography.RSA]::Create()
                 $rsa.ImportFromPem($pem)
             }
         }
-        # Format the Signature
-        $signedBytes = $rsa.SignHash($result, $hashAlgo, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+
+        if ($null -eq $rsa) {
+            throw "RSA provider initialization failed. Cannot proceed with signing."
+        }
+
+        $signedBytes = $rsa.SignHash($hashResult, $hashAlgo, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
         $signature = [Convert]::ToBase64String($signedBytes)
 
-        # Invoke the WebRequest
         $headers = @{
             Accept        = "application/json"
             Date          = "$now"
             Authorization = "Signature keyId=`"system/$($systemKey)`",headers=`"request-line date`",algorithm=`"rsa-sha256`",signature=`"$($signature)`""
         }
 
-        switch ($method) {
-            'GET' {
-                $maxRetries = 3
-                $retryCount = 0
-                do {
-                    try {
-                        $request = Invoke-RestMethod -Method $method -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers
-                        $success = $true
-                    } catch {
-                        if ($_.Exception.Message -like "*The remote name could not be resolved*") {
-                            $retryCount++
-                            Start-Sleep -Seconds 2
-                            # add to retry counter and continue loop
-                            $success = $false
-                        } else {
-                            Write-ToLog "Failed to get system: $($_.Exception.Message)" -Level Warning -Step "Invoke-SystemContextAPI"
-                            # set success to true & exit the loop
-                            $success = $true
-                        }
-                    }
-                } while (-not $success -and $retryCount -lt $maxRetries)
-                if (-not $success) {
-                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Verbose -Step "Invoke-SystemContextAPI"
-                }
-            }
-            'PUT' {
-                $maxRetries = 3
-                $retryCount = 0
-                do {
-                    try {
-                        $request = Invoke-RestMethod -Method $method -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
-                        $success = $true
-                    } catch {
-                        if ($_.Exception.Message -like "*The remote name could not be resolved*") {
-                            $retryCount++
-                            Start-Sleep -Seconds 2
-                            # add to retry counter and continue loop
-                            $success = $false
-                        } else {
-                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning -Step "Invoke-SystemContextAPI"
-                            # set success to true & exit the loop
-                            $success = $true
-                        }
-                    }
-                } while (-not $success -and $retryCount -lt $maxRetries)
-                if (-not $success) {
-                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Verbose -Step "Invoke-SystemContextAPI"
-                }
-            }
-            'POST' {
-                $maxRetries = 3
-                $retryCount = 0
-                do {
-                    try {
-                        $request = Invoke-RestMethod -Method $method -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers -Body $form
-                        $success = $true
-                    } catch {
-                        if ($_.Exception.Message -like "*The remote name could not be resolved*") {
-                            $retryCount++
-                            Start-Sleep -Seconds 2
-                            # add to retry counter and continue loop
-                            $success = $false
-                        } else {
-                            Write-ToLog "Failed to update system: $($_.Exception.Message)" -Level Warning -Step "Invoke-SystemContextAPI"
-                            # set success to true & exit the loop
-                            $success = $true
-                        }
-                    }
-                } while (-not $success -and $retryCount -lt $maxRetries)
-                if (-not $success) {
-                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Verbose -Step "Invoke-SystemContextAPI"
-                }
-            }
-            'DELETE' {
-                $maxRetries = 3
-                $retryCount = 0
-                do {
-                    try {
-                        $request = Invoke-RestMethod -Method DELETE -Uri "$($global:JCUrl)$requestURL" -ContentType 'application/json' -Headers $headers
-                        $success = $true
-                    } catch {
-                        if ($_.Exception.Message -like "*The remote name could not be resolved*") {
-                            $retryCount++
-                            Start-Sleep -Seconds 2
-                            # add to retry counter and continue loop
-                            $success = $false
-                        } else {
-                            Write-ToLog "Failed to delete system: $($_.Exception.Message)" -Level Warning -Step "Invoke-SystemContextAPI"
-                            # set success to true & exit the loop
-                            $success = $true
-                        }
-                    }
-                } while (-not $success -and $retryCount -lt $maxRetries)
-                if (-not $success) {
-                    Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Verbose -Step "Invoke-SystemContextAPI"
-                }
-            }
-            default {
-                'Invalid method specified. Valid methods are: GET, PUT, POST, DELETE.'
-            }
+        # Step 3: Send the PUT request
+        try {
+            $response = Invoke-RestMethod -Method PUT -Uri "$baseUrl$requestURL" -ContentType 'application/json' -Headers $headers -Body $bodyJson
+            Write-Verbose "Successfully updated system property: $property"
+            return $response
+        } catch {
+            throw "Failed to update system property $property : $_"
         }
-    }
-    end {
-        return $request
     }
 }
