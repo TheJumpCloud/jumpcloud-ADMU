@@ -48,11 +48,8 @@ $systemContextBinding = $false # Bind using the systemContext API (default False
 function Confirm-MigrationParameter {
     [CmdletBinding()]
     param(
-        [ValidateSet('CSV', 'Description')]
-        [string]$dataSource = 'Description',
-
+        [ValidateSet('CSV', 'Description')][string]$dataSource = 'Description',
         [string]$csvName = 'jcdiscovery.csv',
-
         [string]$TempPassword = 'Temp123!Temp123!',
         [bool]$LeaveDomain = $true,
         [bool]$ForceReboot = $true,
@@ -62,30 +59,22 @@ function Confirm-MigrationParameter {
         [bool]$BindAsAdmin = $false,
         [bool]$SetDefaultWindowsUser = $true,
         [bool]$removeMDM = $true,
-
         [bool]$systemContextBinding = $false,
         [string]$JumpCloudAPIKey = 'YOURAPIKEY',
         [string]$JumpCloudOrgID = 'YOURORGID',
         [bool]$ReportStatus = $false,
-
-        [ValidateSet('Restart', 'Shutdown')]
-        [string]$postMigrationBehavior = 'Restart'
+        [ValidateSet('Restart', 'Shutdown')][string]$postMigrationBehavior = 'Restart'
     )
-    if ($dataSource -eq 'CSV') {
-        if ([string]::IsNullOrWhiteSpace($csvName)) {
-            throw "Parameter Validation Failed: When dataSource is 'CSV', the 'csvName' parameter cannot be empty."
-        }
+    if ($dataSource -eq 'CSV' -and [string]::IsNullOrWhiteSpace($csvName)) {
+        throw "csvName required when dataSource is 'CSV'."
     }
-    if ([string]::IsNullOrEmpty($TempPassword)) {
-        throw "Parameter Validation Failed: The 'TempPassword' parameter cannot be empty."
-    }
-    # This check is crucial. It runs if the user relies on the default systemContextBinding=$false or sets it explicitly.
+    if ([string]::IsNullOrEmpty($TempPassword)) { throw "TempPassword cannot be empty." }
     if (-not $systemContextBinding) {
         if ([string]::IsNullOrWhiteSpace($JumpCloudAPIKey) -or $JumpCloudAPIKey -eq 'YOURAPIKEY') {
-            throw "Parameter Validation Failed: 'JumpCloudAPIKey' must be set to a valid key when 'systemContextBinding' is false."
+            throw "JumpCloudAPIKey required when systemContextBinding is false."
         }
         if ([string]::IsNullOrWhiteSpace($JumpCloudOrgID) -or $JumpCloudOrgID -eq 'YOURORGID') {
-            throw "Parameter Validation Failed: 'JumpCloudOrgID' must be set to a valid ID when 'systemContextBinding' is false."
+            throw "JumpCloudOrgID required when systemContextBinding is false."
         }
     }
     return $true
@@ -97,23 +86,15 @@ function Get-MigrationUsers {
         [Parameter(Mandatory = $true)]
         [ValidateSet('CSV', 'Description')]
         [string]$source,
-
         [Parameter(Mandatory = $false)]
         [string]$csvName = 'jcdiscovery.csv',
-
-        [Parameter(Mandatory = $false)]
-        [string]$GetSystemScriptPath = 'C:\Windows\Temp\Get-System.ps1',
-
         [Parameter(Mandatory = $true)]
         [boolean]$systemContextBinding
     )
-
     if ($source -eq 'CSV') {
-        # CSV-based migration
         return Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $systemContextBinding
     } elseif ($source -eq 'Description') {
-        # System description-based migration
-        return Get-MigrationUsersFromSystemDescription -GetSystemScriptPath $GetSystemScriptPath -systemContextBinding $systemContextBinding
+        return Get-MigrationUsersFromSystemDescription -systemContextBinding $systemContextBinding
     }
 }
 
@@ -123,31 +104,25 @@ function Get-MigrationUsersFromCsv {
     param(
         [Parameter(Mandatory = $true)]
         [string]$csvName,
-
         [Parameter(Mandatory = $true)]
         [boolean]$systemContextBinding
     )
     begin {
         $csvPath = "C:\Windows\Temp\$csvName"
         if (-not (Test-Path -Path $csvPath -PathType Leaf)) {
-            throw "Validation Failed: The CSV file was not found at: '$csvPath'."
+            throw "CSV file not found: '$csvPath'."
         }
         $ImportedCSV = Import-Csv -Path $csvPath -ErrorAction Stop
     }
     process {
-        # Begin by processing the CSV content headers, these should include the required values
         $requiredHeaders = @("LocalComputerName", "SerialNumber", "JumpCloudUserName", "SID", "LocalPath")
         $csvHeaders = $ImportedCSV[0].PSObject.Properties.Name
         foreach ($header in $requiredHeaders) {
-            if ($header -notin $csvHeaders) {
-                throw "Validation Failed: The CSV is missing the required header: '$header'."
-            }
+            if ($header -notin $csvHeaders) { throw "CSV missing header: '$header'." }
         }
         $usersToMigrate = New-Object System.Collections.ArrayList
         $computerName = hostname
-        if ([string]::IsNullOrWhiteSpace($computerName)) {
-            $computerName = $env:COMPUTERNAME
-        }
+        if ([string]::IsNullOrWhiteSpace($computerName)) { $computerName = $env:COMPUTERNAME }
         try {
             $serialNumber = (Get-WmiObject -Class Win32_BIOS).SerialNumber
         } catch {
@@ -155,37 +130,30 @@ function Get-MigrationUsersFromCsv {
         }
         $ValidDeviceRows = $ImportedCSV | Where-Object {
             ((-not [string]::IsNullOrWhiteSpace($_.JumpCloudUserName))) -and
-            ($_.LocalComputerName -eq $computerName) -and
-            ($_.SerialNumber -eq $serialNumber)
+            ($_.LocalComputerName -eq $computerName) -and ($_.SerialNumber -eq $serialNumber)
         }
         $duplicateSids = $ValidDeviceRows | Group-Object -Property 'SID' | Where-Object { $_.Count -gt 1 }
-        if ($duplicateSids) {
-            throw "Validation Failed: Duplicate SID '$($duplicateSids[0].Name)' found for LocalComputerName '$($computerName)'."
-        }
+        if ($duplicateSids) { throw "Duplicate SID found: '$($duplicateSids[0].Name)'." }
         foreach ($row in $ValidDeviceRows) {
-            if (($row.LocalComputerName -eq $computerName) -and ($row.SerialNumber -eq $serialNumber)) {
-                if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
-                    throw "VALIDATION FAILED: on row : 'JumpCloudUserID' cannot be empty when systemContextBinding is enabled. Halting script."
-                }
-                $requiredFields = "LocalPath", "SID"
-                foreach ($field in $requiredFields) {
-                    if ([string]::IsNullOrWhiteSpace($row.$field)) {
-                        throw "Validation Failed: Required field '$field' is empty for user '$($row.JumpCloudUserName)'."
-                    }
-                }
-                $usersToMigrate.Add([PSCustomObject]@{
-                        SelectedUsername  = $row.SID
-                        LocalPath         = $row.LocalPath
-                        JumpCloudUserName = $row.JumpCloudUserName
-                        JumpCloudUserID   = $row.JumpCloudUserID
-                    }) | Out-Null
+            if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($row.JumpCloudUserID)) {
+                throw "JumpCloudUserID required for systemContextBinding."
             }
+            $requiredFields = "LocalPath", "SID"
+            foreach ($field in $requiredFields) {
+                if ([string]::IsNullOrWhiteSpace($row.$field)) {
+                    throw "Field '$field' empty for user '$($row.JumpCloudUserName)'."
+                }
+            }
+            $usersToMigrate.Add([PSCustomObject]@{
+                    SelectedUsername  = $row.SID
+                    LocalPath         = $row.LocalPath
+                    JumpCloudUserName = $row.JumpCloudUserName
+                    JumpCloudUserID   = $row.JumpCloudUserID
+                }) | Out-Null
         }
     }
     end {
-        if ($usersToMigrate.Count -eq 0) {
-            throw "Validation Failed: No users were found in the CSV matching this computer's configuration."
-        }
+        if ($usersToMigrate.Count -eq 0) { throw "No users found in CSV matching this computer." }
         return $usersToMigrate
     }
 }
@@ -193,93 +161,33 @@ function Get-MigrationUsersFromCsv {
 function Get-MigrationUsersFromSystemDescription {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
-    param(
-        [Parameter(Mandatory = $true)]
-        [string]$GetSystemScriptPath,
-        [Parameter(Mandatory = $true)]
-        [boolean]$systemContextBinding
-    )
-    begin {
-        if (-not (Test-Path -Path $GetSystemScriptPath -PathType Leaf)) {
-            throw "Validation Failed: Get-System script not found at: '$GetSystemScriptPath'."
-        }
-        # Dot source the Get-System function
-        . $GetSystemScriptPath
-    }
+    param([Parameter(Mandatory = $true)][boolean]$systemContextBinding)
     process {
         try {
-            Write-Host "[status] Retrieving system description from JumpCloud..."
-            $systemDescription = Get-System -property "Description"
+            Write-Host "[status] Retrieving system description..."
+            $systemDescription = Get-SystemDescription -systemContextBinding $systemContextBinding
         } catch {
             throw "Failed to retrieve system description: $_"
         }
-
-        # Validate that system description contains valid JSON
-        if ([string]::IsNullOrEmpty($systemDescription)) {
-            Write-Host "[status] System description is empty. No users to migrate."
-            return $null
-        }
-
-        try {
-            $users = $systemDescription | ConvertFrom-Json
-        } catch {
-            throw "Validation Failed: System description does not contain valid JSON: $_"
-        }
-
-        # Ensure we have an array
-        if ($users.GetType().Name -eq 'PSCustomObject') {
-            $users = @($users)
-        }
-
+        if ([string]::IsNullOrEmpty($systemDescription)) { Write-Host "[status] System description is empty."; return $null }
+        try { $users = $systemDescription | ConvertFrom-Json } catch { throw "Invalid JSON: $_" }
+        if ($users.GetType().Name -eq 'PSCustomObject') { $users = @($users) }
         $usersToMigrate = New-Object System.Collections.ArrayList
-
-        # Validate and process users from system description
         foreach ($user in $users) {
-            # Validate required properties
-            if ([string]::IsNullOrWhiteSpace($user.sid)) {
-                Write-Host "[WARNING] Skipping user: Missing 'sid' property"
-                continue
-            }
-
-            if ([string]::IsNullOrWhiteSpace($user.un)) {
-                Write-Host "[WARNING] Skipping user: Missing 'un' (JumpCloud username) property"
-                continue
-            }
-
-            # Skip users marked as 'Skip' or not in 'Pending' state
-            if ($user.st -eq 'Skip') {
-                Write-Host "[status] Skipping user marked as Skip: $($user.un)"
-                continue
-            }
-
-            if ($user.st -ne 'Pending') {
-                Write-Host "[status] Skipping user with status '$($user.st)': $($user.un)"
-                continue
-            }
-
-            # For systemContextBinding, validate uid is present
-            if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($user.uid)) {
-                throw "VALIDATION FAILED: User '$($user.un)' is missing 'uid' property required for systemContextBinding."
-            }
-
-            # Build user object for migration
-            $migrationUser = [PSCustomObject]@{
-                SelectedUsername  = $user.sid
-                JumpCloudUserName = $user.un
-                LocalPath         = $user.localPath
-                JumpCloudUserID   = $user.uid
-            }
-
-            [void]$usersToMigrate.Add($migrationUser)
-            Write-Host "[status] User queued for migration: $($user.un) (SID: $($user.sid))"
+            if ([string]::IsNullOrWhiteSpace($user.sid)) { continue }
+            if ([string]::IsNullOrWhiteSpace($user.un)) { continue }
+            if ($user.st -eq 'Skip') { continue }
+            if ($user.st -ne 'Pending') { continue }
+            if ($systemContextBinding -and [string]::IsNullOrWhiteSpace($user.uid)) { throw "User '$($user.un)' missing 'uid'." }
+            [void]$usersToMigrate.Add([PSCustomObject]@{
+                    SelectedUsername  = $user.sid
+                    JumpCloudUserName = $user.un
+                    LocalPath         = $user.localPath
+                    JumpCloudUserID   = $user.uid
+                })
+            Write-Host "[status] User queued: $($user.un)"
         }
-
-        if ($usersToMigrate.Count -eq 0) {
-            Write-Host "[status] No eligible users found in system description for migration."
-            return $null
-        }
-
-        Write-Host "[status] $($usersToMigrate.Count) user(s) found and validated for migration."
+        if ($usersToMigrate.Count -eq 0) { Write-Host "[status] No eligible users found."; return $null }
         return $usersToMigrate
     }
 }
@@ -287,98 +195,67 @@ function Get-LatestADMUGUIExe {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param(
-        # The full path to the discovery CSV file.
-        [Parameter(Mandatory = $false)]
-        [string]$destinationPath = "C:\Windows\Temp",
-        # Optional GitHub token for authenticated requests (helps avoid rate limiting)
-        [Parameter(Mandatory = $false)]
-        [string]$GitHubToken,
-        # Maximum number of retry attempts
-        [Parameter(Mandatory = $false)]
-        [int]$MaxRetries = 3,
-        # Delay between retries in seconds
-        [Parameter(Mandatory = $false)]
-        [int]$RetryDelaySeconds = 20
+        [Parameter(Mandatory = $false)][string]$destinationPath = "C:\Windows\Temp",
+        [Parameter(Mandatory = $false)][string]$GitHubToken,
+        [Parameter(Mandatory = $false)][int]$MaxRetries = 3,
+        [Parameter(Mandatory = $false)][int]$RetryDelaySeconds = 20
     )
-
     begin {
         $owner = "TheJumpCloud"
         $repo = "jumpcloud-ADMU"
         $apiUrl = "https://api.github.com/repos/$owner/$repo/releases/latest"
-        # Setup headers for authenticated requests if token is provided
-        $headers = @{
-            "Accept" = "application/vnd.github.v3+json"
-        }
+        $headers = @{"Accept" = "application/vnd.github.v3+json" }
         if (-not [string]::IsNullOrEmpty($GitHubToken)) {
             $headers["Authorization"] = "Bearer $GitHubToken"
-            Write-Host "Using authenticated GitHub API requests" -ForegroundColor Cyan
+            Write-Host "Using authenticated GitHub API" -ForegroundColor Cyan
         }
     }
     process {
         $attempt = 0
         $success = $false
-        $lastError = $null
         while ($attempt -lt $MaxRetries -and -not $success) {
             $attempt++
             try {
-                if ($attempt -gt 1) {
-                    Write-Host "Retry attempt $attempt of $MaxRetries..." -ForegroundColor Yellow
-                }
-                Write-Host "Querying GitHub API for the latest '$repo' release..." -ForegroundColor Yellow
-                # Get latest release data from the GitHub API
+                if ($attempt -gt 1) { Write-Host "Retry attempt $attempt of $MaxRetries..." -ForegroundColor Yellow }
+                Write-Host "Querying GitHub for latest release..." -ForegroundColor Yellow
                 $latestRelease = Invoke-RestMethod -Uri $apiUrl -Headers $headers -ErrorAction Stop
-                # Find the specific GUI executable asset
                 $exeAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
                 if ($exeAsset) {
                     $downloadUrl = $exeAsset.browser_download_url
                     $fileName = $exeAsset.name
                     $fullPath = Join-Path -Path $destinationPath -ChildPath $fileName
                     Write-Host "Downloading '$fileName' (Version $($latestRelease.tag_name))..." -ForegroundColor Yellow
-                    # Download with retry logic
-                    $downloadAttempt = 0
-                    $downloadSuccess = $false
-                    while ($downloadAttempt -lt $MaxRetries -and -not $downloadSuccess) {
-                        $downloadAttempt++
+                    $dlAttempt = 0
+                    while ($dlAttempt -lt $MaxRetries) {
+                        $dlAttempt++
                         try {
                             Invoke-WebRequest -Uri $downloadUrl -OutFile $fullPath -ErrorAction Stop
-                            $downloadSuccess = $true
+                            Write-Host "Download complete!" -ForegroundColor Green
+                            $success = $true
+                            break
                         } catch {
-                            if ($downloadAttempt -lt $MaxRetries) {
+                            if ($dlAttempt -lt $MaxRetries) {
                                 Write-Host "Download failed. Retrying in $RetryDelaySeconds seconds..." -ForegroundColor Yellow
                                 Start-Sleep -Seconds $RetryDelaySeconds
-                            } else {
-                                throw
                             }
                         }
                     }
-                    Write-Host "Download complete! File saved to '$fullPath'." -ForegroundColor Green
-                    $success = $true
                 } else {
-                    throw "Could not find 'gui_jcadmu.exe' in the latest release."
+                    throw "Asset 'gui_jcadmu.exe' not found in release."
                 }
             } catch {
-                $lastError = $_
                 $errorMessage = $_.Exception.Message
-                $isRateLimit = $errorMessage -match "rate limit"
-                $isNetworkError = $errorMessage -match "network|connection|timeout|unable to connect"
-                if ($isRateLimit) {
-                    Write-Host "GitHub API rate limit exceeded." -ForegroundColor Yellow
+                if ($errorMessage -match "rate limit|403") {
+                    Write-Host "GitHub API rate limit issue." -ForegroundColor Yellow
                     if ([string]::IsNullOrEmpty($GitHubToken)) {
-                        Write-Host "Hint: Provide a GitHub token via -GitHubToken parameter for higher rate limits." -ForegroundColor Cyan
+                        Write-Host "Hint: Use -GitHubToken for higher limits." -ForegroundColor Cyan
                     }
-                } elseif ($isNetworkError) {
-                    Write-Host "Network connectivity issue detected: $errorMessage" -ForegroundColor Yellow
                 }
                 if ($attempt -lt $MaxRetries) {
-                    Write-Host "Waiting $RetryDelaySeconds seconds before retry..." -ForegroundColor Yellow
+                    Write-Host "Waiting $RetryDelaySeconds seconds..." -ForegroundColor Yellow
                     Start-Sleep -Seconds $RetryDelaySeconds
                 } else {
-                    $errorDetail = if ($lastError.ErrorDetails.Message) {
-                        $lastError.ErrorDetails.Message
-                    } else {
-                        $lastError.Exception.Message
-                    }
-                    throw "Operation failed after $MaxRetries attempts. Last error: $errorDetail"
+                    throw "Failed after $MaxRetries attempts: $errorMessage"
                 }
             }
         }
@@ -386,29 +263,12 @@ function Get-LatestADMUGUIExe {
 }
 function ConvertTo-ArgumentList {
     [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
-        [hashtable]
-        $InputHashtable
-    )
-    # Initialize a generic list to hold the formatted arguments.
+    param ([Parameter(Mandatory = $true, ValueFromPipeline = $true)][hashtable]$InputHashtable)
     $argumentList = [System.Collections.Generic.List[string]]::new()
-    # Iterate through each key-value pair in the input hashtable.
     foreach ($entry in $InputHashtable.GetEnumerator()) {
-        # Only process entries where the value is not null or an empty string.
         if ($null -ne $entry.Value -and (-not ($entry.Value -is [string]) -or $entry.Value -ne '')) {
-            $key = $entry.Key
-            $value = $entry.Value
-            # Format the value. Booleans are converted to lowercase string literals like '$true'.
-            # Other types are used as-is (they will be converted to strings automatically).
-            $formattedValue = if ($value -is [bool]) {
-                '$' + $value.ToString().ToLower()
-            } else {
-                $value
-            }
-            # Construct the argument string in the format -Key:Value and add it to the list.
-            $argument = "-{0}:{1}" -f $key, $formattedValue
-            $argumentList.Add($argument)
+            $formattedValue = if ($entry.Value -is [bool]) { '$' + $entry.Value.ToString().ToLower() } else { $entry.Value }
+            $argumentList.Add("-{0}:{1}" -f $entry.Key, $formattedValue)
         }
     }
     return $argumentList
@@ -416,81 +276,42 @@ function ConvertTo-ArgumentList {
 function Get-JcadmuGuiSha256 {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory = $false)]
-        [string]$GitHubToken,
-        [Parameter(Mandatory = $false)]
-        [int]$MaxRetries = 3,
-        [Parameter(Mandatory = $false)]
-        [int]$RetryDelaySeconds = 5
+        [Parameter(Mandatory = $false)][string]$GitHubToken,
+        [Parameter(Mandatory = $false)][int]$MaxRetries = 3,
+        [Parameter(Mandatory = $false)][int]$RetryDelaySeconds = 5
     )
     begin {
         $apiUrl = "https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/releases"
-        # Setup headers for authenticated requests if token is provided
-        $headers = @{
-            "Accept" = "application/vnd.github.v3+json"
-        }
+        $headers = @{"Accept" = "application/vnd.github.v3+json" }
         if (-not [string]::IsNullOrEmpty($GitHubToken)) {
             $headers["Authorization"] = "Bearer $GitHubToken"
         }
     }
     process {
         $attempt = 0
-        $success = $false
-        $lastError = $null
-        while ($attempt -lt $MaxRetries -and -not $success) {
+        while ($attempt -lt $MaxRetries) {
             $attempt++
             try {
-                if ($attempt -gt 1) {
-                    Write-Host "Retry attempt $attempt of $MaxRetries for SHA256 retrieval..." -ForegroundColor Yellow
-                }
+                if ($attempt -gt 1) { Write-Host "Retry attempt $attempt..." -ForegroundColor Yellow }
                 $releases = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers -ErrorAction Stop
-                if ($null -eq $releases -or $releases.Count -eq 0) {
-                    throw "No releases were found for the repository."
-                }
+                if ($null -eq $releases -or $releases.Count -eq 0) { throw "No releases found." }
                 $latestRelease = $releases[0]
-                $latestTag = $latestRelease.tag_name
-                # Find the specific asset within the 'assets' array
                 $targetAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
-                if ($targetAsset) {
-                    $digest = $targetAsset.digest
-                    if ($digest -and $digest.StartsWith('sha256:')) {
-                        $sha256 = $digest.Split(':')[1]
-                        $success = $true
-                        return [PSCustomObject]@{
-                            TagName = $latestTag
-                            SHA256  = $sha256
-                        }
-                    } else {
-                        throw "SHA256 digest not found or in unexpected format for 'gui_jcadmu.exe'."
-                    }
+                if ($targetAsset -and $targetAsset.digest -match "sha256:") {
+                    $sha256 = $targetAsset.digest.Split(':')[1]
+                    return [PSCustomObject]@{ TagName = $latestRelease.tag_name; SHA256 = $sha256 }
                 } else {
-                    throw "Asset 'gui_jcadmu.exe' not found in the latest release (Tag: $latestTag)."
+                    throw "SHA256 digest not found for 'gui_jcadmu.exe'."
                 }
             } catch {
-                $lastError = $_
-                $errorMessage = $_.Exception.Message
-                # Check for specific error types
-                $isRateLimit = $errorMessage -match "rate limit|403|forbidden"
-                $isNetworkError = $errorMessage -match "network|connection|timeout|unable to connect"
-                if ($isRateLimit) {
-                    Write-Host "GitHub API access issue (rate limit or 403 Forbidden)." -ForegroundColor Yellow
-                    if ([string]::IsNullOrEmpty($GitHubToken)) {
-                        Write-Host "Hint: Provide a GitHub token via -GitHubToken parameter to avoid rate limiting." -ForegroundColor Cyan
-                    }
-                } elseif ($isNetworkError) {
-                    Write-Host "Network connectivity issue detected: $errorMessage" -ForegroundColor Yellow
+                if ($_.Exception.Message -match "rate limit|403") {
+                    Write-Host "GitHub API rate limit issue." -ForegroundColor Yellow
                 }
                 if ($attempt -lt $MaxRetries) {
-                    Write-Host "Waiting $RetryDelaySeconds seconds before retry..." -ForegroundColor Yellow
+                    Write-Host "Retrying in $RetryDelaySeconds seconds..." -ForegroundColor Yellow
                     Start-Sleep -Seconds $RetryDelaySeconds
                 } else {
-                    # Final attempt failed
-                    $errorDetail = if ($lastError.ErrorDetails.Message) {
-                        $lastError.ErrorDetails.Message
-                    } else {
-                        $lastError.Exception.Message
-                    }
-                    throw "An API error or network issue occurred after $MaxRetries attempts: $errorDetail"
+                    throw "Failed after $MaxRetries attempts: $($_.Exception.Message)"
                 }
             }
         }
@@ -498,44 +319,28 @@ function Get-JcadmuGuiSha256 {
 }
 function Test-ExeSHA {
     param (
-        [Parameter(Mandatory = $true)]
-        [string]$filePath,
-        [Parameter(Mandatory = $false)]
-        [string]$GitHubToken
+        [Parameter(Mandatory = $true)][string]$filePath,
+        [Parameter(Mandatory = $false)][string]$GitHubToken
     )
     process {
-        if (-not (Test-Path -Path $filePath)) {
-            throw "The gui_jcadmu.exe file was not found at: '$filePath'."
-        }
-        # Pass GitHub token to Get-JcadmuGuiSha256 if available
-        if (-not [string]::IsNullOrEmpty($GitHubToken)) {
-            $releaseSHA256 = Get-JcadmuGuiSha256 -GitHubToken $GitHubToken
-        } else {
-            $releaseSHA256 = Get-JcadmuGuiSha256
-        }
-        $releaseSHA256 = $releaseSHA256.SHA256
-        # Get the SHA256 of the local file
+        if (-not (Test-Path -Path $filePath)) { throw "File not found: '$filePath'." }
+        $releaseSHA256 = if ($GitHubToken) { (Get-JcadmuGuiSha256 -GitHubToken $GitHubToken).SHA256 } else { (Get-JcadmuGuiSha256).SHA256 }
         $localFileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash.ToLower()
         Write-Host "[status] Official SHA256: $releaseSHA256"
-        Write-Host "[status] Local File SHA256:  $localFileHash"
-        Write-Host "`nValidating the downloaded file against the official release hash..."
+        Write-Host "[status] Local SHA256:    $localFileHash"
         if ($localFileHash -eq $releaseSHA256.ToLower()) {
-            Write-Host "[status] SUCCESS: Hash validation passed! The local file matches the official release."
+            Write-Host "[status] SUCCESS: Hash validation passed!"
         } else {
-            throw "[status] WARNING: HASH MISMATCH! The local file is different from the official release."
+            throw "[status] Hash mismatch! File differs from official release."
         }
     }
 }
 function Invoke-UserMigrationBatch {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)]
-        [array]$UsersToMigrate,
-
-        [Parameter(Mandatory = $true)]
-        [hashtable]$MigrationConfig
+        [Parameter(Mandatory = $true)][array]$UsersToMigrate,
+        [Parameter(Mandatory = $true)][hashtable]$MigrationConfig
     )
-    # Initialize results tracking
     $results = [PSCustomObject]@{
         TotalUsers           = $UsersToMigrate.Count
         SuccessfulMigrations = 0
@@ -547,16 +352,12 @@ function Invoke-UserMigrationBatch {
         EndTime              = $null
         Duration             = $null
     }
-    # Get the last user for domain leave logic
     $lastUser = $UsersToMigrate | Select-Object -Last 1
-    # Process each user migration
     foreach ($user in $UsersToMigrate) {
         $userStartTime = Get-Date
         $isLastUser = ($user -eq $lastUser)
-        # Determine domain leave parameter for this user
         $leaveDomainParam = if ($isLastUser -and $MigrationConfig.LeaveDomainAfterMigration) { $true } else { $false }
         $removeMDMParam = if ($isLastUser -and $MigrationConfig.RemoveMDM) { $true } else { $false }
-        # Build migration parameters for this user
         $migrationParams = @{
             JumpCloudUserName     = $user.JumpCloudUserName
             SelectedUserName      = $user.selectedUsername
@@ -572,11 +373,9 @@ function Invoke-UserMigrationBatch {
             adminDebug            = $true
             ReportStatus          = $MigrationConfig.ReportStatus
         }
-        # Handle optional JumpCloudOrgID parameter
         if (-not [string]::IsNullOrEmpty($MigrationConfig.JumpCloudOrgID)) {
             $migrationParams.Add('JumpCloudOrgID', $MigrationConfig.JumpCloudOrgID)
         }
-        # Handle system context binding parameters
         if ($MigrationConfig.systemContextBinding -eq $true) {
             $migrationParams.Remove('AutoBindJCUser')
             $migrationParams.Remove('JumpCloudAPIKey')
@@ -584,15 +383,10 @@ function Invoke-UserMigrationBatch {
             $migrationParams.Add('systemContextBinding', $true)
             $migrationParams.Add('JumpCloudUserID', $user.JumpCloudUserID)
         }
-        # Get domain status before migration
         $domainStatus = Get-DomainStatus
-        Write-Host "[status] Domain status before migration:"
-        Write-Host "[status] Azure/EntraID status: $($domainStatus.AzureAD)"
-        Write-Host "[status] Local domain status: $($domainStatus.LocalDomain)"
-        Write-Host "[status] Begin Migration for JumpCloudUser: $($user.JumpCloudUserName)"
-        # Execute the migration
+        Write-Host "[status] Domain status - Azure/EntraID: $($domainStatus.AzureAD), Local Domain: $($domainStatus.LocalDomain)"
+        Write-Host "[status] Begin migration for: $($user.JumpCloudUserName)"
         $migrationResult = Invoke-SingleUserMigration -User $user -MigrationParams $migrationParams -GuiJcadmuPath $MigrationConfig.guiJcadmuPath
-        # Track results
         $userResult = [PSCustomObject]@{
             JumpCloudUserName  = $user.JumpCloudUserName
             SelectedUsername   = $user.selectedUsername
@@ -609,54 +403,35 @@ function Invoke-UserMigrationBatch {
         if ($migrationResult.Success) {
             $results.SuccessfulMigrations++
             $results.SuccessfulUsers += $userResult
-            Write-Host "[status] Migration completed successfully for user: $($user.JumpCloudUserName)"
+            Write-Host "[status] Migration successful: $($user.JumpCloudUserName)"
         } else {
             $results.FailedMigrations++
             $results.FailedUsers += $userResult
-            Write-Host "[status] Migration failed for user: $($user.JumpCloudUserName)"
+            Write-Host "[status] Migration failed: $($user.JumpCloudUserName)"
         }
     }
     $results.EndTime = Get-Date
     $results.Duration = $results.EndTime - $results.StartTime
-    Write-Host "`nAll user migrations have been processed."
     return $results
 }
 function Invoke-SingleUserMigration {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)]
-        [PSCustomObject]$User,
-
-        [Parameter(Mandatory = $true)]
-        [hashtable]$MigrationParams,
-
-        [Parameter(Mandatory = $true)]
-        [string]$GuiJcadmuPath
+        [Parameter(Mandatory = $true)][PSCustomObject]$User,
+        [Parameter(Mandatory = $true)][hashtable]$MigrationParams,
+        [Parameter(Mandatory = $true)][string]$GuiJcadmuPath
     )
-    if (-not (Test-Path -Path $GuiJcadmuPath)) {
-        throw "The gui_jcadmu.exe file was not found at: '$GuiJcadmuPath'. Please ensure the file is present before running the migration."
-    }
+    if (-not (Test-Path -Path $GuiJcadmuPath)) { throw "File not found: '$GuiJcadmuPath'." }
     $convertedParams = ConvertTo-ArgumentList -InputHashtable $MigrationParams
     Write-Host "[status] Executing migration command..."
-    # Execute the migration
     $result = & $GuiJcadmuPath $convertedParams
-    # get the exit code
     $exitCode = $LASTEXITCODE
-    Write-Host "[status] Migration process completed with exit code: $exitCode"
+    Write-Host "[status] Migration completed with exit code: $exitCode"
     Write-Host "`n[status] Migration output:"
     $result | Out-Host
-    Write-Host "`n"
-    if ($exitCode -eq 0) {
-        # return true
-        return [PSCustomObject]@{
-            Success      = $true
-            ErrorMessage = $null
-        }
-    } else {
-        return [PSCustomObject]@{
-            Success      = $false
-            ErrorMessage = $result[-1]
-        }
+    return [PSCustomObject]@{
+        Success      = ($exitCode -eq 0)
+        ErrorMessage = if ($exitCode -ne 0) { $result[-1] } else { $null }
     }
 }
 function Get-DomainStatus {
@@ -667,63 +442,65 @@ function Get-DomainStatus {
         $AzureADStatus = "Unknown"
         $LocalDomainStatus = "Unknown"
         foreach ($line in $ADStatus) {
-            if ($line -match "AzureADJoined : ") {
-                $AzureADStatus = ($line.TrimStart('AzureADJoined : '))
-            }
-            if ($line -match "DomainJoined : ") {
-                $LocalDomainStatus = ($line.TrimStart('DomainJoined : '))
-            }
+            if ($line -match "AzureADJoined : ") { $AzureADStatus = ($line.TrimStart('AzureADJoined : ')) }
+            if ($line -match "DomainJoined : ") { $LocalDomainStatus = ($line.TrimStart('DomainJoined : ')) }
         }
-        return [PSCustomObject]@{
-            AzureAD     = $AzureADStatus
-            LocalDomain = $LocalDomainStatus
-        }
+        return [PSCustomObject]@{ AzureAD = $AzureADStatus; LocalDomain = $LocalDomainStatus }
     } catch {
         Write-Host "[status] Error getting domain status: $($_.Exception.Message)"
-        return [PSCustomObject]@{
-            AzureAD     = "Error"
-            LocalDomain = "Error"
-        }
+        return [PSCustomObject]@{ AzureAD = "Error"; LocalDomain = "Error" }
     }
 }
-#endregion functionDefinitions
-
-#region validation
-# validate migration parameters
-$confirmMigrationParameters = Confirm-MigrationParameter `
-    -dataSource $dataSource `
-    -csvName $csvName `
-    -TempPassword $TempPassword `
-    -LeaveDomain $LeaveDomain `
-    -ForceReboot $ForceReboot `
-    -UpdateHomePath $UpdateHomePath `
-    -AutoBindJCUser $AutoBindJCUser `
-    -PrimaryUser $PrimaryUser `
-    -BindAsAdmin $BindAsAdmin `
-    -SetDefaultWindowsUser $SetDefaultWindowsUser `
-    -systemContextBinding $systemContextBinding `
-    -JumpCloudAPIKey $JumpCloudAPIKey `
-    -JumpCloudOrgID $JumpCloudOrgID `
-    -postMigrationBehavior $postMigrationBehavior `
-    -removeMDM $removeMDM `
-    -ReportStatus $ReportStatus
-if ($confirmMigrationParameters) {
-    Write-Host "[STATUS] Migration parameters validated successfully."
+function Get-SystemDescription {
+    param([bool]$systemContextBinding)
+    if (-not $systemContextBinding) { throw "Description source requires systemContextBinding=`$true" }
+    try {
+        $cfg = Get-Content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
+        $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
+        if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey" }
+        $host_match = [regex]::Match($cfg, 'agentServerHost["]?:["]?agent\.(\w+)\.jumpcloud\.com').Groups[1].Value
+        $url = if ($host_match -eq "eu") { "https://console.jumpcloud.eu" }else { "https://console.jumpcloud.com" }
+        $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
+        if (-not(Test-Path $privKey)) { throw "Key not found" }
+        if ($PSVersionTable.PSVersion.Major -eq 5) {
+            if (-not([System.Management.Automation.PSTypeName]'RSAEncryption.RSAEncryptionProvider').Type) {
+                $rsaType = @'
+using System;using System.Collections.Generic;using System.IO;using System.Net;using System.Runtime.InteropServices;using System.Security;using System.Security.Cryptography;using System.Text;namespace RSAEncryption{public class RSAEncryptionProvider{public static RSACryptoServiceProvider GetRSAProviderFromPemFile(String pemfile,SecureString p=null){const String h="-----BEGIN PUBLIC KEY-----";const String f="-----END PUBLIC KEY-----";bool isPrivate=true;byte[]pk=null;if(!File.Exists(pemfile)){throw new Exception("key not found");}string ps=File.ReadAllText(pemfile).Trim();if(ps.StartsWith(h)&&ps.EndsWith(f)){isPrivate=false;}if(isPrivate){pk=ConvertPrivateKeyToBytes(ps,p);if(pk==null){return null;}return DecodeRSAPrivateKey(pk);}return null;}static byte[]ConvertPrivateKeyToBytes(String i,SecureString p=null){const String ph="-----BEGIN RSA PRIVATE KEY-----";const String pf="-----END RSA PRIVATE KEY-----";String ps=i.Trim();byte[]bk;if(!ps.StartsWith(ph)||!ps.EndsWith(pf)){return null;}StringBuilder sb=new StringBuilder(ps);sb.Replace(ph,"");sb.Replace(pf,"");String pvs=sb.ToString().Trim();try{bk=Convert.FromBase64String(pvs);return bk;}catch(System.FormatException){StringReader sr=new StringReader(pvs);if(!sr.ReadLine().StartsWith("Proc-Type"))return null;String sl=sr.ReadLine();if(!sl.StartsWith("DEK-Info"))return null;String ss=sl.Substring(sl.IndexOf(",")+1).Trim();byte[]salt=new byte[ss.Length/2];for(int i=0;i<salt.Length;i++)salt[i]=Convert.ToByte(ss.Substring(i*2,2),16);if(!(sr.ReadLine()==""))return null;String es="";String l="";while((l=sr.ReadLine())!=null){es+=l;}bk=Convert.FromBase64String(es);byte[]dk=GetEncryptedKey(salt,p,1,1);byte[]iv=new byte[8];Array.Copy(salt,0,iv,0,8);bk=DecryptKey(bk,dk,iv);return bk;}}public static RSACryptoServiceProvider DecodeRSAPrivateKey(byte[]pk){byte[]M,E,D,P,Q,DP,DQ,IQ;MemoryStream m=new MemoryStream(pk);BinaryReader br=new BinaryReader(m);byte b=0;ushort t=0;int e=0;try{t=br.ReadUInt16();if(t==0x8130)br.ReadByte();else if(t==0x8230)br.ReadInt16();else return null;t=br.ReadUInt16();if(t!=0x0102)return null;b=br.ReadByte();if(b!=0x00)return null;e=GetIntegerSize(br);M=br.ReadBytes(e);e=GetIntegerSize(br);E=br.ReadBytes(e);e=GetIntegerSize(br);D=br.ReadBytes(e);e=GetIntegerSize(br);P=br.ReadBytes(e);e=GetIntegerSize(br);Q=br.ReadBytes(e);e=GetIntegerSize(br);DP=br.ReadBytes(e);e=GetIntegerSize(br);DQ=br.ReadBytes(e);e=GetIntegerSize(br);IQ=br.ReadBytes(e);RSACryptoServiceProvider RSA=new RSACryptoServiceProvider();RSAParameters RP=new RSAParameters();RP.Modulus=M;RP.Exponent=E;RP.D=D;RP.P=P;RP.Q=Q;RP.DP=DP;RP.DQ=DQ;RP.InverseQ=IQ;RSA.ImportParameters(RP);return RSA;}catch(Exception){return null;}finally{br.Close();}}private static int GetIntegerSize(BinaryReader br){byte b=0;byte lb=0x00;byte hb=0x00;int c=0;b=br.ReadByte();if(b!=0x02)return 0;b=br.ReadByte();if(b==0x81)c=br.ReadByte();else if(b==0x82){hb=br.ReadByte();lb=br.ReadByte();byte[]mi={lb,hb,0x00,0x00};c=BitConverter.ToInt32(mi,0);}else{c=b;}while(br.ReadByte()==0x00){c--;}br.BaseStream.Seek(-1,SeekOrigin.Current);return c;}static byte[]GetEncryptedKey(byte[]salt,SecureString sp,int c,int m){IntPtr up=IntPtr.Zero;int HL=16;byte[]km=new byte[HL*m];byte[]pb=new byte[sp.Length];up=Marshal.SecureStringToGlobalAllocAnsi(sp);Marshal.Copy(up,pb,0,pb.Length);Marshal.ZeroFreeGlobalAllocAnsi(up);byte[]d00=new byte[pb.Length+salt.Length];Array.Copy(pb,d00,pb.Length);Array.Copy(salt,0,d00,pb.Length,salt.Length);MD5 md=new MD5CryptoServiceProvider();byte[]res=null;byte[]ht=new byte[HL+d00.Length];for(int j=0;j<m;j++){res=md.ComputeHash(ht);Array.Copy(res,0,ht,0,res.Length);Array.Copy(d00,0,ht,res.Length,d00.Length);}byte[]dk=new byte[24];Array.Copy(km,dk,dk.Length);Array.Clear(pb,0,pb.Length);Array.Clear(d00,0,d00.Length);Array.Clear(res,0,res.Length);Array.Clear(ht,0,ht.Length);Array.Clear(km,0,km.Length);return dk;}static byte[]DecryptKey(byte[]cd,byte[]dek,byte[]iv){MemoryStream ms=new MemoryStream();TripleDES alg=TripleDES.Create();alg.Key=dek;alg.IV=iv;try{CryptoStream cs=new CryptoStream(ms,alg.CreateDecryptor(),CryptoStreamMode.Write);cs.Write(cd,0,cd.Length);cs.Close();}catch(Exception){return null;}byte[]dd=ms.ToArray();return dd;}}}
+'@
+                Add-Type -TypeDefinition $rsaType
+            }
+            $rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($privKey)
+        } else {
+            $pem = Get-Content -Path $privKey -Raw
+            $rsa = [System.Security.Cryptography.RSA]::Create()
+            $rsa.ImportFromPem($pem)
+        }
+        $now = (Get-Date -Date ((Get-Date).ToUniversalTime())-UFormat '+%a, %d %h %Y %H:%M:%S GMT')
+        $signstr = "GET /api/systems/$key HTTP/1.1`ndate: $now"
+        $enc = [system.Text.Encoding]::UTF8
+        $data = $enc.GetBytes($signstr)
+        $sha = New-Object System.Security.Cryptography.SHA256CryptoServiceProvider
+        $hr = $sha.ComputeHash($data)
+        $ha = [System.Security.Cryptography.HashAlgorithmName]::SHA256
+        $sb = $rsa.SignHash($hr, $ha, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+        $sig = [Convert]::ToBase64String($sb)
+        $h = @{Accept = "application/json"; Date = "$now"; Authorization = "Signature keyId=`"system/$key`",headers=`"request-line date`",algorithm=`"rsa-sha256`",signature=`"$sig`"" }
+        $sys = Invoke-RestMethod -Method GET -Uri "$url/api/systems/$key" -Headers $h
+        return $sys.description
+    } catch { throw "Failed to get description: $_" }
 }
+#endregion functionDefinitions
+#region validation
+$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus
+if ($confirmMigrationParameters) { Write-Host "[STATUS] Migration parameters validated successfully." }
 #endregion validation
 #region dataImport
 if ($dataSource -eq 'CSV') {
-    Write-Host "[status] Using CSV source for migration users..."
-    if (-not $csvName) {
-        Write-Host "[status] Required script variable 'csvName' not set, exiting..."
-        exit 1
-    }
+    Write-Host "[status] Using CSV source..."
+    if (-not $csvName) { Write-Host "[status] csvName not set, exiting..."; exit 1 }
 } elseif ($dataSource -eq 'Description') {
-    Write-Host "[status] Using system description source for migration users..."
-    Write-Host "[status] Importing Get-System function for system description retrieval..."
+    Write-Host "[status] Using system description source..."
 }
-
-# Call the unified function and store the result (which is either an array of users or $null)
 try {
     $UsersToMigrate = Get-MigrationUsers -source $dataSource -csvName $csvName -systemContextBinding $systemContextBinding
 } catch {
@@ -731,59 +508,37 @@ try {
     exit 1
 }
 #endregion dataImport
-
-# Run ADMU
-
-# If multiple users are planned to be migrated: set the force reboot / leave domain options to false:
-if ($UsersToMigrate) {
-    #region logoffUsers
-    # Query User Sessions & logoff
-    # get rid of the > char & break out into a CSV type object
-    $loggedInUsers = (quser) -replace '^>', ' ' | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
-    # create a list for users
-    $processedUsers = @()
-    foreach ($obj in $loggedInUsers) {
-        # if missing an entry for one of: USERNAME,SESSIONNAME,ID,STATE,IDLE TIME OR LOGON TIME, add a comma
-        if ($obj.Split(',').Count -ne 6) {
-            # Write-Host ($obj -replace '(^[^,]+)', '$1,')
-            $processedUsers += ($obj -replace '(^[^,]+)', '$1,')
-        } else {
-            # Write-Host ($obj)
-            $processedUsers += $obj
-        }
-    }
-    $UsersList = $processedUsers | ConvertFrom-Csv
-    Write-Host "[status] Logging off users..."
-    foreach ($user in $UsersList) {
-        if (($user.username)) {
-            Write-Host "[status] Logging off user: $($user.username) with ID: $($user.ID)"
-            # Force Logout
-            logoff.exe $($user.ID)
-        }
-    }
-    #endregion logoffUsers
-    if ($LeaveDomain) {
-        $LeaveDomain = $false
-        Write-Host "[status] The Domain will attempt to be un-joined for the last user migrated on this system"
-        $LeaveDomainAfterMigration = $true
-    }
-    # if you force with the JumpCloud command, the results will never be written to the console, we always want to reboot/shutdown with the built in commands.
-    if ($ForceReboot) {
-        $ForceReboot = $false
-        Write-Host "[status] The system will $postMigrationBehavior after the last user is migrated"
-        $ForceRebootAfterMigration = $true
-    }
-} else {
-    Write-Host "[status] No users to migrate, exiting..."
-    exit 1
+if (-not $UsersToMigrate) { Write-Host "[status] No users to migrate, exiting..."; exit 1 }
+#region logoffUsers
+$loggedInUsers = (quser) -replace '^>', ' ' | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
+$processedUsers = @()
+foreach ($obj in $loggedInUsers) {
+    $processedUsers += if ($obj.Split(',').Count -ne 6) { $obj -replace '(^[^,]+)', '$1,' } else { $obj }
 }
+$UsersList = $processedUsers | ConvertFrom-Csv
+Write-Host "[status] Logging off users..."
+foreach ($user in $UsersList) {
+    if ($user.username) {
+        Write-Host "[status] Logging off: $($user.username) (ID: $($user.ID))"
+        logoff.exe $($user.ID)
+    }
+}
+#endregion logoffUsers
+if ($LeaveDomain) {
+    $LeaveDomain = $false
+    Write-Host "[status] Domain will be un-joined for last user migrated"
+    $LeaveDomainAfterMigration = $true
+}
+if ($ForceReboot) {
+    $ForceReboot = $false
+    Write-Host "[status] System will $postMigrationBehavior after last user is migrated"
+    $ForceRebootAfterMigration = $true
+}
+#endregion logoffUsers (implied)
 #region migration
-$guiJcadmuPath = "C:\Windows\Temp\gui_jcadmu.exe" # Exe path
-# Download the latest ADMU GUI executable
+$guiJcadmuPath = "C:\Windows\Temp\gui_jcadmu.exe"
 Get-LatestADMUGUIExe
-# Validate the downloaded file against the official release hash
 Test-ExeSHA -filePath $guiJcadmuPath
-# Execute the migration batch processing
 $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig @{
     TempPassword              = $TempPassword
     UpdateHomePath            = $UpdateHomePath
@@ -799,34 +554,18 @@ $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -M
     removeMDM                 = $removeMDM
     guiJcadmuPath             = $guiJcadmuPath
 }
-# Display results summary
-Write-Host "`nMigration Results Summary:"
-Write-Host "Total Users Processed: $($migrationResults.TotalUsers)"
-Write-Host "Successful Migrations: $($migrationResults.SuccessfulMigrations)"
-Write-Host "Failed Migrations: $($migrationResults.FailedMigrations)"
+Write-Host "`nResults - Total: $($migrationResults.TotalUsers), Success: $($migrationResults.SuccessfulMigrations), Failed: $($migrationResults.FailedMigrations)"
 if ($migrationResults.FailedUsers.Count -gt 0) {
     Write-Host "`nFailed Users:"
-    foreach ($failedUser in $migrationResults.FailedUsers) {
-        Write-Host "  - $($failedUser.JumpCloudUserName)"
-    }
+    foreach ($failedUser in $migrationResults.FailedUsers) { Write-Host "  - $($failedUser.JumpCloudUserName)" }
     exit 1
 } else {
-    # process remainder of the script:
     #region restart/shutdown
-    # If force restart was specified, we kick off a command to initiate the restart
-    # this ensures that the JumpCloud commands reports a success
     if ($ForceRebootAfterMigration) {
-        # wait 20 seconds after migration to ensure the agent has time to associate the user to the device
         Start-Sleep 20
         switch ($postMigrationBehavior) {
-            'shutdown' {
-                Write-Host "[status] Shutting down the system with PowerShell..."
-                Stop-Computer -ComputerName localhost -force
-            }
-            'restart' {
-                Write-Host "[status] Restarting the system with PowerShell..."
-                Restart-Computer -ComputerName localhost -force
-            }
+            'shutdown' { Write-Host "[status] Shutting down..."; Stop-Computer -ComputerName localhost -force }
+            'restart' { Write-Host "[status] Restarting..."; Restart-Computer -ComputerName localhost -force }
         }
     }
     #endregion restart/shutdown
