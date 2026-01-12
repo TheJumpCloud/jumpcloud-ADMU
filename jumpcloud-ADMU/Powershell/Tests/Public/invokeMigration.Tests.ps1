@@ -264,7 +264,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
     Context "Get-MigrationUsersFromCsv Function" {
         # Universal setup for all tests in this context
         BeforeAll {
-            $csvPath = Join-Path 'C:\Windows\Temp' 'jcDiscovery.csv'
+            $csvPath = Join-Path 'C:\Windows\Temp' 'jcdiscovery.csv'
+            $csvName = "jcdiscovery.csv"
         }
 
         AfterEach {
@@ -276,7 +277,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
         It "Should throw an error if the CSV file does not exist" {
             # Act & Assert
-            { Get-MigrationUsersFromCsv -csvPath "notAFile.csv" -systemContextBinding $false } | Should -Throw -ExpectedMessage "*CSV file not found:*"
+            { Get-MigrationUsersFromCsv -csvName "notAFile.csv" -systemContextBinding $false } | Should -Throw -ExpectedMessage "*CSV file not found:*"
         }
 
         It "Should throw an error if the CSV is missing a required header" {
@@ -288,7 +289,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Set-Content -Path $csvPath -Value $csvContent -Force
 
             # Act & Assert
-            { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw -ExpectedMessage "*CSV missing header: 'SID'*"
+            { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Throw -ExpectedMessage "*CSV missing header: 'SID'*"
         }
 
 
@@ -313,7 +314,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Duplicate SID found: 'S-1-5-21-DUPLICATE-SID'."
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Throw "Duplicate SID found: 'S-1-5-21-DUPLICATE-SID'."
             }
             It "Should NOT throw an error if a SID is duplicated for the local device and only one row has a JumpCloudUserName" {
                 # Arrange: The same SID appears twice for 'TEST-PC-1'.
@@ -326,8 +327,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Not -Throw
-                $usersToMigrate = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Not -Throw
+                $usersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false
                 $usersToMigrate | Should -Not -BeNullOrEmpty
                 ($usersToMigrate | Select-Object -First 1).SelectedUsername | Should -Be "S-1-5-21-DUPLICATE-SID"
                 ($usersToMigrate | Select-Object -First 1).LocalPath | Should -Be "C:\Users\j.doe"
@@ -345,8 +346,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Not -Throw
-                $usersToMigrate = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Not -Throw
+                $usersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false
                 $usersToMigrate | Should -Not -BeNullOrEmpty
                 ($usersToMigrate | Select-Object -First 1).SelectedUsername | Should -Be "S-1-5-21-DIFFERENT-SID"
                 ($usersToMigrate | Select-Object -First 1).LocalPath | Should -Be "C:\Users\j.doe"
@@ -362,7 +363,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Field 'SID' empty"
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Throw "Field 'SID' empty"
             }
 
             It "Should throw an error if 'LocalPath' field is empty" {
@@ -374,7 +375,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "Field 'LocalPath' empty"
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Throw "Field 'LocalPath' empty"
             }
 
             It "Should only return rows where 'JumpCloudUserName' field is not empty" {
@@ -387,8 +388,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                # Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false | Should -Not -BeNullOrEmpty
-                $result = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
+                # Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false | Should -Not -BeNullOrEmpty
+                $result = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false
                 $result | Where-Object { -not [string]::IsNullOrWhiteSpace($_.JumpCloudUserName) } | Should -Not -BeNullOrEmpty
                 $result[0].SelectedUserName | Should -Be "S-1-5-21-ABC"
                 $result[0].JumpCloudUserName | Should -Be "bobby.jones"
@@ -404,7 +405,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $true } | Should -Throw "JumpCloudUserID required for systemContextBinding."
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true } | Should -Throw "JumpCloudUserID required for systemContextBinding."
             }
 
             # --- Test Cases for Filtering Logic ---
@@ -417,7 +418,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 "@
                 Set-Content -Path $csvPath -Value $csvContent -Force
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false } | Should -Throw "No users found in CSV matching this computer."
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Throw "No users found in CSV matching this computer."
             }
 
             It "Should return a filtered list of user objects for the current computer" {
@@ -430,7 +431,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 "@
                 Set-Content -Path $csvPath -Value $csvContent -Force
                 # Act
-                $result = Get-MigrationUsersFromCsv -csvPath $csvPath -systemContextBinding $false
+                $result = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false
 
                 # Assert
                 $result | Should -Not -BeNullOrEmpty
@@ -873,17 +874,18 @@ $userSid1,C:\Users\$userToMigrateFrom1,$env:COMPUTERNAME,$userToMigrateFrom1,$us
                 guiJcadmuPath             = $destinationPath
             }
             $systemContextBinding = $false
+            $csvName = "jcdiscovery.csv"
         }
         # Migration with Valid data
         It "Should migrate the users to JumpCloud and not throw an error" {
             # set the users to migrate
-            $UsersToMigrate = Get-MigrationUsersFromCsv -CsvPath $csvPath -systemContextBinding $systemContextBinding
+            $UsersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $systemContextBinding
             # Execute the migration batch processing
             { Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig $migrationParams } | Should -Not -Throw
         }
         It "Should migrate the users and return the expected results" {
             # set the users to migrate
-            $UsersToMigrate = Get-MigrationUsersFromCsv -CsvPath $csvPath -systemContextBinding $systemContextBinding
+            $UsersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $systemContextBinding
             # Execute the migration batch processing
             $results = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig $migrationParams
             $results.TotalUsers | Should -Be 2
@@ -892,7 +894,7 @@ $userSid1,C:\Users\$userToMigrateFrom1,$env:COMPUTERNAME,$userToMigrateFrom1,$us
         }
         It "Should migrate multiple users even if one fails" {
             # set the users to migrate
-            $UsersToMigrate = Get-MigrationUsersFromCsv -CsvPath $csvPath -systemContextBinding $systemContextBinding
+            $UsersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $systemContextBinding
             # Force an error by setting one of the JumpCloudUserName to an invalid user
             # to throw the test init the user to migrate to
             Initialize-TestUser -username $userToMigrateTo1 -password $tempPassword
