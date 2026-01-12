@@ -59,6 +59,9 @@ function Invoke-SystemContextAPI {
             throw "Could not get systemKey from jcagent.conf or determine JumpCloud Region."
         }
 
+        # convert $method .toUpper() for consistency
+        $method = $method.ToUpper()
+
         # Referenced Library for RSA
         switch ($PSVersionTable.PSVersion.Major) {
             '5' {
