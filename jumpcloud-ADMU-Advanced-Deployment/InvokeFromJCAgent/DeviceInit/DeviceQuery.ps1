@@ -1,221 +1,257 @@
-# fist set the execution policy to allow script execution
+#region functions
 function Confirm-ExecutionPolicy {
-    # this checks the execution policy
-    # returns True/False
     begin {
-        $success = $true
-        $curExecutionPolicy = Get-ExecutionPolicy -List
-        $lines = $curExecutionPolicy -split "`n" | Where-Object { $_.Trim() -ne "" -and $_ -notmatch '^-{5}' -and $_ -notmatch 'Scope ExecutionPolicy' }
-        $policies = [PSCustomObject]@{
-            MachinePolicy = ""
-            UserPolicy    = ""
-            Process       = ""
-            CurrentUser   = ""
-            LocalMachine  = ""
-        }
-
-        $regex = '@\{Scope=(.+?); ExecutionPolicy=(.+?)\}'
+        $s = $true
+        $c = Get-ExecutionPolicy -List
+        $l = ($c -split "`n" | ? { $_.Trim() -ne "" } -NotMatch '^-{5}') -notmatch 'Scope'
+        $p = [PSCustomObject]@{MachinePolicy = ""; UserPolicy = ""; Process = ""; CurrentUser = ""; LocalMachine = "" }; $r = '@\{Scope=(.+?); ExecutionPolicy=(.+?)\}'
     }
     process {
         try {
-            foreach ($line in $lines) {
-                if ($line -match $regex) {
-                    $scope = $matches[1]
-                    $executionPolicy = $matches[2].Trim()
-                    switch ($scope) {
-                        "MachinePolicy" { $policies.MachinePolicy = $executionPolicy }
-                        "UserPolicy" { $policies.UserPolicy = $executionPolicy }
-                        "Process" { $policies.Process = $executionPolicy }
-                        "CurrentUser" { $policies.CurrentUser = $executionPolicy }
-                        "LocalMachine" { $policies.LocalMachine = $executionPolicy }
+            foreach ($ln in $l) {
+                if ($ln -match $r) {
+                    $sc = $matches[1]
+                    $ep = $matches[2].Trim()
+                    switch ($sc) {
+                        "MachinePolicy" {
+                            $p.MachinePolicy = $ep
+                        }
+                        "UserPolicy" {
+                            $p.UserPolicy = $ep
+                        }
+                        "Process" {
+                            $p.Process = $ep
+                        }
+                        "CurrentUser" {
+                            $p.CurrentUser = $ep
+                        }
+                        "LocalMachine" {
+                            $p.LocalMachine = $ep
+                        }
                     }
                 }
             }
-            # if the machinePolicy is set to Restricted, AllSigned or RemoteSigned, the ADMU script can not run
-            if (($policies.MachinePolicy -eq "Restricted") -or
-                ($policies.MachinePolicy -eq "AllSigned") -or
-                ($policies.MachinePolicy -eq "RemoteSigned")) {
-                throw "Machine Policy is set to $($policies.MachinePolicy), this script can not change the Machine Policy because it's set by Group Policy. You need to change this in the Group Policy Editor and likely enable scripts to be run"
-                # Throw "Machine Policy is set to $($policies.MachinePolicy)"
-                $success = $false
-
+            if ($p.MachinePolicy -in "Restricted", "AllSigned", "RemoteSigned") {
+                throw "MachinePolicy: $($p.MachinePolicy). Change via GPO."
             }
-            if ($policies.MachinePolicy -eq "Unrestricted") {
-                Write-Host "[status] Machine Policy is set to Unrestricted, no changes made."
-                $success = $true
-                return
+            if ($p.MachinePolicy -eq "Unrestricted") {
+                Write-Host"[status] MachinePolicy: Unrestricted"
+                return$true
             }
-            # If the Process policy is set to Restricted, AllSigned or RemoteSigned, we need to change it to Bypass
-            if (($policies.Process -eq "Restricted") -or
-                ($policies.Process -eq "AllSigned") -or
-                ($policies.Process -eq "RemoteSigned") -or
-                ($policies.Process -eq "Undefined")) {
-                Write-Host "[status] Process Policy is set to $($policies.Process), setting to Bypass"
-                try {
-                    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
-                } catch {
-                    throw "Failed to set Process execution policy to Bypass."
-                    $success = $false
-                }
-            } else {
-                Write-Host "[status] Process Policy is set to $($policies.Process), no changes made."
+            if ($p.Process -in "Restricted", "AllSigned", "RemoteSigned", "Undefined") {
+                Write-Host"[status] Setting Process to Bypass"; Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
             }
-            # If the localMachine policy is set to Restricted, AllSigned or RemoteSigned, we need to change it to Bypass
-            if (($policies.LocalMachine -eq "Restricted") -or
-                ($policies.LocalMachine -eq "AllSigned") -or
-                ($policies.LocalMachine -eq "RemoteSigned") -or
-                ($policies.LocalMachine -eq "Undefined")) {
-                Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), setting to Bypass"
-                try {
-                    Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
-                } catch {
-                    throw "Failed to set LocalMachine execution policy to Bypass."
-                    $success = $false
-                }
-            } else {
-                Write-Host "[status] Local Machine Policy is set to $($policies.LocalMachine), no changes made."
+            if ($p.LocalMachine -in "Restricted", "AllSigned", "RemoteSigned", "Undefined") {
+                Write-Host"[status] Setting LocalMachine to Bypass"; Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
             }
         } catch {
-            throw "Exception occurred in Confirm-ExecutionPolicy: $($_.Exception.Message)"
-            $success = $false
+            throw"ExecutionPolicy error: $_"
+            return $false
         }
     }
-    end {
-        return $success
-    }
+    end { return $s }
 }
-if (-not (Confirm-ExecutionPolicy)) {
-    throw "Execution Policy could not be set, please check the machine policy execution settings for this device. Exiting."
-}
-# first init the RSA encryption provider
-. C:\Windows\Temp\Initialize-RSAEncryption.ps1
-# Import the Get/Set System functions
-. C:\Windows\Temp\Get-System.ps1
-. C:\Windows\Temp\Set-System.ps1
 
-# get the JumpCloud programFiles location:
+function Get-System {
+    param([bool]$systemContextBinding)
+    if (-not $systemContextBinding) { throw "Description source requires systemContextBinding=`$true" }
+    try {
+        $cfg = Get-Content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
+        $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
+        if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey" }
+        $host_match = [regex]::Match($cfg, 'agentServerHost["]?:["]?agent\.(\w+)\.jumpcloud\.com').Groups[1].Value
+        $url = if ($host_match -eq "eu") { "https://console.jumpcloud.eu" }else { "https://console.jumpcloud.com" }
+        $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
+        if (-not(Test-Path $privKey)) { throw "Key not found" }
+        if ($PSVersionTable.PSVersion.Major -eq 5) {
+            if (-not([System.Management.Automation.PSTypeName]'RSAEncryption.RSAEncryptionProvider').Type) {
+                $rsaType = @'
+using System;using System.Collections.Generic;using System.IO;using System.Net;using System.Runtime.InteropServices;using System.Security;using System.Security.Cryptography;using System.Text;namespace RSAEncryption{public class RSAEncryptionProvider{public static RSACryptoServiceProvider GetRSAProviderFromPemFile(String pemfile,SecureString p=null){const String h="-----BEGIN PUBLIC KEY-----";const String f="-----END PUBLIC KEY-----";bool isPrivate=true;byte[]pk=null;if(!File.Exists(pemfile)){throw new Exception("key not found");}string ps=File.ReadAllText(pemfile).Trim();if(ps.StartsWith(h)&&ps.EndsWith(f)){isPrivate=false;}if(isPrivate){pk=ConvertPrivateKeyToBytes(ps,p);if(pk==null){return null;}return DecodeRSAPrivateKey(pk);}return null;}static byte[]ConvertPrivateKeyToBytes(String i,SecureString p=null){const String ph="-----BEGIN RSA PRIVATE KEY-----";const String pf="-----END RSA PRIVATE KEY-----";String ps=i.Trim();byte[]bk;if(!ps.StartsWith(ph)||!ps.EndsWith(pf)){return null;}StringBuilder sb=new StringBuilder(ps);sb.Replace(ph,"");sb.Replace(pf,"");String pvs=sb.ToString().Trim();try{bk=Convert.FromBase64String(pvs);return bk;}catch(System.FormatException){StringReader sr=new StringReader(pvs);if(!sr.ReadLine().StartsWith("Proc-Type"))return null;String sl=sr.ReadLine();if(!sl.StartsWith("DEK-Info"))return null;String ss=sl.Substring(sl.IndexOf(",")+1).Trim();byte[]salt=new byte[ss.Length/2];for(int idx=0;idx<salt.Length;idx++)salt[idx]=Convert.ToByte(ss.Substring(idx*2,2),16);if(!(sr.ReadLine()==""))return null;String es="";String l="";while((l=sr.ReadLine())!=null){es+=l;}bk=Convert.FromBase64String(es);byte[]dk=GetEncryptedKey(salt,p,1,1);byte[]iv=new byte[8];Array.Copy(salt,0,iv,0,8);bk=DecryptKey(bk,dk,iv);return bk;}}public static RSACryptoServiceProvider DecodeRSAPrivateKey(byte[]pk){byte[]M,E,D,P,Q,DP,DQ,IQ;MemoryStream m=new MemoryStream(pk);BinaryReader br=new BinaryReader(m);byte b=0;ushort t=0;int e=0;try{t=br.ReadUInt16();if(t==0x8130)br.ReadByte();else if(t==0x8230)br.ReadInt16();else return null;t=br.ReadUInt16();if(t!=0x0102)return null;b=br.ReadByte();if(b!=0x00)return null;e=GetIntegerSize(br);M=br.ReadBytes(e);e=GetIntegerSize(br);E=br.ReadBytes(e);e=GetIntegerSize(br);D=br.ReadBytes(e);e=GetIntegerSize(br);P=br.ReadBytes(e);e=GetIntegerSize(br);Q=br.ReadBytes(e);e=GetIntegerSize(br);DP=br.ReadBytes(e);e=GetIntegerSize(br);DQ=br.ReadBytes(e);e=GetIntegerSize(br);IQ=br.ReadBytes(e);RSACryptoServiceProvider RSA=new RSACryptoServiceProvider();RSAParameters RP=new RSAParameters();RP.Modulus=M;RP.Exponent=E;RP.D=D;RP.P=P;RP.Q=Q;RP.DP=DP;RP.DQ=DQ;RP.InverseQ=IQ;RSA.ImportParameters(RP);return RSA;}catch(Exception){return null;}finally{br.Close();}}private static int GetIntegerSize(BinaryReader br){byte b=0;byte lb=0x00;byte hb=0x00;int c=0;b=br.ReadByte();if(b!=0x02)return 0;b=br.ReadByte();if(b==0x81)c=br.ReadByte();else if(b==0x82){hb=br.ReadByte();lb=br.ReadByte();byte[]mi={lb,hb,0x00,0x00};c=BitConverter.ToInt32(mi,0);}else{c=b;}while(br.ReadByte()==0x00){c--;}br.BaseStream.Seek(-1,SeekOrigin.Current);return c;}static byte[]GetEncryptedKey(byte[]salt,SecureString sp,int c,int m){IntPtr up=IntPtr.Zero;int HL=16;byte[]km=new byte[HL*m];byte[]pb=new byte[sp.Length];up=Marshal.SecureStringToGlobalAllocAnsi(sp);Marshal.Copy(up,pb,0,pb.Length);Marshal.ZeroFreeGlobalAllocAnsi(up);byte[]d00=new byte[pb.Length+salt.Length];Array.Copy(pb,d00,pb.Length);Array.Copy(salt,0,d00,pb.Length,salt.Length);MD5 md=new MD5CryptoServiceProvider();byte[]res=null;byte[]ht=new byte[HL+d00.Length];for(int j=0;j<m;j++){res=md.ComputeHash(ht);Array.Copy(res,0,ht,0,res.Length);Array.Copy(d00,0,ht,res.Length,d00.Length);}byte[]dk=new byte[24];Array.Copy(km,dk,dk.Length);Array.Clear(pb,0,pb.Length);Array.Clear(d00,0,d00.Length);Array.Clear(res,0,res.Length);Array.Clear(ht,0,ht.Length);Array.Clear(km,0,km.Length);return dk;}static byte[]DecryptKey(byte[]cd,byte[]dek,byte[]iv){MemoryStream ms=new MemoryStream();TripleDES alg=TripleDES.Create();alg.Key=dek;alg.IV=iv;try{CryptoStream cs=new CryptoStream(ms,alg.CreateDecryptor(),CryptoStreamMode.Write);cs.Write(cd,0,cd.Length);cs.Close();}catch(Exception){return null;}byte[]dd=ms.ToArray();return dd;}}}
+'@
+                Add-Type -TypeDefinition $rsaType
+            }
+            $rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($privKey)
+        } else {
+            $pem = Get-Content -Path $privKey -Raw
+            $rsa = [System.Security.Cryptography.RSA]::Create()
+            $rsa.ImportFromPem($pem)
+        }
+        $now = (Get-Date -Date ((Get-Date).ToUniversalTime())-UFormat '+%a, %d %h %Y %H:%M:%S GMT')
+        $signstr = "GET /api/systems/$key HTTP/1.1`ndate: $now"
+        $enc = [system.Text.Encoding]::UTF8
+        $data = $enc.GetBytes($signstr)
+        $sha = New-Object System.Security.Cryptography.SHA256CryptoServiceProvider
+        $hr = $sha.ComputeHash($data)
+        $ha = [System.Security.Cryptography.HashAlgorithmName]::SHA256
+        $sb = $rsa.SignHash($hr, $ha, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+        $sig = [Convert]::ToBase64String($sb)
+        $h = @{
+            Accept        = "application/json"
+            Date          = "$now"
+            Authorization = "Signature keyId=`"system/$key`",headers=`"request-line date`",algorithm=`"rsa-sha256`",signature=`"$sig`""
+        }
+        $sys = Invoke-RestMethod -Method GET -Uri "$url/api/systems/$key" -Headers $h
+        return $sys
+    } catch { throw "Failed to get system: $_" }
+}
+function Set-System {
+    param([string]$prop, [object]$payload)
+    try {
+        $cfg = Get-Content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
+        $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
+        if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey" }
+        $host_match = [regex]::Match($cfg, 'agentServerHost["]?:["]?agent\.(\w+)\.jumpcloud\.com').Groups[1].Value
+        $url = if ($host_match -eq "eu") { "https://console.jumpcloud.eu" }else { "https://console.jumpcloud.com" }
+        $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
+        if (-not(Test-Path $privKey)) { throw "Key not found" }
+
+        $rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($privKey)
+        $now = (Get-Date -Date ((Get-Date).ToUniversalTime())-UFormat '+%a, %d %h %Y %H:%M:%S GMT')
+        $pl = if ($payload -is [PSCustomObject]) {
+            $payload | ConvertTo-Json -Depth 5
+            # Write-Host "[debug] Payload JSON: $($payload | ConvertTo-Json -Depth 5)"
+        } else {
+            $payload | ConvertTo-Json -Depth 5
+            # Write-Host "[debug] Payload: $($payload | ConvertTo-Json -Depth 5)"
+        }
+        $signstr = "PUT /api/systems/$key HTTP/1.1`ndate: $now"
+        $enc = [text.Encoding]::UTF8
+        $data = $enc.GetBytes($signstr)
+        $sha = New-Object System.Security.Cryptography.SHA256CryptoServiceProvider
+        $hr = $sha.ComputeHash($data)
+        $ha = [System.Security.Cryptography.HashAlgorithmName]::SHA256
+        $sb = $rsa.SignHash($hr, $ha, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+        $sig = [Convert]::ToBase64String($sb)
+        $h = @{
+            Accept        = "application/json"
+            Date          = "$now"
+            Authorization = "Signature keyId=`"system/$key`",headers=`"request-line date`",algorithm=`"rsa-sha256`",signature=`"$sig`""
+        }
+        $b = @{}
+        if ($prop -eq "Description") {
+            Write-Host "setting description to: $pl"
+            $b["description"] = $pl
+        } elseif ($prop -eq "Attributes") {
+            # before setting attributes, get the existing ones
+            $existing = Get-System -systemContextBinding $true
+            $attrs = @{}
+            foreach ($attr in $existing.attributes) {
+                # if the value is null, remove it from the existing set
+                if (($null -eq $attr.value) -or ([string]::IsNullOrWhiteSpace($attr.value))) {
+                    Write-Host "removing attribute: $($attr.name) due to null/empty value"
+                    continue
+                }
+                Write-Host "existing attribute: $($attr.name) = $($attr.value)"
+                $attrs[$attr.name] = $attr.value
+            }
+            # update or add the new attribute
+            if (($null -eq $payload.value) -or ([string]::IsNullOrWhiteSpace($payload.value))) {
+                Write-Host "removing attribute: $($payload.name) due to null/empty value"
+                $attrs.Remove($payload.name) | Out-Null
+            } else {
+                $attrs[$payload.name] = $payload.value
+            }
+            # convert back to the required format
+            $payload = @()
+            foreach ($k in $attrs.Keys) {
+                $payload += @{ "name" = $k; "value" = $attrs[$k] }
+            }
+            Write-Host "setting attributes to: $(@{attributes = $payload } | ConvertTo-Json -Depth 5)"
+            $b["attributes"] = $payload
+        }
+        $j = $b | ConvertTo-Json
+        Invoke-RestMethod -Method PUT -Uri "$url/api/systems/$key" -ContentType 'application/json' -Headers $h -Body $j | Out-Null
+    } catch { throw "SetSystem: $_" }
+}
+#endregion functions
+
+# validate execution policy
+if (-not(Confirm-ExecutionPolicy)) { throw"ExecutionPolicy failed"; exit 1 }
+# retrieve JumpCloud installation path
 $jumpCloudPath = (Get-ItemProperty -Path "HKLM:\SOFTWARE\JumpCloud\JumpCloud Agent\ConfigFile" -ErrorAction SilentlyContinue)
 $jumpCloudConfigPath = $jumpCloudPath."(default)"
-# go up three levels to get to the program files path
 $jumpCloudInstallPath = Split-Path -Path (Split-Path -Path (Split-Path -Path $jumpCloudConfigPath)) -Parent
-
-# get the users from osquery
+# get data
 $data = & "$jumpCloudInstallPath\jcosqueryi.exe" --A users --csv
 $users = $data | ConvertFrom-Csv -Delimiter "|"
-
-# get the AD users by looking for the administrator user account, getting the UUID (sid) and filtering the users list
-$adminUser = $users | Where-Object { $_.uid -eq 500 }
-$machineSID = ($adminUser.uuid -split "-")[0..6] -join "-"
-
-# filter our the users with uid ne to special account users like 18, 19, 20, 501, etc
-$users = $users | Where-Object { [int64]$_.uid -ge 1000 }
-
-$adUsers = $users | Where-Object { ($_.uuid -notmatch $machineSID) }
-$localUsers = $users | Where-Object { ($_.uuid -match $machineSID) }
-
-# admu user attribute object
-$userObject = @{
-    st        = '' # Planned, InProgress, Completed, Failed
-    msg       = ''
-    sid       = ''
-    localPath = ''
-    un        = ''
+$admin = $users | ? { $_.uid -eq 500 }
+$mSID = ($admin.uuid -split "-")[0..6] -join "-"
+$users = $users | ? { [int64]$_.uid -ge 1000 }
+$adUsers = $users | ? { $_.uuid -notmatch $mSID }
+$uObj = @{
+    st        = '';
+    msg       = '';
+    sid       = '';
+    localPath = '';
+    un        = '';
     uid       = ''
 }
-$admuUsers = @()
-
-#foreach ad user, create the admu user object
-foreach ($adUser in $adUsers) {
-    $user = $userObject.PSObject.Copy()
-    $user.st = 'Pending'
-    $user.msg = 'Planned for migration'
-    $user.sid = $adUser.uuid
-    $user.localPath = $adUser.directory
-    $user.un = ''
-    $user.uid = ''
-    $admuUsers += $user
+$amuUsers = @()
+foreach ($aU in $adUsers) {
+    $u = $uObj.PSObject.Copy()
+    $u.st = 'Pending'
+    $u.msg = 'Planned'
+    $u.sid = $aU.uuid
+    $u.localPath = $aU.directory
+    $u.un = ''
+    $u.uid = ''
+    $amuUsers += $u
 }
-
-# Get the system description to check for existing userObject data
-$systemDescription = Get-System -property "Description"
-$descriptionNeedsUpdate = $false
-$mergedUsers = @()
-
-if ([system.string]::IsNullOrEmpty($systemDescription)) {
-    Write-Host "[status] No existing system description found, creating new ADMU attribute..."
-    $mergedUsers = @($admuUsers)
-    $descriptionNeedsUpdate = $true
+$sDesc = $null
+try {
+    $sRet = Get-System -systemContextBinding $true
+    $sDesc = $sRet.description
+} catch {
+    Write-Host "[status] Could not retrieve description: $_"
+}
+$merged = @()
+$needsUpdate = $false
+if ( [string]::IsNullOrEmpty($sDesc) ) {
+    Write-Host "[status] No description found, creating..."
+    $merged = @($amuUsers)
+    $needsUpdate = $true
 } else {
-    # try to parse the existing description as json
     try {
-        $existingData = $systemDescription | ConvertFrom-Json
-        $existingUsers = @()
-
-        if ($existingData.GetType().Name -eq 'PSCustomObject') {
-            $existingUsers += $existingData
+        $eData = $sDesc | ConvertFrom-Json
+        $eUsers = if ( $eData.GetType().Name -eq 'PSCustomObject' ) {
+            @($eData)
         } else {
-            $existingUsers += $existingData
+            @($eData)
         }
-
-        Write-Host "[status] Existing system description found, merging with new AD user discoveries..."
-
-        # Start with all existing users (preserves their migration status)
-        $mergedUsers = $existingUsers.PSObject.Copy()
-
-        # Find new AD users not in the existing description
-        $newUsersToAdd = @()
-        foreach ($adUser in $admuUsers) {
-            $existingUser = $existingUsers | Where-Object { $_.sid -eq $adUser.sid }
-            if (-not $existingUser) {
-                $newUsersToAdd += $adUser
-                Write-Host "[status] New AD user discovered: $($adUser.un) ($($adUser.localPath))"
-                $descriptionNeedsUpdate = $true
+        Write-Host "[status] Merging with existing users..."
+        $merged = $eUsers
+        $newUsers = @()
+        foreach ($aU in $amuUsers) {
+            if (-not($eUsers | ? { $_.sid -eq $aU.sid })) {
+                $newUsers += $aU
+                $needsUpdate = $true
             }
         }
-
-        # Add new users to the merged list
-        $mergedUsers += $newUsersToAdd
-
-        # Filter out users marked as "Skip"
-        $mergedUsers = $mergedUsers | Where-Object { $_.st -ne 'Skip' }
-
-        if (-not $descriptionNeedsUpdate) {
-            Write-Host "[status] No new AD users found. Device description will not be updated."
-        }
-
+        $merged += $newUsers
+        $merged = $merged | ? { $_.st -ne 'Skip' }
     } catch {
-        Write-Host "[status] Existing system description is not valid JSON, overwriting with new ADMU attribute..."
-        $mergedUsers = $admuUsers
-        $descriptionNeedsUpdate = $true
+        Write-Host "[status] Invalid JSON, overwriting..."
+        $merged = $amuUsers
+        $needsUpdate = $true
     }
 }
-
-# Update system description only if needed
-if ($descriptionNeedsUpdate -and $mergedUsers.Count -gt 0) {
-    Write-Host "[status] Updating system description with $($mergedUsers.Count) user(s)..."
-    $descSet = Set-System -property "Description" -payload (@($mergedUsers) | ConvertTo-Json -Depth 5)
+# update admu device description if needed
+if ( $needsUpdate -and $merged.Count -gt 0 ) {
+    Write-Host "[status] Updating description..."
+    Set-System -prop "Description" -payload $merged
 }
-
-# Get and set the ADMU attribute on the system
-$attributes = Get-System -property "Attributes"
-$admuAttribute = $attributes | Where-Object { $_.name -eq 'admu' }
-
-# Determine the ADMU status based on current user states
-$pendingUsers = $mergedUsers | Where-Object { $_.st -eq 'Pending' }
-$completeUsers = $mergedUsers | Where-Object { $_.st -eq 'Complete' }
-$admuStatus = if ($pendingUsers.Count -gt 0) { 'Pending' } else { 'Complete' }
-
-if ($admuAttribute) {
-    $currentStatus = $admuAttribute.value
-    Write-Host "[status] Existing ADMU attribute found. Current status: $currentStatus"
-
-    if ($currentStatus -ne $admuStatus) {
-        Write-Host "[status] Updating ADMU attribute to '$admuStatus' (Pending: $($pendingUsers.Count), Complete: $($completeUsers.Count))..."
-        $attributeSet = Set-System -property 'attributes' -payload @{ admu = $admuStatus }
-    } else {
-        Write-Host "[status] ADMU attribute status is already '$admuStatus', no update needed."
-    }
+$pending = $merged | ? { $_.st -eq 'Pending' }
+$errors = $merged | ? { $_.st -eq 'Error' }
+$skipped = $merged | ? { $_.st -eq 'Skip' }
+# calculate overall ADMU status, set attribute
+$amuStatus = if ($errors.Count -gt 0) {
+    'Error'
+} elseif ($pending.Count -gt 0) {
+    'Pending'
 } else {
-    Write-Host "[status] No existing ADMU attribute found. Creating with status: $admuStatus..."
-    $attributeSet = Set-System -property 'attributes' -payload @{ admu = $admuStatus }
+    'Complete'
 }
+Write-Host "[status] Setting ADMU status to $amuStatus..."
+# Set the admu tracker attribute to the calculated status
+Set-System -prop "Attributes" -payload @{ "name" = "admu"; "value" = "$amuStatus" }
+Write-Host "[status] Device initialization complete."
