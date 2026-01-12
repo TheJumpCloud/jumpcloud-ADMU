@@ -14,8 +14,7 @@ Reverts a user migration by restoring original registry files for a specified Wi
 
 ```
 Start-Reversion [-UserSID] <String> [[-TargetProfileImagePath] <String>] [-form <Boolean>] [-UserName <String>]
- [-ProfileSize <String>] [-LocalPath <String>] [-DryRun] [-Force]
- [-WhatIf] [-Confirm] [<CommonParameters>]
+ [-ProfileSize <String>] [-LocalPath <String>] [-DryRun] [-Force] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
