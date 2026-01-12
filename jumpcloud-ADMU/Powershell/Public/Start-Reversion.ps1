@@ -1,4 +1,4 @@
-Function Start-Reversion {
+function Start-Reversion {
     <#
     .SYNOPSIS
         Reverts a user migration by restoring original registry files for a specified Windows SID.
@@ -64,7 +64,7 @@ Function Start-Reversion {
         [switch]$Force
     )
 
-    Begin {
+    begin {
         Write-ToLog -Message "Begin Revert Migration" -MigrationStep -Level Info
 
         # Initialize result object
@@ -133,7 +133,10 @@ Function Start-Reversion {
             }
         }
 
-
+        # TODO: review localPath vs targetProfileImagePath usage
+        if (-not $ProfileSize -and $LocalPath) {
+            $LocalPath = $TargetProfileImagePath
+        }
         $profileSize = Get-ProfileSize -ProfilePath $LocalPath
 
         # Prefer the progress form created in Form.ps1 so updates apply to the first window the user sees
@@ -142,7 +145,7 @@ Function Start-Reversion {
         }
     }
 
-    Process {
+    process {
         try {
             #region Validate Registry and Determine Profile Path
             Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
@@ -217,7 +220,7 @@ Function Start-Reversion {
             # Get the most recent ACL backup file path
 
             if ($aclBackupFiles.Count -eq 0) {
-                Throw "No ACL backup files found in directory: $aclBackupDir for SID: $UserSID. Cannot proceed with revert."
+                throw "No ACL backup files found in directory: $aclBackupDir for SID: $UserSID. Cannot proceed with revert."
             } else {
                 Write-ToLog -Message "Found ACL backup files in $aclBackupDir" -Level Info -Step "Revert-Migration"
             }
@@ -249,7 +252,7 @@ Function Start-Reversion {
             }
             # Validate that the UsrClass and NTUSER original files were found
             if ($registryFiles.Type -notcontains "NTUSER") {
-                Throw "No NTUser.DAT backup files found in directory: $profileImagePath for SID: $UserSID. Cannot proceed with revert."
+                throw "No NTUser.DAT backup files found in directory: $profileImagePath for SID: $UserSID. Cannot proceed with revert."
             }
 
             # UsrClass.dat files in AppData
@@ -276,7 +279,7 @@ Function Start-Reversion {
             }
 
             if ($registryFiles.Type -notcontains "UsrClass") {
-                Throw "No UsrClass.dat backup files found in directory: $profileImagePath for SID: $UserSID. Cannot proceed with revert."
+                throw "No UsrClass.dat backup files found in directory: $profileImagePath for SID: $UserSID. Cannot proceed with revert."
             }
             #endregion Identify Registry Files to Revert
 
@@ -519,7 +522,7 @@ Function Start-Reversion {
         }
     }
 
-    End {
+    end {
         $revertResult.EndTime = Get-Date
         $duration = $revertResult.EndTime - $revertResult.StartTime
 

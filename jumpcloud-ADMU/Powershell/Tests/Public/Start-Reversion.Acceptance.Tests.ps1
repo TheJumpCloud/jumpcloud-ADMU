@@ -170,13 +170,13 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
                 $usrclassBackupPattern = "USRCLASS_original_*"
                 $userProfileDir = "C:\Users\$userToMigrateFrom"
                 # Remove NTUser_Original_*.DAT backup
-                Get-ChildItem -Path $userProfileDir -Filter $ntuserBackupPattern -force -ErrorAction SilentlyContinue | ForEach-Object {
+                Get-ChildItem -Path $userProfileDir -Filter $ntuserBackupPattern -Force -ErrorAction SilentlyContinue | ForEach-Object {
                     Remove-Item -Path $_.FullName -Force
                 }
                 { Start-Reversion @reversionInput } | Should -Throw "No NTUser.DAT backup files found in directory: $userProfileDir for SID: $userToMigrateFromSID. Cannot proceed with revert."
 
                 # Remove UsrClass_Original_*.dat backup
-                Get-ChildItem -Path $userProfileDir -Filter $usrclassBackupPattern -force -ErrorAction SilentlyContinue | ForEach-Object {
+                Get-ChildItem -Path $userProfileDir -Filter $usrclassBackupPattern -Force -ErrorAction SilentlyContinue | ForEach-Object {
                     Remove-Item -Path $_.FullName -Force
                 }
                 { Start-Reversion @reversionInput } | Should -Throw "No UsrClass.dat backup files found in directory: $userProfileDir for SID: $userToMigrateFromSID. Cannot proceed with revert."
