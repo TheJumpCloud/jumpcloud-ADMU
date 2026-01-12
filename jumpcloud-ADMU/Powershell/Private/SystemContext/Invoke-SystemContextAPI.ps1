@@ -63,7 +63,9 @@ function Invoke-SystemContextAPI {
         switch ($PSVersionTable.PSVersion.Major) {
             '5' {
                 # https://github.com/wing328/PSPetstore/blob/87a2c455a7c62edcfc927ff5bf4955b287ef483b/src/PSOpenAPITools/Private/RSAEncryptionProvider.cs
-                Add-Type -typedef @"
+                if (-not([System.Management.Automation.PSTypeName]'RSAEncryption.RSAEncryptionProvider').Type) {
+
+                    Add-Type -typedef @"
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -337,6 +339,7 @@ function Invoke-SystemContextAPI {
     }
 
 "@
+                }
             }
             default {
                 Write-Verbose "PowerShell version: $($PSVersionTable.PSVersion)"
@@ -597,6 +600,7 @@ function Invoke-SystemContextAPI {
                             $success = $false
                         } else {
                             Write-ToLog "Failed to get system: $($_.Exception.Message)" -Level Warning -Step "Invoke-SystemContextAPI"
+                            Write-Host "Failed to get system: $($_.Exception.Message)"
                             # set success to true & exit the loop
                             $success = $true
                         }

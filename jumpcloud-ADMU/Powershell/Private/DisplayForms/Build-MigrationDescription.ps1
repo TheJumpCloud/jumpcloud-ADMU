@@ -113,6 +113,6 @@ function Build-MigrationDescription {
                 uid       = $null
             })
     }
-    # Ensure return is always an array
-    return @($description)
+    # Ensure return is always an array (use unary comma for PowerShell 5.1 compatibility)
+    return @(, $description)
 }
