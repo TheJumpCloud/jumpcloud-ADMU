@@ -443,6 +443,272 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
         }
     }
+    Context "Get-MigrationUsersFromSystemDescription Function" {
+        # Mock Get-SystemDescription to avoid actual API calls
+        BeforeEach {
+            # Store the original Get-SystemDescription function if it exists
+            if (Test-Path function:Get-SystemDescription) {
+                $originalFunc = Get-Item function:Get-SystemDescription
+            }
+        }
+
+        AfterEach {
+            # Restore original function if it existed
+            if ($null -ne $originalFunc) {
+                $functionDefinition = Get-Content function:$originalFunc
+                Invoke-Expression "function Get-SystemDescription { $functionDefinition }"
+            }
+        }
+
+        Context "Error Handling" {
+            It "Should THROW when Get-SystemDescription fails with error" {
+                # Arrange
+                function Get-SystemDescription {
+                    throw "API connection failed"
+                }
+
+                # Act & Assert
+                { Get-MigrationUsersFromSystemDescription -systemContextBinding $false } | Should -Throw "Failed to retrieve system description:"
+            }
+
+            It "Should THROW when systemDescription JSON is invalid" {
+                # Arrange
+                function Get-SystemDescription {
+                    return "{ invalid json }"
+                }
+
+                # Act & Assert
+                { Get-MigrationUsersFromSystemDescription -systemContextBinding $false } | Should -Throw "Invalid JSON:"
+            }
+        }
+
+        Context "Empty and Null Handling" {
+            It "Should return NULL when system description is empty string" {
+                # Arrange
+                function Get-SystemDescription {
+                    return ""
+                }
+
+                # Act
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+
+                # Assert
+                $result | Should -Be $null
+            }
+
+            It "Should return NULL when system description is NULL" {
+                # Arrange
+                function Get-SystemDescription {
+                    return $null
+                }
+
+                # Act
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+
+                # Assert
+                $result | Should -Be $null
+            }
+
+            It "Should return NULL when all users are filtered out" {
+                # Arrange - JSON with users but all have non-Pending status
+                function Get-SystemDescription {
+                    return '[{"sid":"S-1-5-21-TEST","un":"user1","st":"Completed"}]'
+                }
+
+                # Act
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+
+                # Assert
+                $result | Should -Be $null
+            }
+        }
+
+        Context "User Filtering Logic" {
+            It "Should filter out users with empty SID" {
+                # Arrange
+                function Get-SystemDescription {
+                    return '[{"sid":"","un":"user1","st":"Pending","uid":"jcuid1"},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending","uid":"jcuid2"}]'
+                }
+
+                # Act
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+
+                # Assert
+                $result.Count | Should -Be 1
+                $result[0].JumpCloudUserName | Should -Be "user2"
+            }
+
+            It "Should filter out users with empty username (un)" {
+                # Arrange
+                function Get-SystemDescription {
+                    return '[{"sid":"S-1-5-21-ABC","un":"","st":"Pending","uid":"jcuid1"},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending","uid":"jcuid2"}]'
+                }
+
+                # Act
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+
+                # Assert
+                $result.Count | Should -Be 1
+                $result[0].JumpCloudUserName | Should -Be "user2"
+            }
+
+            It "Should skip users with status 'Skip'" {
+                # Arrange
+                function Get-SystemDescription {
+                    return '[{"sid":"S-1-5-21-ABC","un":"user1","st":"Skip","uid":"jcuid1"},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending","uid":"jcuid2"}]'
+                }
+
+                # Act
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+
+                # Assert
+                $result.Count | Should -Be 1
+                $result[0].JumpCloudUserName | Should -Be "user2"
+            }
+
+            It "Should only include users with status 'Pending'" {
+                # Arrange
+                function Get-SystemDescription {
+                    return '[{"sid":"S-1-5-21-ABC","un":"user1","st":"Completed","uid":"jcuid1"},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending","uid":"jcuid2"},{"sid":"S-1-5-21-DEF","un":"user3","st":"Failed","uid":"jcuid3"}]'
+                }
+
+                # Act
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+
+                # Assert
+                $result.Count | Should -Be 1
+                $result[0].JumpCloudUserName | Should -Be "user2"
+                $result[0].SelectedUsername | Should -Be "S-1-5-21-XYZ"
+            }
+        }
+
+        Context "systemContextBinding Validation" {
+            It "Should THROW when systemContextBinding is true and user missing uid" {
+                # Arrange
+                function Get-SystemDescription {
+                    return '[{"sid":"S-1-5-21-ABC","un":"user1","st":"Pending","uid":""},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending","uid":"jcuid2"}]'
+                }
+
+                # Act & Assert
+                { Get-MigrationUsersFromSystemDescription -systemContextBinding $true } | Should -Throw "User 'user1' missing 'uid'."
+            }
+
+            It "Should NOT THROW when systemContextBinding is false and user missing uid" {
+                # Arrange
+                function Get-SystemDescription {
+                    return '[{"sid":"S-1-5-21-ABC","un":"user1","st":"Pending"},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending","uid":"jcuid2"}]'
+                }
+
+                # Act & Assert
+                { Get-MigrationUsersFromSystemDescription -systemContextBinding $false } | Should -Not -Throw
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+                $result.Count | Should -Be 2
+            }
+        }
+
+        Context "JSON Parsing - Single vs Array" {
+            It "Should convert single PSCustomObject to array" {
+                # Arrange - Simulate JSON that returns single object
+                function Get-SystemDescription {
+                    return '{"sid":"S-1-5-21-ABC","un":"user1","st":"Pending","uid":"jcuid1"}'
+                }
+
+                # Act
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+
+                # Assert
+                $result -is [System.Collections.ArrayList] | Should -Be $true
+                $result.Count | Should -Be 1
+                $result[0].JumpCloudUserName | Should -Be "user1"
+            }
+
+            It "Should handle JSON array correctly" {
+                # Arrange
+                function Get-SystemDescription {
+                    return '[{"sid":"S-1-5-21-ABC","un":"user1","st":"Pending","uid":"jcuid1"},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending","uid":"jcuid2"}]'
+                }
+
+                # Act
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+
+                # Assert
+                $result.Count | Should -Be 2
+                $result[0].JumpCloudUserName | Should -Be "user1"
+                $result[1].JumpCloudUserName | Should -Be "user2"
+            }
+        }
+
+        Context "Output Structure" {
+            It "Should return objects with correct properties" {
+                # Arrange
+                function Get-SystemDescription {
+                    return '[{"sid":"S-1-5-21-ABC","un":"jane.doe","localPath":"C:\\Users\\jane.doe","st":"Pending","uid":"jcuser123"}]'
+                }
+
+                # Act
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+
+                # Assert
+                $result[0].SelectedUsername | Should -Be "S-1-5-21-ABC"
+                $result[0].JumpCloudUserName | Should -Be "jane.doe"
+                $result[0].LocalPath | Should -Be "C:\Users\jane.doe"
+                $result[0].JumpCloudUserID | Should -Be "jcuser123"
+                $result[0].PSObject.Properties.Name.Count | Should -Be 4
+            }
+
+            It "Should return ArrayList type" {
+                # Arrange
+                function Get-SystemDescription {
+                    return '[{"sid":"S-1-5-21-ABC","un":"user1","st":"Pending","uid":"jcuid1"}]'
+                }
+
+                # Act
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+
+                # Assert
+                $result.GetType().Name | Should -Be "ArrayList"
+            }
+        }
+
+        Context "Mixed Scenarios" {
+            It "Should filter correctly with mixed valid and invalid users" {
+                # Arrange
+                function Get-SystemDescription {
+                    $json = @'
+[
+    {"sid":"","un":"user1","st":"Pending","uid":"jcuid1"},
+    {"sid":"S-1-5-21-ABC","un":"user2","st":"Skip","uid":"jcuid2"},
+    {"sid":"S-1-5-21-XYZ","un":"","st":"Pending","uid":"jcuid3"},
+    {"sid":"S-1-5-21-DEF","un":"user3","st":"Completed","uid":"jcuid4"},
+    {"sid":"S-1-5-21-GHI","un":"user4","st":"Pending","uid":"jcuid5"}
+]
+'@
+                    return $json
+                }
+
+                # Act
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+
+                # Assert
+                $result.Count | Should -Be 1
+                $result[0].JumpCloudUserName | Should -Be "user4"
+            }
+
+            It "Should handle users with missing optional fields gracefully" {
+                # Arrange
+                function Get-SystemDescription {
+                    return '[{"sid":"S-1-5-21-ABC","un":"user1","st":"Pending","uid":"jcuid1"},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending"}]'
+                }
+
+                # Act
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+
+                # Assert
+                $result.Count | Should -Be 2
+                $result[1].JumpCloudUserID | Should -BeNullOrEmpty
+            }
+        }
+    }
     Context "Get-LatestADMUGUIExe Function" {
         It "Should download the file successfully" {
             # Arrange
