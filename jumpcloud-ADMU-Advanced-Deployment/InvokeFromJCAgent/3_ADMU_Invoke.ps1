@@ -165,8 +165,7 @@ function Get-MigrationUsersFromSystemDescription {
     process {
         try {
             Write-Host "[status] Retrieving system description..."
-            $systemReturn = Get-SystemDescription -systemContextBinding $systemContextBinding
-            $systemDescription = $systemReturn.Description
+            $systemDescription = Get-SystemDescription -systemContextBinding $systemContextBinding
         } catch {
             throw "Failed to retrieve system description: $_"
         }
@@ -189,7 +188,7 @@ function Get-MigrationUsersFromSystemDescription {
             Write-Host "[status] User queued: $($user.un)"
         }
         if ($usersToMigrate.Count -eq 0) { Write-Host "[status] No eligible users found."; return $null }
-        return $usersToMigrate
+        return @(, $usersToMigrate)
     }
 }
 function Get-LatestADMUGUIExe {
@@ -264,12 +263,29 @@ function Get-LatestADMUGUIExe {
 }
 function ConvertTo-ArgumentList {
     [CmdletBinding()]
-    param ([Parameter(Mandatory = $true, ValueFromPipeline = $true)][hashtable]$InputHashtable)
+    param (
+        [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
+        [hashtable]
+        $InputHashtable
+    )
+    # Initialize a generic list to hold the formatted arguments.
     $argumentList = [System.Collections.Generic.List[string]]::new()
+    # Iterate through each key-value pair in the input hashtable.
     foreach ($entry in $InputHashtable.GetEnumerator()) {
+        # Only process entries where the value is not null or an empty string.
         if ($null -ne $entry.Value -and (-not ($entry.Value -is [string]) -or $entry.Value -ne '')) {
-            $formattedValue = if ($entry.Value -is [bool]) { '$' + $entry.Value.ToString().ToLower() } else { $entry.Value }
-            $argumentList.Add("-{0}:{1}" -f $entry.Key, $formattedValue)
+            $key = $entry.Key
+            $value = $entry.Value
+            # Format the value. Booleans are converted to lowercase string literals like '$true'.
+            # Other types are used as-is (they will be converted to strings automatically).
+            $formattedValue = if ($value -is [bool]) {
+                '$' + $value.ToString().ToLower()
+            } else {
+                $value
+            }
+            # Construct the argument string in the format -Key:Value and add it to the list.
+            $argument = "-{0}:{1}" -f $key, $formattedValue
+            $argumentList.Add($argument)
         }
     }
     return $argumentList
@@ -487,7 +503,7 @@ using System;using System.Collections.Generic;using System.IO;using System.Net;u
         $sig = [Convert]::ToBase64String($sb)
         $h = @{Accept = "application/json"; Date = "$now"; Authorization = "Signature keyId=`"system/$key`",headers=`"request-line date`",algorithm=`"rsa-sha256`",signature=`"$sig`"" }
         $sys = Invoke-RestMethod -Method GET -Uri "$url/api/systems/$key" -Headers $h
-        return $sys
+        return $sys.description
     } catch { throw "Failed to get description: $_" }
 }
 #endregion functionDefinitions

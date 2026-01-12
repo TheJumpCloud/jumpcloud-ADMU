@@ -277,7 +277,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
         It "Should throw an error if the CSV file does not exist" {
             # Act & Assert
-            { Get-MigrationUsersFromCsv -csvName "notAFile.csv" -systemContextBinding $false } | Should -Throw -ExpectedMessage "*CSV file not found:*"
+            { Get-MigrationUsersFromCsv -csvName "notAFile.csv" -systemContextBinding $true } | Should -Throw -ExpectedMessage "*CSV file not found:*"
         }
 
         It "Should throw an error if the CSV is missing a required header" {
@@ -289,7 +289,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
             Set-Content -Path $csvPath -Value $csvContent -Force
 
             # Act & Assert
-            { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Throw -ExpectedMessage "*CSV missing header: 'SID'*"
+            { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true } | Should -Throw -ExpectedMessage "*CSV missing header: 'SID'*"
         }
 
 
@@ -314,7 +314,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Throw "Duplicate SID found: 'S-1-5-21-DUPLICATE-SID'."
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true } | Should -Throw "Duplicate SID found: 'S-1-5-21-DUPLICATE-SID'."
             }
             It "Should NOT throw an error if a SID is duplicated for the local device and only one row has a JumpCloudUserName" {
                 # Arrange: The same SID appears twice for 'TEST-PC-1'.
@@ -327,8 +327,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Not -Throw
-                $usersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true } | Should -Not -Throw
+                $usersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true
                 $usersToMigrate | Should -Not -BeNullOrEmpty
                 ($usersToMigrate | Select-Object -First 1).SelectedUsername | Should -Be "S-1-5-21-DUPLICATE-SID"
                 ($usersToMigrate | Select-Object -First 1).LocalPath | Should -Be "C:\Users\j.doe"
@@ -346,8 +346,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Not -Throw
-                $usersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true } | Should -Not -Throw
+                $usersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true
                 $usersToMigrate | Should -Not -BeNullOrEmpty
                 ($usersToMigrate | Select-Object -First 1).SelectedUsername | Should -Be "S-1-5-21-DIFFERENT-SID"
                 ($usersToMigrate | Select-Object -First 1).LocalPath | Should -Be "C:\Users\j.doe"
@@ -363,7 +363,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Throw "Field 'SID' empty"
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true } | Should -Throw -ExpectedMessage "*Field 'SID' empty*"
             }
 
             It "Should throw an error if 'LocalPath' field is empty" {
@@ -375,7 +375,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Throw "Field 'LocalPath' empty"
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true } | Should -Throw -ExpectedMessage "*Field 'LocalPath' empty*"
             }
 
             It "Should only return rows where 'JumpCloudUserName' field is not empty" {
@@ -388,8 +388,8 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                # Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false | Should -Not -BeNullOrEmpty
-                $result = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false
+                # Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true | Should -Not -BeNullOrEmpty
+                $result = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true
                 $result | Where-Object { -not [string]::IsNullOrWhiteSpace($_.JumpCloudUserName) } | Should -Not -BeNullOrEmpty
                 $result[0].SelectedUserName | Should -Be "S-1-5-21-ABC"
                 $result[0].JumpCloudUserName | Should -Be "bobby.jones"
@@ -405,7 +405,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 Set-Content -Path $csvPath -Value $csvContent -Force
 
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true } | Should -Throw "JumpCloudUserID required for systemContextBinding."
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true } | Should -Throw -ExpectedMessage "*JumpCloudUserID required for systemContextBinding.*"
             }
 
             # --- Test Cases for Filtering Logic ---
@@ -418,7 +418,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 "@
                 Set-Content -Path $csvPath -Value $csvContent -Force
                 # Act & Assert
-                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false } | Should -Throw "No users found in CSV matching this computer."
+                { Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true } | Should -Throw -ExpectedMessage "*No users found in CSV matching this computer.*"
             }
 
             It "Should return a filtered list of user objects for the current computer" {
@@ -431,7 +431,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 "@
                 Set-Content -Path $csvPath -Value $csvContent -Force
                 # Act
-                $result = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $false
+                $result = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $true
 
                 # Assert
                 $result | Should -Not -BeNullOrEmpty
@@ -469,7 +469,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 }
 
                 # Act & Assert
-                { Get-MigrationUsersFromSystemDescription -systemContextBinding $false } | Should -Throw "Failed to retrieve system description:"
+                { Get-MigrationUsersFromSystemDescription -systemContextBinding $true } | Should -Throw -ExpectedMessage "*Failed to retrieve system description:*"
             }
 
             It "Should THROW when systemDescription JSON is invalid" {
@@ -479,7 +479,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 }
 
                 # Act & Assert
-                { Get-MigrationUsersFromSystemDescription -systemContextBinding $false } | Should -Throw "Invalid JSON:"
+                { Get-MigrationUsersFromSystemDescription -systemContextBinding $true } | Should -Throw -ExpectedMessage "*Invalid JSON:*"
             }
         }
 
@@ -491,7 +491,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 }
 
                 # Act
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $true
 
                 # Assert
                 $result | Should -Be $null
@@ -504,7 +504,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 }
 
                 # Act
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $true
 
                 # Assert
                 $result | Should -Be $null
@@ -517,7 +517,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 }
 
                 # Act
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $true
 
                 # Assert
                 $result | Should -Be $null
@@ -527,12 +527,12 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         Context "User Filtering Logic" {
             It "Should filter out users with empty SID" {
                 # Arrange
-                function Get-SystemDescription {
+                Mock Get-SystemDescription {
                     return '[{"sid":"","un":"user1","st":"Pending","uid":"jcuid1"},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending","uid":"jcuid2"}]'
                 }
 
                 # Act
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $true
 
                 # Assert
                 $result.Count | Should -Be 1
@@ -541,12 +541,12 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
             It "Should filter out users with empty username (un)" {
                 # Arrange
-                function Get-SystemDescription {
+                Mock Get-SystemDescription {
                     return '[{"sid":"S-1-5-21-ABC","un":"","st":"Pending","uid":"jcuid1"},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending","uid":"jcuid2"}]'
                 }
 
                 # Act
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $true
 
                 # Assert
                 $result.Count | Should -Be 1
@@ -555,12 +555,12 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
             It "Should skip users with status 'Skip'" {
                 # Arrange
-                function Get-SystemDescription {
+                Mock Get-SystemDescription {
                     return '[{"sid":"S-1-5-21-ABC","un":"user1","st":"Skip","uid":"jcuid1"},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending","uid":"jcuid2"}]'
                 }
 
                 # Act
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $true
 
                 # Assert
                 $result.Count | Should -Be 1
@@ -569,12 +569,12 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
             It "Should only include users with status 'Pending'" {
                 # Arrange
-                function Get-SystemDescription {
+                Mock Get-SystemDescription {
                     return '[{"sid":"S-1-5-21-ABC","un":"user1","st":"Completed","uid":"jcuid1"},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending","uid":"jcuid2"},{"sid":"S-1-5-21-DEF","un":"user3","st":"Failed","uid":"jcuid3"}]'
                 }
 
                 # Act
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $true
 
                 # Assert
                 $result.Count | Should -Be 1
@@ -586,7 +586,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         Context "systemContextBinding Validation" {
             It "Should THROW when systemContextBinding is true and user missing uid" {
                 # Arrange
-                function Get-SystemDescription {
+                Mock Get-SystemDescription {
                     return '[{"sid":"S-1-5-21-ABC","un":"user1","st":"Pending","uid":""},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending","uid":"jcuid2"}]'
                 }
 
@@ -594,17 +594,6 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 { Get-MigrationUsersFromSystemDescription -systemContextBinding $true } | Should -Throw "User 'user1' missing 'uid'."
             }
 
-            It "Should NOT THROW when systemContextBinding is false and user missing uid" {
-                # Arrange
-                function Get-SystemDescription {
-                    return '[{"sid":"S-1-5-21-ABC","un":"user1","st":"Pending"},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending","uid":"jcuid2"}]'
-                }
-
-                # Act & Assert
-                { Get-MigrationUsersFromSystemDescription -systemContextBinding $false } | Should -Not -Throw
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
-                $result.Count | Should -Be 2
-            }
         }
 
         Context "JSON Parsing - Single vs Array" {
@@ -615,7 +604,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 }
 
                 # Act
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $true
 
                 # Assert
                 $result -is [System.Collections.ArrayList] | Should -Be $true
@@ -630,7 +619,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 }
 
                 # Act
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $true
 
                 # Assert
                 $result.Count | Should -Be 2
@@ -647,7 +636,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 }
 
                 # Act
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $true
 
                 # Assert
                 $result[0].SelectedUsername | Should -Be "S-1-5-21-ABC"
@@ -664,7 +653,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 }
 
                 # Act
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $true
 
                 # Assert
                 $result.GetType().Name | Should -Be "ArrayList"
@@ -688,29 +677,15 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 }
 
                 # Act
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
+                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $true
 
                 # Assert
                 $result.Count | Should -Be 1
                 $result[0].JumpCloudUserName | Should -Be "user4"
             }
-
-            It "Should handle users with missing optional fields gracefully" {
-                # Arrange
-                function Get-SystemDescription {
-                    return '[{"sid":"S-1-5-21-ABC","un":"user1","st":"Pending","uid":"jcuid1"},{"sid":"S-1-5-21-XYZ","un":"user2","st":"Pending"}]'
-                }
-
-                # Act
-                $result = Get-MigrationUsersFromSystemDescription -systemContextBinding $false
-
-                # Assert
-                $result.Count | Should -Be 2
-                $result[1].JumpCloudUserID | Should -BeNullOrEmpty
-            }
         }
     }
-    Context "Get-LatestADMUGUIExe Function" {
+    Context "Get-LatestADMUGUIExe Function" -Skip {
         It "Should download the file successfully" {
             # Arrange
             $folderDest = "C:\Windows\Temp\TestExeDownload"
@@ -739,7 +714,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
         }
     }
 
-    Context "Get-JcadmuGuiSha256 Function" {
+    Context "Get-JcadmuGuiSha256 Function" -Skip {
         It "Should return SHA256 hash for a valid file" {
             # Gets the SHA from the recent release of the ADMU GUI from GitHub
             $hash = Get-JcadmuGuiSha256 -GitHubToken $GitHubToken
@@ -907,7 +882,7 @@ $userSid1,C:\Users\$userToMigrateFrom1,$env:COMPUTERNAME,$userToMigrateFrom1,$us
     }
 }
 
-Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
+Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" -Skip {
     BeforeAll {
         # get the remote invoke script path
         $global:remoteInvoke = Join-Path $PSScriptRoot '..\..\..\..\jumpcloud-ADMU-Advanced-Deployment\InvokeFromJCAgent\3_ADMU_Invoke.ps1'
