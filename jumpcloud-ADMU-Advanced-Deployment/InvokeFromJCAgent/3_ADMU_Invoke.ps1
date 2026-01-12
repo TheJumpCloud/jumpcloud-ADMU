@@ -237,6 +237,8 @@ function Get-LatestADMUGUIExe {
                             if ($dlAttempt -lt $MaxRetries) {
                                 Write-Host "Download failed. Retrying in $RetryDelaySeconds seconds..." -ForegroundColor Yellow
                                 Start-Sleep -Seconds $RetryDelaySeconds
+                            } else {
+                                throw "$($_.Exception.Message)"
                             }
                         }
                     }
