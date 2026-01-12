@@ -444,6 +444,242 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
 
         }
     }
+    Context "Get-LatestADMUGUIExe Function" {
+        It "Should download the file successfully" {
+            # Arrange
+            $folderDest = "C:\Windows\Temp\TestExeDownload"
+            if (-not (Test-Path -Path $folderDest)) {
+                New-Item -Path $folderDest -ItemType Directory | Out-Null
+            }
+            # Call the function to download the file
+            Get-LatestADMUGUIExe -destinationPath $folderDest -GitHubToken $env:GITHUB_TOKEN
+
+            # Validate the file was downloaded
+            $downloadedFile = Join-Path -Path $folderDest -ChildPath "gui_jcadmu.exe"
+            Test-Path -Path $downloadedFile | Should -BeTrue
+        }
+        # Simulate a download failure
+        It "Should throw an error if the download fails" {
+            # Mock Invoke-WebRequest to throw an error
+            Mock Invoke-WebRequest { throw "Simulated download failure" }
+            { Get-LatestADMUGUIExe -destinationPath "C:\Windows\Temp" -GitHubToken $env:GITHUB_TOKEN } | Should -Throw "Operation failed after 3 attempts. Last error: Simulated download failure"
+        }
+        AfterAll {
+            # Clean up the test directory
+            $folderDest = "C:\Windows\Temp\TestExeDownload"
+            if (Test-Path -Path $folderDest) {
+                Remove-Item -Path $folderDest -Recurse -Force
+            }
+        }
+    }
+
+    Context "Get-JcadmuGuiSha256 Function" {
+        It "Should return SHA256 hash for a valid file" {
+            # Gets the SHA from the recent release of the ADMU GUI from GitHub
+            $hash = Get-JcadmuGuiSha256 -GitHubToken $GitHubToken
+            Write-Host "SHA256 Hash: $hash"
+            $hash | Should -Not -BeNullOrEmpty
+        }
+    }
+    Context "Invoke-SingleUserMigration Function" {
+        BeforeAll {
+            # set the GUI path variable
+            # Copy the exe file from D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\exe\gui_jcadmu.exe to C:\Windows\Temp
+            $guiPath = Join-Path $PSScriptRoot '..\..\..\..\jumpCloud-Admu\Exe\gui_jcadmu.exe'
+            $destinationPath = Join-Path -Path 'C:\Windows\Temp' -ChildPath 'gui_jcadmu.exe'
+            Copy-Item -Path $guiPath -Destination $destinationPath -Force
+        }
+        BeforeEach {
+            # sample password
+            $tempPassword = "Temp123!Temp123!"
+            # Generate two users for testing
+            # username to migrate
+            $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # username to migrate to
+            $userToMigrateTo = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+
+            # Initialize-TestUser
+            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            # remove the log
+            $logPath = "C:\Windows\Temp\jcadmu.log"
+            if (Test-Path -Path $logPath) {
+                Remove-Item $logPath
+                New-Item $logPath -Force -ItemType File
+            }
+
+            $sourceUser = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom
+
+            # Build migration parameters for this user
+            $migrationParams = @{
+                JumpCloudUserName     = $userToMigrateTo
+                SelectedUserName      = $sourceUser
+                TempPassword          = $tempPassword
+                UpdateHomePath        = $false
+                AutoBindJCUser        = $false
+                JumpCloudAPIKey       = $null
+                BindAsAdmin           = $false
+                SetDefaultWindowsUser = $true
+                LeaveDomain           = $false
+                adminDebug            = $false
+                ReportStatus          = $false
+            }
+        }
+        It "Should perform migration for a single user should not throw an error for valid parameters" {
+            { invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe" } | Should -Not -Throw
+        }
+        It "Should return success and error message valid parameters" {
+            $result = invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe"
+            $result.GetType().Name | Should -Be "PSCustomObject"
+            $result.Success | Should -BeOfType "Boolean"
+            $result.Success | Should -Be $true
+            $result.ErrorMessage | Should -BeNullOrEmpty
+        }
+        It "Should return a failure and error message if an error occurs in migration" {
+            # to throw the test init the user to migrate to
+            Initialize-TestUser -username $userToMigrateTo -password $tempPassword
+            # do the migration
+            $result = invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe"
+            $result.GetType().Name | Should -Be "PSCustomObject"
+            $result.Success | Should -BeOfType "Boolean"
+            $result.Success | Should -Be $false
+            $result.ErrorMessage | Should -Not -BeNullOrEmpty
+        }
+    }
+    Context "Invoke-UserMigrationBatch Function" {
+        # This block runs once before any tests in this 'Describe' block.
+        BeforeAll {
+            # Copy the exe file from D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\exe\gui_jcadmu.exe to C:\Windows\Temp
+            $guiPath = Join-Path $PSScriptRoot '..\..\..\..\jumpCloud-Admu\Exe\gui_jcadmu.exe'
+            $destinationPath = Join-Path -Path 'C:\Windows\Temp' -ChildPath 'gui_jcadmu.exe'
+            Copy-Item -Path $guiPath -Destination $destinationPath -Force
+        }
+
+        # Test Setup
+        BeforeEach {
+            # sample password
+            $tempPassword = "Temp123!Temp123!"
+            # username to migrate
+            $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # username to migrate to
+            $userToMigrateTo = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # set a second set of users for the multiple user migration test
+            # username to migrate
+            $userToMigrateFrom1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            # username to migrate to
+            $userToMigrateTo1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+
+            # Initialize-TestUser
+            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            Initialize-TestUser -username $userToMigrateFrom1 -password $tempPassword
+            # remove the log
+            $logPath = "C:\Windows\Temp\jcadmu.log"
+            if (Test-Path -Path $logPath) {
+                Remove-Item $logPath
+                New-Item $logPath -Force -ItemType File
+            }
+
+            $userSid = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom
+            $userSid1 = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom1
+            # Create a CSV file for the user migration, should have these: "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
+            $csvPath = "C:\Windows\Temp\jcdiscovery.csv"
+            try {
+                $SN = (Get-WmiObject -Class Win32_BIOS).SerialNumber
+            } catch {
+                $SN = (Get-CimInstance -Class Win32_BIOS).SerialNumber
+            }
+            $csvContent = @"
+SID,LocalPath,LocalComputerName,LocalUsername,JumpCloudUserName,JumpCloudUserID,JumpCloudSystemID,SerialNumber
+$userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userToMigrateTo,$null,$null,$SN
+$userSid1,C:\Users\$userToMigrateFrom1,$env:COMPUTERNAME,$userToMigrateFrom1,$userToMigrateTo1,$null,$null,$SN
+"@
+            $csvContent | Set-Content -Path $csvPath -Force
+            # Build migration parameters for this user
+            $migrationParams = @{
+                TempPassword              = $TempPassword
+                UpdateHomePath            = $false
+                AutoBindJCUser            = $false
+                JumpCloudAPIKey           = $null
+                BindAsAdmin               = $false
+                SetDefaultWindowsUser     = $true
+                ReportStatus              = $false
+                JumpCloudOrgID            = $null
+                systemContextBinding      = $false
+                LeaveDomainAfterMigration = $false
+                guiJcadmuPath             = $destinationPath
+            }
+            $systemContextBinding = $false
+            $csvName = "jcdiscovery.csv"
+        }
+        # Migration with Valid data
+        It "Should migrate the users to JumpCloud and not throw an error" {
+            # set the users to migrate
+            $UsersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $systemContextBinding
+            # Execute the migration batch processing
+            { Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig $migrationParams } | Should -Not -Throw
+        }
+        It "Should migrate the users and return the expected results" {
+            # set the users to migrate
+            $UsersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $systemContextBinding
+            # Execute the migration batch processing
+            $results = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig $migrationParams
+            $results.TotalUsers | Should -Be 2
+            $results.SuccessfulMigrations | Should -Be 2
+            $results.FailedMigrations | Should -Be 0
+        }
+        It "Should migrate multiple users even if one fails" {
+            # set the users to migrate
+            $UsersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $systemContextBinding
+            # Force an error by setting one of the JumpCloudUserName to an invalid user
+            # to throw the test init the user to migrate to
+            Initialize-TestUser -username $userToMigrateTo1 -password $tempPassword
+            # Execute the migration batch processing
+            $results = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig $migrationParams
+            $results.TotalUsers | Should -Be 2
+            $results.SuccessfulMigrations | Should -Be 1
+            $results.FailedMigrations | Should -Be 1
+        }
+    }
+}
+
+Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
+    BeforeAll {
+        # get the remote invoke script path
+        $global:remoteInvoke = Join-Path $PSScriptRoot '..\..\..\..\jumpcloud-ADMU-Advanced-Deployment\InvokeFromJCAgent\3_ADMU_Invoke.ps1'
+        if (-not (Test-Path $global:remoteInvoke)) {
+            throw "TEST SETUP FAILED: Script not found at the calculated path: $($global:remoteInvoke). Please check the relative path in the BeforeAll block."
+        }
+        $currentPath = $PSScriptRoot # Start from the current script's directory.
+        $TargetDirectory = "helperFunctions"
+        $FileName = "Import-AllFunctions.ps1"
+        while ($currentPath -ne $null) {
+            $filePath = Join-Path -Path $currentPath $TargetDirectory
+            if (Test-Path $filePath) {
+                # File found! Return the full path.
+                $helpFunctionDir = $filePath
+                break
+            }
+
+            # Move one directory up.
+            $currentPath = Split-Path $currentPath -Parent
+        }
+        . "$helpFunctionDir\$fileName"
+
+        # import the init user function:
+        . "$helpFunctionDir\Initialize-TestUser.ps1"
+
+        # import functions from the remote invoke script
+        # get the function definitions from the script
+        $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
+        $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
+        $functionMatches = [regex]::Matches($scriptContent, $pattern)
+
+        # set the matches.value to a temp file and import the functions
+        $tempFunctionFile = Join-Path $PSScriptRoot 'invokeFunctions.ps1'
+        $functionMatches.Value | Set-Content -Path $tempFunctionFile -Force
+
+        # import the functions from the temp file
+        . $tempFunctionFile
+    }
     Context "Get-MigrationUsersFromSystemDescription Function" {
         # Mock Get-SystemDescription to avoid actual API calls
         BeforeEach {
@@ -684,242 +920,6 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 $result[0].JumpCloudUserName | Should -Be "user4"
             }
         }
-    }
-    Context "Get-LatestADMUGUIExe Function" -Skip {
-        It "Should download the file successfully" {
-            # Arrange
-            $folderDest = "C:\Windows\Temp\TestExeDownload"
-            if (-not (Test-Path -Path $folderDest)) {
-                New-Item -Path $folderDest -ItemType Directory | Out-Null
-            }
-            # Call the function to download the file
-            Get-LatestADMUGUIExe -destinationPath $folderDest -GitHubToken $env:GITHUB_TOKEN
-
-            # Validate the file was downloaded
-            $downloadedFile = Join-Path -Path $folderDest -ChildPath "gui_jcadmu.exe"
-            Test-Path -Path $downloadedFile | Should -BeTrue
-        }
-        # Simulate a download failure
-        It "Should throw an error if the download fails" {
-            # Mock Invoke-WebRequest to throw an error
-            Mock Invoke-WebRequest { throw "Simulated download failure" }
-            { Get-LatestADMUGUIExe -destinationPath "C:\Windows\Temp" -GitHubToken $env:GITHUB_TOKEN } | Should -Throw "Operation failed after 3 attempts. Last error: Simulated download failure"
-        }
-        AfterAll {
-            # Clean up the test directory
-            $folderDest = "C:\Windows\Temp\TestExeDownload"
-            if (Test-Path -Path $folderDest) {
-                Remove-Item -Path $folderDest -Recurse -Force
-            }
-        }
-    }
-
-    Context "Get-JcadmuGuiSha256 Function" -Skip {
-        It "Should return SHA256 hash for a valid file" {
-            # Gets the SHA from the recent release of the ADMU GUI from GitHub
-            $hash = Get-JcadmuGuiSha256 -GitHubToken $GitHubToken
-            Write-Host "SHA256 Hash: $hash"
-            $hash | Should -Not -BeNullOrEmpty
-        }
-    }
-    Context "Invoke-SingleUserMigration Function" {
-        BeforeAll {
-            # set the GUI path variable
-            # Copy the exe file from D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\exe\gui_jcadmu.exe to C:\Windows\Temp
-            $guiPath = Join-Path $PSScriptRoot '..\..\..\..\jumpCloud-Admu\Exe\gui_jcadmu.exe'
-            $destinationPath = Join-Path -Path 'C:\Windows\Temp' -ChildPath 'gui_jcadmu.exe'
-            Copy-Item -Path $guiPath -Destination $destinationPath -Force
-        }
-        BeforeEach {
-            # sample password
-            $tempPassword = "Temp123!Temp123!"
-            # Generate two users for testing
-            # username to migrate
-            $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-            # username to migrate to
-            $userToMigrateTo = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-
-            # Initialize-TestUser
-            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
-            # remove the log
-            $logPath = "C:\Windows\Temp\jcadmu.log"
-            if (Test-Path -Path $logPath) {
-                Remove-Item $logPath
-                New-Item $logPath -Force -ItemType File
-            }
-
-            $sourceUser = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom
-
-            # Build migration parameters for this user
-            $migrationParams = @{
-                JumpCloudUserName     = $userToMigrateTo
-                SelectedUserName      = $sourceUser
-                TempPassword          = $tempPassword
-                UpdateHomePath        = $false
-                AutoBindJCUser        = $false
-                JumpCloudAPIKey       = $null
-                BindAsAdmin           = $false
-                SetDefaultWindowsUser = $true
-                LeaveDomain           = $false
-                adminDebug            = $false
-                ReportStatus          = $false
-            }
-        }
-        It "Should perform migration for a single user should not throw an error for valid parameters" {
-            { invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe" } | Should -Not -Throw
-        }
-        It "Should return success and error message valid parameters" {
-            $result = invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe"
-            $result.GetType().Name | Should -Be "PSCustomObject"
-            $result.Success | Should -BeOfType "Boolean"
-            $result.Success | Should -Be $true
-            $result.ErrorMessage | Should -BeNullOrEmpty
-        }
-        It "Should return a failure and error message if an error occurs in migration" {
-            # to throw the test init the user to migrate to
-            Initialize-TestUser -username $userToMigrateTo -password $tempPassword
-            # do the migration
-            $result = invoke-SingleUserMigration -User $userToMigrateFrom -MigrationParams $migrationParams -GuiJcadmuPath "C:\Windows\Temp\gui_jcadmu.exe"
-            $result.GetType().Name | Should -Be "PSCustomObject"
-            $result.Success | Should -BeOfType "Boolean"
-            $result.Success | Should -Be $false
-            $result.ErrorMessage | Should -Not -BeNullOrEmpty
-        }
-    }
-    Context "Invoke-UserMigrationBatch Function" {
-        # This block runs once before any tests in this 'Describe' block.
-        BeforeAll {
-            # Copy the exe file from D:\a\jumpcloud-ADMU\jumpcloud-ADMU\jumpcloud-ADMU\exe\gui_jcadmu.exe to C:\Windows\Temp
-            $guiPath = Join-Path $PSScriptRoot '..\..\..\..\jumpCloud-Admu\Exe\gui_jcadmu.exe'
-            $destinationPath = Join-Path -Path 'C:\Windows\Temp' -ChildPath 'gui_jcadmu.exe'
-            Copy-Item -Path $guiPath -Destination $destinationPath -Force
-        }
-
-        # Test Setup
-        BeforeEach {
-            # sample password
-            $tempPassword = "Temp123!Temp123!"
-            # username to migrate
-            $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-            # username to migrate to
-            $userToMigrateTo = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-            # set a second set of users for the multiple user migration test
-            # username to migrate
-            $userToMigrateFrom1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-            # username to migrate to
-            $userToMigrateTo1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
-
-            # Initialize-TestUser
-            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
-            Initialize-TestUser -username $userToMigrateFrom1 -password $tempPassword
-            # remove the log
-            $logPath = "C:\Windows\Temp\jcadmu.log"
-            if (Test-Path -Path $logPath) {
-                Remove-Item $logPath
-                New-Item $logPath -Force -ItemType File
-            }
-
-            $userSid = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom
-            $userSid1 = Test-UsernameOrSID -usernameOrSid $userToMigrateFrom1
-            # Create a CSV file for the user migration, should have these: "SID","LocalPath","LocalComputerName","LocalUsername","JumpCloudUserName","JumpCloudUserID","JumpCloudSystemID","SerialNumber"
-            $csvPath = "C:\Windows\Temp\jcdiscovery.csv"
-            try {
-                $SN = (Get-WmiObject -Class Win32_BIOS).SerialNumber
-            } catch {
-                $SN = (Get-CimInstance -Class Win32_BIOS).SerialNumber
-            }
-            $csvContent = @"
-SID,LocalPath,LocalComputerName,LocalUsername,JumpCloudUserName,JumpCloudUserID,JumpCloudSystemID,SerialNumber
-$userSid,C:\Users\$userToMigrateFrom,$env:COMPUTERNAME,$userToMigrateFrom,$userToMigrateTo,$null,$null,$SN
-$userSid1,C:\Users\$userToMigrateFrom1,$env:COMPUTERNAME,$userToMigrateFrom1,$userToMigrateTo1,$null,$null,$SN
-"@
-            $csvContent | Set-Content -Path $csvPath -Force
-            # Build migration parameters for this user
-            $migrationParams = @{
-                TempPassword              = $TempPassword
-                UpdateHomePath            = $false
-                AutoBindJCUser            = $false
-                JumpCloudAPIKey           = $null
-                BindAsAdmin               = $false
-                SetDefaultWindowsUser     = $true
-                ReportStatus              = $false
-                JumpCloudOrgID            = $null
-                systemContextBinding      = $false
-                LeaveDomainAfterMigration = $false
-                guiJcadmuPath             = $destinationPath
-            }
-            $systemContextBinding = $false
-            $csvName = "jcdiscovery.csv"
-        }
-        # Migration with Valid data
-        It "Should migrate the users to JumpCloud and not throw an error" {
-            # set the users to migrate
-            $UsersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $systemContextBinding
-            # Execute the migration batch processing
-            { Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig $migrationParams } | Should -Not -Throw
-        }
-        It "Should migrate the users and return the expected results" {
-            # set the users to migrate
-            $UsersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $systemContextBinding
-            # Execute the migration batch processing
-            $results = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig $migrationParams
-            $results.TotalUsers | Should -Be 2
-            $results.SuccessfulMigrations | Should -Be 2
-            $results.FailedMigrations | Should -Be 0
-        }
-        It "Should migrate multiple users even if one fails" {
-            # set the users to migrate
-            $UsersToMigrate = Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $systemContextBinding
-            # Force an error by setting one of the JumpCloudUserName to an invalid user
-            # to throw the test init the user to migrate to
-            Initialize-TestUser -username $userToMigrateTo1 -password $tempPassword
-            # Execute the migration batch processing
-            $results = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig $migrationParams
-            $results.TotalUsers | Should -Be 2
-            $results.SuccessfulMigrations | Should -Be 1
-            $results.FailedMigrations | Should -Be 1
-        }
-    }
-}
-
-Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" -Skip {
-    BeforeAll {
-        # get the remote invoke script path
-        $global:remoteInvoke = Join-Path $PSScriptRoot '..\..\..\..\jumpcloud-ADMU-Advanced-Deployment\InvokeFromJCAgent\3_ADMU_Invoke.ps1'
-        if (-not (Test-Path $global:remoteInvoke)) {
-            throw "TEST SETUP FAILED: Script not found at the calculated path: $($global:remoteInvoke). Please check the relative path in the BeforeAll block."
-        }
-        $currentPath = $PSScriptRoot # Start from the current script's directory.
-        $TargetDirectory = "helperFunctions"
-        $FileName = "Import-AllFunctions.ps1"
-        while ($currentPath -ne $null) {
-            $filePath = Join-Path -Path $currentPath $TargetDirectory
-            if (Test-Path $filePath) {
-                # File found! Return the full path.
-                $helpFunctionDir = $filePath
-                break
-            }
-
-            # Move one directory up.
-            $currentPath = Split-Path $currentPath -Parent
-        }
-        . "$helpFunctionDir\$fileName"
-
-        # import the init user function:
-        . "$helpFunctionDir\Initialize-TestUser.ps1"
-
-        # import functions from the remote invoke script
-        # get the function definitions from the script
-        $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
-        $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
-        $functionMatches = [regex]::Matches($scriptContent, $pattern)
-
-        # set the matches.value to a temp file and import the functions
-        $tempFunctionFile = Join-Path $PSScriptRoot 'invokeFunctions.ps1'
-        $functionMatches.Value | Set-Content -Path $tempFunctionFile -Force
-
-        # import the functions from the temp file
-        . $tempFunctionFile
     }
     Context "JumpCloud Agent Required Migrations" {
         # Validate the JumpCloud Agent is installed
