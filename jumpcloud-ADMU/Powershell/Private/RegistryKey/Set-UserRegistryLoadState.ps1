@@ -50,7 +50,6 @@ function Set-UserRegistryLoadState {
                         } else {
                             $closeResults = Close-ProcessesBySid -Sid $UserSid -Force
                             if ($closeResults) {
-                                Show-ProcessListResult -ProcessList $closeResults -domainUsername $username
                                 if ($closeResults | Where-Object { $_.WasBlockedByBlacklist }) {
                                     throw "Registry Load $key blocked by active session for $UserSid"
                                 }
@@ -66,7 +65,6 @@ function Set-UserRegistryLoadState {
                         } else {
                             $closeResults = Close-ProcessesBySid -Sid $UserSid -Force
                             if ($closeResults) {
-                                Show-ProcessListResult -ProcessList $closeResults -domainUsername $username
                                 if ($closeResults | Where-Object { $_.WasBlockedByBlacklist }) {
                                     throw "Registry Load $key blocked by active session for $UserSid"
                                 }
@@ -90,7 +88,6 @@ function Set-UserRegistryLoadState {
                         } else {
                             $closeResults = Close-ProcessesBySid -Sid $UserSid -Force
                             if ($closeResults) {
-                                Show-ProcessListResult -ProcessList $closeResults -domainUsername $username
                                 if ($closeResults | Where-Object { $_.WasBlockedByBlacklist }) {
                                     throw "Registry Unload $key blocked by active session for $UserSid"
                                 }
@@ -108,7 +105,6 @@ function Set-UserRegistryLoadState {
                         } else {
                             $closeResults = Close-ProcessesBySid -Sid $UserSid -Force
                             if ($closeResults) {
-                                Show-ProcessListResult -ProcessList $closeResults -domainUsername $username
                                 if ($closeResults | Where-Object { $_.WasBlockedByBlacklist }) {
                                     throw "Registry Unload $key blocked by active session for $UserSid"
                                 }
