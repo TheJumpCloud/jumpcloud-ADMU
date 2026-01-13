@@ -39,7 +39,9 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
     }
 
     It "The contents of the invoke migration script should be under 32,767 character limit" {
-        ($scriptContent | Measure-Object -Character).Characters | Should -BeLessThan 32767
+        $measured = $scriptContent | Measure-Object -Character
+        Write-Host "Character Count of Invoke Script: $($measured.Characters) | Limit: 32767"
+        $measured.Characters | Should -BeLessThan 32767
     }
 
     Context 'Confirm-MigrationParameter Function' {
