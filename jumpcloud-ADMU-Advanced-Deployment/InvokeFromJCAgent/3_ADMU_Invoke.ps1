@@ -1,9 +1,9 @@
 # This script is designed to be run from the JumpCloud Console as a command. It
 # will be invoked by the JumpCloud Agent on the target system.
 # The script will run the ADMU command to migrate a user to JumpCloud
-################################################################################
+####
 # Update Variables Below
-################################################################################
+####
 #region variables
 
 # Data source for migration users: "CSV" or "Description"
@@ -41,9 +41,9 @@ $systemContextBinding = $false # Bind using the systemContext API (default False
 # The systemContextBinding option is only available for devices that have enrolled a device using a JumpCloud Administrators Connect Key
 # for more information, see the JumpCloud documentation: https://docs.jumpcloud.com/api/2.0/index.html#section/System-Context
 #endregion variables
-################################################################################
+####
 # Do not edit below
-################################################################################
+####
 #region functionDefinitions
 function Confirm-MigrationParameter {
     [CmdletBinding()]
@@ -79,7 +79,7 @@ function Confirm-MigrationParameter {
     }
     return $true
 }
-function Get-MigrationUsers {
+function Get-MigrationUser {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param(
@@ -92,13 +92,13 @@ function Get-MigrationUsers {
         [boolean]$systemContextBinding
     )
     if ($source -eq 'CSV') {
-        return Get-MigrationUsersFromCsv -csvName $csvName -systemContextBinding $systemContextBinding
+        return Get-MgUserFromCSV -csvName $csvName -systemContextBinding $systemContextBinding
     } elseif ($source -eq 'Description') {
-        return Get-MigrationUsersFromSystemDescription -systemContextBinding $systemContextBinding
+        return Get-MgUserFromDesc -systemContextBinding $systemContextBinding
     }
 }
 
-function Get-MigrationUsersFromCsv {
+function Get-MgUserFromCSV {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param(
@@ -158,7 +158,7 @@ function Get-MigrationUsersFromCsv {
     }
 }
 
-function Get-MigrationUsersFromSystemDescription {
+function Get-MgUserFromDesc {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param([Parameter(Mandatory = $true)][boolean]$systemContextBinding)
@@ -270,22 +270,16 @@ function ConvertTo-ArgumentList {
         [hashtable]
         $InputHashtable
     )
-    # Initialize a generic list to hold the formatted arguments.
     $argumentList = [System.Collections.Generic.List[string]]::new()
-    # Iterate through each key-value pair in the input hashtable.
     foreach ($entry in $InputHashtable.GetEnumerator()) {
-        # Only process entries where the value is not null or an empty string.
         if ($null -ne $entry.Value -and (-not ($entry.Value -is [string]) -or $entry.Value -ne '')) {
             $key = $entry.Key
             $value = $entry.Value
-            # Format the value. Booleans are converted to lowercase string literals like '$true'.
-            # Other types are used as-is (they will be converted to strings automatically).
             $formattedValue = if ($value -is [bool]) {
                 '$' + $value.ToString().ToLower()
             } else {
                 $value
             }
-            # Construct the argument string in the format -Key:Value and add it to the list.
             $argument = "-{0}:{1}" -f $key, $formattedValue
             $argumentList.Add($argument)
         }
@@ -521,7 +515,7 @@ if ($dataSource -eq 'CSV') {
     Write-Host "[status] Using system description source..."
 }
 try {
-    $UsersToMigrate = Get-MigrationUsers -source $dataSource -csvName $csvName -systemContextBinding $systemContextBinding
+    $UsersToMigrate = Get-MigrationUser -source $dataSource -csvName $csvName -systemContextBinding $systemContextBinding
 } catch {
     Write-Host "[ERROR] Failed to retrieve migration users: $_"
     exit 1
