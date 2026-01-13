@@ -48,10 +48,11 @@ function Set-UserRegistryLoadState {
                         if ($results) {
                             Write-ToLog "Load Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
                         } else {
-                            $processList = Get-ProcessByOwner -username $username
-                            if ($processList) {
-                                Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
+                            $closeResults = Close-ProcessesBySid -Sid $UserSid -Force
+                            if ($closeResults) {
+                                if ($closeResults | Where-Object { $_.WasBlockedByBlacklist }) {
+                                    throw "Registry Load $key blocked by active session for $UserSid"
+                                }
                             }
                             Set-UserRegistryLoadState -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
                         }
@@ -62,10 +63,11 @@ function Set-UserRegistryLoadState {
                         if ($results) {
                             Write-ToLog "Load Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
                         } else {
-                            $processList = Get-ProcessByOwner -username $username
-                            if ($processList) {
-                                Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
+                            $closeResults = Close-ProcessesBySid -Sid $UserSid -Force
+                            if ($closeResults) {
+                                if ($closeResults | Where-Object { $_.WasBlockedByBlacklist }) {
+                                    throw "Registry Load $key blocked by active session for $UserSid"
+                                }
                             }
                             Set-UserRegistryLoadState -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
                         }
@@ -84,10 +86,11 @@ function Set-UserRegistryLoadState {
                             Write-ToLog "Unload Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
 
                         } else {
-                            $processList = Get-ProcessByOwner -username $username
-                            if ($processList) {
-                                Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
+                            $closeResults = Close-ProcessesBySid -Sid $UserSid -Force
+                            if ($closeResults) {
+                                if ($closeResults | Where-Object { $_.WasBlockedByBlacklist }) {
+                                    throw "Registry Unload $key blocked by active session for $UserSid"
+                                }
                             }
                             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
                         }
@@ -100,10 +103,11 @@ function Set-UserRegistryLoadState {
                             Write-ToLog "Unload Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
 
                         } else {
-                            $processList = Get-ProcessByOwner -username $username
-                            if ($processList) {
-                                Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
+                            $closeResults = Close-ProcessesBySid -Sid $UserSid -Force
+                            if ($closeResults) {
+                                if ($closeResults | Where-Object { $_.WasBlockedByBlacklist }) {
+                                    throw "Registry Unload $key blocked by active session for $UserSid"
+                                }
                             }
                             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
                         }
