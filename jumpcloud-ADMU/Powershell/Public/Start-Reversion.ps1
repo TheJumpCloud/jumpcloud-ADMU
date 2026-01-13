@@ -57,8 +57,6 @@ function Start-Reversion {
         [Parameter(Mandatory = $false)]
         [string]$ProfileSize,
         [Parameter(Mandatory = $false)]
-        [string]$LocalPath,
-        [Parameter(Mandatory = $false)]
         [switch]$DryRun,
         [Parameter(Mandatory = $false)]
         [switch]$Force
@@ -82,7 +80,12 @@ function Start-Reversion {
             RegistryUpdated     = $false
         }
         $account = New-Object System.Security.Principal.SecurityIdentifier($UserSID)
-        $domainUser = ($account.Translate([System.Security.Principal.NTAccount])).Value
+        try {
+            $domainUser = ($account.Translate([System.Security.Principal.NTAccount])).Value
+
+        } catch {
+            throw "UserSID provided could not be translated"
+        }
 
         # Regex pattern to identify .ADMU profile paths
         $admuPathPattern = '\.ADMU$'
@@ -133,11 +136,7 @@ function Start-Reversion {
             }
         }
 
-        # TODO: review localPath vs targetProfileImagePath usage
-        if (-not $ProfileSize -and $LocalPath) {
-            $LocalPath = $TargetProfileImagePath
-        }
-        $profileSize = Get-ProfileSize -ProfilePath $LocalPath
+        $profileSize = Get-ProfileSize -ProfilePath $TargetProfileImagePath
 
         # Prefer the progress form created in Form.ps1 so updates apply to the first window the user sees
         if ((-not $script:ProgressBar) -and ($form)) {
@@ -150,7 +149,7 @@ function Start-Reversion {
             #region Validate Registry and Determine Profile Path
             Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
             # Casing fixed to 'revertInit'
-            Write-ToProgress -form $form -Status "revertInit" -ProgressBar $ProgressBar -ProfileSize $profileSize -LocalPath $LocalPath -StatusMap $revertMessageMap
+            Write-ToProgress -form $form -Status "revertInit" -ProgressBar $ProgressBar -ProfileSize $profileSize -LocalPath $TargetProfileImagePath -StatusMap $revertMessageMap
 
             # Get profile information from registry for validation
             $profileRegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"

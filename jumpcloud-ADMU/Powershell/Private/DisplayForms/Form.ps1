@@ -919,7 +919,7 @@ Function Show-SelectionForm {
                 $script:ProgressBar = New-ProgressForm
                 Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Initializing" -username $($lvMigratedAccounts.SelectedItem.UserName) -newLocalUsername "N/A" -profileSize "Calculating" -LocalPath $localPath
 
-                Start-Reversion -UserSid $($lvMigratedAccounts.SelectedItem.SID) -form $true -LocalPath $localPath -force
+                Start-Reversion -UserSid $($lvMigratedAccounts.SelectedItem.SID) -form $true -TargetProfileImagePath $localPath -force
             } else {
                 # MIGRATION LOGIC
                 # Only runs if button text is NOT "Restore Profile"

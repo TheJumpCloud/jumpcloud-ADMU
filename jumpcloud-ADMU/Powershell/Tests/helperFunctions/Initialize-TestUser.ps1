@@ -8,7 +8,10 @@ Function Initialize-TestUser {
         $UserName,
         [Parameter()]
         [System.String]
-        $Password
+        $Password,
+        [Parameter()]
+        [System.Boolean]
+        $Reversion
     )
     Process {
         Write-Host "Building Profile for $($UserName)"
@@ -16,7 +19,13 @@ Function Initialize-TestUser {
             Remove-LocalUserProfile $($UserName)
         }
         $newUserPassword = ConvertTo-SecureString -String "$($Password)" -AsPlainText -Force
-        New-localUser -Name "$($UserName)" -password $newUserPassword -ErrorVariable userExitCode -Description "Created By JumpCloud ADMU"
+        if ($Reversion) {
+            # Added this for the reversion test since Start-Reversion removes users with JC description even though it is not needed for the tests
+            New-localUser -Name "$($UserName)" -password $newUserPassword -ErrorVariable userExitCode
+        } else {
+            New-localUser -Name "$($UserName)" -password $newUserPassword -ErrorVariable userExitCode -Description "Created By JumpCloud ADMU"
+        }
+
         if ($userExitCode) {
             Write-ToLog -Message:("$userExitCode")
             Write-ToLog -Message:("The user: $($UserName) could not be created, exiting")
