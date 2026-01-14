@@ -327,4 +327,11 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
             $admuAttr.value | Should -Be "Complete"
         }
     }
+    It "When the Set-Desc runs twice and no updates are made, the system description remains the same" {
+        $admuUsers = Get-ADMUUser -localUsers
+        $descResult1 = Set-SystemDesc -ADMUUsers $admuUsers
+        Start-Sleep -Seconds 2
+        $descResult2 = Set-SystemDesc -ADMUUsers $admuUsers
+        $descResult1.Description | Should -Be $descResult2.Description
+    }
 }
