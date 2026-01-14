@@ -233,6 +233,18 @@ function Get-ADMUUser {
         # Create ADMU user objects
         $admuUsers = New-Object system.Collections.ArrayList
         foreach ($aU in $adUsers) {
+            # Get last logon time from Windows user profile
+            $lastLogin = ''
+            try {
+                $userProfileData = Get-CimInstance -ClassName Win32_UserProfile -Filter "SID = '$($aU.uuid)'" -ErrorAction SilentlyContinue
+                if ($userProfileData -and $userProfileData.LastUseTime) {
+                    $lastLogin = [DateTime]$userProfileData.LastUseTime
+                    $lastLogin = $lastLogin.ToUniversalTime().ToString('O')  # or .ToString('u')
+                }
+            } catch {
+                Write-Host "[status] Could not retrieve last logon time for user $($aU.uuid): $_"
+            }
+
             # validate the user has not been previously migrated if the profileImagePath for that user ends in .ADMU it's been migrated already
             $userProfile = $profileList | Where-Object {
                 $sid = $_.PSChildName
@@ -250,6 +262,7 @@ function Get-ADMUUser {
                         localPath = $aU.directory
                         un        = ''
                         uid       = ''
+                        lastLogin = $lastLogin
                     }
                 } else {
                     $uObj = [PSCustomObject]@{
@@ -259,6 +272,7 @@ function Get-ADMUUser {
                         localPath = $aU.directory
                         un        = ''
                         uid       = ''
+                        lastLogin = $lastLogin
                     }
                 }
             }
