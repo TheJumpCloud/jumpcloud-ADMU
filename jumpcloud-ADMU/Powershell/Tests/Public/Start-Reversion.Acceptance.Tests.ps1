@@ -123,7 +123,7 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
 
                 { Start-Reversion @reversionInput } | Should -Throw "UserSID provided could not be translated"
             }
-            It "Tests that the Reversion fails with an Valid SID and an invalid profilePath" -skip {
+            It "Tests that the Reversion fails with an Valid SID and an invalid profilePath" {
 
                 # Migrate the initialized user to the second username
                 { Start-Migration @testCaseInput } | Should -Not -Throw
@@ -179,26 +179,36 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
                 Get-ChildItem -Path $userProfileDir -Filter $ntuserBackupPattern -Force -ErrorAction SilentlyContinue | ForEach-Object {
                     Remove-Item -Path $_.FullName -Force
                 }
-                { Start-Reversion @reversionInput -ErrorAction Stop -Force } | Should -Throw "*No NTUser.DAT backup files found in directory*"
+                { Start-Reversion @reversionInput -Force -ErrorAction Stop } | Should -Throw "*No NTUser.DAT backup files found in directory*"
             }
 
             # UsrClass Backup Missing Test Case
             It "Tests that the Reversion handles missing UsrClass backup files" {
                 # Migrate the initialized user to the second username
                 { Start-Migration @testCaseInput } | Should -Not -Throw
+
                 # Revert the migration
                 $reversionInput = @{
                     UserSID                = $userToMigrateFromSID
                     TargetProfileImagePath = "C:\Users\$userToMigrateFrom"
                 }
-                # Remove any existing UsrClass.dat backup files to simulate missing backup
-                # Ntuser backups should look like  NTUSER_original__Time
-                $usrclassBackupPattern = "USRCLASS_original_*"
+
+                # --- FIX STARTS HERE ---
+                # Construct the correct path to UsrClass.dat
                 $userProfileDir = "C:\Users\$userToMigrateFrom"
-                # Remove UsrClass_Original_*.dat backup
-                Get-ChildItem -Path $userProfileDir -Filter $usrclassBackupPattern -Force -ErrorAction SilentlyContinue | ForEach-Object {
-                    Remove-Item -Path $_.FullName -Force
+                $usrClassPath = Join-Path $userProfileDir "AppData\Local\Microsoft\Windows"
+
+                $usrclassBackupPattern = "USRCLASS_original_*"
+
+                # Verify path exists before trying to enumerate (optional safety)
+                if (Test-Path $usrClassPath) {
+                    # Remove UsrClass_Original_*.dat backup from the CORRECT location
+                    Get-ChildItem -Path $usrClassPath -Filter $usrclassBackupPattern -Force -ErrorAction SilentlyContinue | ForEach-Object {
+                        Remove-Item -Path $_.FullName -Force
+                    }
                 }
+                # --- FIX ENDS HERE ---
+
                 { Start-Reversion @reversionInput -ErrorAction Stop -Force } | Should -Throw "*No UsrClass.dat backup files found in directory*"
             }
 
