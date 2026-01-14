@@ -1,4 +1,4 @@
-#region functions
+#region functionDefinitions
 function Confirm-ExecutionPolicy {
     begin {
         $s = $true
@@ -129,7 +129,7 @@ function Set-System {
         }
         $b = @{}
         if ($prop -eq "Description") {
-            Write-Host "setting description to: $pl"
+            # Write-Host "setting description to: $pl"
             $b["description"] = $pl
         } elseif ($prop -eq "Attributes") {
             # before setting attributes, get the existing ones
@@ -138,15 +138,15 @@ function Set-System {
             foreach ($attr in $existing.attributes) {
                 # if the value is null, remove it from the existing set
                 if (($null -eq $attr.value) -or ([string]::IsNullOrWhiteSpace($attr.value))) {
-                    Write-Host "removing attribute: $($attr.name) due to null/empty value"
+                    # Write-Host "removing attribute: $($attr.name) due to null/empty value"
                     continue
                 }
-                Write-Host "existing attribute: $($attr.name) = $($attr.value)"
+                # Write-Host "existing attribute: $($attr.name) = $($attr.value)"
                 $attrs[$attr.name] = $attr.value
             }
             # update or add the new attribute
             if (($null -eq $payload.value) -or ([string]::IsNullOrWhiteSpace($payload.value))) {
-                Write-Host "removing attribute: $($payload.name) due to null/empty value"
+                # Write-Host "removing attribute: $($payload.name) due to null/empty value"
                 $attrs.Remove($payload.name) | Out-Null
             } else {
                 $attrs[$payload.name] = $payload.value
@@ -156,102 +156,201 @@ function Set-System {
             foreach ($k in $attrs.Keys) {
                 $payload += @{ "name" = $k; "value" = $attrs[$k] }
             }
-            Write-Host "setting attributes to: $(@{attributes = $payload } | ConvertTo-Json -Depth 5)"
+            # Write-Host "setting attributes to: $(@{attributes = $payload } | ConvertTo-Json -Depth 5)"
             $b["attributes"] = $payload
         }
         $j = $b | ConvertTo-Json
         Invoke-RestMethod -Method PUT -Uri "$url/api/systems/$key" -ContentType 'application/json' -Headers $h -Body $j | Out-Null
     } catch { throw "SetSystem: $_" }
 }
-#endregion functions
+function Get-ADMUUser {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject[]])]
+    param(
+        [Parameter(Mandatory = $false)]
+        [switch]$localUsers
+    )
 
-# validate execution policy
-if (-not(Confirm-ExecutionPolicy)) { throw"ExecutionPolicy failed"; exit 1 }
-# retrieve JumpCloud installation path
-$jumpCloudPath = (Get-ItemProperty -Path "HKLM:\SOFTWARE\JumpCloud\JumpCloud Agent\ConfigFile" -ErrorAction SilentlyContinue)
-$jumpCloudConfigPath = $jumpCloudPath."(default)"
-$jumpCloudInstallPath = Split-Path -Path (Split-Path -Path (Split-Path -Path $jumpCloudConfigPath)) -Parent
-# get data
-$data = & "$jumpCloudInstallPath\jcosqueryi.exe" --A users --csv
-$users = $data | ConvertFrom-Csv -Delimiter "|"
-$admin = $users | ? { $_.uid -eq 500 }
-$mSID = ($admin.uuid -split "-")[0..6] -join "-"
-$users = $users | ? { [int64]$_.uid -ge 1000 }
-$adUsers = $users | ? { $_.uuid -notmatch $mSID }
-$uObj = @{
-    st        = '';
-    msg       = '';
-    sid       = '';
-    localPath = '';
-    un        = '';
-    uid       = ''
-}
-$amuUsers = @()
-foreach ($aU in $adUsers) {
-    $u = $uObj.PSObject.Copy()
-    $u.st = 'Pending'
-    $u.msg = 'Planned'
-    $u.sid = $aU.uuid
-    $u.localPath = $aU.directory
-    $u.un = ''
-    $u.uid = ''
-    $amuUsers += $u
-}
-$sDesc = $null
-try {
-    $sRet = Get-System -systemContextBinding $true
-    $sDesc = $sRet.description
-} catch {
-    Write-Host "[status] Could not retrieve description: $_"
-}
-$merged = @()
-$needsUpdate = $false
-if ( [string]::IsNullOrEmpty($sDesc) ) {
-    Write-Host "[status] No description found, creating..."
-    $merged = @($amuUsers)
-    $needsUpdate = $true
-} else {
     try {
-        $eData = $sDesc | ConvertFrom-Json
-        $eUsers = if ( $eData.GetType().Name -eq 'PSCustomObject' ) {
-            @($eData)
-        } else {
-            @($eData)
+        # Retrieve JumpCloud installation path
+        $jumpCloudPath = (Get-ItemProperty -Path "HKLM:\SOFTWARE\JumpCloud\JumpCloud Agent\ConfigFile" -ErrorAction SilentlyContinue)
+        $jumpCloudConfigPath = $jumpCloudPath."(default)"
+        $jumpCloudInstallPath = Split-Path -Path (Split-Path -Path (Split-Path -Path $jumpCloudConfigPath)) -Parent
+
+        # Get user data from JumpCloud
+        $data = & "$jumpCloudInstallPath\jcosqueryi.exe" --A users --csv
+        $users = $data | ConvertFrom-Csv -Delimiter "|"
+
+        # Get machine SID by finding admin user (uid 500)
+        $admin = $users | Where-Object { $_.uid -eq 500 }
+        $mSID = ($admin.uuid -split "-")[0..6] -join "-"
+
+        # Filter for standard users (uid >= 1000) and AD users (not machine users)
+        $users = $users | Where-Object { [int64]$_.uid -ge 1000 }
+        $adUsers = $users | Where-Object { $_.uuid -notmatch $mSID }
+
+        # If no AD users found and localUsers is set, use all standard users
+        if (($adUsers.Count -eq 0) -and $localUsers) {
+            Write-Host "[status] No AD users found, using standard users for testing..."
+            $adUsers = $users
         }
-        Write-Host "[status] Merging with existing users..."
-        $merged = $eUsers
-        $newUsers = @()
-        foreach ($aU in $amuUsers) {
-            if (-not($eUsers | ? { $_.sid -eq $aU.sid })) {
-                $newUsers += $aU
+
+        # Create ADMU user objects
+        $admuUsers = New-Object system.Collections.ArrayList
+        foreach ($aU in $adUsers) {
+            $uObj = [PSCustomObject]@{
+                st        = 'Pending'
+                msg       = 'Planned'
+                sid       = $aU.uuid
+                localPath = $aU.directory
+                un        = ''
+                uid       = ''
+            }
+            $admuUsers.add($uObj) | Out-Null
+        }
+
+        return @(, $admuUsers)
+    } catch {
+        throw "Failed to retrieve ADMU users: $_"
+    }
+}
+function Set-SystemDesc {
+    [CmdletBinding()]
+    [OutputType([PSCustomObject])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [PSCustomObject[]]$ADMUUsers
+    )
+
+    try {
+        $sDescRaw = $null
+        $result = [PSCustomObject]@{
+            MergedUsers = @()
+            Status      = $null
+            Updated     = $false
+            Error       = $null
+        }
+
+        # Retrieve existing system description (keep as raw string)
+        try {
+            $sRet = Get-System -systemContextBinding $true
+            $sDescRaw = $sRet.description
+        } catch {
+            Write-Host "[status] Could not retrieve description: $_"
+        }
+
+        $merged = @()
+        $needsUpdate = $false
+
+        # Check if description is null or whitespace
+        if ([string]::IsNullOrWhiteSpace($sDescRaw)) {
+            Write-Host "[status] No description found, creating..."
+            $merged = @($ADMUUsers)
+            $needsUpdate = $true
+        } else {
+            try {
+                # Try to parse as JSON
+                $eData = $sDescRaw | ConvertFrom-Json
+
+                # Normalize to array
+                $eUsers = if ($eData -is [array]) {
+                    $eData
+                } else {
+                    @($eData)
+                }
+
+                # Validate that objects have ADMU properties (st, msg, sid, localPath, un, uid)
+                $isValidADMU = $true
+                foreach ($item in $eUsers) {
+                    if (-not ($item | Get-Member -Name 'st' -ErrorAction SilentlyContinue) -or
+                        -not ($item | Get-Member -Name 'msg' -ErrorAction SilentlyContinue) -or
+                        -not ($item | Get-Member -Name 'sid' -ErrorAction SilentlyContinue) -or
+                        -not ($item | Get-Member -Name 'localPath' -ErrorAction SilentlyContinue) -or
+                        -not ($item | Get-Member -Name 'un' -ErrorAction SilentlyContinue) -or
+                        -not ($item | Get-Member -Name 'uid' -ErrorAction SilentlyContinue)) {
+                        $isValidADMU = $false
+                        break
+                    }
+                }
+
+                if ($isValidADMU) {
+                    # Valid ADMU objects - merge with new users
+                    Write-Host "[status] Merging with existing users..."
+                    $merged = $eUsers
+                    $newUsers = @()
+                    foreach ($aU in $ADMUUsers) {
+                        if (-not($eUsers | Where-Object { $_.sid -eq $aU.sid })) {
+                            $newUsers += $aU
+                            $needsUpdate = $true
+                        }
+                    }
+                    $merged += $newUsers
+                    $merged = $merged | Where-Object { $_.st -ne 'Skip' }
+                } else {
+                    # Valid JSON but not ADMU objects - replace
+                    Write-Host "[status] Description contains non-ADMU objects, replacing..."
+                    $merged = @($ADMUUsers)
+                    $needsUpdate = $true
+                }
+            } catch {
+                # Invalid JSON - replace
+                Write-Host "[status] Invalid JSON, replacing..."
+                $merged = @($ADMUUsers)
                 $needsUpdate = $true
             }
         }
-        $merged += $newUsers
-        $merged = $merged | ? { $_.st -ne 'Skip' }
+
+        # Update system description if needed
+        if ($needsUpdate -and $merged.Count -gt 0) {
+            Write-Host "[status] Updating description..."
+            Set-System -prop "Description" -payload $merged
+            $result.Updated = $true
+        }
+
+        # Calculate ADMU status
+        $pending = @($merged | Where-Object { $_.st -eq 'Pending' })
+        $errors = @($merged | Where-Object { $_.st -eq 'Error' })
+        $skipped = @($merged | Where-Object { $_.st -eq 'Skip' })
+        $complete = @($merged | Where-Object { $_.st -eq 'Complete' })
+
+        # Check for unknown/custom states (anything that's not Error, Pending, Complete, or Skip)
+        $inProgress = @($merged | Where-Object { $_.st -notin @('Error', 'Pending', 'Complete', 'Skip') })
+
+        $amuStatus = if ($errors.Count -gt 0) {
+            'Error'
+        } elseif ($inProgress.Count -gt 0) {
+            'InProgress'
+        } elseif ($pending.Count -gt 0) {
+            'Pending'
+        } else {
+            'Complete'
+        }
+
+        Write-Host "[status] Setting ADMU status to $amuStatus..."
+        Set-System -prop "Attributes" -payload @{ "name" = "admu"; "value" = "$amuStatus" }
+
+        $result.MergedUsers = @(, $merged)
+        $result.Status = $amuStatus
+
+        return $result
     } catch {
-        Write-Host "[status] Invalid JSON, overwriting..."
-        $merged = $amuUsers
-        $needsUpdate = $true
+        $errorMsg = "Failed to set system description: $_"
+        Write-Host "[status] $errorMsg"
+        return [PSCustomObject]@{
+            MergedUsers = @()
+            Status      = $null
+            Updated     = $false
+            Error       = $errorMsg
+        }
     }
 }
-# update admu device description if needed
-if ( $needsUpdate -and $merged.Count -gt 0 ) {
-    Write-Host "[status] Updating description..."
-    Set-System -prop "Description" -payload $merged
-}
-$pending = $merged | ? { $_.st -eq 'Pending' }
-$errors = $merged | ? { $_.st -eq 'Error' }
-$skipped = $merged | ? { $_.st -eq 'Skip' }
-# calculate overall ADMU status, set attribute
-$amuStatus = if ($errors.Count -gt 0) {
-    'Error'
-} elseif ($pending.Count -gt 0) {
-    'Pending'
+#endregion functionDefinitions
+if (-not(Confirm-ExecutionPolicy)) { throw"ExecutionPolicy failed"; exit 1 }
+# retrieve JumpCloud installation path
+$admuUsers = Get-ADMUUser
+$descResult = Set-SystemDesc -ADMUUsers $admuUsers
+if ($descResult.Error) {
+    Write-Host "[ERROR] $($descResult.Error)"
 } else {
-    'Complete'
+    Write-Host "[status] Device initialization complete."
 }
-Write-Host "[status] Setting ADMU status to $amuStatus..."
-# Set the admu tracker attribute to the calculated status
-Set-System -prop "Attributes" -payload @{ "name" = "admu"; "value" = "$amuStatus" }
-Write-Host "[status] Device initialization complete."
