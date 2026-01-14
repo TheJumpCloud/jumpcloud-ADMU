@@ -14,7 +14,7 @@ Reverts a user migration by restoring original registry files for a specified Wi
 
 ```
 Start-Reversion [-UserSID] <String> [[-TargetProfileImagePath] <String>] [-form <Boolean>] [-UserName <String>]
- [-ProfileSize <String>] [-LocalPath <String>] [-DryRun] [-Force] [-WhatIf] [-Confirm] [<CommonParameters>]
+ [-ProfileSize <String>] [-DryRun] [-Force] [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
@@ -114,21 +114,6 @@ Accept wildcard characters: False
 
 ### -ProfileSize
 {{ Fill ProfileSize Description }}
-
-```yaml
-Type: System.String
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -LocalPath
-{{ Fill LocalPath Description }}
 
 ```yaml
 Type: System.String
