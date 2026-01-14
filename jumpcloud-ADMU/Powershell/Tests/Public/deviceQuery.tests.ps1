@@ -131,6 +131,28 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
             }
         }
+        It "When some has been previously migrated, their status is set to 'complete'" {
+            $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $tempPassword = "Temp123!Temp123!"
+            # Initialize-TestUser
+            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            # set the user's profileImagePath in registry to simulate a previous migration
+            $sid = (New-Object System.Security.Principal.NTAccount($userToMigrateFrom)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+            $regPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$sid"
+            if (-not (Test-Path $regPath)) {
+                throw "Test Setup Failed: Registry path $regPath does not exist for user $userToMigrateFrom"
+            }
+            # append .ADMU to the existing profileImagePath to simulate migration
+            $existingProfilePath = (Get-ItemProperty -Path $regPath -Name "ProfileImagePath").ProfileImagePath
+            $newProfilePath = "$existingProfilePath.ADMU"
+            Set-ItemProperty -Path $regPath -Name "ProfileImagePath" -Value $newProfilePath
+            # get ADMU users
+            $admuUsers = Get-ADMUUser -localUsers
+            $migratedUser = $admuUsers | Where-Object { $_.un -eq $userToMigrateFrom }
+            $migratedUser | Should -Not -Be $null
+            $migratedUser.st | Should -Be "Complete"
+            $migratedUser.msg | Should -Be "User previously migrated"
+        }
     }
     Context "Set-SystemDesc Tests" {
         BeforeEach {
@@ -326,12 +348,25 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
             $admuAttr = $systemData.attributes | Where-Object { $_.name -eq "admu" }
             $admuAttr.value | Should -Be "Complete"
         }
-    }
-    It "When the Set-Desc runs twice and no updates are made, the system description remains the same" {
-        $admuUsers = Get-ADMUUser -localUsers
-        $descResult1 = Set-SystemDesc -ADMUUsers $admuUsers
-        Start-Sleep -Seconds 2
-        $descResult2 = Set-SystemDesc -ADMUUsers $admuUsers
-        $descResult1.Description | Should -Be $descResult2.Description
+        It "When the Set-Desc runs twice and no updates are made, the system description remains the same" {
+            $admuUsers = Get-ADMUUser -localUsers
+            $descResult1 = Set-SystemDesc -ADMUUsers $admuUsers
+            Start-Sleep -Seconds 2
+            $descResult2 = Set-SystemDesc -ADMUUsers $admuUsers
+            $descResult1.Description | Should -Be $descResult2.Description
+        }
+        It "When the Set-Desc runs twice and updates are made, the system description is updated" {
+            $admuUsers = Get-ADMUUser -localUsers
+            $descResult1 = Set-SystemDesc -ADMUUsers $admuUsers
+            # modify one user's status
+            $admuUsers[0].st = "Complete"
+            $admuUsers[0].msg = "User previously migrated"
+            Start-Sleep -Seconds 2
+            $descResult2 = Set-SystemDesc -ADMUUsers $admuUsers
+            $systemAfter = Get-System -systemContextBinding $true
+            $foundUser = ($systemAfter.Description | ConvertFrom-Json) | Where-Object { $_.sid -eq $admuUsers[0].sid }
+            $foundUser.st | Should -Be "Complete"
+            $foundUser.msg | Should -Be "User previously migrated"
+        }
     }
 }

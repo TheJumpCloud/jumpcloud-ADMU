@@ -226,16 +226,41 @@ function Get-ADMUUser {
             $adUsers = $users
         }
 
+        # get the profileList from registry
+        $profileListPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
+        $profileList = Get-ChildItem -Path $profileListPath
+
         # Create ADMU user objects
         $admuUsers = New-Object system.Collections.ArrayList
         foreach ($aU in $adUsers) {
-            $uObj = [PSCustomObject]@{
-                st        = 'Pending'
-                msg       = 'Planned'
-                sid       = $aU.uuid
-                localPath = $aU.directory
-                un        = ''
-                uid       = ''
+            # validate the user has not been previously migrated if the profileImagePath for that user ends in .ADMU it's been migrated already
+            $userProfile = $profileList | Where-Object {
+                $sid = $_.PSChildName
+                $sid -eq $aU.uuid
+            }
+            if ($userProfile) {
+                Write-Host "[status] Found profile for user $($aU.uuid), checking migration status..."
+                $profilePath = (Get-ItemProperty -Path $userProfile.PSPath).ProfileImagePath
+                if ($profilePath -and $profilePath.EndsWith(".ADMU")) {
+                    Write-Host "user previously migrated, skipping user: $($aU.uuid)"
+                    $uObj = [PSCustomObject]@{
+                        st        = 'Complete'
+                        msg       = 'User previously migrated'
+                        sid       = $aU.uuid
+                        localPath = $aU.directory
+                        un        = ''
+                        uid       = ''
+                    }
+                } else {
+                    $uObj = [PSCustomObject]@{
+                        st        = 'Pending'
+                        msg       = 'Planned'
+                        sid       = $aU.uuid
+                        localPath = $aU.directory
+                        un        = ''
+                        uid       = ''
+                    }
+                }
             }
             $admuUsers.add($uObj) | Out-Null
         }
@@ -316,6 +341,18 @@ function Set-SystemDesc {
                         }
                     }
                     $merged += $newUsers
+
+                    # Check for status updates on existing users (e.g., Complete status from re-running on previously migrated users)
+                    foreach ($aU in $ADMUUsers) {
+                        $existingUser = $merged | Where-Object { $_.sid -eq $aU.sid }
+                        if (($existingUser -and $existingUser.st -ne $aU.st) -or ($existingUser -and $aU.st -eq 'Complete' -and $aU.msg -eq 'User previously migrated')) {
+                            Write-Host "[status] Updating status for user $($aU.sid) from '$($existingUser.st)' to '$($aU.st)'..."
+                            $existingUser.st = $aU.st
+                            $existingUser.msg = $aU.msg
+                            $needsUpdate = $true
+                        }
+                    }
+
                     $merged = $merged | Where-Object { $_.st -ne 'Skip' }
                 } else {
                     # Valid JSON but not ADMU objects - replace
