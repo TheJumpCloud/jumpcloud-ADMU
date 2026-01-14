@@ -81,7 +81,7 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
 
                 Write-Host "Reversion Input Parameters: $($reversionInput | Out-String)"
 
-                $revertResult = Start-Reversion @reversionInput -force
+                $revertResult = Start-Reversion @reversionInput -ErrorAction Stop -Force
                 Write-Host "Revert Result Object: $($revertResult | Out-String)"
 
                 # Validate that the owner is the same as pre-migration
