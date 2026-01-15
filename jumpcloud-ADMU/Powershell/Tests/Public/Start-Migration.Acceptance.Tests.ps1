@@ -512,8 +512,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $system.Description | Should -Not -BeNullOrEmpty
                     # get the userObject by SID in systemDesc
                     $systemDescObj = $system.Description | ConvertFrom-Json
-                    $matchedUser = $systemDescObj | Where-Object { $_.sid -eq $migratedUserSid }
-                    $matchedUser.sid | Should -Be $migratedUserSid
+                    $matchedUser = $systemDescObj | Where-Object { $_.sid -eq $userToMigrateFromSID }
+                    $matchedUser.sid | Should -Be $userToMigrateFromSID
                     $matchedUser.un | Should -Be $GeneratedUser.Username
                     $matchedUser.st | Should -Be "Completed"
 
