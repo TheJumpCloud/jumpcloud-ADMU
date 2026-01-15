@@ -217,7 +217,7 @@ function Get-ADMUUser {
         $mSID = ($admin.uuid -split "-")[0..6] -join "-"
 
         # Filter for standard users (uid >= 1000) and AD users (not machine users)
-        $users = $users | Where-Object { ([int64]$_.uid -ge 1000) -and ($_.type -eq "local") }
+        $users = $users | Where-Object { [int64]$_.uid -ge 1000 }
         $adUsers = $users | Where-Object { $_.uuid -notmatch $mSID }
 
         # If no AD users found and localUsers is set, use all standard users
