@@ -409,7 +409,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                 ValidateUserShellFolder = $true
                 SystemContextBinding    = $false
                 ReportStatus            = $false
-                # JumpCloudUserID         = $null
+                JumpCloudUserID         = $null
             }
             # remove the log
             $logPath = "C:\Windows\Temp\jcadmu.log"
@@ -432,20 +432,96 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # create the user
                     $GeneratedUser = New-JcSdkUser -Email:("$($userToMigrateTo)@jumpcloudadmu.com") -Username:("$($userToMigrateTo)") -Password:("$($user.password)")
                 }
-                It "Report Status to JumpCloud Description" {
+                It "Report Status to JumpCloud Description when the systemDescription was previously empty" {
+                    $userToMigrateFromSID = (Get-LocalUser -Name $userToMigrateFrom | Select-Object -ExpandProperty SID)
+                    # set the system description to null/ empty
+                    Set-JCSystem -SystemID $systemKey -description ""
                     # set the $testCaseInput
                     $testCaseInput.JumpCloudUserName = $userToMigrateTo
-                    $testCaseInput.SelectedUserName = $userToMigrateFrom
+                    $testCaseInput.SelectedUserName = $userToMigrateFromSID
                     $testCaseInput.TempPassword = $tempPassword
                     $testCaseInput.ReportStatus = $true
+                    $testCaseInput.SystemContextBinding = $true
+                    $testCaseInput.JumpCloudUserID = $GeneratedUser.Id
+                    # for this test remove the APIKey/ ORgID params
+                    $testCaseInput.Remove('JumpCloudApiKey')
+                    $testCaseInput.Remove('JumpCloudOrgID')
                     # Migrate the initialized user to the second username
                     { Start-Migration @testCaseInput } | Should -Not -Throw
 
                     # get the system description
-                    $systemDesc = Get-JcSdkSystem -Id $systemKey | Select-Object -ExpandProperty Description
-                    # Should have this value: {"MigrationStatus":"Migration completed successfully","MigrationPercentage":100,"UserSID":"S-1-12-1-3466645622-1152519358-2404555438-459629385","MigrationUsername":"test1","UserID":"61e9de2fac31c01519042fe1","DeviceID":"6894eaab354d2a9865a44c74"}
-                    $systemDesc | Should -Not -BeNullOrEmpty
-                    Write-Host $systemDesc
+                    $system = Get-JcSdkSystem -Id $systemKey
+                    # check the description
+                    $system.Description | Should -Not -BeNullOrEmpty
+                    # get the userObject by SID in systemDesc
+                    $systemDescObj = $system.Description | ConvertFrom-Json
+                    $matchedUser = $systemDescObj | Where-Object { $_.sid -eq $userToMigrateFromSID }
+                    $matchedUser.sid | Should -Be $userToMigrateFromSID
+                    $matchedUser.un | Should -Be $GeneratedUser.Username
+                    $matchedUser.st | Should -Be "Completed"
+
+                    # validate the admu attributes were written:
+                    $matchedAttribute = $system.attributes | Where-Object { $_.Name -eq 'admu' }
+                    $matchedAttribute | Should -Not -BeNullOrEmpty
+                    $matchedAttribute.Name | Should -Be 'admu'
+                    $matchedAttribute.Value | Should -Be "Complete"
+                }
+                It "Report Status to JumpCloud Description when the systemDescription previously had data" {
+                    $migrateUser = Get-LocalUser -Name $userToMigrateTo
+                    $userToMigrateFromSID = $migrateUser.SID.Value
+
+                    # set the system description to a test value
+                    $testUsers = @(
+                        [PSCustomObject]@{
+                            st        = 'Pending'
+                            msg       = 'Planned'
+                            sid       = "S-1-5-21-1111111111-1111111111-1111111111-1001"
+                            localPath = "C:\Users\User1"
+                            un        = "User1"
+                            uid       = ""
+                            lastLogin = $null
+                        },
+                        [PSCustomObject]@{
+                            st        = 'Pending'
+                            msg       = 'Planned'
+                            sid       = $userToMigrateFromSID
+                            localPath = "C:\Users\User2"
+                            un        = $userToMigrateTo
+                            uid       = ""
+                            lastLogin = $null
+                        }
+                    ) | ConvertTo-Json
+                    Set-JCSystem -SystemID $systemKey -description $testUsers
+                    # set the $testCaseInput
+                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                    $testCaseInput.SelectedUserName = $userToMigrateFromSID
+                    $testCaseInput.TempPassword = $tempPassword
+                    $testCaseInput.ReportStatus = $true
+                    $testCaseInput.SystemContextBinding = $true
+                    $testCaseInput.JumpCloudUserID = $GeneratedUser.Id
+                    # for this test remove the APIKey/ ORgID params
+                    $testCaseInput.Remove('JumpCloudApiKey')
+                    $testCaseInput.Remove('JumpCloudOrgID')
+                    # Migrate the initialized user to the second username
+                    { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                    # get the system description
+                    $system = Get-JcSdkSystem -Id $systemKey
+                    # check the description
+                    $migratedUserSid = (Get-LocalUser -Name $userToMigrateTo | Select-Object -ExpandProperty SID)
+                    $system.Description | Should -Not -BeNullOrEmpty
+                    # get the userObject by SID in systemDesc
+                    $systemDescObj = $system.Description | ConvertFrom-Json
+                    $matchedUser = $systemDescObj | Where-Object { $_.sid -eq $migratedUserSid }
+                    $matchedUser.sid | Should -Be $migratedUserSid
+                    $matchedUser.un | Should -Be $GeneratedUser.Username
+                    $matchedUser.st | Should -Be "Completed"
+
+                    # validate the admu attributes were written:
+                    $matchedAttribute = $system.attributes | Where-Object { $_.Name -eq 'admu' }
+                    $matchedAttribute | Should -Not -BeNullOrEmpty
+                    $matchedAttribute.Name | Should -Be 'admu'
+                    $matchedAttribute.Value | Should -Be "Complete"
                 }
                 It "Associates a JumpCloud user using 'AutoBindJCUser'" {
                     # set the $testCaseInput
