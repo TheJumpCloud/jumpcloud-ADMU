@@ -26,14 +26,14 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
         # Test Setup
         BeforeEach {
             # sample password
-            $tempPassword = "Temp123!"
+            $tempPassword = "Temp123!Temp123!"
             # username to migrate
             $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # username to migrate to
             $userToMigrateTo = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
 
             # Initialize-TestUser
-            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword -Reversion $true
             # Get the SID of the initialized user
             $userToMigrateFromSID = (Get-LocalUser -Name $userToMigrateFrom).SID.Value
             # define test case input
@@ -79,13 +79,21 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
                     TargetProfileImagePath = "C:\Users\$userToMigrateFrom"
                 }
 
-                $revertResult = Start-Reversion @reversionInput -force
+                Write-Host "Reversion Input Parameters: $($reversionInput | Out-String)"
+
+                $revertResult = Start-Reversion @reversionInput -ErrorAction SilentlyContinue -Force
                 Write-Host "Revert Result Object: $($revertResult | Out-String)"
 
                 # Validate that the owner is the same as pre-migration
                 $postReversionACL = Get-Acl -Path "C:\Users\$userToMigrateFrom"
-                $postReversionOwner = $postReversionACL.Owner
-                $postReversionOwner | Should -Be $preMigrationOwner
+
+                # Force Get-Acl to return the SID explicitly (Avoiding name resolution issues)
+                $postReversionOwnerSID = $postReversionACL.GetOwner([System.Security.Principal.SecurityIdentifier]).Value
+
+                Write-Host "Post-Reversion Owner SID: $postReversionOwnerSID" -ForegroundColor Blue
+
+                # Compare the folder's owner SID to the known User SID
+                $postReversionOwnerSID | Should -Be $userToMigrateFromSID
 
                 $revertResult | Should -Not -BeNullOrEmpty
                 Write-Host "Reversion Result: $($revertResult | Out-String)"
@@ -101,14 +109,11 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
                 $revertResult.FilesReverted.Count | Should -BeGreaterThan 0
 
                 { Get-LocalUser -Name $userToMigrateFrom } | Should -Not -Throw # Original User should exist
-                { Get-LocalUser -Name $userToMigrateTo } | Should -Throw # Created JC User should not exist after reversion
+                { Get-LocalUser -Name $userToMigrateTo -ErrorAction Stop } | Should -Throw
             }
         }
         Context "Reversion Failure" {
             It "Tests that the Reversion fails with an invalid SID" {
-
-                # Migrate the initialized user to the second username
-                { Start-Migration @testCaseInput } | Should -Not -Throw
 
                 # Revert the migration with an invalid SID
                 $reversionInput = @{
@@ -116,37 +121,25 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
                     TargetProfileImagePath = "C:\Users\$userToMigrateFrom"
                 }
 
-                { Start-Reversion @reversionInput } | Should -Throw "Profile registry path not found for SID: S-1-5-21-0000000000-0000000000-0000000000-9999"
+                { Start-Reversion @reversionInput } | Should -Throw "UserSID provided could not be translated"
             }
-            It "Tests that the Reversion fails with an invalid SID NO Profile Path param" {
+            It "Tests that the Reversion fails with an Valid SID and an invalid profilePath" {
 
                 # Migrate the initialized user to the second username
                 { Start-Migration @testCaseInput } | Should -Not -Throw
 
-                # Revert the migration with an invalid SID
-                $reversionInput = @{
-                    UserSID = "S-1-5-21-0000000000-0000000000-0000000000-9999" # Invalid SID
-                }
-
-                { Start-Reversion @reversionInput } | Should -Throw "Profile registry path not found for SID: S-1-5-21-0000000000-0000000000-0000000000-9999"
-            }
-
-            It "Tests that the Reversion fails with a missing profile path" {
-
-                # Migrate the initialized user to the second username
-                { Start-Migration @testCaseInput } | Should -Not -Throw
-
-                # Revert the migration with a missing profile path
+                # Revert the migration with a valid SID and invalid profileImagePath
                 $reversionInput = @{
                     UserSID                = $userToMigrateFromSID
-                    TargetProfileImagePath = "C:\Users\NonExistentProfile"
+                    TargetProfileImagePath = "C:\Users\InvalidProfilePath"
                 }
 
-                { Start-Reversion @reversionInput } | Should -Throw "Profile directory does not exist: C:\Users\NonExistentProfile"
+                { Start-Reversion @reversionInput } | Should -Throw "Cannot validate argument on parameter 'TargetProfileImagePath'. Target profile path does not exist: C:\Users\InvalidProfilePath"
             }
 
+
             # ACL Backup Missing Test Case
-            It "Tests that the Reversion handles missing ACL, NTUser, and UsrClass backup files gracefully" {
+            It "Tests that the Reversion handles missing ACL backup files" {
                 # Migrate the initialized user to the second username
                 { Start-Migration @testCaseInput } | Should -Not -Throw
 
@@ -158,30 +151,65 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
 
                 # Remove any existing ACL backup files to simulate missing backup
                 $aclBackupDir = "C:\Users\$userToMigrateFrom\AppData\Local\JumpCloudADMU"
+                # List all the backup files before deletion for debugging
+                Write-Host "Existing ACL Backup Files in $aclBackupDir before deletion:" -Foreground Yellow
+                Get-ChildItem -Path $aclBackupDir -Force -ErrorAction SilentlyContinue | ForEach-Object {
+                    Write-Host $_.FullName -Foreground Yellow
+                }
                 if (Test-Path -Path $aclBackupDir) {
                     Remove-Item -Path $aclBackupDir -Recurse -Force
                 }
+                { Start-Reversion @reversionInput -ErrorAction Stop -Force } | Should -Throw "*No ACL backup files found*"
+            }
 
-                { Start-Reversion @reversionInput } | Should -Throw "No ACL backup files found in directory: $aclBackupDir for SID: $userToMigrateFromSID. Cannot proceed with revert."
-
-                # Remove any existing NTUser.DAT and UsrClass.dat backup files to simulate missing backup
+            # NTUser Backup Missing Test Case
+            It "Tests that the Reversion handles missing NTUser backup files" {
+                # Migrate the initialized user to the second username
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+                # Revert the migration
+                $reversionInput = @{
+                    UserSID                = $userToMigrateFromSID
+                    TargetProfileImagePath = "C:\Users\$userToMigrateFrom"
+                }
+                # Remove any existing NTUser.DAT backup files to simulate missing backup
                 # Ntuser backups should look like  NTUSER_original__Time
                 $ntuserBackupPattern = "NTUSER_original_*"
-                $usrclassBackupPattern = "USRCLASS_original_*"
                 $userProfileDir = "C:\Users\$userToMigrateFrom"
                 # Remove NTUser_Original_*.DAT backup
-                Get-ChildItem -Path $userProfileDir -Filter $ntuserBackupPattern -force -ErrorAction SilentlyContinue | ForEach-Object {
+                Get-ChildItem -Path $userProfileDir -Filter $ntuserBackupPattern -Force -ErrorAction SilentlyContinue | ForEach-Object {
                     Remove-Item -Path $_.FullName -Force
                 }
-                { Start-Reversion @reversionInput } | Should -Throw "No NTUser.DAT backup files found in directory: $userProfileDir for SID: $userToMigrateFromSID. Cannot proceed with revert."
+                { Start-Reversion @reversionInput -Force -ErrorAction Stop } | Should -Throw "*No NTUser.DAT backup files found in directory*"
+            }
 
-                # Remove UsrClass_Original_*.dat backup
-                Get-ChildItem -Path $userProfileDir -Filter $usrclassBackupPattern -force -ErrorAction SilentlyContinue | ForEach-Object {
-                    Remove-Item -Path $_.FullName -Force
+            # UsrClass Backup Missing Test Case
+            It "Tests that the Reversion handles missing UsrClass backup files" {
+                # Migrate the initialized user to the second username
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                # Revert the migration
+                $reversionInput = @{
+                    UserSID                = $userToMigrateFromSID
+                    TargetProfileImagePath = "C:\Users\$userToMigrateFrom"
                 }
-                { Start-Reversion @reversionInput } | Should -Throw "No UsrClass.dat backup files found in directory: $userProfileDir for SID: $userToMigrateFromSID. Cannot proceed with revert."
 
+                # --- FIX STARTS HERE ---
+                # Construct the correct path to UsrClass.dat
+                $userProfileDir = "C:\Users\$userToMigrateFrom"
+                $usrClassPath = Join-Path $userProfileDir "AppData\Local\Microsoft\Windows"
 
+                $usrclassBackupPattern = "USRCLASS_original_*"
+
+                # Verify path exists before trying to enumerate (optional safety)
+                if (Test-Path $usrClassPath) {
+                    # Remove UsrClass_Original_*.dat backup from the CORRECT location
+                    Get-ChildItem -Path $usrClassPath -Filter $usrclassBackupPattern -Force -ErrorAction SilentlyContinue | ForEach-Object {
+                        Remove-Item -Path $_.FullName -Force
+                    }
+                }
+                # --- FIX ENDS HERE ---
+
+                { Start-Reversion @reversionInput -ErrorAction Stop -Force } | Should -Throw "*No UsrClass.dat backup files found in directory*"
             }
 
         }

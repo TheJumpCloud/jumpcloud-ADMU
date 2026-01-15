@@ -1,3 +1,21 @@
+## 2.12.0
+
+Release Date: January 15, 2026
+
+#### RELEASE NOTES
+
+```
+This release includes the option to update ADMU status on the JumpCloud system description field when migrating remotely. This allows administrators to track migration progress remotely.
+```
+
+#### FEATURES:
+
+Additional method for remotely migrating system by reading the device description field.
+
+#### IMPROVEMENTS:
+
+Several new tests added to validate new features and existing functionality.
+
 ## 2.11.0
 
 Release Date: January 2, 2026
@@ -55,7 +73,6 @@ Patch release to address several issues.
 
 - This release introduces the ability to set a device's primary user using the PrimaryUser parameter. This can only be done when using the AutoBindJCUser feature as well as using SystemContext.
 - Profile image permission backup functionality added
-
 
 ## 2.9.4
 

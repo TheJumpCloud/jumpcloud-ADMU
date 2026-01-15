@@ -141,8 +141,6 @@ function Start-Migration {
             if ($invalidStringParams -or $trueBoolParams) {
                 $allInvalidParams = $invalidStringParams + $trueBoolParams
                 throw "The 'SystemContextBinding' parameter cannot be used with the following parameters: $($allInvalidParams -join ', '). Please remove these parameters when running SystemContextBinding and try again."
-
-
             }
             if (-not $PSBoundParameters.ContainsKey('JumpCloudUserID')) {
                 throw "The 'SystemContextBinding' parameter requires the 'JumpCloudUserID' parameter to be set."
@@ -177,7 +175,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.11.0"
+        $admuVersion = "2.12.0"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -647,23 +645,27 @@ function Start-Migration {
         }
         $admuTracker.install.pass = $true
 
-        Write-ToLog -Message ("Validating JumpCloud Connectivity...")
         # Validate JumpCloud Connectivity if Agent is installed and AutoBindJCUser is selected
-        if ($AgentService -and $autobindJCUser) {
+        if ($AgentService -and ($autobindJCUser -or $systemContextBinding)) {
+            Write-ToLog -Message ("Validating JumpCloud Connectivity...") -MigrationStep
+
             # Object to pass in to the Write-
-            Write-ToLog -Message ("JumpCloud Agent is installed, confirming connectivity to JumpCloud...")
-            Write-ToProgress -ProgressBar $ProgressBar -Status "validateJCConnectivity" -form $isForm -StatusMap $admuTracker
+            Write-ToLog -Message ("JumpCloud Agent is installed, confirming connectivity to JumpCloud...") -level Info
+            Write-ToProgress -ProgressBar $ProgressBar -Status "validateJCConnectivity" -form $isForm -StatusMap $admuTracker -localPath $oldUserProfileImagePath
             $confirmAPIResult = Confirm-API -JcApiKey $JumpCloudAPIKey -JcOrgId $JumpCloudOrgID -SystemContextBinding $systemContextBinding
 
             Write-ToLog -Message ("Confirm-API Results:`nType: $($confirmAPIResult.type)`nValid: $($confirmAPIResult.isValid)`nSystemID: $($confirmAPIResult.ValidatedID)")
             if ($confirmAPIResult.type -eq 'SystemContext' -and $confirmAPIResult.isValid -and $confirmAPIResult.ValidatedID) {
                 Write-ToLog -Message ("Validated SystemContext API with ID: $($confirmAPIResult.ValidatedID)")
-                $validatedSystemID = $confirmAPIResult.ValidatedID
-                $validatedSystemContextAPI = $true
+                $script:validatedSystemID = $confirmAPIResult.ValidatedID
+                $script:validatedSystemContextAPI = $true
             } elseif ($confirmAPIResult.type -eq 'API' -and $confirmAPIResult.isValid -and $confirmAPIResult.ValidatedID) {
                 Write-ToLog -Message ("Validated JC API Key")
-                $validatedApiKey = $true
-                $validatedSystemID = $confirmAPIResult.ValidatedID
+                $script:validatedApiKey = $true
+                $script:validatedSystemID = $confirmAPIResult.ValidatedID
+                # set script variables for APIKEY + ORGID
+                $script:JumpCloudAPIKey = $JumpCloudAPIKey
+                $script:JumpCloudOrgID = $JumpCloudOrgID
             } else {
                 Write-ToLog -Message ("Could not validate API Key or SystemContext API, please check your parameters and try again.") -Level Error
                 Write-ToProgress -ProgressBar $ProgressBar -Status "Could not validate API Key or SystemContext API" -form $isForm -logLevel Error
@@ -677,12 +679,17 @@ function Start-Migration {
                     UserSID                   = $SelectedUserSID
                     MigrationUsername         = $JumpCloudUserName
                     UserID                    = $script:JumpCloudUserID
-                    DeviceID                  = $validatedSystemID
-                    ValidatedSystemContextAPI = $validatedSystemContextAPI
-                    ValidatedApiKey           = $validatedApiKey
-                    JCApiKey                  = $JumpCloudAPIKey
-                    OrgID                     = $JumpCloudOrgID
+                    DeviceID                  = $script:validatedSystemID
+                    ValidatedSystemContextAPI = $script:validatedSystemContextAPI
+                    ValidatedApiKey           = $script:validatedApiKey
+                    JCApiKey                  = $script:JumpCloudAPIKey
+                    OrgID                     = $script:JumpCloudOrgID
                     reportStatus              = $reportStatus
+                }
+
+                if ($script:validatedSystemContextAPI) {
+                    # update the 'admu' attribute object to inform dynamic groups that the system migration status is "InProgress"
+                    $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = 'InProgress' } }
                 }
             }
         }
@@ -1483,7 +1490,7 @@ function Start-Migration {
 
             #region AutoBindUserToJCSystem
             if ($AutoBindJCUser -eq $true) {
-                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $script:JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
+                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $script:JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
                 Write-ToProgress -ProgressBar $ProgressBar -Status "autoBind" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
                 if ($bindResult) {
                     Write-ToLog -Message:('JumpCloud automatic bind step succeeded for user ' + $JumpCloudUserName)
@@ -1495,7 +1502,7 @@ function Start-Migration {
                         $primaryUserBody = @{
                             "primarySystemUser.id" = $script:JumpCloudUserId
                         }
-                        Invoke-SystemPut -JcApiKey $JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemID $validatedSystemID -Body $primaryUserBody
+                        Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemID $script:validatedSystemID -Body $primaryUserBody
                     }
                 } else {
                     Write-ToLog -Message:('JumpCloud automatic bind step failed, Api Key or JumpCloud username is incorrect.') -Level Warning
@@ -1723,11 +1730,24 @@ function Start-Migration {
             Write-ToLog -Message "User $selectedUserName was migrated to $JumpCloudUserName"
             Write-ToLog -Message "Please login as $JumpCloudUserName to complete the migration and initialize the windows built in app setup."
             Write-ToProgress -ProgressBar $ProgressBar -Status "migrationComplete" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+            if ($reportStatus) {
+                if ($validatedSystemContextAPI) {
+                    # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Complete"
+                    $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = "Complete" } }
+                }
+            }
         } else {
             Write-ToLog -Message ("ADMU encountered the following errors: $($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true })") -Level Warning
             Write-ToLog -Message ("The following migration steps were reverted to their original state: $FixedErrors") -Level Warning
             Write-ToLog -Message ('Script finished with errors; Log file location: ' + $jcAdmuLogFile) -Level Warning
             Write-ToProgress -ProgressBar $ProgressBar -Status $Script:ErrorMessage -form $isForm -logLevel "Error" -SystemDescription $systemDescription
+
+            if ($reportStatus) {
+                if ($validatedSystemContextAPI) {
+                    # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Error"
+                    $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = "Error" } }
+                }
+            }
             #region exeExitCode
             throw "JumpCloud ADMU was unable to migrate $selectedUserName"
             #endregion exeExitCode

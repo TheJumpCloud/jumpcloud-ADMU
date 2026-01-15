@@ -67,31 +67,37 @@ function Write-ToProgress {
             Update-ProgressForm -progressBar $progressBar -percentComplete $PercentComplete -Status $statusMessage -logLevel $logLevel
         }
     } else {
-        Write-Progress -Activity "Migration Progress" -percentComplete $PercentComplete -status $statusMessage
+        Write-Progress -Activity "Migration Progress" -PercentComplete $PercentComplete -Status $statusMessage
         if ($SystemDescription.reportStatus) {
             if ($logLevel -eq "Error") {
                 $statusMessage = "Error occurred during migration. Please check (C:\Windows\Temp\jcadmu.log) for more information."
-                $Percent = "ERROR"
+                $percent = "ERROR"
             } else {
-                # We use the clean string we extracted in Step 2.
                 $percent = [math]::Round($PercentComplete)
                 $percent = "$percent%"
             }
             Write-ToLog -Message "Migration status updated: $statusMessage" -level Info
 
-            $description = [PSCustomObject]@{
-                MigrationStatus     = $statusMessage
-                MigrationPercentage = $percent
-                UserSID             = $SystemDescription.UserSID
-                MigrationUsername   = $SystemDescription.MigrationUsername
-                UserID              = $SystemDescription.UserID
-                DeviceID            = $SystemDescription.DeviceID
-            }
+            # Build the migration description object
             if ($SystemDescription.ValidatedSystemContextAPI) {
-                Invoke-SystemContextAPI -Method PUT -Endpoint 'Systems' -Body @{'description' = ($description | ConvertTo-Json -Compress) } | Out-Null
+                $authMethod = "SystemContextAPI"
+            } elseif ($SystemDescription.ValidatedApiKey) {
+                $authMethod = "ApiKey"
+            } else {
+                $authMethod = "None"
+            }
+            $descriptionArray = Build-MigrationDescription -UserSID $SystemDescription.UserSID -MigrationUsername $SystemDescription.MigrationUsername -StatusMessage $statusMessage -Percent $percent -LocalPath $LocalPath -AuthMethod $authMethod
+
+            # Send to appropriate API endpoint
+            if ($SystemDescription.ValidatedSystemContextAPI) {
+                try {
+                    Invoke-SystemContextAPI -Method PUT -Endpoint 'Systems' -Body @{'description' = ($descriptionArray | ConvertTo-Json) } | Out-Null
+                } catch {
+                    Write-ToLog -Message "Error occurred while reporting migration progress via SystemContextAPI: $_" -Level Error
+                }
             } elseif ($SystemDescription.ValidatedApiKey) {
                 try {
-                    Invoke-SystemPut -JcApiKey $SystemDescription.JCApiKey -jcOrgID $SystemDescription.JumpCloudOrgID -systemId $SystemDescription.DeviceID -Body @{'description' = ($description | ConvertTo-Json -Compress) }
+                    Invoke-SystemAPI -JcApiKey $SystemDescription.JCApiKey -jcOrgID $SystemDescription.JumpCloudOrgID -systemId $SystemDescription.DeviceID -Body @{'description' = ($descriptionArray | ConvertTo-Json) }
                 } catch {
                     Write-ToLog -Message "Error occurred while reporting migration progress to API: $_" -Level Error
                 }

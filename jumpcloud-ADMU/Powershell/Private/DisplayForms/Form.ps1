@@ -33,7 +33,7 @@ Function Show-SelectionForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.11.0"
+        Title="JumpCloud ADMU 2.12.0"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -919,7 +919,7 @@ Function Show-SelectionForm {
                 $script:ProgressBar = New-ProgressForm
                 Write-ToProgress -form $true -ProgressBar $script:ProgressBar -status "Initializing" -username $($lvMigratedAccounts.SelectedItem.UserName) -newLocalUsername "N/A" -profileSize "Calculating" -LocalPath $localPath
 
-                Start-Reversion -UserSid $($lvMigratedAccounts.SelectedItem.SID) -form $true -LocalPath $localPath -force
+                Start-Reversion -UserSid $($lvMigratedAccounts.SelectedItem.SID) -form $true -TargetProfileImagePath $localPath -force
             } else {
                 # MIGRATION LOGIC
                 # Only runs if button text is NOT "Restore Profile"

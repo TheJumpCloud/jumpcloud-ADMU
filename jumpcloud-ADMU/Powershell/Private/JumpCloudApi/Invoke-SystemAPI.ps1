@@ -1,4 +1,4 @@
-function Invoke-SystemPut {
+function Invoke-SystemAPI {
     param (
         [Parameter(Mandatory = $true)]
         [string]$jcApiKey,
@@ -6,8 +6,10 @@ function Invoke-SystemPut {
         [string]$jcOrgID,
         [Parameter(Mandatory = $true)]
         [string]$systemId,
-        [Parameter(Mandatory = $true)]
-        [object]$Body
+        [Parameter(Mandatory = $false)]
+        [object]$Body,
+        [Parameter(Mandatory = $false)]
+        [string]$method = "PUT"
     )
     $uri = "$($global:JCUrl)/api/systems/$systemId"
 
@@ -23,7 +25,12 @@ function Invoke-SystemPut {
     $retryCount = 0
     do {
         try {
-            $response = Invoke-RestMethod -Uri $uri -Method Put -Headers $Headers -Body ($Body | ConvertTo-Json)
+            if ($Body) {
+                $bodyContent = $Body | ConvertTo-Json
+            } else {
+                $bodyContent = $null
+            }
+            $response = Invoke-RestMethod -Uri $uri -Method $method -Headers $Headers -Body $bodyContent
             $retry = $false
         } catch {
             if ($_.Exception.Message -like "*The remote name could not be resolved*") {
@@ -33,7 +40,7 @@ function Invoke-SystemPut {
                 $retry = $true
             } else {
                 $ErrorMessage = $_.Exception.Message
-                Write-ToLog "Failed to update system: $($ErrorMessage)" -Level Warning -Step "Invoke-SystemPut"
+                Write-ToLog "Failed to update system: $($ErrorMessage)" -Level Warning -Step "Invoke-SystemAPI"
                 # exit the loop
                 $retry = $false
                 $success = $false
@@ -41,6 +48,9 @@ function Invoke-SystemPut {
         }
     } while ($retry -and $retryCount -lt $maxRetries)
     if ($retryCount -eq $maxRetries) {
-        Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Warning -Step "Invoke-SystemPut"
+        Write-ToLog "Failed to resolve 'console.jumpcloud.com' after $maxRetries attempts." -Level Warning -Step "Invoke-SystemAPI"
+    }
+    if ($response) {
+        return $response
     }
 }

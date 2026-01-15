@@ -1,4 +1,4 @@
-Function Start-Reversion {
+function Start-Reversion {
     <#
     .SYNOPSIS
         Reverts a user migration by restoring original registry files for a specified Windows SID.
@@ -57,14 +57,12 @@ Function Start-Reversion {
         [Parameter(Mandatory = $false)]
         [string]$ProfileSize,
         [Parameter(Mandatory = $false)]
-        [string]$LocalPath,
-        [Parameter(Mandatory = $false)]
         [switch]$DryRun,
         [Parameter(Mandatory = $false)]
         [switch]$Force
     )
 
-    Begin {
+    begin {
         Write-ToLog -Message "Begin Revert Migration" -MigrationStep -Level Info
 
         # Initialize result object
@@ -82,7 +80,12 @@ Function Start-Reversion {
             RegistryUpdated     = $false
         }
         $account = New-Object System.Security.Principal.SecurityIdentifier($UserSID)
-        $domainUser = ($account.Translate([System.Security.Principal.NTAccount])).Value
+        try {
+            $domainUser = ($account.Translate([System.Security.Principal.NTAccount])).Value
+
+        } catch {
+            throw "UserSID provided could not be translated"
+        }
 
         # Regex pattern to identify .ADMU profile paths
         $admuPathPattern = '\.ADMU$'
@@ -133,8 +136,7 @@ Function Start-Reversion {
             }
         }
 
-
-        $profileSize = Get-ProfileSize -ProfilePath $LocalPath
+        $profileSize = Get-ProfileSize -ProfilePath $TargetProfileImagePath
 
         # Prefer the progress form created in Form.ps1 so updates apply to the first window the user sees
         if ((-not $script:ProgressBar) -and ($form)) {
@@ -142,12 +144,12 @@ Function Start-Reversion {
         }
     }
 
-    Process {
+    process {
         try {
             #region Validate Registry and Determine Profile Path
             Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
             # Casing fixed to 'revertInit'
-            Write-ToProgress -form $form -Status "revertInit" -ProgressBar $ProgressBar -ProfileSize $profileSize -LocalPath $LocalPath -StatusMap $revertMessageMap
+            Write-ToProgress -form $form -Status "revertInit" -ProgressBar $ProgressBar -ProfileSize $profileSize -LocalPath $TargetProfileImagePath -StatusMap $revertMessageMap
 
             # Get profile information from registry for validation
             $profileRegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"
@@ -217,7 +219,7 @@ Function Start-Reversion {
             # Get the most recent ACL backup file path
 
             if ($aclBackupFiles.Count -eq 0) {
-                Throw "No ACL backup files found in directory: $aclBackupDir for SID: $UserSID. Cannot proceed with revert."
+                throw "No ACL backup files found in directory: $aclBackupDir for SID: $UserSID. Cannot proceed with revert."
             } else {
                 Write-ToLog -Message "Found ACL backup files in $aclBackupDir" -Level Info -Step "Revert-Migration"
             }
@@ -249,14 +251,14 @@ Function Start-Reversion {
             }
             # Validate that the UsrClass and NTUSER original files were found
             if ($registryFiles.Type -notcontains "NTUSER") {
-                Throw "No NTUser.DAT backup files found in directory: $profileImagePath for SID: $UserSID. Cannot proceed with revert."
+                throw "No NTUser.DAT backup files found in directory: $profileImagePath for SID: $UserSID. Cannot proceed with revert."
             }
 
             # UsrClass.dat files in AppData
             $appDataPath = Join-Path $profileImagePath "AppData\Local\Microsoft\Windows"
             $usrClassCurrent = Join-Path $appDataPath "UsrClass.dat"
             $usrClassOriginalPattern = Join-Path $appDataPath "UsrClass_original_*.dat"
-            $usrClassOriginalFiles = Get-ChildItem -Path $usrClassOriginalPattern -Force | Where-Object { $_.Name -match "UsrClass_original_*" }
+            $usrClassOriginalFiles = Get-ChildItem -Path $usrClassOriginalPattern -Force  | Where-Object { $_.Name -match "UsrClass_original_*" }
 
             if ($usrClassOriginalFiles.Count -eq 0) {
                 Write-ToLog -Message "Warning: No original UsrClass.dat backup found in $appDataPath" -Level Warning -Step "Revert-Migration"
@@ -276,7 +278,7 @@ Function Start-Reversion {
             }
 
             if ($registryFiles.Type -notcontains "UsrClass") {
-                Throw "No UsrClass.dat backup files found in directory: $profileImagePath for SID: $UserSID. Cannot proceed with revert."
+                throw "No UsrClass.dat backup files found in directory: $profileImagePath for SID: $UserSID. Cannot proceed with revert."
             }
             #endregion Identify Registry Files to Revert
 
@@ -519,7 +521,7 @@ Function Start-Reversion {
         }
     }
 
-    End {
+    end {
         $revertResult.EndTime = Get-Date
         $duration = $revertResult.EndTime - $revertResult.StartTime
 
