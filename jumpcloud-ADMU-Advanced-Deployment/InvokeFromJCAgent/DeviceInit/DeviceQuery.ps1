@@ -223,7 +223,7 @@ function Get-ADMUUser {
         # If no AD users found and localUsers is set, use all standard users
         if (($adUsers.Count -eq 0) -and $localUsers) {
             Write-Host "[status] No AD users found, using standard users for testing..."
-            $adUsers = $users
+            $adUsers = $users | Where-Object { $_.type -eq 'local' }
         }
 
         # get the profileList from registry
@@ -265,6 +265,7 @@ function Get-ADMUUser {
                         lastLogin = $lastLogin
                     }
                 } else {
+                    Write-Host "user not yet migrated, marking as pending: $($aU.uuid)"
                     $uObj = [PSCustomObject]@{
                         st        = 'Pending'
                         msg       = 'Planned'
