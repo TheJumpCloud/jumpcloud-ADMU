@@ -234,7 +234,7 @@ function Get-ADMUUser {
         $admuUsers = New-Object system.Collections.ArrayList
         foreach ($aU in $adUsers) {
             # Get last logon time from Windows user profile
-            $lastLogin = ''
+            $lastLogin = $null
             try {
                 $userProfileData = Get-CimInstance -ClassName Win32_UserProfile -Filter "SID = '$($aU.uuid)'" -ErrorAction SilentlyContinue
                 if ($userProfileData -and $userProfileData.LastUseTime) {
@@ -260,8 +260,8 @@ function Get-ADMUUser {
                         msg       = 'User previously migrated'
                         sid       = $aU.uuid
                         localPath = $aU.directory
-                        un        = ''
-                        uid       = ''
+                        un        = $null
+                        uid       = $null
                         lastLogin = $lastLogin
                     }
                 } else {
@@ -270,8 +270,8 @@ function Get-ADMUUser {
                         msg       = 'Planned'
                         sid       = $aU.uuid
                         localPath = $aU.directory
-                        un        = ''
-                        uid       = ''
+                        un        = $null
+                        uid       = $null
                         lastLogin = $lastLogin
                     }
                 }

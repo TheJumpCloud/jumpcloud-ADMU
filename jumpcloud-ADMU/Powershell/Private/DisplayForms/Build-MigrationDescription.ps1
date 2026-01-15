@@ -94,6 +94,7 @@ function Build-MigrationDescription {
                     msg       = $StatusMessage
                     st        = $statusValue
                     uid       = $null
+                    lastLogin = $null
                 }
             }
         } catch {
@@ -111,6 +112,7 @@ function Build-MigrationDescription {
                 msg       = $StatusMessage
                 st        = $statusValue
                 uid       = $null
+                lastLogin = $null
             })
     }
     # Ensure return is always an array (use unary comma for PowerShell 5.1 compatibility)

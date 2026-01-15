@@ -689,7 +689,7 @@ function Start-Migration {
 
                 if ($script:validatedSystemContextAPI) {
                     # update the 'admu' attribute object to inform dynamic groups that the system migration status is "InProgress"
-                    $attributeSet = Set-System -property 'attributes' -payload @{ admu = "InProgress" }
+                    $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = 'InProgress' } }
                 }
             }
         }
@@ -1733,7 +1733,7 @@ function Start-Migration {
             if ($reportStatus) {
                 if ($validatedSystemContextAPI) {
                     # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Complete"
-                    $attributeSet = Set-System -property 'attributes' -payload @{ admu = "Complete" }
+                    $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = "Complete" } }
                 }
             }
         } else {
@@ -1745,7 +1745,7 @@ function Start-Migration {
             if ($reportStatus) {
                 if ($validatedSystemContextAPI) {
                     # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Error"
-                    $attributeSet = Set-System -property 'attributes' -payload @{ admu = "Error" }
+                    $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = "Error" } }
                 }
             }
             #region exeExitCode

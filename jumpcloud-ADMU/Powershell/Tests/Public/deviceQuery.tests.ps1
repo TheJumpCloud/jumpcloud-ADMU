@@ -186,7 +186,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 msg       = "Migration started"
                 st        = "InProgress"
                 uid       = $null
-                lastLogin = ''
+                lastLogin = $null
             }
             $admuUsers += $newUser
             # push to system description
@@ -212,7 +212,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                     localPath = "C:\Users\User1"
                     un        = "User1"
                     uid       = ""
-                    lastLogin = ""
+                    lastLogin = $null
                 },
                 [PSCustomObject]@{
                     st        = 'Pending'
@@ -221,7 +221,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                     localPath = "C:\Users\User2"
                     un        = "User2"
                     uid       = ""
-                    lastLogin = ""
+                    lastLogin = $null
                 }
             )
             $descResult = Set-SystemDesc -ADMUUsers $testUsers
@@ -242,7 +242,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                     localPath = "C:\Users\User3"
                     un        = "User3"
                     uid       = ""
-                    lastLogin = ""
+                    lastLogin = $null
                 },
                 [PSCustomObject]@{
                     st        = 'InProgress'
@@ -251,7 +251,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                     localPath = "C:\Users\User4"
                     un        = "User4"
                     uid       = ""
-                    lastLogin = ""
+                    lastLogin = $null
                 }
             )
             $descResult = Set-SystemDesc -ADMUUsers $testUsers
@@ -272,7 +272,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                     localPath = "C:\Users\User5"
                     un        = "User5"
                     uid       = ""
-                    lastLogin = ""
+                    lastLogin = $null
                 },
                 [PSCustomObject]@{
                     st        = 'Error'
@@ -281,7 +281,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                     localPath = "C:\Users\User6"
                     un        = "User6"
                     uid       = ""
-                    lastLogin = ""
+                    lastLogin = $null
                 }
             )
             $descResult = Set-SystemDesc -ADMUUsers $testUsers
@@ -302,7 +302,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                     localPath = "C:\Users\User7"
                     un        = "User7"
                     uid       = ""
-                    lastLogin = ""
+                    lastLogin = $null
                 },
                 [PSCustomObject]@{
                     st        = 'Complete'
@@ -311,7 +311,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                     localPath = "C:\Users\User8"
                     un        = "User8"
                     uid       = ""
-                    lastLogin = ""
+                    lastLogin = $null
                 },
                 [PSCustomObject]@{
                     st        = 'Skip'
@@ -320,7 +320,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                     localPath = "C:\Users\User9"
                     un        = "User9"
                     uid       = ""
-                    lastLogin = ""
+                    lastLogin = $null
                 }
             )
             $descResult = Set-SystemDesc -ADMUUsers $testUsers
@@ -341,7 +341,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                     localPath = "C:\Users\User10"
                     un        = "User10"
                     uid       = ""
-                    lastLogin = ""
+                    lastLogin = $null
                 },
                 [PSCustomObject]@{
                     st        = 'Skip'
@@ -350,7 +350,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                     localPath = "C:\Users\User11"
                     un        = "User11"
                     uid       = ""
-                    lastLogin = ""
+                    lastLogin = $null
                 }
             )
             $descResult = Set-SystemDesc -ADMUUsers $testUsers

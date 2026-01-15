@@ -442,7 +442,13 @@ function Invoke-SystemContextAPI {
                 foreach ($key in $newAttributesMap.Keys) {
                     $existingAttr = $mergedAttributes | Where-Object { $_.name -eq $key }
 
-                    if ($existingAttr) {
+                    # Check if the value is null - if so, remove the attribute
+                    if ($null -eq $newAttributesMap[$key]) {
+                        if ($existingAttr) {
+                            $mergedAttributes = $mergedAttributes | Where-Object { $_.name -ne $key }
+                            Write-ToLog -Message "Removed attribute: $key" -Level Verbose
+                        }
+                    } elseif ($existingAttr) {
                         # Update existing attribute - convert value to string
                         $existingAttr.value = [string]$newAttributesMap[$key]
                         Write-ToLog -Message "Updated attribute: $key = $($existingAttr.value)" -Level Verbose

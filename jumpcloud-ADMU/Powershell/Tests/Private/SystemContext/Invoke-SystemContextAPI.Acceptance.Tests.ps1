@@ -42,7 +42,7 @@ Describe "Invoke-SystemContextAPI Acceptance Tests" -Tag "InstallJC" {
         }
         . "$helpFunctionDir\$fileName"
 
-        $config = get-content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
+        $config = Get-Content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
         $regex = 'systemKey\":\"(\w+)\"'
         $systemKey = [regex]::Match($config, $regex).Groups[1].Value
     }
@@ -75,6 +75,50 @@ Describe "Invoke-SystemContextAPI Acceptance Tests" -Tag "InstallJC" {
                 }
             }
         }
+        It "Should set a custom attribute value" {
+            $systemBefore = Invoke-SystemContextAPI -method "GET" -endpoint "systems"
+            $attributeKey = "TestAttribute$(Get-Random)"
+            $attributeValue = "TestValue$(Get-Random)"
+
+            { Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{$attributeKey = $attributeValue } } } | Should -Not -Throw
+            $systemAfter = Invoke-SystemContextAPI -method "GET" -endpoint "systems"
+            $foundAttribute = $systemAfter.attributes | Where-Object { $_.name -eq $attributeKey }
+            $foundAttribute.value | Should -Be $attributeValue
+
+        }
+        It "Should update a custom attribute Value when it exists already" {
+            $systemBefore = Invoke-SystemContextAPI -method "GET" -endpoint "systems"
+            $attributeKey = "TestAttribute$(Get-Random)"
+            $attributeValue = "TestValue$(Get-Random)"
+
+            { Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{$attributeKey = $attributeValue } } } | Should -Not -Throw
+            $systemAfter = Invoke-SystemContextAPI -method "GET" -endpoint "systems"
+            $foundAttribute = $systemAfter.attributes | Where-Object { $_.name -eq $attributeKey }
+            $foundAttribute.value | Should -Be $attributeValue
+
+            # Update the attribute value
+            $newAttributeValue = "UpdatedValue$(Get-Random)"
+            { Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{$attributeKey = $newAttributeValue } } } | Should -Not -Throw
+            $systemUpdated = Invoke-SystemContextAPI -method "GET" -endpoint "systems"
+            $foundUpdatedAttribute = $systemUpdated.attributes | Where-Object { $_.name -eq $attributeKey }
+            $foundUpdatedAttribute.value | Should -Be $newAttributeValue
+        }
+        It "Should clear a custom attribute when it's Value is set to Null" {
+            $systemBefore = Invoke-SystemContextAPI -method "GET" -endpoint "systems"
+            $attributeKey = "TestAttribute$(Get-Random)"
+            $attributeValue = "TestValue$(Get-Random)"
+
+            { Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{$attributeKey = $attributeValue } } } | Should -Not -Throw
+            $systemAfter = Invoke-SystemContextAPI -method "GET" -endpoint "systems"
+            $foundAttribute = $systemAfter.attributes | Where-Object { $_.name -eq $attributeKey }
+            $foundAttribute.value | Should -Be $attributeValue
+
+            # Clear the attribute value by setting it to $null
+            { Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{$attributeKey = $null } } } | Should -Not -Throw
+            $systemUpdated = Invoke-SystemContextAPI -method "GET" -endpoint "systems"
+            $foundUpdatedAttribute = $systemUpdated.attributes | Where-Object { $_.name -eq $attributeKey }
+            $foundUpdatedAttribute | Should -BeNullOrEmpty
+        }
     }
 
     Context "User Association" {
@@ -83,7 +127,7 @@ Describe "Invoke-SystemContextAPI Acceptance Tests" -Tag "InstallJC" {
             $Password = "Temp123!"
             $user = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             # If User Exists, remove from the org
-            $users = Get-JCSdkUser
+            $users = Get-JcSdkUser
             if ("$($user)" -in $users.Username) {
                 $existing = $users | Where-Object { $_.username -eq "$($user)" }
                 Write-Host "Found JumpCloud User $($user): with id: $($existing.Id) removing..."
