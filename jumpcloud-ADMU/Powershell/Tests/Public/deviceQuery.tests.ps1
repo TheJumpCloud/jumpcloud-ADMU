@@ -148,7 +148,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
             Set-ItemProperty -Path $regPath -Name "ProfileImagePath" -Value $newProfilePath
             # get ADMU users
             $admuUsers = Get-ADMUUser -localUsers
-            $migratedUser = $admuUsers | Where-Object { $_.un -eq $userToMigrateFrom }
+            $migratedUser = $admuUsers | Where-Object { $_.sid -eq $sid }
             $migratedUser | Should -Not -Be $null
             $migratedUser.st | Should -Be "Complete"
             $migratedUser.msg | Should -Be "User previously migrated"
