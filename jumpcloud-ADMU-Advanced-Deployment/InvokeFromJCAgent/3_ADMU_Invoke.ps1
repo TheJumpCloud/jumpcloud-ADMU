@@ -6,7 +6,7 @@
 ####
 #region variables
 
-# Data source for migration users: "CSV" or "Description"
+# Data source for migration users: "CSV"
 $dataSource = 'CSV'
 
 # CSV variables - only required if dataSource is set to 'CSV'
