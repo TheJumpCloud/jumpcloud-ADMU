@@ -35,17 +35,17 @@ function Confirm-ExecutionPolicy {
                 throw "MachinePolicy: $($p.MachinePolicy). Change via GPO."
             }
             if ($p.MachinePolicy -eq "Unrestricted") {
-                Write-Host"[status] MachinePolicy: Unrestricted"
-                return$true
+                Write-Host "[status] MachinePolicy: Unrestricted"
+                return $true
             }
             if ($p.Process -in "Restricted", "AllSigned", "RemoteSigned", "Undefined") {
-                Write-Host"[status] Setting Process to Bypass"; Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
+                Write-Host "[status] Setting Process to Bypass"; Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope Process -Force
             }
             if ($p.LocalMachine -in "Restricted", "AllSigned", "RemoteSigned", "Undefined") {
-                Write-Host"[status] Setting LocalMachine to Bypass"; Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
+                Write-Host "[status] Setting LocalMachine to Bypass"; Set-ExecutionPolicy -ExecutionPolicy Bypass -Scope LocalMachine -Force
             }
         } catch {
-            throw"ExecutionPolicy error: $_"
+            throw "ExecutionPolicy error: $_"
             return $false
         }
     }
@@ -233,51 +233,58 @@ function Get-ADMUUser {
         # Create ADMU user objects
         $admuUsers = New-Object system.Collections.ArrayList
         foreach ($aU in $adUsers) {
-            # Get last logon time from Windows user profile
-            $lastLogin = $null
             try {
-                $userProfileData = Get-CimInstance -ClassName Win32_UserProfile -Filter "SID = '$($aU.uuid)'" -ErrorAction SilentlyContinue
-                if ($userProfileData -and $userProfileData.LastUseTime) {
-                    $lastLogin = [DateTime]$userProfileData.LastUseTime
-                    $lastLogin = $lastLogin.ToUniversalTime().ToString('O')  # or .ToString('u')
+                # Get last logon time from Windows user profile
+                $lastLogin = $null
+                try {
+                    $userProfileData = Get-CimInstance -ClassName Win32_UserProfile -Filter "SID = '$($aU.uuid)'" -ErrorAction SilentlyContinue
+                    if ($userProfileData -and $userProfileData.LastUseTime) {
+                        $lastLogin = [DateTime]$userProfileData.LastUseTime
+                        $lastLogin = $lastLogin.ToUniversalTime().ToString('O')  # or .ToString('u')
+                    }
+                } catch {
+                    Write-Host "[status] Could not retrieve last logon time for user $($aU.uuid): $_"
+                }
+
+                # validate the user has not been previously migrated if the profileImagePath for that user ends in .ADMU it's been migrated already
+                $userProfile = $profileList | Where-Object {
+                    $sid = $_.PSChildName
+                    $sid -eq $aU.uuid
+                }
+                if ($userProfile) {
+                    Write-Host "[status] Found profile for user $($aU.uuid), checking migration status..."
+                    $profilePath = (Get-ItemProperty -Path $userProfile.PSPath).ProfileImagePath
+                    if ($profilePath -and $profilePath.EndsWith(".ADMU")) {
+                        Write-Host "user previously migrated, skipping user: $($aU.uuid)"
+                        $uObj = [PSCustomObject]@{
+                            st        = 'Complete'
+                            msg       = 'User previously migrated'
+                            sid       = $aU.uuid
+                            localPath = $aU.directory
+                            un        = $null
+                            uid       = $null
+                            lastLogin = $lastLogin
+                        }
+                    } else {
+                        Write-Host "user not yet migrated, marking as pending: $($aU.uuid)"
+                        $uObj = [PSCustomObject]@{
+                            st        = 'Pending'
+                            msg       = 'Planned'
+                            sid       = $aU.uuid
+                            localPath = $aU.directory
+                            un        = $null
+                            uid       = $null
+                            lastLogin = $lastLogin
+                        }
+                    }
+                    $admuUsers.add($uObj) | Out-Null
+                } else {
+                    Write-Host "[status] No profile found for user $($aU.uuid), skipping..."
                 }
             } catch {
-                Write-Host "[status] Could not retrieve last logon time for user $($aU.uuid): $_"
+                Write-Host "[status] Error processing user $($aU.uuid): $_"
+                continue
             }
-
-            # validate the user has not been previously migrated if the profileImagePath for that user ends in .ADMU it's been migrated already
-            $userProfile = $profileList | Where-Object {
-                $sid = $_.PSChildName
-                $sid -eq $aU.uuid
-            }
-            if ($userProfile) {
-                Write-Host "[status] Found profile for user $($aU.uuid), checking migration status..."
-                $profilePath = (Get-ItemProperty -Path $userProfile.PSPath).ProfileImagePath
-                if ($profilePath -and $profilePath.EndsWith(".ADMU")) {
-                    Write-Host "user previously migrated, skipping user: $($aU.uuid)"
-                    $uObj = [PSCustomObject]@{
-                        st        = 'Complete'
-                        msg       = 'User previously migrated'
-                        sid       = $aU.uuid
-                        localPath = $aU.directory
-                        un        = $null
-                        uid       = $null
-                        lastLogin = $lastLogin
-                    }
-                } else {
-                    Write-Host "user not yet migrated, marking as pending: $($aU.uuid)"
-                    $uObj = [PSCustomObject]@{
-                        st        = 'Pending'
-                        msg       = 'Planned'
-                        sid       = $aU.uuid
-                        localPath = $aU.directory
-                        un        = $null
-                        uid       = $null
-                        lastLogin = $lastLogin
-                    }
-                }
-            }
-            $admuUsers.add($uObj) | Out-Null
         }
 
         return @(, $admuUsers)
@@ -428,7 +435,7 @@ function Set-SystemDesc {
     }
 }
 #endregion functionDefinitions
-if (-not(Confirm-ExecutionPolicy)) { throw"ExecutionPolicy failed"; exit 1 }
+if (-not(Confirm-ExecutionPolicy)) { throw "ExecutionPolicy failed"; exit 1 }
 # retrieve JumpCloud installation path
 $admuUsers = Get-ADMUUser
 $descResult = Set-SystemDesc -ADMUUsers $admuUsers
