@@ -467,7 +467,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $matchedAttribute.Value | Should -Be "Complete"
                 }
                 It "Report Status to JumpCloud Description when the systemDescription previously had data" {
-                    $migrateUser = Get-LocalUser -Name $userToMigrateTo
+                    $migrateUser = Get-LocalUser -Name $userToMigrateFrom
                     $userToMigrateFromSID = $migrateUser.SID.Value
 
                     # set the system description to a test value
@@ -600,7 +600,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.AutoBindJCUser = $false
                     $testCaseInput.SystemContextBinding = $true
                     # Add the JumpCloudUserID parameter
-                    $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
+                    $testCaseInput.JumpCloudUserID = $GeneratedUser.Id
                     # Migrate the initialized user to the second username
                     { Start-Migration @testCaseInput } | Should -Not -Throw
 
@@ -622,7 +622,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.PrimaryUser = $true
                     $testCaseInput.SystemContextBinding = $false
                     # Add the JumpCloudUserID parameter
-                    $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
+                    $testCaseInput.JumpCloudUserID = $GeneratedUser.Id
 
                     { Start-Migration @testCaseInput } | Should -Throw
                 }
@@ -638,7 +638,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.PrimaryUser = $true
                     $testCaseInput.SystemContextBinding = $true
                     # Add the JumpCloudUserID parameter
-                    $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
+                    $testCaseInput.JumpCloudUserID = $GeneratedUser.Id
                     # Migrate the initialized user to the second username
                     { Start-Migration @testCaseInput } | Should -Not -Throw
 
@@ -666,7 +666,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.BindAsAdmin = $true
                     $testCaseInput.SystemContextBinding = $true
                     # Add the JumpCloudUserID parameter
-                    $testCaseInput.Add("JumpCloudUserID", $GeneratedUser.Id)
+                    $testCaseInput.JumpCloudUserID = $GeneratedUser.Id
                     # Migrate the initialized user to the second username
                     { Start-Migration @testCaseInput } | Should -Not -Throw
 

@@ -1,4 +1,4 @@
-Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
+Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
     BeforeAll {
         # get the remote invoke script path
         $global:remoteInvoke = Join-Path $PSScriptRoot '..\..\..\..\jumpcloud-ADMU-Advanced-Deployment\InvokeFromJCAgent\DeviceInit\DeviceQuery.ps1'
@@ -120,6 +120,10 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
             $admuUsers = Get-ADMUUser -localUsers
             $admuUsers | Should -Not -Be $null
             $admuUsers.Count | Should -BeGreaterThan 0
+
+            foreach ($user in $admuUsers) {
+                Write-Host "ADMU User with SID: $($user.sid) | localPath: $($user.localPath)"
+            }
         }
         It "Data from Get-ADMUUser should have the required properties" {
             $admuUsers = Get-ADMUUser -localUsers
