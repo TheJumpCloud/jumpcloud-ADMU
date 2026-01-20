@@ -111,6 +111,41 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
                 { Get-LocalUser -Name $userToMigrateFrom } | Should -Not -Throw # Original User should exist
                 { Get-LocalUser -Name $userToMigrateTo -ErrorAction Stop } | Should -Throw
             }
+
+            It "Allows reversion when the registry profile key is renamed to .bak" {
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                $profileListRoot = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
+                $originalKeyPath = Join-Path -Path $profileListRoot -ChildPath $userToMigrateFromSID
+                $bakKeyName = "$userToMigrateFromSID.bak"
+                $bakKeyPath = Join-Path -Path $profileListRoot -ChildPath $bakKeyName
+
+                if (-not (Test-Path -Path $originalKeyPath)) {
+                    throw "Test precondition failed: profile registry key not found for SID $userToMigrateFromSID"
+                }
+
+                if (Test-Path -Path $bakKeyPath) {
+                    Remove-Item -Path $bakKeyPath -Recurse -Force
+                }
+
+                try {
+                    Rename-Item -Path $originalKeyPath -NewName $bakKeyName -Force
+
+                    $reversionInput = @{
+                        UserSID                = $userToMigrateFromSID
+                        TargetProfileImagePath = "C:\Users\$userToMigrateFrom"
+                    }
+
+                    $revertResult = Start-Reversion @reversionInput -ErrorAction Stop -Force
+                    $revertResult | Should -Not -BeNullOrEmpty
+                    $revertResult.Success | Should -BeTrue
+                    $revertResult.RegistryUpdated | Should -BeTrue
+                } finally {
+                    if ((Test-Path -Path $bakKeyPath) -and -not (Test-Path -Path $originalKeyPath)) {
+                        Rename-Item -Path $bakKeyPath -NewName $userToMigrateFromSID -Force
+                    }
+                }
+            }
         }
         Context "Reversion Failure" {
             It "Tests that the Reversion fails with an invalid SID" {
