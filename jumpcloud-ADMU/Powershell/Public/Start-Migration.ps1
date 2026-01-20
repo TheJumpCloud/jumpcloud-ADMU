@@ -175,7 +175,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.12.0"
+        $admuVersion = "2.12.1"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -1331,18 +1331,26 @@ function Start-Migration {
                 Write-ToLog -Message:("Parameter to Update Home Path was not set.")
                 Write-ToLog -Message:("The $JumpCloudUserName account will point to $oldUserProfileImagePath profile path")
                 $datPath = $oldUserProfileImagePath
+
                 try {
                     Write-ToLog -Message:("Attempting to remove newly created $newUserProfileImagePath")
                     Start-Sleep 1
                     icacls $newUserProfileImagePath /reset /t /c /l *> $null
                     Start-Sleep 1
                     # Reset permissions on newUserProfileImagePath
-                    # -ErrorAction Stop; Remove-Item doesn't throw terminating errors
                     Remove-Item -Path ($newUserProfileImagePath) -Force -Recurse -ErrorAction Stop
                 } catch {
-                    Write-ToLog -Message:("Remove $newUserProfileImagePath failed, renaming to ADMU_unusedProfile_$JumpCloudUserName")
-                    Rename-Item -Path $newUserProfileImagePath -NewName "ADMU_unusedProfile_$JumpCloudUserName" -ErrorAction Stop
+                    try {
+                        Write-ToLog -Message:("Remove $newUserProfileImagePath failed. Exception: $($_.Exception.Message)")
+                        Write-ToLog -Message:("Attempting to rename directory to ADMU_unusedProfile_$JumpCloudUserName")
+
+                        Rename-Item -Path $newUserProfileImagePath -NewName "ADMU_unusedProfile_$JumpCloudUserName" -ErrorAction Stop
+                    } catch {
+                        Write-ToLog -Message:("Renaming the temp directory: $newUserProfileImagePath failed. Manual cleanup required") -level Warning
+                        Write-ToLog -Message:("Rename Error: $($_.Exception.Message)") -level Warning
+                    }
                 }
+
                 # Set the target user Profile Image Path to Source user Profile Path (they are the same)
                 $newUserProfileImagePath = $oldUserProfileImagePath
                 # TODO: Validate this should be here:
