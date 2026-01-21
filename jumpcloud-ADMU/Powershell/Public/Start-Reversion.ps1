@@ -41,7 +41,7 @@ function Start-Reversion {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
-        [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
+        [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+(?:\.bak)?$")]
         [string]$UserSID,
 
         [Parameter(Mandatory = $false, Position = 1)]
@@ -166,7 +166,11 @@ function Start-Reversion {
 
             # Validate this is an ADMU migrated profile by checking registry path
             if ($registryProfileImagePath -notmatch $admuPathPattern) {
-                throw "Registry profile path does not contain .ADMU suffix. This does not appear to be a migrated profile: $registryProfileImagePath"
+                if ($registryProfileImagePath -match '\\TEMP$') {
+                    Write-ToLog -Message "Registry profile path resolved to temporary profile: $registryProfileImagePath" -Level Warning -Step "Revert-Migration"
+                } else {
+                    throw "Registry profile path does not contain .ADMU suffix. This does not appear to be a migrated profile: $registryProfileImagePath"
+                }
             }
 
             Write-ToLog -Message "Confirmed .ADMU migration profile detected in registry" -Level Verbose -Step "Revert-Migration"
@@ -178,7 +182,11 @@ function Start-Reversion {
                 # Validate target profile path is associated with the UserSID
                 $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $TargetProfileImagePath -UserSID $UserSID
                 if (-not $sidValidation.IsValid) {
-                    throw "Target profile path validation failed: $($sidValidation.Reason)"
+                    if ($registryProfileImagePath -match '\\TEMP$') {
+                        Write-ToLog -Message "Target profile path validation failed ($($sidValidation.Reason)), but registry points to TEMP so continuing with TEMP profile." -Level Warning -Step "Revert-Migration"
+                    } else {
+                        throw "Target profile path validation failed: $($sidValidation.Reason)"
+                    }
                 }
                 Write-ToLog -Message "Target profile path validated for UserSID: $UserSID" -Level Verbose -Step "Revert-Migration"
             } else {
