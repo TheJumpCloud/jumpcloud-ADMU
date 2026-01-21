@@ -159,6 +159,9 @@ function Start-Reversion {
                 throw "Profile registry path not found for SID: $UserSID"
             }
 
+            $profileRegistryBasePath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"
+            $profileRegistryBakPath = "$profileRegistryBasePath.bak"
+
             $registryProfileImagePath = (Get-ItemProperty -Path $profileRegistryPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
             $revertResult.RegistryProfilePath = $registryProfileImagePath
 
@@ -194,7 +197,6 @@ function Start-Reversion {
                 $profileImagePath = $registryProfileImagePath -replace $admuPathPattern, ''
 
                 $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $profileImagePath -UserSID $UserSID
-                Write-Host "Test $sidValidation"
 
                 if (-not $sidValidation.IsValid) {
                     throw "Registry profile path validation failed: $($sidValidation.Reason)"
@@ -521,6 +523,26 @@ function Start-Reversion {
                 $revertResult.Success = $true
             }
             #endregion Final Validation
+
+            #region Remove ProfileList SID.bak Entry
+            if ($profileRegistryBakPath) {
+                if ($DryRun) {
+                    Write-ToLog -Message "WHAT IF: Would remove registry entry $profileRegistryBakPath" -Level Verbose -Step "Revert-Migration"
+                } elseif (Test-Path -LiteralPath $profileRegistryBakPath) {
+                    try {
+                        Write-ToLog -Message "Removing registry entry $profileRegistryBakPath" -Level Info -Step "Revert-Migration"
+                        Remove-Item -LiteralPath $profileRegistryBakPath -Recurse -Force -ErrorAction Stop
+                        Write-ToLog -Message "Successfully removed registry entry $profileRegistryBakPath" -Level Info -Step "Revert-Migration"
+                    } catch {
+                        $errorMsg = "Failed to remove registry entry $profileRegistryBakPath : $($_.Exception.Message)"
+                        Write-ToLog -Message $errorMsg -Level Error -Step "Revert-Migration"
+                        $revertResult.Errors += $errorMsg
+                    }
+                } else {
+                    Write-ToLog -Message "No SID.bak registry entry found for SID: $UserSID" -Level Verbose -Step "Revert-Migration"
+                }
+            }
+            #endregion Remove ProfileList SID.bak Entry
 
         } catch {
             $errorMsg = "Migration revert failed: $($_.Exception.Message)"
