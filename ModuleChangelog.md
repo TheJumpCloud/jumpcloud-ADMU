@@ -1,3 +1,17 @@
+## 2.12.1
+
+Release Date: January 20, 2026
+
+#### RELEASE NOTES
+
+```
+Added Bug fix for temp user directory renaming
+```
+
+#### BUG FIXES:
+
+- Resolved an issue where renaming a created temp profile fails and freezes the migration
+
 ## 2.12.0
 
 Release Date: January 15, 2026
