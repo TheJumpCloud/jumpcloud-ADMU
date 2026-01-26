@@ -53,10 +53,6 @@ function Start-Reversion {
         [Parameter(Mandatory = $false)]
         [bool]$form = $false,
         [Parameter(Mandatory = $false)]
-        [string]$UserName,
-        [Parameter(Mandatory = $false)]
-        [string]$ProfileSize,
-        [Parameter(Mandatory = $false)]
         [switch]$DryRun,
         [Parameter(Mandatory = $false)]
         [switch]$Force
@@ -258,7 +254,7 @@ function Start-Reversion {
             $appDataPath = Join-Path $profileImagePath "AppData\Local\Microsoft\Windows"
             $usrClassCurrent = Join-Path $appDataPath "UsrClass.dat"
             $usrClassOriginalPattern = Join-Path $appDataPath "UsrClass_original_*.dat"
-            $usrClassOriginalFiles = Get-ChildItem -Path $usrClassOriginalPattern -Force  | Where-Object { $_.Name -match "UsrClass_original_*" }
+            $usrClassOriginalFiles = Get-ChildItem -Path $usrClassOriginalPattern -Force | Where-Object { $_.Name -match "UsrClass_original_*" }
 
             if ($usrClassOriginalFiles.Count -eq 0) {
                 Write-ToLog -Message "Warning: No original UsrClass.dat backup found in $appDataPath" -Level Warning -Step "Revert-Migration"
