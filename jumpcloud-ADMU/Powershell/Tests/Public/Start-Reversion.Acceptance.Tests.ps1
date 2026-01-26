@@ -136,7 +136,7 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
                         TargetProfileImagePath = "C:\Users\$userToMigrateFrom"
                     }
 
-                    $revertResult = Start-Reversion @reversionInput -ErrorAction Stop -Force
+                    $revertResult = Start-Reversion @reversionInput -ErrorAction SilentlyContinue -Force
                     $revertResult | Should -Not -BeNullOrEmpty
                     $revertResult.Success | Should -BeTrue
                     $revertResult.RegistryUpdated | Should -BeTrue

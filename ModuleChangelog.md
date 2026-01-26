@@ -1,6 +1,6 @@
-## 2.13.0
+## 2.12.2
 
-Release Date: January 21, 2026
+Release Date: January 26, 2026
 
 #### RELEASE NOTES
 
