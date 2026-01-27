@@ -167,6 +167,9 @@ function Start-Reversion {
 
             Write-ToLog -Message "Found registry profile path: $registryProfileImagePath" -Level Info -Step "Revert-Migration"
 
+            # Save the original registry path for validation checks
+            $originalRegistryProfileImagePath = $registryProfileImagePath
+
             # Validate this is an ADMU migrated profile by checking registry path
             if ($registryProfileImagePath -notmatch $admuPathPattern) {
                 if ($registryProfileImagePath -match '\\TEMP$') {
@@ -179,6 +182,7 @@ function Start-Reversion {
             }
 
             # If the base registry key points to TEMP and .bak exists, prefer .bak for the actual profile path
+            $switchedToBak = $false
             if ($registryProfileImagePath -match '\\TEMP$' -and (Test-Path -LiteralPath $profileRegistryBakPath)) {
                 try {
                     $bakProfileImagePath = (Get-ItemProperty -Path $profileRegistryBakPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
@@ -187,6 +191,7 @@ function Start-Reversion {
                         $registryProfileImagePath = $bakProfileImagePath
                         $profileRegistryPath = $profileRegistryBakPath
                         $revertResult.RegistryProfilePath = $registryProfileImagePath
+                        $switchedToBak = $true
                     } else {
                         Write-ToLog -Message ".bak key exists but does not contain ADMU migrated profile. Continuing with TEMP profile." -Level Warning -Step "Revert-Migration"
                     }
@@ -203,7 +208,7 @@ function Start-Reversion {
                 # Validate target profile path is associated with the UserSID
                 $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $TargetProfileImagePath -UserSID $UserSID
                 if (-not $sidValidation.IsValid) {
-                    if ($registryProfileImagePath -match '\\TEMP$') {
+                    if ($originalRegistryProfileImagePath -match '\\TEMP$') {
                         Write-ToLog -Message "Target profile path validation failed ($($sidValidation.Reason)), but registry points to TEMP so continuing with TEMP profile." -Level Warning -Step "Revert-Migration"
                     } else {
                         throw "Target profile path validation failed: $($sidValidation.Reason)"
@@ -215,10 +220,14 @@ function Start-Reversion {
                 # Use registry path, remove .ADMU suffix
                 $profileImagePath = $registryProfileImagePath -replace $admuPathPattern, ''
 
-                $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $profileImagePath -UserSID $UserSID
+                if (-not $switchedToBak) {
+                    $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $profileImagePath -UserSID $UserSID
 
-                if (-not $sidValidation.IsValid) {
-                    throw "Registry profile path validation failed: $($sidValidation.Reason)"
+                    if (-not $sidValidation.IsValid) {
+                        throw "Registry profile path validation failed: $($sidValidation.Reason)"
+                    }
+                } else {
+                    Write-ToLog -Message "Skipping profile path validation since switched to .bak registry key" -Level Verbose -Step "Revert-Migration"
                 }
                 Write-ToLog -Message "Using registry profile path (without .ADMU): $profileImagePath" -Level Info -Step "Revert-Migration"
             }
