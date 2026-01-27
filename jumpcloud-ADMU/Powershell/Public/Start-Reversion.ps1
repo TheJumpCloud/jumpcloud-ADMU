@@ -210,7 +210,7 @@ function Start-Reversion {
                 if ($originalRegistryProfileImagePath -match '\\TEMP$' -and (Test-Path -LiteralPath $profileRegistryBakPath)) {
                     try {
                         $bakProfileImagePath = (Get-ItemProperty -Path $profileRegistryBakPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
-                        if ($TargetProfileImagePath -eq $bakProfileImagePath) {
+                        if (($bakProfileImagePath -replace $admuPathPattern, '') -eq $TargetProfileImagePath) {
                             Write-ToLog -Message "Target profile path matches .bak registry entry. Skipping validation since base key points to TEMP." -Level Verbose -Step "Revert-Migration"
                             $skipValidation = $true
                         }
