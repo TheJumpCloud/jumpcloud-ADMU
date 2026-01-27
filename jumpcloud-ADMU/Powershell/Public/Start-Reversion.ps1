@@ -523,10 +523,14 @@ function Start-Reversion {
                             Rename-Item -LiteralPath $profileRegistryBakPath -NewName (Split-Path -Leaf $basePath) -Force -ErrorAction Stop
                             Write-ToLog -Message "Successfully renamed registry entry to $basePath" -Level Info -Step "Revert-Migration"
                         } else {
-                            # Safe to remove the .bak entry if it's separate from the active profile path
-                            Write-ToLog -Message "Removing registry entry $profileRegistryBakPath" -Level Info -Step "Revert-Migration"
-                            Remove-Item -LiteralPath $profileRegistryBakPath -Recurse -Force -ErrorAction Stop
-                            Write-ToLog -Message "Successfully removed registry entry $profileRegistryBakPath" -Level Info -Step "Revert-Migration"
+                            # Safe to remove the .bak entry if it's separate from the active profile path and registry update succeeded
+                            if ($revertResult.RegistryUpdated) {
+                                Write-ToLog -Message "Removing registry entry $profileRegistryBakPath" -Level Info -Step "Revert-Migration"
+                                Remove-Item -LiteralPath $profileRegistryBakPath -Recurse -Force -ErrorAction Stop
+                                Write-ToLog -Message "Successfully removed registry entry $profileRegistryBakPath" -Level Info -Step "Revert-Migration"
+                            } else {
+                                Write-ToLog -Message "Preserving registry entry $profileRegistryBakPath as recovery reference since ProfileImagePath update failed" -Level Warning -Step "Revert-Migration"
+                            }
                         }
                     } catch {
                         $errorMsg = "Failed to process registry entry $profileRegistryBakPath : $($_.Exception.Message)"
