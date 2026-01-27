@@ -545,10 +545,14 @@ function Start-Reversion {
                         # Check if the resolved profile registry path is the .bak path
                         if ($profileRegistryPath -eq $profileRegistryBakPath) {
                             # If we updated the .bak key, rename it to the base name instead of deleting it
-                            $basePath = $profileRegistryBasePath
-                            Write-ToLog -Message "Renaming registry entry from $profileRegistryBakPath to $basePath" -Level Info -Step "Revert-Migration"
-                            Rename-Item -LiteralPath $profileRegistryBakPath -NewName (Split-Path -Leaf $basePath) -Force -ErrorAction Stop
-                            Write-ToLog -Message "Successfully renamed registry entry to $basePath" -Level Info -Step "Revert-Migration"
+                            if ($revertResult.RegistryUpdated) {
+                                $basePath = $profileRegistryBasePath
+                                Write-ToLog -Message "Renaming registry entry from $profileRegistryBakPath to $basePath" -Level Info -Step "Revert-Migration"
+                                Rename-Item -LiteralPath $profileRegistryBakPath -NewName (Split-Path -Leaf $basePath) -Force -ErrorAction Stop
+                                Write-ToLog -Message "Successfully renamed registry entry to $basePath" -Level Info -Step "Revert-Migration"
+                            } else {
+                                Write-ToLog -Message "Preserving registry entry $profileRegistryBakPath as recovery reference since ProfileImagePath update failed" -Level Warning -Step "Revert-Migration"
+                            }
                         } else {
                             # Safe to remove the .bak entry if it's separate from the active profile path and registry update succeeded
                             if ($revertResult.RegistryUpdated) {
