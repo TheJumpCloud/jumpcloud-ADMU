@@ -206,15 +206,29 @@ function Start-Reversion {
                 $profileImagePath = $TargetProfileImagePath
 
                 # Validate target profile path is associated with the UserSID
-                $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $TargetProfileImagePath -UserSID $UserSID
-                if (-not $sidValidation.IsValid) {
-                    if ($originalRegistryProfileImagePath -match '\\TEMP$') {
-                        Write-ToLog -Message "Target profile path validation failed ($($sidValidation.Reason)), but registry points to TEMP so continuing with TEMP profile." -Level Warning -Step "Revert-Migration"
-                    } else {
-                        throw "Target profile path validation failed: $($sidValidation.Reason)"
+                $skipValidation = $false
+                if ($originalRegistryProfileImagePath -match '\\TEMP$' -and (Test-Path -LiteralPath $profileRegistryBakPath)) {
+                    try {
+                        $bakProfileImagePath = (Get-ItemProperty -Path $profileRegistryBakPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
+                        if ($TargetProfileImagePath -eq $bakProfileImagePath) {
+                            Write-ToLog -Message "Target profile path matches .bak registry entry. Skipping validation since base key points to TEMP." -Level Verbose -Step "Revert-Migration"
+                            $skipValidation = $true
+                        }
+                    } catch {
+                        Write-ToLog -Message "Failed to read .bak registry key for validation: $($_.Exception.Message)" -Level Warning -Step "Revert-Migration"
                     }
-                } else {
-                    Write-ToLog -Message "Target profile path validated for UserSID: $UserSID" -Level Verbose -Step "Revert-Migration"
+                }
+                if (-not $skipValidation) {
+                    $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $TargetProfileImagePath -UserSID $UserSID
+                    if (-not $sidValidation.IsValid) {
+                        if ($originalRegistryProfileImagePath -match '\\TEMP$') {
+                            Write-ToLog -Message "Target profile path validation failed ($($sidValidation.Reason)), but registry points to TEMP so continuing with TEMP profile." -Level Warning -Step "Revert-Migration"
+                        } else {
+                            throw "Target profile path validation failed: $($sidValidation.Reason)"
+                        }
+                    } else {
+                        Write-ToLog -Message "Target profile path validated for UserSID: $UserSID" -Level Verbose -Step "Revert-Migration"
+                    }
                 }
             } else {
                 # Use registry path, remove .ADMU suffix
