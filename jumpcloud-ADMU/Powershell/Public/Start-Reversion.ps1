@@ -532,7 +532,6 @@ function Start-Reversion {
                         $errorMsg = "Failed to process registry entry $profileRegistryBakPath : $($_.Exception.Message)"
                         Write-ToLog -Message $errorMsg -Level Error -Step "Revert-Migration"
                         $revertResult.Errors += $errorMsg
-                        $revertResult.RegistryUpdated = $false
                     }
                 } else {
                     Write-ToLog -Message "No SID.bak registry entry found for SID: $UserSID" -Level Verbose -Step "Revert-Migration"
