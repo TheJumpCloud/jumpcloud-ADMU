@@ -158,9 +158,6 @@ function Start-Reversion {
             $profileRegistryPath = (Get-ProfileRegistryPath -UserSID $UserSID).ResolvedPath
             # Casing fixed to 'revertValidateProfilePath', removed -StatusType, added -StatusMap
             Write-ToProgress -form $form -Status "revertValidateProfilePath" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
-            if (-not (Test-Path $profileRegistryPath)) {
-                throw "Profile registry path not found for SID: $UserSID"
-            }
 
             $profileRegistryBasePath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"
             $profileRegistryBakPath = "$profileRegistryBasePath.bak"
@@ -177,9 +174,9 @@ function Start-Reversion {
                 } else {
                     throw "Registry profile path does not contain .ADMU suffix. This does not appear to be a migrated profile: $registryProfileImagePath"
                 }
+            } else {
+                Write-ToLog -Message "Confirmed .ADMU migration profile detected in registry" -Level Verbose -Step "Revert-Migration"
             }
-
-            Write-ToLog -Message "Confirmed .ADMU migration profile detected in registry" -Level Verbose -Step "Revert-Migration"
             # Determine which profile path to use
             if ($TargetProfileImagePath) {
                 Write-ToLog -Message "Using provided target profile path: $TargetProfileImagePath" -Level Info -Step "Revert-Migration"
