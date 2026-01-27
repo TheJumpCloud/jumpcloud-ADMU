@@ -177,6 +177,24 @@ function Start-Reversion {
             } else {
                 Write-ToLog -Message "Confirmed .ADMU migration profile detected in registry" -Level Verbose -Step "Revert-Migration"
             }
+
+            # If the base registry key points to TEMP and .bak exists, prefer .bak for the actual profile path
+            if ($registryProfileImagePath -match '\\TEMP$' -and (Test-Path -LiteralPath $profileRegistryBakPath)) {
+                try {
+                    $bakProfileImagePath = (Get-ItemProperty -Path $profileRegistryBakPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
+                    if ($bakProfileImagePath -match $admuPathPattern) {
+                        Write-ToLog -Message "Detected TEMP profile in base key but .bak key contains migrated profile. Using .bak path: $bakProfileImagePath" -Level Info -Step "Revert-Migration"
+                        $registryProfileImagePath = $bakProfileImagePath
+                        $profileRegistryPath = $profileRegistryBakPath
+                        $revertResult.RegistryProfilePath = $registryProfileImagePath
+                    } else {
+                        Write-ToLog -Message ".bak key exists but does not contain ADMU migrated profile. Continuing with TEMP profile." -Level Warning -Step "Revert-Migration"
+                    }
+                } catch {
+                    Write-ToLog -Message "Failed to read .bak registry key: $($_.Exception.Message). Continuing with TEMP profile." -Level Warning -Step "Revert-Migration"
+                }
+            }
+
             # Determine which profile path to use
             if ($TargetProfileImagePath) {
                 Write-ToLog -Message "Using provided target profile path: $TargetProfileImagePath" -Level Info -Step "Revert-Migration"
