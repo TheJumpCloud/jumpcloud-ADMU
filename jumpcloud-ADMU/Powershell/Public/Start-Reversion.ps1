@@ -65,6 +65,9 @@ function Start-Reversion {
     begin {
         Write-ToLog -Message "Begin Revert Migration" -MigrationStep -Level Info
 
+        # Normalize UserSID by removing .bak suffix if present
+        $UserSID = $UserSID -replace '\.bak$', ''
+
         # Initialize result object
         $revertResult = [PSCustomObject]@{
             Success             = $false
@@ -530,11 +533,21 @@ function Start-Reversion {
                     Write-ToLog -Message "WHAT IF: Would remove registry entry $profileRegistryBakPath" -Level Verbose -Step "Revert-Migration"
                 } elseif (Test-Path -LiteralPath $profileRegistryBakPath) {
                     try {
-                        Write-ToLog -Message "Removing registry entry $profileRegistryBakPath" -Level Info -Step "Revert-Migration"
-                        Remove-Item -LiteralPath $profileRegistryBakPath -Recurse -Force -ErrorAction Stop
-                        Write-ToLog -Message "Successfully removed registry entry $profileRegistryBakPath" -Level Info -Step "Revert-Migration"
+                        # Check if the resolved profile registry path is the .bak path
+                        if ($profileRegistryPath -eq $profileRegistryBakPath) {
+                            # If we updated the .bak key, rename it to the base name instead of deleting it
+                            $basePath = $profileRegistryBasePath
+                            Write-ToLog -Message "Renaming registry entry from $profileRegistryBakPath to $basePath" -Level Info -Step "Revert-Migration"
+                            Rename-Item -LiteralPath $profileRegistryBakPath -NewName (Split-Path -Leaf $basePath) -Force -ErrorAction Stop
+                            Write-ToLog -Message "Successfully renamed registry entry to $basePath" -Level Info -Step "Revert-Migration"
+                        } else {
+                            # Safe to remove the .bak entry if it's separate from the active profile path
+                            Write-ToLog -Message "Removing registry entry $profileRegistryBakPath" -Level Info -Step "Revert-Migration"
+                            Remove-Item -LiteralPath $profileRegistryBakPath -Recurse -Force -ErrorAction Stop
+                            Write-ToLog -Message "Successfully removed registry entry $profileRegistryBakPath" -Level Info -Step "Revert-Migration"
+                        }
                     } catch {
-                        $errorMsg = "Failed to remove registry entry $profileRegistryBakPath : $($_.Exception.Message)"
+                        $errorMsg = "Failed to process registry entry $profileRegistryBakPath : $($_.Exception.Message)"
                         Write-ToLog -Message $errorMsg -Level Error -Step "Revert-Migration"
                         $revertResult.Errors += $errorMsg
                     }
