@@ -13,7 +13,7 @@ function Confirm-ProfileSidAssociation {
     )
     try {
         Write-ToLog -Message "Validating profile path association with SID: $UserSID" -Level Verbose -Step "Revert-Migration"
-        $profileRegistryKey = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"
+        $profileRegistryKey = (Get-ProfileRegistryPath -UserSID $UserSID).ResolvedPath
         $regProfilePath = (Get-ItemProperty -Path $profileRegistryKey -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
 
         # Remove the .ADMU suffix
