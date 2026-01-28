@@ -83,6 +83,13 @@ function Start-Reversion {
             throw "UserSID provided could not be translated"
         }
 
+        # VALIDATION: Check if user profile is currently loaded
+        if (Test-UserProfileLoaded -UserSID $UserSID) {
+            $errorMessage = "Cannot revert user profile for SID: $UserSID. The user's profile is currently loaded in memory. Please ensure the user is logged out before attempting reversion."
+            Write-ToLog -Message $errorMessage -Level Error
+            throw $errorMessage
+        }
+
         # Regex pattern to identify .ADMU profile paths
         $admuPathPattern = '\.ADMU$'
 

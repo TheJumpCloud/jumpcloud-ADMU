@@ -450,6 +450,10 @@ function Start-Migration {
         }
 
         #region validation
+        # Check if profile is loaded
+        if (Test-UserProfileLoaded -UserSID $SelectedUserSID) {
+            throw [System.Management.Automation.ValidationMetadataException] "Cannot migrate user profile for '$SelectedUserName' (SID: $SelectedUserSID). The user's profile is currently loaded in memory. Please ensure the user is logged out before attempting migration."
+        }
         # validate SelectedUserName is not null or empty
         if ([string]::IsNullOrEmpty($SelectedUserName)) {
             throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for SelectedUserName"
