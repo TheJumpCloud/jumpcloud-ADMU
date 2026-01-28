@@ -172,11 +172,8 @@ function Start-Reversion {
 
             # Validate this is an ADMU migrated profile by checking registry path
             if ($registryProfileImagePath -notmatch $admuPathPattern) {
-                if ($registryProfileImagePath -match '\\TEMP$') {
-                    Write-ToLog -Message "Registry profile path resolved to temporary profile: $registryProfileImagePath" -Level Warning -Step "Revert-Migration"
-                } else {
-                    throw "Registry profile path does not contain .ADMU suffix. This does not appear to be a migrated profile: $registryProfileImagePath"
-                }
+                throw "Registry profile path does not contain .ADMU suffix. This does not appear to be a migrated profile: $registryProfileImagePath"
+
             } else {
                 Write-ToLog -Message "Confirmed .ADMU migration profile detected in registry" -Level Verbose -Step "Revert-Migration"
             }
