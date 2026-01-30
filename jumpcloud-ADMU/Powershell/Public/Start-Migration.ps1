@@ -691,7 +691,7 @@ function Start-Migration {
                     # update the 'admu' attribute object to inform dynamic groups that the system migration status is "InProgress"
                     $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = 'InProgress' } }
                 } elseif ($script:validatedApiKey) {
-                    $attributeSet = Invoke-SystemAPI -jcApiKey $script:JumpCloudAPIKey -jcOrgID $script:JumpCloudOrgID -Body @{attributes = @{'admu' = 'InProgress' } }
+                    $attributeSet = Invoke-SystemAPI -jcApiKey $script:JumpCloudAPIKey -jcOrgID $script:JumpCloudOrgID -systemID $script:validatedSystemID -Body @{attributes = @{'admu' = 'InProgress' } }
                 }
             }
         }
