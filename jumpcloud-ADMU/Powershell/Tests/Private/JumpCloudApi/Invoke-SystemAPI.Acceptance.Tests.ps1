@@ -148,7 +148,7 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             { Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body } | Should -Not -Throw
 
             # Assert
-            $sys = Get-JcSdkSystem -id $systemId
+            $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
             $attr = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }
             $attr.value | Should -Be $val1
         }
@@ -161,7 +161,7 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body | Out-Null
 
             # Assert
-            $sys = Get-JcSdkSystem -id $systemId
+            $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
             $attr = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }
             $attr.value | Should -Be $newVal
         }
@@ -180,7 +180,7 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body | Out-Null
 
             # Assert
-            $sys = Get-JcSdkSystem -id $systemId
+            $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
 
             $attr1 = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }
             $attr1.value | Should -Be $val1_Final
@@ -199,7 +199,7 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
 
             { Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body } | Should -Not -Throw
 
-            $sys = Get-JcSdkSystem -id $systemId
+            $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
             ($sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }).value | Should -Be "JsonValue"
         }
 
@@ -213,7 +213,7 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body | Out-Null
 
             # Assert
-            $sys = Get-JcSdkSystem -id $systemId
+            $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
 
             # Attr2 should be gone
             $attr2 = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr2" }

@@ -76,17 +76,28 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             Assert-MockCalled Invoke-RestMethod -Times 1
         }
 
-        It "Set-System: Should use RSA Signature (System Context) when JCApiKey is NOT provided" {
-            # Mock Invoke-RestMethod to verify headers (Authorization = Signature...)
+        It "Set-System: System Context when JCApiKey is NOT provided" {
+            Mock Get-Content -MockWith { return 'systemKey":"mockKey";"agentServerHost":"agent.jumpcloud.com"' }
+
+            Mock Test-Path -MockWith { return $true }
+
+            # This mimics the static method the script calls: [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($privKey)
+            if (-not ([System.Management.Automation.PSTypeName]'RSAEncryption.RSAEncryptionProvider').Type) {
+                Add-Type -TypeDefinition @"
+                    namespace RSAEncryption {
+                        public class RSAEncryptionProvider {
+                            public static System.Security.Cryptography.RSACryptoServiceProvider GetRSAProviderFromPemFile(string s, object p) {
+                                return new System.Security.Cryptography.RSACryptoServiceProvider();
+                            }
+                        }
+                    }
+"@
+            }
+
             Mock Invoke-RestMethod -MockWith { return $true } -ParameterFilter {
                 $Headers.ContainsKey("Authorization") -and $Headers["Authorization"] -match "Signature keyId="
             }
 
-            Mock Get-Content -MockWith { return 'systemKey":"mockKey";"agentServerHost":"agent.jumpcloud.com"' }
-            # Mock RSA Provider to avoid file not found errors during test
-            Mock -CommandName "RSAEncryption.RSAEncryptionProvider" -MockWith { return $true }
-
-            # Call Set-System WITHOUT the API Key parameter
             Set-System -prop "Description" -Payload "TestPayload"
 
             Assert-MockCalled Invoke-RestMethod -Times 1

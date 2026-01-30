@@ -195,9 +195,6 @@ function Set-System {
                 $b["attributes"] = $payload
             }
             $j = $b | ConvertTo-Json
-            Write-Host "Header : $($h | ConvertTo-Json)"
-            Write-Host "Body : $j"
-            Write-Host "URL : $url/api/systems/$key"
             Invoke-RestMethod -Method PUT -Uri "$url/api/systems/$key" -ContentType 'application/json' -Headers $h -Body $j -ErrorAction Stop | Out-Null
             return
         } catch {
