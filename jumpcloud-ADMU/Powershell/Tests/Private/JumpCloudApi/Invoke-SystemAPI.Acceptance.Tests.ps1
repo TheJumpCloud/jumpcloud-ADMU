@@ -146,7 +146,7 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             # Action: Add Attr1
             $body = @{ attributes = @{ "PesterTestAttr1" = $val1 } }
             { Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body } | Should -Not -Throw
-            Start-Sleep -Seconds 2 # Wait a moment for the API to process
+
             # Assert
             $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
             $attr = $sys.attributes | Where-Object { $_.name -eq "PesterTestAttr1" }
@@ -159,7 +159,7 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             # Action: Update Attr1
             $body = @{ attributes = @{ "PesterTestAttr1" = $newVal } }
             Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body | Out-Null
-            Start-Sleep -Seconds 2 # Wait a moment for the API to process
+
             # Assert
             $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
             $attr = $sys.attributes | Where-Object { $_.name -eq "PesterTestAttr1" }
@@ -178,7 +178,7 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
                 }
             }
             Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body | Out-Null
-            Start-Sleep -Seconds 2 # Wait a moment for the API to process
+
             # Assert
             $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
 
@@ -198,7 +198,7 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             $body = @{ attributes = $jsonString }
 
             { Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body } | Should -Not -Throw
-            Start-Sleep -Seconds 2 # Wait a moment for the API to process
+
             # Assert
             $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
             ($sys.attributes | Where-Object { $_.name -eq "PesterTestAttr1" }).value | Should -Be "JsonValue"
@@ -212,7 +212,7 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
                 }
             }
             Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body | Out-Null
-            Start-Sleep -Seconds 2 # Wait a moment for the API to process
+
             # Assert
             $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
 
