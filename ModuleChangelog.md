@@ -1,3 +1,15 @@
+## 2.12.3
+
+Release Date: January 30, 2026
+
+#### RELEASE NOTES
+
+```
+Added functionality for Invoke-SystemAPI to create, update, and delete attributes
+Added support for secret variables in DeviceQuery for bulk ADMU
+```
+
+- Resolved an issue where renaming a created temp profile fails and freezes the migration
 ## 2.12.1
 
 Release Date: January 20, 2026

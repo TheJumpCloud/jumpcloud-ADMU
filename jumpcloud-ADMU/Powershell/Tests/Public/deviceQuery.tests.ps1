@@ -44,6 +44,68 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
         Write-Host "Character Count of Device Query Script: $($measured.Characters) | Limit: 32767"
         $measured.Characters | Should -BeLessThan 32767
     }
+
+    Context "API Key Functionality" {
+        It "Should validate the API Key regex syntax correctly" {
+
+            $regex = '^\{\{\s*[\w\.-]+\s*\}\}$' # This regex matches the one defined in the scriptParameters region
+
+            "{{ variable.name }}" | Should -Match $regex
+            "{{MySecret}}" | Should -Match $regex
+            "{{ global.api-key }}" | Should -Match $regex
+            "{{variable_with_underscore}}" | Should -Match $regex
+
+            # Invalid cases
+            "plainTextKey" | Should -Not -Match $regex
+            "{ missing.brace }" | Should -Not -Match $regex
+            "{{ space in name }}" | Should -Not -Match $regex
+        }
+
+        It "Set-System: Should use x-api-key header when JCApiKey IS provided" {
+            # Mock Invoke-RestMethod to verify headers without making actual calls
+            Mock Invoke-RestMethod -MockWith { return $true } -ParameterFilter {
+                $Headers.ContainsKey("x-api-key") -and $Headers["x-api-key"] -eq "{{ variable.apikey }}"
+            }
+
+            # Call Set-System WITH the API Key parameter
+            # We mock Get-Content/Regex for systemKey to ensure the function reaches the header construction part
+            Mock Get-Content -MockWith { return 'systemKey":"mockKey";"agentServerHost":"agent.jumpcloud.com"' }
+
+            Set-System -prop "Description" -Payload "TestPayload" -JCApiKey "{{ variable.apikey }}"
+
+            Assert-MockCalled Invoke-RestMethod -Times 1
+        }
+
+        It "Set-System: Should use RSA Signature (System Context) when JCApiKey is NOT provided" {
+            # Mock Invoke-RestMethod to verify headers (Authorization = Signature...)
+            Mock Invoke-RestMethod -MockWith { return $true } -ParameterFilter {
+                $Headers.ContainsKey("Authorization") -and $Headers["Authorization"] -match "Signature keyId="
+            }
+
+            Mock Get-Content -MockWith { return 'systemKey":"mockKey";"agentServerHost":"agent.jumpcloud.com"' }
+            # Mock RSA Provider to avoid file not found errors during test
+            Mock -CommandName "RSAEncryption.RSAEncryptionProvider" -MockWith { return $true }
+
+            # Call Set-System WITHOUT the API Key parameter
+            Set-System -prop "Description" -Payload "TestPayload"
+
+            Assert-MockCalled Invoke-RestMethod -Times 1
+        }
+
+        It "Set-SystemDesc: Should pass the API Key through to Set-System" {
+            # Mock Set-System to ensure it receives the key
+            Mock Set-System -Verifiable -ParameterFilter { $JCApiKey -eq "{{ variable.apikey }}" }
+            # Mock Get-System to return empty description so logic proceeds
+            Mock Get-System -MockWith { return [PSCustomObject]@{ description = "" } }
+
+            $dummyUsers = @([PSCustomObject]@{ st = 'Pending'; msg = 'Planned'; sid = 'S-1-5'; localPath = 'C:\'; un = 'u'; uid = '1' })
+
+            Set-SystemDesc -ADMUUsers $dummyUsers -JCApiKey "{{ variable.apikey }}"
+
+            Assert-MockCalled Set-System
+        }
+    }
+
     Context "Get-System Tests" {
         It "Should get the system data" {
             Get-System -systemContextBinding $true | Should -Not -Be $null

@@ -128,4 +128,106 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             }
         }
     }
+    Context "Attribute Mapping Logic" {
+
+        BeforeAll {
+            # Define test attribute keys
+            $key1 = "PesterTest_Attr1"
+            $key2 = "PesterTest_Attr2"
+
+            # Ensure clean state: Attempt to remove them if they exist from previous runs
+            $cleanupBody = @{ attributes = @{ $key1 = $null; $key2 = $null } }
+            Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $cleanupBody | Out-Null
+        }
+
+        It "Should ADD a new attribute without affecting existing ones" {
+            $val1 = "Value_$(Get-Random)"
+
+            # Action: Add Attr1
+            $body = @{ attributes = @{ "PesterTest_Attr1" = $val1 } }
+            { Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body } | Should -Not -Throw
+
+            # Assert
+            $sys = Get-JcSdkSystem -id $systemId
+            $attr = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }
+            $attr.value | Should -Be $val1
+        }
+
+        It "Should UPDATE an existing attribute" {
+            $newVal = "Updated_$(Get-Random)"
+
+            # Action: Update Attr1
+            $body = @{ attributes = @{ "PesterTest_Attr1" = $newVal } }
+            Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body | Out-Null
+
+            # Assert
+            $sys = Get-JcSdkSystem -id $systemId
+            $attr = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }
+            $attr.value | Should -Be $newVal
+        }
+
+        It "Should handle Multiple Attributes (Add one, Update one) simultaneously" {
+            $val1_Final = "FinalValue_1"
+            $val2 = "Value_2"
+
+            # Action: Update Attr1 AND Add Attr2
+            $body = @{
+                attributes = @{
+                    "PesterTest_Attr1" = $val1_Final
+                    "PesterTest_Attr2" = $val2
+                }
+            }
+            Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body | Out-Null
+
+            # Assert
+            $sys = Get-JcSdkSystem -id $systemId
+
+            $attr1 = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }
+            $attr1.value | Should -Be $val1_Final
+
+            $attr2 = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr2" }
+            $attr2.value | Should -Be $val2
+        }
+
+        It "Should accept attributes passed as a JSON String (ConvertTo-Json compatibility)" {
+            # Many scripts pass the body as a JSON string, ensuring the function parses it back to an object before merging
+            $jsonString = @{
+                "PesterTest_Attr1" = "JsonValue"
+            } | ConvertTo-Json -Compress
+
+            $body = @{ attributes = $jsonString }
+
+            { Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body } | Should -Not -Throw
+
+            $sys = Get-JcSdkSystem -id $systemId
+            ($sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }).value | Should -Be "JsonValue"
+        }
+
+        It "Should REMOVE an attribute when value is set to `$null" {
+            # Action: Remove Attr2 (Set to null), keep Attr1
+            $body = @{
+                attributes = @{
+                    "PesterTest_Attr2" = $null
+                }
+            }
+            Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body | Out-Null
+
+            # Assert
+            $sys = Get-JcSdkSystem -id $systemId
+
+            # Attr2 should be gone
+            $attr2 = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr2" }
+            $attr2 | Should -BeNullOrEmpty
+
+            # Attr1 should still exist (ensures array didn't get corrupted/wiped)
+            $attr1 = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }
+            $attr1 | Should -Not -BeNullOrEmpty
+        }
+
+        AfterAll {
+            # Cleanup: Remove test attributes
+            $cleanupBody = @{ attributes = @{ "PesterTest_Attr1" = $null; "PesterTest_Attr2" = $null } }
+            Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $cleanupBody | Out-Null
+        }
+    }
 }
