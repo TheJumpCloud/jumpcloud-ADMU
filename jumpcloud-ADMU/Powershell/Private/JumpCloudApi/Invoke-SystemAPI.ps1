@@ -12,7 +12,6 @@ function Invoke-SystemAPI {
         [string]$method = "PUT"
     )
     $uri = "$($global:JCUrl)/api/systems/$systemId"
-
     $Headers = @{
         'Accept'       = 'application/json';
         'Content-Type' = 'application/json';

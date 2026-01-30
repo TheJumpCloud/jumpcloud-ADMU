@@ -140,7 +140,6 @@ function Set-System {
             $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
             if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey" }
             # If JCApiKey is provided, use it in the header else use SystemAPI
-            Write-Host "JCApiKey: $JCApiKey"
             if (-not [string]::IsNullOrWhiteSpace($JCApiKey)) {
                 Write-Host "[status] Using JCApiKey for authentication."
                 $h = @{
