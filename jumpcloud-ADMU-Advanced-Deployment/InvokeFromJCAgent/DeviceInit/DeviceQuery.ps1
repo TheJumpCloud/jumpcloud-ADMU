@@ -149,7 +149,7 @@ function Set-System {
                 }
 
             } else {
-                Write-Host "[status]Using SystemAPI for authentication."
+                Write-Host "[status] Using SystemAPI for authentication."
                 # region SystemAPI Signature
                 $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
                 if (-not(Test-Path $privKey)) { throw "Key not found" }
