@@ -144,12 +144,12 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             $val1 = "Value_$(Get-Random)"
 
             # Action: Add Attr1
-            $body = @{ attributes = @{ "PesterTest_Attr1" = $val1 } }
+            $body = @{ attributes = @{ "PesterTestAttr1" = $val1 } }
             { Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body } | Should -Not -Throw
             Start-Sleep -Seconds 2 # Wait a moment for the API to process
             # Assert
             $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
-            $attr = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }
+            $attr = $sys.attributes | Where-Object { $_.name -eq "PesterTestAttr1" }
             $attr.value | Should -Be $val1
         }
 
@@ -157,12 +157,12 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             $newVal = "Updated_$(Get-Random)"
 
             # Action: Update Attr1
-            $body = @{ attributes = @{ "PesterTest_Attr1" = $newVal } }
+            $body = @{ attributes = @{ "PesterTestAttr1" = $newVal } }
             Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body | Out-Null
             Start-Sleep -Seconds 2 # Wait a moment for the API to process
             # Assert
             $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
-            $attr = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }
+            $attr = $sys.attributes | Where-Object { $_.name -eq "PesterTestAttr1" }
             $attr.value | Should -Be $newVal
         }
 
@@ -173,8 +173,8 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             # Action: Update Attr1 AND Add Attr2
             $body = @{
                 attributes = @{
-                    "PesterTest_Attr1" = $val1_Final
-                    "PesterTest_Attr2" = $val2
+                    "PesterTestAttr1" = $val1_Final
+                    "PesterTestAttr2" = $val2
                 }
             }
             Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body | Out-Null
@@ -182,17 +182,17 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             # Assert
             $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
 
-            $attr1 = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }
+            $attr1 = $sys.attributes | Where-Object { $_.name -eq "PesterTestAttr1" }
             $attr1.value | Should -Be $val1_Final
 
-            $attr2 = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr2" }
+            $attr2 = $sys.attributes | Where-Object { $_.name -eq "PesterTestAttr2" }
             $attr2.value | Should -Be $val2
         }
 
         It "Should accept attributes passed as a JSON String (ConvertTo-Json compatibility)" {
             # Many scripts pass the body as a JSON string, ensuring the function parses it back to an object before merging
             $jsonString = @{
-                "PesterTest_Attr1" = "JsonValue"
+                "PesterTestAttr1" = "JsonValue"
             } | ConvertTo-Json -Compress
 
             $body = @{ attributes = $jsonString }
@@ -201,14 +201,14 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             Start-Sleep -Seconds 2 # Wait a moment for the API to process
             # Assert
             $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
-            ($sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }).value | Should -Be "JsonValue"
+            ($sys.attributes | Where-Object { $_.name -eq "PesterTestAttr1" }).value | Should -Be "JsonValue"
         }
 
         It "Should REMOVE an attribute when value is set to `$null" {
             # Action: Remove Attr2 (Set to null), keep Attr1
             $body = @{
                 attributes = @{
-                    "PesterTest_Attr2" = $null
+                    "PesterTestAttr2" = $null
                 }
             }
             Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $body | Out-Null
@@ -217,17 +217,17 @@ Describe 'Invoke-SystemAPI' -Tags 'InstallJC' {
             $sys = Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -method "GET"
 
             # Attr2 should be gone
-            $attr2 = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr2" }
+            $attr2 = $sys.attributes | Where-Object { $_.name -eq "PesterTestAttr2" }
             $attr2 | Should -BeNullOrEmpty
 
             # Attr1 should still exist (ensures array didn't get corrupted/wiped)
-            $attr1 = $sys.attributes | Where-Object { $_.name -eq "PesterTest_Attr1" }
+            $attr1 = $sys.attributes | Where-Object { $_.name -eq "PesterTestAttr1" }
             $attr1 | Should -Not -BeNullOrEmpty
         }
 
         AfterAll {
             # Cleanup: Remove test attributes
-            $cleanupBody = @{ attributes = @{ "PesterTest_Attr1" = $null; "PesterTest_Attr2" = $null } }
+            $cleanupBody = @{ attributes = @{ "PesterTestAttr1" = $null; "PesterTestAttr2" = $null } }
             Invoke-SystemAPI -JcApiKey $env:PESTER_APIKEY -systemId $systemId -Body $cleanupBody | Out-Null
         }
     }
