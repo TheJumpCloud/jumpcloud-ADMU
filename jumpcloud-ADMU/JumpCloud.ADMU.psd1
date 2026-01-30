@@ -11,7 +11,7 @@
     # Script module or binary module file associated with this manifest.
     RootModule        = 'JumpCloud.ADMU.psm1'
     # Version number of this module.
-    ModuleVersion     = '2.12.1'
+    ModuleVersion     = '2.12.3'
 
     # Supported PSEditions
     # CompatiblePSEditions = @()
