@@ -163,7 +163,13 @@ jobs:
         run: |
           . "${{ github.workspace }}/.github/scripts/Compare-WindowsMDMFunctions.ps1" -WorkspacePath "${{ github.workspace }}"
   Test-Module:
-    needs: ["Setup-Build-Dependencies", "Check-PR-Labels", "Build-Module"]
+    needs:
+      [
+        "Setup-Build-Dependencies",
+        "Check-PR-Labels",
+        "Build-Module",
+        "Compare-WindowsMDM-Functions",
+      ]
     runs-on: Windows-2022
     timeout-minutes: 75
     strategy:
