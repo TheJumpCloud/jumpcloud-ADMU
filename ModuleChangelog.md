@@ -5,11 +5,21 @@ Release Date: February 2, 2026
 #### RELEASE NOTES
 
 ```
-Added functionality for Invoke-SystemAPI to create, update, and delete attributes
+- Added functionality for Invoke-SystemAPI to create, update, and delete attributes
 Added support for secret variables in DeviceQuery for bulk ADMU
+- Resolved an issue where renaming a created temp profile fails and freezes the migration
+This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
 ```
 
-- Resolved an issue where renaming a created temp profile fails and freezes the migration
+#### FEATURES:
+
+- Additional method for migration reversion by considering the .bak suffix in the reg profile path.
+- Added support for secret variables and description based bulk migration using an API key
+
+#### IMPROVEMENTS:
+
+Test added to validate new features and existing functionality.
+
 ## 2.12.1
 
 Release Date: January 20, 2026

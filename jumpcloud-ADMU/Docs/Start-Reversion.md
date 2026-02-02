@@ -8,41 +8,43 @@ schema: 2.0.0
 # Start-Reversion
 
 ## SYNOPSIS
+
 Reverts a user migration by restoring original registry files for a specified Windows SID.
 
 ## SYNTAX
 
 ```
-Start-Reversion [-UserSID] <String> [[-TargetProfileImagePath] <String>] [-form <Boolean>] [-UserName <String>]
- [-ProfileSize <String>] [-DryRun] [-Force] [-WhatIf] [-Confirm] [<CommonParameters>]
+Start-Reversion [-UserSID] <String> [[-TargetProfileImagePath] <String>] [-form <Boolean>] [-DryRun] [-Force]
+ [-WhatIf] [-Confirm] [<CommonParameters>]
 ```
 
 ## DESCRIPTION
+
 This function reverts a user migration by:
-1.
-Looking up the account SID in the Windows registry ProfileList
-2.
-Identifying the .ADMU profile path
-3.
-Restoring original NTUSER.DAT and UsrClass.dat files from backups
-4.
-Preserving migrated files with _migrated suffix for rollback purposes
+
+1.  Looking up the account SID in the Windows registry ProfileList
+2.  Identifying the .ADMU profile path
+3.  Restoring original NTUSER.DAT and UsrClass.dat files from backups
+4.  Preserving migrated files with \_migrated suffix for rollback purposes
 
 ## EXAMPLES
 
 ### EXAMPLE 1
+
 ```
 Start-Reversion -UserSID "S-1-5-21-123456789-1234567890-123456789-1001"
 Reverts the migration for the specified user SID using the registry profile path.
 ```
 
 ### EXAMPLE 2
+
 ```
 Start-Reversion -UserSID "S-1-5-21-123456789-1234567890-123456789-1001" -TargetProfileImagePath "C:\Users\john.doe"
 Reverts the migration using a specific target profile path instead of the registry value.
 ```
 
 ### EXAMPLE 3
+
 ```
 Start-Reversion -UserSID "S-1-5-21-123456789-1234567890-123456789-1001" -DryRun
 Shows what would be reverted without making actual changes.
@@ -51,6 +53,7 @@ Shows what would be reverted without making actual changes.
 ## PARAMETERS
 
 ### -UserSID
+
 The Windows Security Identifier (SID) of the user account to revert.
 
 ```yaml
@@ -66,6 +69,7 @@ Accept wildcard characters: False
 ```
 
 ### -TargetProfileImagePath
+
 The actual profile path to revert.
 If not specified, will use the path from the registry.
 This path will be validated to ensure it exists and is associated with the UserSID.
@@ -83,7 +87,8 @@ Accept wildcard characters: False
 ```
 
 ### -form
-{{ Fill form Description }}
+
+The form parameter specifies whether to launch the reversion process in a graphical user interface (GUI) form. For CLI usage, this parameter should be set to $false.
 
 ```yaml
 Type: System.Boolean
@@ -97,37 +102,8 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -UserName
-{{ Fill UserName Description }}
-
-```yaml
-Type: System.String
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -ProfileSize
-{{ Fill ProfileSize Description }}
-
-```yaml
-Type: System.String
-Parameter Sets: (All)
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
 ### -DryRun
+
 Shows what actions would be performed without actually executing them.
 
 ```yaml
@@ -143,6 +119,7 @@ Accept wildcard characters: False
 ```
 
 ### -Force
+
 Bypasses confirmation prompts and forces the revert operation.
 
 ```yaml
@@ -158,6 +135,7 @@ Accept wildcard characters: False
 ```
 
 ### -WhatIf
+
 Shows what would happen if the cmdlet runs.
 The cmdlet is not run.
 
@@ -174,6 +152,7 @@ Accept wildcard characters: False
 ```
 
 ### -Confirm
+
 Prompts you for confirmation before running the cmdlet.
 
 ```yaml
