@@ -1746,7 +1746,7 @@ function Start-Migration {
                     $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = "Complete" } }
                 } elseif ($validatedApiKey) {
                     # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Complete"
-                    $attributeSet = Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemID $script:validatedSystemID -Body @{attributes = @{'admu' = "Complete" } }
+                    $attributeSet = Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -JcOrgId $script:JumpCloudOrgID -systemID $script:validatedSystemID -Body @{attributes = @{'admu' = "Complete" } }
                 }
             }
         } else {
@@ -1760,7 +1760,7 @@ function Start-Migration {
                     # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Error"
                     $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = "Error" } }
                 } elseif ($validatedApiKey) {
-                    $attributeSet = Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemID $script:validatedSystemID -Body @{attributes = @{'admu' = "Error" } }
+                    $attributeSet = Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -JcOrgId $script:JumpCloudOrgID -systemID $script:validatedSystemID -Body @{attributes = @{'admu' = "Error" } }
                 }
             }
             #region exeExitCode
