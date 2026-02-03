@@ -5,12 +5,22 @@ Release Date: February 3, 2026
 #### RELEASE NOTES
 
 ```
-This release resolves an issue when installing the JumpCloud agent.
+Bug fix release addressing issues with Agent Install, reverting profiles with .bak.
 ```
+
+#### FEATURES:
+
+Additional method for migration reversion by considering the .bak suffix in the reg profile path.
+
+#### IMPROVEMENTS:
+
+Test added to validate new features and existing functionality.
 
 #### BUG FIXES:
 
 When installing the JumpCloud Agent and also specifying that the tool autobind a user, the tool would not correctly validate the passed in APIKey. This has been resolved in this release.
+This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
+
 
 ## 2.12.1
 

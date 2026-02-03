@@ -552,15 +552,17 @@ Function Show-SelectionForm {
     $migratedUsers = @()
 
     foreach ($listItem in $profileList) {
-        $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+$"
-        $isValidFormat = [regex]::IsMatch($($listItem.PSChildName), $sidPattern);
+        $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+(?:\.bak)?$"
+        $rawSid = $listItem.PSChildName
+        $normalizedSid = $rawSid -replace '\.bak$', ''
+        $isValidFormat = [regex]::IsMatch($normalizedSid, $sidPattern);
 
         if ($isValidFormat) {
-            # Create the Object first
+            # Normalize SIDs stored as .bak keys so lookups and display names work consistently
             $userObj = [PSCustomObject]@{
-                Name              = Convert-SecurityIdentifier $listItem.PSChildName
+                Name              = Convert-SecurityIdentifier $normalizedSid
                 LocalPath         = $listItem.ProfileImagePath
-                SID               = $listItem.PSChildName
+                SID               = $normalizedSid
                 IsLocalAdmin      = $null
                 LocalProfileSize  = $null
                 Loaded            = $null
