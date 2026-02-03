@@ -96,9 +96,9 @@ foreach ($comp in $comparisons) {
 }
 
 if ($failures.Count -gt 0) {
-    Write-Error "Windows MDM function comparison failed:"
+    Write-Warning "Windows MDM function comparison failed:"
     foreach ($f in $failures) {
-        Write-Error "  - $f"
+        Write-Warning "  - $f"
     }
     throw "Function definition(s) need to be updated from the script's definition. See errors above."
 }
