@@ -1,3 +1,17 @@
+## 2.12.2
+
+Release Date: February 3, 2026
+
+#### RELEASE NOTES
+
+```
+This release resolves an issue when installing the JumpCloud agent.
+```
+
+#### BUG FIXES:
+
+When installing the JumpCloud Agent and also specifying that the tool autobind a user, the tool would not correctly validate the passed in APIKey. This has been resolved in this release.
+
 ## 2.12.1
 
 Release Date: January 20, 2026

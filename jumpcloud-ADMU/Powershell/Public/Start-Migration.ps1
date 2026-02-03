@@ -175,7 +175,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.12.1"
+        $admuVersion = "2.12.2"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -634,6 +634,7 @@ function Start-Migration {
 
             if ($agentInstallStatus) {
                 Write-ToLog -Message ("JumpCloud Agent Install Done")
+                $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
             } else {
                 Write-ToLog -Message ("JumpCloud Agent Install Failed") -Level Error
                 Write-ToProgress -ProgressBar $ProgressBar -Status "JC Agent Install failed " -form $isForm -logLevel Error
