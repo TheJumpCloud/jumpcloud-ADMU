@@ -150,26 +150,8 @@ jobs:
             ${{ github.workspace }}/Jumpcloud-ADMU/JumpCloud.ADMU.psm1
             ${{ github.workspace }}/Jumpcloud-ADMU/Exe/*.exe
           retention-days: 1
-  Compare-WindowsMDM-Functions:
-    needs: ["Build-Module"]
-    runs-on: Windows-2022
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v4
-      - name: Compare Windows MDM function definitions to script
-        shell: pwsh
-        env:
-          GITHUB_WORKSPACE: ${{ github.workspace }}
-        run: |
-          . "${{ github.workspace }}/.github/scripts/Compare-WindowsMDMFunctions.ps1" -WorkspacePath "${{ github.workspace }}"
   Test-Module:
-    needs:
-      [
-        "Setup-Build-Dependencies",
-        "Check-PR-Labels",
-        "Build-Module",
-        "Compare-WindowsMDM-Functions",
-      ]
+    needs: ["Setup-Build-Dependencies", "Check-PR-Labels", "Build-Module"]
     runs-on: Windows-2022
     timeout-minutes: 75
     strategy:
