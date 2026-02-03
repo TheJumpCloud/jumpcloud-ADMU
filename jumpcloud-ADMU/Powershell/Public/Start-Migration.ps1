@@ -1648,9 +1648,24 @@ function Start-Migration {
                     Write-ToLog -Message:('Attempting to remove MDM Enrollment(s)')
                     # get the MDM Enrollments
                     $mdmEnrollments = Get-WindowsMDMProvider
-                    foreach ($enrollment in $mdmEnrollments) {
-                        Write-ToLog -Message:("Removing MDM Enrollment: $($enrollment.EnrollmentGUID)")
-                        Remove-WindowsMDMProvider -EnrollmentGUID $enrollment.EnrollmentGUID
+                    $taskSchedulerGuids = Get-MdmEnrollmentGuidFromTaskScheduler
+                    if ($taskSchedulerGuids.Count -gt 0) {
+                        foreach ($guid in $taskSchedulerGuids) {
+                            if ($mdmEnrollments.EnrollmentGUID -contains $guid) {
+                                # Get the enrollment details
+                                if (($mdmEnrollments | Where-Object { $_.EnrollmentGUID -eq $guid }).ProviderID -like '*JumpCloud*') {
+                                    #Do not remove the JumpCloud enrollment; continue to the next GUID
+                                    continue
+                                } else {
+                                    # Remove the MDM Enrollment
+                                    Write-ToLog -Message:("Removing MDM Enrollment: $guid")
+                                    Remove-WindowsMDMProvider -EnrollmentGUID $guid
+                                }
+                            }
+                        }
+                    } else {
+                        # No MDM Enrollments found
+                        Write-ToLog -Message:('No MDM Enrollments found')
                     }
                 }
             }
