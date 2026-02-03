@@ -1,3 +1,17 @@
+## 2.12.2
+
+Release Date: February 3, 2026
+
+#### RELEASE NOTES
+
+```
+Updated Windows MDM removal logic
+```
+
+#### IMPROVEMENTS:
+
+Added new functions and features to handle potential edge cases when removing Windows MDM providers
+
 ## 2.12.1
 
 Release Date: January 20, 2026
