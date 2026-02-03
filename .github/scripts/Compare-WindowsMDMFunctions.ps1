@@ -34,7 +34,7 @@ function Get-RegionContent {
         [string]$ScriptContent,
         [string]$RegionName
     )
-    # PowerShell uses #region Name and #endregion Name (case-sensitive in script)
+    # Script uses #startregion Name and #endregion Name (case-sensitive in script)
     $startPattern = [regex]::Escape("#startregion $RegionName")
     $endPattern = [regex]::Escape("#endregion $RegionName")
     $pattern = "(?s)${startPattern}\s*(.*?)${endPattern}"
