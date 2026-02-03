@@ -85,19 +85,19 @@ Describe "Remove-WindowsMDMProvider Acceptance Tests" -Tag "Acceptance" {
         # Now call the Remove-WindowsMDMProvider function
         $removalResult = Remove-WindowsMDMProvider -EnrollmentGUID $newGUID
         # Assert that the removal was successful
-        # the scheduled task folder should not exist
+        # the scheduled task should not exist
         $svc = New-Object -ComObject Schedule.Service
         $svc.Connect()
         $rootFolder = $svc.GetFolder($taskRoot)
-        $taskFolder = $null
+        $taskFolder = $rootFolder.GetFolder($newGUID)
         try {
-            $taskFolder = $rootFolder.GetFolder($newGUID)
-            $notFoundTaskFolder = $false
+            $task = $taskFolder.GetTask("TestMDMTask")
+            $notFoundTask = $false
         } catch {
-            # Folder does not exist, which is expected
-            $notFoundTaskFolder = $true
+            # Task does not exist, which is expected
+            $notFoundTask = $true
         }
-        $notFoundTaskFolder | Should -Be $true
+        $notFoundTask | Should -Be $true
         # the registry keys should not exist
         (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Enrollments\$newGUID") | Should -Be $false
         (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Enrollments\Status\$newGUID") | Should -Be $false
