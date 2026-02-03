@@ -238,6 +238,58 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
         }
     }
 
+    Context 'Windows MDM Function Sync' {
+        BeforeAll {
+            # Module root is 3 levels up from Tests/moduleValidation
+            $moduleBase = $PSScriptRoot
+            1..3 | ForEach-Object { $moduleBase = Split-Path $moduleBase -Parent }
+            $scriptUrl = 'https://raw.githubusercontent.com/TheJumpCloud/support/master/scripts/windows/remove_windowsMDM.ps1'
+            $supportScriptContent = Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing -ErrorAction Stop | Select-Object -ExpandProperty Content
+            $windowsMdmRegionNames = @('Get-MdmEnrollmentGuidFromTaskScheduler', 'Get-WindowsMDMProvider', 'Remove-WindowsMDMProvider')
+
+            function Get-NormalizedFunctionContent {
+                param([string]$Content)
+                if (-not $Content) { return '' }
+                $trimmed = $Content.Trim()
+                $normalized = ($trimmed -replace "`r`n", "`n") -replace "`r", "`n"
+                return $normalized.Trim()
+            }
+
+            function Get-SupportScriptRegionContent {
+                param([string]$ScriptContent, [string]$RegionName)
+                $startPattern = [regex]::Escape("#startregion $RegionName")
+                $endPattern = [regex]::Escape("#endregion $RegionName")
+                $pattern = "(?s)${startPattern}\s*(.*?)${endPattern}"
+                $m = [regex]::Match($ScriptContent, $pattern)
+                if (-not $m.Success) { return $null }
+                return $m.Groups[1].Value
+            }
+        }
+
+        It 'Windows MDM function definitions match remove_windowsMDM.ps1 on support repo' {
+            $failures = [System.Collections.ArrayList]::new()
+            foreach ($regionName in $windowsMdmRegionNames) {
+                $localPath = Join-Path $moduleBase 'Powershell' 'Private' 'WindowsMDM' "$regionName.ps1"
+                if (-not (Test-Path $localPath)) {
+                    [void]$failures.Add("Local file not found: $localPath")
+                    continue
+                }
+                $regionContent = Get-SupportScriptRegionContent -ScriptContent $supportScriptContent -RegionName $regionName
+                if ($null -eq $regionContent) {
+                    [void]$failures.Add("The script at $scriptUrl does not define the required region '#region $regionName ... #endregion $regionName'. Please add this region to the script.")
+                    continue
+                }
+                $localContent = Get-Content -Path $localPath -Raw -ErrorAction Stop
+                $normalizedRegion = Get-NormalizedFunctionContent $regionContent
+                $normalizedLocal = Get-NormalizedFunctionContent $localContent
+                if ($normalizedRegion -ne $normalizedLocal) {
+                    [void]$failures.Add("The function definition for '$regionName' does not match the script's definition. Please update jumpcloud-ADMU/Powershell/Private/WindowsMDM/$regionName.ps1 from the script at $scriptUrl (region: #region $regionName ... #endregion $regionName).")
+                }
+            }
+            $failures.Count | Should -Be 0 -Because ($failures -join ' ')
+        }
+    }
+
     Context 'Module Help Files' {
         It 'Validates no new changes should be committed after running Build.ps1' {
             # Get Docs Directory:
