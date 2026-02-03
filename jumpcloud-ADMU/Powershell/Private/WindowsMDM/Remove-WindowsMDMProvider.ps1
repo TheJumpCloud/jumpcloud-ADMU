@@ -54,7 +54,7 @@ function Remove-WindowsMDMProvider {
                     $GuidsToProcess = $taskSchedulerGuids
                 } else {
                     # Fallback to Registry scan if no tasks exist.
-                    Write-ToLog "No GUIDs found in Task Scheduler. Falling back to Registry discovery." -Level Warn
+                    Write-ToLog "No GUIDs found in Task Scheduler. Falling back to Registry discovery." -Level Warning
                     Get-ChildItem -Path "HKLM:\SOFTWARE\Microsoft\Enrollments\" -Recurse -ErrorAction SilentlyContinue | ForEach-Object {
                         $EnrollID = $_.PSChildName
                         if ($EnrollID -match '^[A-Fa-f0-9]{8}-([A-Fa-f0-9]{4}-){3}[A-Fa-f0-9]{12}$') {
@@ -153,7 +153,7 @@ function Remove-WindowsMDMProvider {
                             Write-ToLog "Removing WNS Push Key: $($_.PSPath)"
                             Remove-Item -Path $_.PSPath -Recurse -Force -ErrorAction Stop
                         } catch {
-                            Write-ToLog "Failed to remove WNS key. Error: $($_.Exception.Message)" -Level Warn
+                            Write-ToLog "Failed to remove WNS key. Error: $($_.Exception.Message)" -Level Warning
                         }
                     }
                 }
@@ -172,7 +172,7 @@ function Remove-WindowsMDMProvider {
                             Write-ToLog "No certificates found matching ProviderID: $providerIdValue"
                         }
                     } catch {
-                        Write-ToLog "Error processing certificates: $($_.Exception.Message)" -Level Warn
+                        Write-ToLog "Error processing certificates: $($_.Exception.Message)" -Level Warning
                     }
                 } else {
                     Write-ToLog "Skipping certificate removal (No ProviderID found to match against)."
@@ -238,7 +238,7 @@ function Remove-WindowsMDMProvider {
         # --- Phase 4: Final Verification ---
         $mdmEnrollmentDetails = Get-WindowsMDMProvider
         if ($mdmEnrollmentDetails) {
-            Write-ToLog "MDM enrollment keys still exist after cleanup. Please check the log for details." -Level Warn
+            Write-ToLog "MDM enrollment keys still exist after cleanup. Please check the log for details." -Level Warning
         } else {
             Write-ToLog "####### No MDM enrollment keys found after cleanup. Cleanup was successful! ######" -Level Verbose
         }

@@ -7,7 +7,7 @@ function Get-WindowsMDMProvider {
 
     Write-ToLog "Checking for MDM Enrollment Key at: $MdmEnrollmentKey"
     if (!(Test-Path $MdmEnrollmentKey)) {
-        Write-ToLog "MDM enrollment key: '$MdmEnrollmentKey' not found." -Level Warn
+        Write-ToLog "MDM enrollment key: '$MdmEnrollmentKey' not found." -Level Warning
         return
     }
 
