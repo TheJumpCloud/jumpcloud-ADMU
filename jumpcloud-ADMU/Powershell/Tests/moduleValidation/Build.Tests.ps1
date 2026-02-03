@@ -240,9 +240,7 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
 
     Context 'Windows MDM Function Sync' {
         BeforeAll {
-            # Module root is 3 levels up from Tests/moduleValidation
-            $moduleBase = $PSScriptRoot
-            1..3 | ForEach-Object { $moduleBase = Split-Path $moduleBase -Parent }
+            $windowsMdmPath = "$PSScriptRoot\..\..\..\Powershell\Private\WindowsMDM"
             $scriptUrl = 'https://raw.githubusercontent.com/TheJumpCloud/support/master/scripts/windows/remove_windowsMDM.ps1'
             $supportScriptContent = Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing -ErrorAction Stop | Select-Object -ExpandProperty Content
             $windowsMdmRegionNames = @('Get-MdmEnrollmentGuidFromTaskScheduler', 'Get-WindowsMDMProvider', 'Remove-WindowsMDMProvider')
@@ -269,7 +267,7 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
         It 'Windows MDM function definitions match remove_windowsMDM.ps1 on support repo' {
             $failures = [System.Collections.ArrayList]::new()
             foreach ($regionName in $windowsMdmRegionNames) {
-                $localPath = Join-Path $moduleBase 'Powershell' 'Private' 'WindowsMDM' "$regionName.ps1"
+                $localPath = Join-Path $windowsMdmPath "$regionName.ps1"
                 if (-not (Test-Path $localPath)) {
                     [void]$failures.Add("Local file not found: $localPath")
                     continue
