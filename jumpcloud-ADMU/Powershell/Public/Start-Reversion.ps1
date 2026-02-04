@@ -41,7 +41,7 @@ function Start-Reversion {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory = $true, Position = 0)]
-        [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
+        [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+(?:\.bak)?$")]
         [string]$UserSID,
 
         [Parameter(Mandatory = $false, Position = 1)]
@@ -60,6 +60,9 @@ function Start-Reversion {
 
     begin {
         Write-ToLog -Message "Begin Revert Migration" -MigrationStep -Level Info
+
+        # Normalize UserSID by removing .bak suffix if present
+        $UserSID = $UserSID -replace '\.bak$', ''
 
         # Initialize result object
         $revertResult = [PSCustomObject]@{
@@ -153,25 +156,47 @@ function Start-Reversion {
             Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
 
             # Get profile information from registry for validation
-            $profileRegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"
-
+            $profileRegistryPath = (Get-ProfileRegistryPath -UserSID $UserSID).ResolvedPath
             # Casing fixed to 'revertValidateProfilePath', removed -StatusType, added -StatusMap
             Write-ToProgress -form $form -Status "revertValidateProfilePath" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
-            if (-not (Test-Path $profileRegistryPath)) {
-                throw "Profile registry path not found for SID: $UserSID"
-            }
+
+            $profileRegistryBasePath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"
+            $profileRegistryBakPath = "$profileRegistryBasePath.bak"
 
             $registryProfileImagePath = (Get-ItemProperty -Path $profileRegistryPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
             $revertResult.RegistryProfilePath = $registryProfileImagePath
 
             Write-ToLog -Message "Found registry profile path: $registryProfileImagePath" -Level Info -Step "Revert-Migration"
 
+            # Save the original registry path for validation checks
+            $originalRegistryProfileImagePath = $registryProfileImagePath
+
             # Validate this is an ADMU migrated profile by checking registry path
             if ($registryProfileImagePath -notmatch $admuPathPattern) {
                 throw "Registry profile path does not contain .ADMU suffix. This does not appear to be a migrated profile: $registryProfileImagePath"
+
+            } else {
+                Write-ToLog -Message "Confirmed .ADMU migration profile detected in registry" -Level Verbose -Step "Revert-Migration"
             }
 
-            Write-ToLog -Message "Confirmed .ADMU migration profile detected in registry" -Level Verbose -Step "Revert-Migration"
+            # If the base registry key points to TEMP and .bak exists, prefer .bak for the actual profile path
+            $switchedToBak = $false
+            if ($registryProfileImagePath -match '\\TEMP$' -and (Test-Path -LiteralPath $profileRegistryBakPath)) {
+                try {
+                    $bakProfileImagePath = (Get-ItemProperty -Path $profileRegistryBakPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
+                    if ($bakProfileImagePath -match $admuPathPattern) {
+                        Write-ToLog -Message "Detected TEMP profile in base key but .bak key contains migrated profile. Using .bak path: $bakProfileImagePath" -Level Info -Step "Revert-Migration"
+                        $registryProfileImagePath = $bakProfileImagePath
+                        $profileRegistryPath = $profileRegistryBakPath
+                        $revertResult.RegistryProfilePath = $registryProfileImagePath
+                        $switchedToBak = $true
+                    } else {
+                        Write-ToLog -Message ".bak key exists but does not contain ADMU migrated profile. Continuing with TEMP profile." -Level Warning -Step "Revert-Migration"
+                    }
+                } catch {
+                    Write-ToLog -Message "Failed to read .bak registry key: $($_.Exception.Message). Continuing with TEMP profile." -Level Warning -Step "Revert-Migration"
+                }
+            }
 
             # Determine which profile path to use
             if ($TargetProfileImagePath) {
@@ -179,17 +204,42 @@ function Start-Reversion {
                 $profileImagePath = $TargetProfileImagePath
 
                 # Validate target profile path is associated with the UserSID
-                $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $TargetProfileImagePath -UserSID $UserSID
-                if (-not $sidValidation.IsValid) {
-                    throw "Target profile path validation failed: $($sidValidation.Reason)"
+                $skipValidation = $false
+                if ($originalRegistryProfileImagePath -match '\\TEMP$' -and (Test-Path -LiteralPath $profileRegistryBakPath)) {
+                    try {
+                        $bakProfileImagePath = (Get-ItemProperty -Path $profileRegistryBakPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
+                        if (($bakProfileImagePath -replace $admuPathPattern, '') -eq $TargetProfileImagePath) {
+                            Write-ToLog -Message "Target profile path matches .bak registry entry. Skipping validation since base key points to TEMP." -Level Verbose -Step "Revert-Migration"
+                            $skipValidation = $true
+                        }
+                    } catch {
+                        Write-ToLog -Message "Failed to read .bak registry key for validation: $($_.Exception.Message)" -Level Warning -Step "Revert-Migration"
+                    }
                 }
-                Write-ToLog -Message "Target profile path validated for UserSID: $UserSID" -Level Verbose -Step "Revert-Migration"
+                if (-not $skipValidation) {
+                    $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $TargetProfileImagePath -UserSID $UserSID
+                    if (-not $sidValidation.IsValid) {
+                        if ($originalRegistryProfileImagePath -match '\\TEMP$') {
+                            Write-ToLog -Message "Target profile path validation failed ($($sidValidation.Reason)), but registry points to TEMP so continuing with TEMP profile." -Level Warning -Step "Revert-Migration"
+                        } else {
+                            throw "Target profile path validation failed: $($sidValidation.Reason)"
+                        }
+                    } else {
+                        Write-ToLog -Message "Target profile path validated for UserSID: $UserSID" -Level Verbose -Step "Revert-Migration"
+                    }
+                }
             } else {
                 # Use registry path, remove .ADMU suffix
                 $profileImagePath = $registryProfileImagePath -replace $admuPathPattern, ''
-                $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $profileImagePath -UserSID $UserSID
-                if (-not $sidValidation.IsValid) {
-                    throw "Registry profile path validation failed: $($sidValidation.Reason)"
+
+                if (-not $switchedToBak) {
+                    $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $profileImagePath -UserSID $UserSID
+
+                    if (-not $sidValidation.IsValid) {
+                        throw "Registry profile path validation failed: $($sidValidation.Reason)"
+                    }
+                } else {
+                    Write-ToLog -Message "Skipping profile path validation since switched to .bak registry key" -Level Verbose -Step "Revert-Migration"
                 }
                 Write-ToLog -Message "Using registry profile path (without .ADMU): $profileImagePath" -Level Info -Step "Revert-Migration"
             }
@@ -489,6 +539,52 @@ function Start-Reversion {
                 }
             }
             #endregion Remove JumpCloud ADMU Created User
+
+            #region Remove ProfileList SID.bak Entry
+            if ($profileRegistryBakPath) {
+                if ($DryRun) {
+                    if (Test-Path -LiteralPath $profileRegistryBakPath) {
+                        if ($profileRegistryPath -eq $profileRegistryBakPath) {
+                            Write-ToLog -Message "WHAT IF: Would rename registry entry $profileRegistryBakPath to $profileRegistryBasePath" -Level Verbose -Step "Revert-Migration"
+                        } else {
+                            Write-ToLog -Message "WHAT IF: Would remove registry entry $profileRegistryBakPath" -Level Verbose -Step "Revert-Migration"
+                        }
+                    } else {
+                        Write-ToLog -Message "WHAT IF: No SID.bak registry entry found for SID: $UserSID" -Level Verbose -Step "Revert-Migration"
+                    }
+                } elseif (Test-Path -LiteralPath $profileRegistryBakPath) {
+                    try {
+                        # Check if the resolved profile registry path is the .bak path
+                        if ($profileRegistryPath -eq $profileRegistryBakPath) {
+                            # If we updated the .bak key, rename it to the base name instead of deleting it
+                            if ($revertResult.RegistryUpdated) {
+                                $basePath = $profileRegistryBasePath
+                                Write-ToLog -Message "Renaming registry entry from $profileRegistryBakPath to $basePath" -Level Info -Step "Revert-Migration"
+                                Rename-Item -LiteralPath $profileRegistryBakPath -NewName (Split-Path -Leaf $basePath) -Force -ErrorAction Stop
+                                Write-ToLog -Message "Successfully renamed registry entry to $basePath" -Level Info -Step "Revert-Migration"
+                            } else {
+                                Write-ToLog -Message "Preserving registry entry $profileRegistryBakPath as recovery reference since ProfileImagePath update failed" -Level Warning -Step "Revert-Migration"
+                            }
+                        } else {
+                            # Safe to remove the .bak entry if it's separate from the active profile path and registry update succeeded
+                            if ($revertResult.RegistryUpdated) {
+                                Write-ToLog -Message "Removing registry entry $profileRegistryBakPath" -Level Info -Step "Revert-Migration"
+                                Remove-Item -LiteralPath $profileRegistryBakPath -Recurse -Force -ErrorAction Stop
+                                Write-ToLog -Message "Successfully removed registry entry $profileRegistryBakPath" -Level Info -Step "Revert-Migration"
+                            } else {
+                                Write-ToLog -Message "Preserving registry entry $profileRegistryBakPath as recovery reference since ProfileImagePath update failed" -Level Warning -Step "Revert-Migration"
+                            }
+                        }
+                    } catch {
+                        $errorMsg = "Failed to process registry entry $profileRegistryBakPath : $($_.Exception.Message)"
+                        Write-ToLog -Message $errorMsg -Level Error -Step "Revert-Migration"
+                        $revertResult.Errors += $errorMsg
+                    }
+                } else {
+                    Write-ToLog -Message "No SID.bak registry entry found for SID: $UserSID" -Level Verbose -Step "Revert-Migration"
+                }
+            }
+            #endregion Remove ProfileList SID.bak Entry
 
             #region Final Validation
             if (-not $DryRun) {

@@ -558,19 +558,11 @@ function Show-SelectionForm {
         $isValidFormat = [regex]::IsMatch($normalizedSid, $sidPattern);
 
         if ($isValidFormat) {
-            # Skip this entry if it points to a TEMP profile
-            if ($listItem.ProfileImagePath -like "*\TEMP") {
-                continue
-            }
-
-            # Strip .bak from the SID so we can use it for valid lookups later
-            $cleanSid = $listItem.PSChildName -replace '\.bak$', ''
-
-            # Create the Object first
+            # Normalize SIDs stored as .bak keys so lookups and display names work consistently
             $userObj = [PSCustomObject]@{
-                Name              = Convert-SecurityIdentifier $cleanSid
+                Name              = Convert-SecurityIdentifier $normalizedSid
                 LocalPath         = $listItem.ProfileImagePath
-                SID               = $cleanSid
+                SID               = $normalizedSid
                 IsLocalAdmin      = $null
                 LocalProfileSize  = $null
                 Loaded            = $null

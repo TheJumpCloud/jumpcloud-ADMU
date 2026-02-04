@@ -6,7 +6,15 @@ Release Date: February 4, 2026
 
 ```
 Added functionality to validate if the user is logged on during pre-migration stage
+This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
 ```
+#### FEATURES:
+
+Additional method for migration reversion by considering the .bak suffix in the reg profile path.
+
+#### IMPROVEMENTS:
+
+Test added to validate new features and existing functionality.
 
 ## 2.12.1
 
