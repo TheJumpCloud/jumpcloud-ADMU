@@ -492,11 +492,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             Mock Start-Sleep -MockWith { return }
 
             $maxRetries = 3
-            try {
-                Set-System -prop "Description" -payload "Test" -maxRetries $maxRetries -retryDelaySeconds 1
-            } catch {
-                # We expect it to fail eventually
-            }
+            Set-System -prop "Description" -payload "Test" -maxRetries $maxRetries -retryDelaySeconds 1
 
             # Verify Start-Sleep was called for retries (maxRetries - 1)
             Assert-MockCalled Start-Sleep -Times 2
