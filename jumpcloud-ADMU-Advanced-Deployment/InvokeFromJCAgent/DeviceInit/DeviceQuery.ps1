@@ -1,3 +1,10 @@
+#region scriptParameters
+
+# Optional JumpCloud API Key for authentication. Variable syntax supported: {/{/ variable.name /}/}/ (without '/' character)
+$JCAPIKEY = $null
+
+#endregion scriptParameters
+
 #region functionDefinitions
 function Confirm-ExecutionPolicy {
     begin {
@@ -135,11 +142,12 @@ function Set-System {
             }
             $cfg = Get-Content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
             $host_match = [regex]::Match($cfg, 'agentServerHost["]?:["]?agent\.(\w+)\.jumpcloud\.com').Groups[1].Value
-            $url = if ($host_match -eq "eu") { "https://console.jumpcloud.eu" }else { "https://console.jumpcloud.com" }
+            $url = if ($host_match -eq "eu") { "https://console.jumpcloud.eu" } else { "https://console.jumpcloud.com" }
             $now = (Get-Date -Date ((Get-Date).ToUniversalTime())-UFormat '+%a, %d %h %Y %H:%M:%S GMT')
             $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
+
             if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey" }
-            # If JCApiKey is provided, use it in the header else use SystemAPI
+
             if (-not [string]::IsNullOrWhiteSpace($JCApiKey)) {
                 Write-Host "[status] Using JCApiKey for authentication."
                 $h = @{
@@ -147,10 +155,8 @@ function Set-System {
                     "Content-Type" = "application/json"
                     "x-api-key"    = "$JCApiKey"
                 }
-
             } else {
                 Write-Host "[status] Using SystemAPI for authentication."
-                # region SystemAPI Signature
                 $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
                 if (-not(Test-Path $privKey)) { throw "Key not found" }
                 $rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($privKey)
@@ -162,7 +168,7 @@ function Set-System {
                 $ha = [System.Security.Cryptography.HashAlgorithmName]::SHA256
                 $sb = $rsa.SignHash($hr, $ha, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
                 $sig = [Convert]::ToBase64String($sb)
-                # endregion SystemAPI Signature
+
                 $h = @{
                     "Accept"        = "application/json"
                     "Date"          = "$now"
@@ -177,9 +183,7 @@ function Set-System {
                 $existing = Get-System -systemContextBinding $true
                 $attrs = @{}
                 foreach ($attr in $existing.attributes) {
-                    if (($null -eq $attr.value) -or ([string]::IsNullOrWhiteSpace($attr.value))) {
-                        continue
-                    }
+                    if (($null -eq $attr.value) -or ([string]::IsNullOrWhiteSpace($attr.value))) { continue }
                     $attrs[$attr.name] = $attr.value
                 }
                 if (($null -eq $payload.value) -or ([string]::IsNullOrWhiteSpace($payload.value))) {
@@ -206,9 +210,11 @@ function Set-System {
             }
         }
     }
-
-    throw "SetSystem: Failed to set $prop after $maxRetries attempts: $($lastError.Exception.Message)"
+    # Final failure block
+    Write-Error "CRITICAL: SetSystem failed after $maxRetries attempts. Last Error: $($lastError.Exception.Message)"
+    exit 1
 }
+
 function Get-ADMUUser {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
@@ -452,25 +458,6 @@ function Set-SystemDesc {
     }
 }
 #endregion functionDefinitions
-
-#region scriptParameters
-
-# Optional JumpCloud API Key for authentication. Variable syntax supported: {{ variable.name }}
-# If not provided, SystemAPI authentication will be used
-$JCApiKey = ""
-
-# Since it is optional, we only validate if $JCApiKey contains text.
-if (-not [string]::IsNullOrWhiteSpace($JCApiKey)) {
-    # FIX:
-    # [\w\.-]+ matches any word character (letters, numbers, underscore), dots, or dashes.
-    # This matches: {{variable.name}}, {{MySecret}}, {{global.api-key}}, etc.
-    if ($JCApiKey -match '^\{\{\s*[\w\.-]+\s*\}\}$') {
-        Write-Host "[status] API Key parameter syntax is valid."
-    } else {
-        throw "Invalid API Key parameter syntax. Expected format like: {{ variable.name }} or {{ MySecret }}"
-    }
-}
-#endregion scriptParameters
 
 #region mainScript
 if (-not(Confirm-ExecutionPolicy)) { throw "ExecutionPolicy failed"; exit 1 }
