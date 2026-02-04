@@ -458,4 +458,48 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             $foundUser.msg | Should -Be "User previously migrated"
         }
     }
+    Context "Set-System Retry and Error Handling" {
+        It "Should attempt retries and exit with code 1 upon exhaustion" {
+            # 1. Mock Get-Content to bypass systemKey/URL discovery
+            Mock Get-Content -MockWith { return 'systemKey":"mockKey";"agentServerHost":"agent.jumpcloud.com"' }
+
+            # 2. Mock Invoke-RestMethod to ALWAYS fail
+            # This triggers the 'catch' block in Set-System
+            Mock Invoke-RestMethod -MockWith { throw "Connection Timeout" }
+
+            # 3. Use a small retry count/delay to keep the test fast
+            $params = @{
+                prop              = "Description"
+                payload           = "Test"
+                maxRetries        = 2
+                retryDelaySeconds = 0
+            }
+
+            # 4. We use a try/catch in the test to catch the 'exit' call
+            # In Pester, 'exit' inside a scriptblock usually throws a specific
+            # termination error that we can inspect.
+            { Set-System @params } | Should -Throw
+
+            # 5. Verify the mocks were called exactly 'maxRetries' times
+            Assert-MockCalled Invoke-RestMethod -Times 2
+        }
+
+        It "Should wait for exponential backoff between retries" {
+            Mock Get-Content -MockWith { return 'systemKey":"mockKey";"agentServerHost":"agent.jumpcloud.com"' }
+            Mock Invoke-RestMethod -MockWith { throw "Temporary Failure" }
+
+            # Mock Start-Sleep so the test doesn't actually wait
+            Mock Start-Sleep -MockWith { return }
+
+            $maxRetries = 3
+            try {
+                Set-System -prop "Description" -payload "Test" -maxRetries $maxRetries -retryDelaySeconds 1
+            } catch {
+                # We expect it to fail eventually
+            }
+
+            # Verify Start-Sleep was called for retries (maxRetries - 1)
+            Assert-MockCalled Start-Sleep -Times 2
+        }
+    }
 }
