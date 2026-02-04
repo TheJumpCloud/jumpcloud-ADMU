@@ -547,6 +547,9 @@ function Show-SelectionForm {
         $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
     }
 
+    # Get the SID of the user currently running this script to exclude them
+    $currentUserSID = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+
     # 1. Initialize TWO lists
     $systemUsers = @()
     $migratedUsers = @()
@@ -558,6 +561,16 @@ function Show-SelectionForm {
         $isValidFormat = [regex]::IsMatch($normalizedSid, $sidPattern);
 
         if ($isValidFormat) {
+            # Check if this is the current user; if so, skip adding to the list
+            if ($normalizedSid -eq $currentUserSID) {
+                continue
+            }
+
+            # Check if this is a TEMP profile; if so, skip adding to the list
+            if ($listItem.ProfileImagePath -like "*\TEMP") {
+                continue
+            }
+
             # Normalize SIDs stored as .bak keys so lookups and display names work consistently
             $userObj = [PSCustomObject]@{
                 Name              = Convert-SecurityIdentifier $normalizedSid
@@ -863,7 +876,8 @@ function Show-SelectionForm {
                 $msgBody = "The profile for user '$SelectedUserName' is currently loaded by the system.`n`nYou cannot migrate a profile while the user is logged in.`n`nPlease ensure the user is fully signed out and try again."
 
                 $wshell = New-Object -ComObject WScript.Shell
-                $wshell.Popup($msgBody, 0, $msgTitle) | Out-Null
+                # 48 adds the Exclamation/Warning Icon
+                $wshell.Popup($msgBody, 0, $msgTitle, 48) | Out-Null
                 # --- WSHELL POPUP ALERT END ---
 
             } else {
@@ -918,8 +932,8 @@ function Show-SelectionForm {
                         $msgBody = "The profile for user '$($lvMigratedAccounts.SelectedItem.UserName)' is currently loaded.`n`nPlease sign out the user before restoring."
 
                         $wshell = New-Object -ComObject WScript.Shell
-
-                        $wshell.Popup($msgBody, 0, $msgTitle) | Out-Null
+                        # 48 adds the Exclamation/Warning Icon
+                        $wshell.Popup($msgBody, 0, $msgTitle, 48) | Out-Null
                         # ------------------------------------
 
                     } else {
