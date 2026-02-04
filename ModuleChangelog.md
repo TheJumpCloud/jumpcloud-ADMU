@@ -7,14 +7,29 @@ Release Date: February 4, 2026
 ```
 Added functionality to validate if the user is logged on during pre-migration stage
 This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
+Bug fix release addressing issues with Agent Install, reverting profiles with .bak.
+Updated Windows MDM removal logic
 ```
 #### FEATURES:
 
-Additional method for migration reversion by considering the .bak suffix in the reg profile path.
+- Additional method for migration reversion by considering the .bak suffix in the reg profile path.
+- Added support for secret variables and description based bulk migration using an API key
 
 #### IMPROVEMENTS:
 
-Test added to validate new features and existing functionality.
+- Test added to validate new features and existing functionality.
+- Added new functions and features to handle potential edge cases when removing Windows MDM providers
+- Added functionality for Invoke-SystemAPI to create, update, and delete attributes
+Added support for secret variables in DeviceQuery for bulk ADMU
+- Resolved an issue where renaming a created temp profile fails and freezes the migration
+This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
+
+#### BUG FIXES:
+
+- When installing the JumpCloud Agent and also specifying that the tool autobind a user, the tool would not correctly validate the passed in APIKey. This has been resolved in this release.
+This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
+- Fixed a bug with Write-ToLog not properly handling Warnings in the host/console
+
 
 ## 2.12.1
 

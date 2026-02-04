@@ -638,6 +638,7 @@ function Start-Migration {
 
             if ($agentInstallStatus) {
                 Write-ToLog -Message ("JumpCloud Agent Install Done")
+                $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
             } else {
                 Write-ToLog -Message ("JumpCloud Agent Install Failed") -Level Error
                 Write-ToProgress -ProgressBar $ProgressBar -Status "JC Agent Install failed " -form $isForm -logLevel Error
@@ -694,6 +695,8 @@ function Start-Migration {
                 if ($script:validatedSystemContextAPI) {
                     # update the 'admu' attribute object to inform dynamic groups that the system migration status is "InProgress"
                     $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = 'InProgress' } }
+                } elseif ($script:validatedApiKey) {
+                    $attributeSet = Invoke-SystemAPI -jcApiKey $script:JumpCloudAPIKey -jcOrgID $script:JumpCloudOrgID -systemID $script:validatedSystemID -Body @{attributes = @{'admu' = 'InProgress' } }
                 }
             }
         }
@@ -1650,9 +1653,27 @@ function Start-Migration {
                     Write-ToLog -Message:('Attempting to remove MDM Enrollment(s)')
                     # get the MDM Enrollments
                     $mdmEnrollments = Get-WindowsMDMProvider
-                    foreach ($enrollment in $mdmEnrollments) {
-                        Write-ToLog -Message:("Removing MDM Enrollment: $($enrollment.EnrollmentGUID)")
-                        Remove-WindowsMDMProvider -EnrollmentGUID $enrollment.EnrollmentGUID
+                    $taskSchedulerGuids = Get-MdmEnrollmentGuidFromTaskScheduler
+                    if ($taskSchedulerGuids.Count -gt 0) {
+                        foreach ($guid in $taskSchedulerGuids) {
+                            if ($mdmEnrollments.EnrollmentGUID -contains $guid) {
+                                # Get the enrollment details
+                                if (($mdmEnrollments | Where-Object { $_.EnrollmentGUID -eq $guid }).ProviderID -like '*JumpCloud*') {
+                                    #Do not remove the JumpCloud enrollment; continue to the next GUID
+                                    continue
+                                } else {
+                                    # Remove the MDM Enrollment
+                                    Write-ToLog -Message:("Removing MDM Enrollment: $guid")
+                                    Remove-WindowsMDMProvider -EnrollmentGUID $guid
+                                }
+                            } else {
+                                # GUID was not discovered by Get-WindowsMDMProvider; could be an orphan - remove it
+                                Remove-WindowsMDMProvider -EnrollmentGUID $guid
+                            }
+                        }
+                    } else {
+                        # No MDM Enrollments found
+                        Write-ToLog -Message:('No MDM Enrollments found')
                     }
                 }
             }
@@ -1744,6 +1765,9 @@ function Start-Migration {
                 if ($validatedSystemContextAPI) {
                     # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Complete"
                     $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = "Complete" } }
+                } elseif ($validatedApiKey) {
+                    # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Complete"
+                    $attributeSet = Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -JcOrgId $script:JumpCloudOrgID -systemID $script:validatedSystemID -Body @{attributes = @{'admu' = "Complete" } }
                 }
             }
         } else {
@@ -1756,6 +1780,8 @@ function Start-Migration {
                 if ($validatedSystemContextAPI) {
                     # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Error"
                     $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = "Error" } }
+                } elseif ($validatedApiKey) {
+                    $attributeSet = Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -JcOrgId $script:JumpCloudOrgID -systemID $script:validatedSystemID -Body @{attributes = @{'admu' = "Error" } }
                 }
             }
             #region exeExitCode

@@ -1,4 +1,4 @@
-Describe "Remove-WindowsMDMProvider Acceptance Tests" -Tag "Acceptance" {
+Describe "Get-MdmEnrollmentGuidFromTaskScheduler Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
@@ -17,7 +17,19 @@ Describe "Remove-WindowsMDMProvider Acceptance Tests" -Tag "Acceptance" {
         }
         . "$helpFunctionDir\$fileName"
     }
-    It "Should Remove an MDM Provider Successfully" {
+    It "Given a system with MDM Enrollment, Should Get the MDM Provider Information" -Skip {
+        $mdmEnrollments = Get-MdmEnrollmentGuidFromTaskScheduler
+        # Should not be null or empty
+        $mdmEnrollments | Should -Not -BeNullOrEmpty
+        $mdmEnrollments.Count | Should -BeGreaterThan 0
+    }
+    It "Given a system without MDM Enrollment, Should Return No MDM Provider Information" -Skip {
+        # This test assumes the test system is not MDM enrolled.
+        $mdmEnrollments = Get-MdmEnrollmentGuidFromTaskScheduler
+        # Should be null or empty
+        $mdmEnrollments | Should -BeNullOrEmpty
+    }
+    It "Mocked MDM Enrollment should return data" {
         # Add acceptance test logic and assertions (against a real system)
         $newGUID = [guid]::NewGuid().ToString()
         # Create dummy MDM registry keys
@@ -82,30 +94,13 @@ Describe "Remove-WindowsMDMProvider Acceptance Tests" -Tag "Acceptance" {
         # Register the task in the created folder
         $taskFolder.RegisterTaskDefinition("TestMDMTask", $taskDef, 6, $null, $null, 3) | Out-Null
 
-        # Now call the Remove-WindowsMDMProvider function
-        $removalResult = Remove-WindowsMDMProvider -EnrollmentGUID $newGUID
-        # Assert that the removal was successful
-        # the scheduled task should not exist
-        $svc = New-Object -ComObject Schedule.Service
-        $svc.Connect()
-        $rootFolder = $svc.GetFolder($taskRoot)
-        $taskFolder = $rootFolder.GetFolder($newGUID)
-        try {
-            $task = $taskFolder.GetTask("TestMDMTask")
-            $notFoundTask = $false
-        } catch {
-            # Task does not exist, which is expected
-            $notFoundTask = $true
+        # Get the MDM provider info
+        $mdmEnrollments = Get-MdmEnrollmentGuidFromTaskScheduler
+        # Should not be null or empty
+        $mdmEnrollments | Should -Not -BeNullOrEmpty
+        $mdmEnrollments | ForEach-Object {
+            $_ | Should -Be $newGUID
+            Write-Host "Found mocked MDM enrollment with GUID: $($_)"
         }
-        $notFoundTask | Should -Be $true
-        # the registry keys should not exist
-        (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Enrollments\$newGUID") | Should -Be $false
-        (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Enrollments\Status\$newGUID") | Should -Be $false
-        (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\EnterpriseResourceManager\Tracked\$newGUID") | Should -Be $false
-        (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\AdmxInstalled\$newGUID") | Should -Be $false
-        (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\PolicyManager\Providers\$newGUID") | Should -Be $false
-        (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Provisioning\OMADM\Accounts\$newGUID") | Should -Be $false
-        (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Provisioning\OMADM\Logger\$newGUID") | Should -Be $false
-        (Test-Path -Path "HKLM:\SOFTWARE\Microsoft\Provisioning\OMADM\Sessions\$newGUID") | Should -Be $false
     }
 }
