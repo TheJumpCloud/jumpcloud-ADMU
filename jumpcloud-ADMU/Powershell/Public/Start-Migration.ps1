@@ -1661,6 +1661,9 @@ function Start-Migration {
                                     Write-ToLog -Message:("Removing MDM Enrollment: $guid")
                                     Remove-WindowsMDMProvider -EnrollmentGUID $guid
                                 }
+                            } else {
+                                # GUID was not discovered by Get-WindowsMDMProvider; could be an orphan - remove it
+                                Remove-WindowsMDMProvider -EnrollmentGUID $guid
                             }
                         }
                     } else {
