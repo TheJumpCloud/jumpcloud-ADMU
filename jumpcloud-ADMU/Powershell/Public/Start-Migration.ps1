@@ -634,6 +634,7 @@ function Start-Migration {
 
             if ($agentInstallStatus) {
                 Write-ToLog -Message ("JumpCloud Agent Install Done")
+                $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
             } else {
                 Write-ToLog -Message ("JumpCloud Agent Install Failed") -Level Error
                 Write-ToProgress -ProgressBar $ProgressBar -Status "JC Agent Install failed " -form $isForm -logLevel Error
