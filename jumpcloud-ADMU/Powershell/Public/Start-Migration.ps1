@@ -175,7 +175,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.12.1"
+        $admuVersion = "2.12.2"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -690,6 +690,8 @@ function Start-Migration {
                 if ($script:validatedSystemContextAPI) {
                     # update the 'admu' attribute object to inform dynamic groups that the system migration status is "InProgress"
                     $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = 'InProgress' } }
+                } elseif ($script:validatedApiKey) {
+                    $attributeSet = Invoke-SystemAPI -jcApiKey $script:JumpCloudAPIKey -jcOrgID $script:JumpCloudOrgID -systemID $script:validatedSystemID -Body @{attributes = @{'admu' = 'InProgress' } }
                 }
             }
         }
@@ -1760,6 +1762,9 @@ function Start-Migration {
                 if ($validatedSystemContextAPI) {
                     # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Complete"
                     $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = "Complete" } }
+                } elseif ($validatedApiKey) {
+                    # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Complete"
+                    $attributeSet = Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -JcOrgId $script:JumpCloudOrgID -systemID $script:validatedSystemID -Body @{attributes = @{'admu' = "Complete" } }
                 }
             }
         } else {
@@ -1772,6 +1777,8 @@ function Start-Migration {
                 if ($validatedSystemContextAPI) {
                     # update the 'admu' attribute object to inform dynamic groups that the system migration status is "Error"
                     $attributeSet = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body @{attributes = @{'admu' = "Error" } }
+                } elseif ($validatedApiKey) {
+                    $attributeSet = Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -JcOrgId $script:JumpCloudOrgID -systemID $script:validatedSystemID -Body @{attributes = @{'admu' = "Error" } }
                 }
             }
             #region exeExitCode
