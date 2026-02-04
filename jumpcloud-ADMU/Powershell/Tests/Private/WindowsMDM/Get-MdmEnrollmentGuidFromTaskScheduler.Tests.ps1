@@ -17,18 +17,6 @@ Describe "Get-MdmEnrollmentGuidFromTaskScheduler Acceptance Tests" -Tag "Accepta
         }
         . "$helpFunctionDir\$fileName"
     }
-    It "Given a system with MDM Enrollment, Should Get the MDM Provider Information" -Skip {
-        $mdmEnrollments = Get-MdmEnrollmentGuidFromTaskScheduler
-        # Should not be null or empty
-        $mdmEnrollments | Should -Not -BeNullOrEmpty
-        $mdmEnrollments.Count | Should -BeGreaterThan 0
-    }
-    It "Given a system without MDM Enrollment, Should Return No MDM Provider Information" -Skip {
-        # This test assumes the test system is not MDM enrolled.
-        $mdmEnrollments = Get-MdmEnrollmentGuidFromTaskScheduler
-        # Should be null or empty
-        $mdmEnrollments | Should -BeNullOrEmpty
-    }
     It "Mocked MDM Enrollment should return data" {
         # Add acceptance test logic and assertions (against a real system)
         $newGUID = [guid]::NewGuid().ToString()
