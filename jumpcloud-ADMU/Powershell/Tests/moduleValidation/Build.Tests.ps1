@@ -29,7 +29,7 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
             $psd1Regex = "ModuleVersion[\s\S]+(([0-9]+)\.([0-9]+)\.([0-9]+))"
             $psd1VersionMatch = Select-String -InputObject:($psd1Content) -Pattern:($psd1Regex)
             $psd1Version = [version]$psd1VersionMatch.Matches.Groups[1].value
-            write-host "psd1version $psd1Version"
+            Write-Host "psd1version $psd1Version"
         }
     }
 
@@ -40,13 +40,13 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
             $progressFormCmd = Get-Command New-ProgressForm
             $progressFormVersion = $progressFormCmd.Definition | Select-String -Pattern:($VersionRegex)
             $branchProgressFormVersion = [version]$progressFormVersion.Matches.value
-            $masterProgressForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/ProgressForm.ps1 -useBasicParsing).ToString()
+            $masterProgressForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/ProgressForm.ps1 -UseBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterProgressForm) -Pattern:($VersionRegex)
             $masterProgressFormVersion = [version]$masterVersion.Matches.value
             if ($env:ModuleVersionType -eq "manual") {
                 # Manual Versioning
                 # Given version should be greater than master
-                $branchProgressFormVersion | Should -be $psd1Version
+                $branchProgressFormVersion | Should -Be $psd1Version
             } else {
                 $branchProgressFormVersion | Should -BeGreaterThan $masterProgressFormVersion
                 $branchProgressFormVersion.$($env:ModuleVersionType) | Should -Be ($masterProgressFormVersion.$($env:ModuleVersionType) + 1)
@@ -58,13 +58,13 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
             $formCmd = Get-Command Show-SelectionForm
             $formVersion = $formCmd.Definition | Select-String -Pattern:($VersionRegex)
             $branchFormVersion = [version]$formVersion.Matches.value
-            $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/Form.ps1 -useBasicParsing).ToString()
+            $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/Form.ps1 -UseBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterForm) -Pattern:($VersionRegex)
             $masterFormVersion = [version]$masterVersion.Matches.value
             if ($env:ModuleVersionType -eq "manual") {
                 # Manual Versioning
                 # Given version should be greater than master
-                $branchFormVersion | Should -be $psd1Version
+                $branchFormVersion | Should -Be $psd1Version
             } else {
                 $branchFormVersion | Should -BeGreaterThan $masterFormVersion
                 $branchFormVersion.$($env:ModuleVersionType) | Should -Be ($masterFormVersion.$($env:ModuleVersionType) + 1)
@@ -78,23 +78,23 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
             $admuVersionRaw = $startMigrationCmd.Definition | Select-String -Pattern:($VersionRegex)
             $admuVersion = $admuVersionRaw.matches.groups[1].value
             $branchStartMigrationVersion = [version]$admuVersion
-            $masterStartMigration = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Public/Start-Migration.ps1 -useBasicParsing).ToString()
+            $masterStartMigration = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Public/Start-Migration.ps1 -UseBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterStartMigration) -Pattern:($VersionRegex)
-            write-host "Master Version Raw: $($masterVersion.matches.groups[1].value)"
+            Write-Host "Master Version Raw: $($masterVersion.matches.groups[1].value)"
             $masterStartMigrationVersion = [version]$masterVersion.matches.groups[1].value
             if ($env:ModuleVersionType -eq "manual") {
-                $branchStartMigrationVersion | Should -be $psd1Version
+                $branchStartMigrationVersion | Should -Be $psd1Version
             } else {
                 $branchStartMigrationVersion | Should -BeGreaterThan $masterStartMigrationVersion
-                write-host "Branch Start-Migration Version: $branchStartMigrationVersion"
-                write-host "Master Start-Migration Version: $masterStartMigrationVersion"
+                Write-Host "Branch Start-Migration Version: $branchStartMigrationVersion"
+                Write-Host "Master Start-Migration Version: $masterStartMigrationVersion"
                 $branchStartMigrationVersion.$($env:ModuleVersionType) | Should -Be ($masterStartMigrationVersion.$($env:ModuleVersionType) + 1)
             }
         }
 
         It 'gui_jcadmu.exe/ uwp_jcadmu.exe versions' {
             $VersionRegex = [regex]'(?<=Title="JumpCloud ADMU )([0-9]+)\.([0-9]+)\.([0-9]+)'
-            $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/Form.ps1 -useBasicParsing).ToString()
+            $masterForm = (Invoke-WebRequest https://raw.githubusercontent.com/TheJumpCloud/jumpcloud-ADMU/master/jumpcloud-ADMU/Powershell/Private/DisplayForms/Form.ps1 -UseBasicParsing).ToString()
             $masterVersion = Select-String -InputObject:($masterForm) -Pattern:($VersionRegex)
             $masterFormVersion = [version]$masterVersion.Matches.value
             $gui_exePathFromArtifact = "$PSScriptRoot\..\..\..\Exe\gui_jcadmu.exe"
@@ -102,8 +102,8 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
             $gui_exeVersion = [version](Get-Item ("$gui_exePathFromArtifact")).VersionInfo.FileVersion
             $wup_exeVersion = [version](Get-Item ("$uwp_exePathFromArtifact")).VersionInfo.FileVersion
             if ($env:ModuleVersionType -eq "manual") {
-                $gui_exeVersion | Should -be $psd1Version
-                $wup_exeVersion | Should -be $psd1Version
+                $gui_exeVersion | Should -Be $psd1Version
+                $wup_exeVersion | Should -Be $psd1Version
             } else {
                 $gui_exeVersion | Should -BeGreaterThan $masterFormVersion
                 $gui_exeVersion.$($env:ModuleVersionType) | Should -Be ($masterFormVersion.$($env:ModuleVersionType) + 1)
@@ -139,7 +139,7 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
 
             $psd1Path = Join-Path $PSScriptRoot "\..\..\..\JumpCloud.ADMU.psd1"
             $encoding = (Get-FileEncoding -Path $psd1Path)[1]
-            write-host "Encoding: $($encoding.BodyName)"
+            Write-Host "Encoding: $($encoding.BodyName)"
             $encoding.BodyName | Should -BeIn @('utf-8', 'utf-16')
         }
         It 'PSD1 version' {
@@ -167,7 +167,7 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
         }
     }
 
-    Context "admuTemplate Validation" -skip {
+    Context "admuTemplate Validation" -Skip {
         It "admuTemplate should have been generated" {
             $admuTemplatePath = Join-Path $Global:rootModule "Deploy\admuTemplate.ps1"
             $admuTemplatePath | Should -Exist
@@ -189,14 +189,14 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
             Write-Host "Module Changelog Version: $ModuleChangelogVersion"
             $latestVersion = [version]$latestModule.version
             if ($env:ModuleVersionType -eq "manual") {
-                $ModuleChangelogVersion | Should -be $psd1Version
+                $ModuleChangelogVersion | Should -Be $psd1Version
             } else {
                 ([version]$ModuleChangelogVersion).$($env:ModuleVersionType) | Should -Be ($latestVersion.$($env:ModuleVersionType) + 1)
             }
 
         }
         It 'Module Changelog should not contain placeholder values' {
-            $ModuleChangelogContent | Should -not -Match "{ { Fill in the"
+            $ModuleChangelogContent | Should -Not -Match "{ { Fill in the"
         }
         It 'Module Changelog Version should be todays date' {
             $moduleChangelogContent = Get-Content ("$FilePath_ModuleChangelog") -TotalCount 3
@@ -232,9 +232,59 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
             }
             $todayDate = Get-Date -UFormat "%B %d, %Y"
             if ($todayDate | Select-String -Pattern "0\d,") {
-                $todayDate = "$(Get-Date -UFormat %B) $($(Get-Date -Uformat %d) -replace '0', ''), $(Get-Date -UFormat %Y)"
+                $todayDate = "$(Get-Date -UFormat %B) $($(Get-Date -UFormat %d) -replace '0', ''), $(Get-Date -UFormat %Y)"
             }
             $latestReleaseDate | Should -Be $todayDate
+        }
+    }
+
+    Context 'Windows MDM Function Sync' {
+        BeforeAll {
+            $windowsMdmPath = "$PSScriptRoot\..\..\..\Powershell\Private\WindowsMDM"
+            $scriptUrl = 'https://raw.githubusercontent.com/TheJumpCloud/support/master/scripts/windows/remove_windowsMDM.ps1'
+            $supportScriptContent = Invoke-WebRequest -Uri $scriptUrl -UseBasicParsing -ErrorAction Stop | Select-Object -ExpandProperty Content
+            $windowsMdmRegionNames = @('Get-MdmEnrollmentGuidFromTaskScheduler', 'Get-WindowsMDMProvider', 'Remove-WindowsMDMProvider')
+
+            function Get-NormalizedFunctionContent {
+                param([string]$Content)
+                if (-not $Content) { return '' }
+                $trimmed = $Content.Trim()
+                $normalized = ($trimmed -replace "`r`n", "`n") -replace "`r", "`n"
+                return $normalized.Trim()
+            }
+
+            function Get-SupportScriptRegionContent {
+                param([string]$ScriptContent, [string]$RegionName)
+                $startPattern = [regex]::Escape("#startregion $RegionName")
+                $endPattern = [regex]::Escape("#endregion $RegionName")
+                $pattern = "(?s)${startPattern}\s*(.*?)${endPattern}"
+                $m = [regex]::Match($ScriptContent, $pattern)
+                if (-not $m.Success) { return $null }
+                return $m.Groups[1].Value
+            }
+        }
+
+        It 'Windows MDM function definitions match remove_windowsMDM.ps1 on support repo' {
+            $failures = [System.Collections.ArrayList]::new()
+            foreach ($regionName in $windowsMdmRegionNames) {
+                $localPath = Join-Path $windowsMdmPath "$regionName.ps1"
+                if (-not (Test-Path $localPath)) {
+                    [void]$failures.Add("Local file not found: $localPath")
+                    continue
+                }
+                $regionContent = Get-SupportScriptRegionContent -ScriptContent $supportScriptContent -RegionName $regionName
+                if ($null -eq $regionContent) {
+                    [void]$failures.Add("The script at $scriptUrl does not define the required region '#region $regionName ... #endregion $regionName'. Please add this region to the script.")
+                    continue
+                }
+                $localContent = Get-Content -Path $localPath -Raw -ErrorAction Stop
+                $normalizedRegion = Get-NormalizedFunctionContent $regionContent
+                $normalizedLocal = Get-NormalizedFunctionContent $localContent
+                if ($normalizedRegion -ne $normalizedLocal) {
+                    [void]$failures.Add("The function definition for '$regionName' does not match the script's definition. Please update jumpcloud-ADMU/Powershell/Private/WindowsMDM/$regionName.ps1 from the script at $scriptUrl (region: #region $regionName ... #endregion $regionName).")
+                }
+            }
+            $failures.Count | Should -Be 0 -Because ($failures -join ' ')
         }
     }
 
@@ -249,7 +299,7 @@ Describe "Module Validation Tests" -Tag "Module Validation" {
                 # Use git diff with --ignore-cr-at-eol to ignore line ending differences to account for docs being generated on different OSes
                 $diff = git diff --ignore-cr-at-eol -- $item.fullname
                 if ($diff) {
-                    write-warning "Diff found in file: $($item.fullname) when we expected none to exist; have you run build.ps1 and committed the resulting changes?"
+                    Write-Warning "Diff found in file: $($item.fullname) when we expected none to exist; have you run build.ps1 and committed the resulting changes?"
                     Write-Warning "Diff output: $diff"
                 }
                 $diff | Should -BeNullOrEmpty
