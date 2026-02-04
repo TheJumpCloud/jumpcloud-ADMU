@@ -92,7 +92,7 @@ function Invoke-SystemAPI {
             } else {
                 $bodyContent = $null
             }
-            $response = Invoke-RestMethod -Uri $uri -Method $method -Headers $Headers -Body $bodyContent
+            $response = Invoke-RestMethod -Uri $uri -Method $method -Headers $Headers -Body $bodyContent | Out-Null
             $retry = $false
         } catch {
             if ($_.Exception.Message -like "*The remote name could not be resolved*") {
