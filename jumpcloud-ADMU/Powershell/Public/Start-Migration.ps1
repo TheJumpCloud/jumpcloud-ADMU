@@ -450,6 +450,10 @@ function Start-Migration {
         }
 
         #region validation
+        # Check if profile is loaded
+        if (Test-UserProfileLoaded -UserSID $SelectedUserSID) {
+            throw [System.Management.Automation.ValidationMetadataException] "Cannot migrate user profile for '$SelectedUserName' (SID: $SelectedUserSID). The user's profile is currently loaded in memory. Please ensure the user is logged out before attempting migration."
+        }
         # validate SelectedUserName is not null or empty
         if ([string]::IsNullOrEmpty($SelectedUserName)) {
             throw [System.Management.Automation.ValidationMetadataException] "You must supply a value for SelectedUserName"
@@ -1360,7 +1364,6 @@ function Start-Migration {
                 # $admuTracker.renameHomeDirectory.pass = $true
             }
             #endregion renameHomeDirectory
-
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath + '.' + "ADMU")
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
             $trackAccountMerge = $true
@@ -1407,7 +1410,6 @@ function Start-Migration {
                 Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and source user have have Full Control `n$($validateUsrClassDatPermissionsResults | Out-String)") -Level Warning
             }
             #endRegion Validate Hive Permissions
-
             ### Active Setup Registry Entry ###
             #region Set UWP Registry Keys
             Write-ToLog -Message:('Creating HKLM Registry Entries')

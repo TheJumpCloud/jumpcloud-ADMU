@@ -5,10 +5,11 @@ Release Date: February 4, 2026
 #### RELEASE NOTES
 
 ```
+Added functionality to validate if the user is logged on during pre-migration stage
+This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
 Bug fix release addressing issues with Agent Install, reverting profiles with .bak.
 Updated Windows MDM removal logic
 ```
-
 #### FEATURES:
 
 - Additional method for migration reversion by considering the .bak suffix in the reg profile path.

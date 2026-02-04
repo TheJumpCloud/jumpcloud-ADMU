@@ -136,10 +136,15 @@ function Start-Reversion {
         }
 
         $profileSize = Get-ProfileSize -ProfilePath $TargetProfileImagePath
-
         # Prefer the progress form created in Form.ps1 so updates apply to the first window the user sees
         if ((-not $script:ProgressBar) -and ($form)) {
             $script:ProgressBar = New-ProgressForm
+        }
+        # VALIDATION: Check if user profile is currently loaded
+        if (Test-UserProfileLoaded -UserSID $UserSID) {
+            $errorMessage = "Cannot revert user profile for SID: $UserSID. The user's profile is currently loaded in memory. Please ensure the user is logged out before attempting reversion."
+            Write-ToLog -Message $errorMessage -Level Error
+            throw $errorMessage
         }
     }
 
@@ -147,9 +152,8 @@ function Start-Reversion {
         try {
             #region Validate Registry and Determine Profile Path
             Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
-            # Casing fixed to 'revertInit'
-            Write-ToProgress -form $form -Status "revertInit" -ProgressBar $ProgressBar -ProfileSize $profileSize -LocalPath $TargetProfileImagePath -StatusMap $revertMessageMap
 
+            Write-ToProgress -form $form -Status "revertInit" -ProgressBar $ProgressBar -ProfileSize $profileSize -LocalPath $TargetProfileImagePath -StatusMap $revertMessageMap
             # Get profile information from registry for validation
             $profileRegistryPath = (Get-ProfileRegistryPath -UserSID $UserSID).ResolvedPath
             # Casing fixed to 'revertValidateProfilePath', removed -StatusType, added -StatusMap
