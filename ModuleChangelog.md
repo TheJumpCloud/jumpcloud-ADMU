@@ -5,11 +5,20 @@ Release Date: February 4, 2026
 #### RELEASE NOTES
 
 ```
+Updated Windows MDM removal logic
+```
+
+#### BUG FIXES:
+
+- Fixed a bug with Write-ToLog not properly handling Warnings in the host/console
+
+#### IMPROVEMENTS:
+
+- Added new functions and features to handle potential edge cases when removing Windows MDM providers
 - Added functionality for Invoke-SystemAPI to create, update, and delete attributes
 Added support for secret variables in DeviceQuery for bulk ADMU
 - Resolved an issue where renaming a created temp profile fails and freezes the migration
 This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
-```
 
 #### FEATURES:
 
