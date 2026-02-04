@@ -492,8 +492,13 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             Mock Start-Sleep -MockWith { return }
 
             $maxRetries = 3
-            Set-System -prop "Description" -payload "Test" -maxRetries $maxRetries -retryDelaySeconds 1
-
+            try {
+                Set-System -prop "Description" -payload "Test" -maxRetries $maxRetries -retryDelaySeconds 1
+            } catch {
+                # We catch the 'exit 1' / 'Write-Error' here so the test
+                # can proceed to the Assert-MockCalled lines below.
+                Write-Host "Caught expected exhaustion exit: $($_.Exception.Message)"
+            }
             # Verify Start-Sleep was called for retries (maxRetries - 1)
             Assert-MockCalled Start-Sleep -Times 2
         }
