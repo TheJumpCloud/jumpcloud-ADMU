@@ -8,6 +8,10 @@ Release Date: February 4, 2026
 Updated Windows MDM removal logic
 ```
 
+#### BUG FIXES:
+
+- Fixed a bug with Write-ToLog not properly handling Warnings in the host/console
+
 #### IMPROVEMENTS:
 
 Added new functions and features to handle potential edge cases when removing Windows MDM providers
