@@ -33,7 +33,7 @@ function Show-SelectionForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.12.0"
+        Title="JumpCloud ADMU 2.12.2"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -552,15 +552,25 @@ function Show-SelectionForm {
     $migratedUsers = @()
 
     foreach ($listItem in $profileList) {
-        $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+$"
-        $isValidFormat = [regex]::IsMatch($($listItem.PSChildName), $sidPattern);
+        $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+(?:\.bak)?$"
+        $rawSid = $listItem.PSChildName
+        $normalizedSid = $rawSid -replace '\.bak$', ''
+        $isValidFormat = [regex]::IsMatch($normalizedSid, $sidPattern);
 
         if ($isValidFormat) {
+            # Skip this entry if it points to a TEMP profile
+            if ($listItem.ProfileImagePath -like "*\TEMP") {
+                continue
+            }
+
+            # Strip .bak from the SID so we can use it for valid lookups later
+            $cleanSid = $listItem.PSChildName -replace '\.bak$', ''
+
             # Create the Object first
             $userObj = [PSCustomObject]@{
-                Name              = Convert-SecurityIdentifier $listItem.PSChildName
+                Name              = Convert-SecurityIdentifier $cleanSid
                 LocalPath         = $listItem.ProfileImagePath
-                SID               = $listItem.PSChildName
+                SID               = $cleanSid
                 IsLocalAdmin      = $null
                 LocalProfileSize  = $null
                 Loaded            = $null
@@ -842,8 +852,9 @@ function Show-SelectionForm {
         })
 
     # Change button when profile selected
-    $lvProfileList.Add_SelectionChanged( {
+    $lvProfileList.Add_SelectionChanged({
             $SelectedUserName = $($lvProfileList.SelectedItem.username)
+
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
 
             # Check if user profile is currently loaded using the Loaded property from Win32_UserProfile
@@ -852,7 +863,17 @@ function Show-SelectionForm {
                 $btn_migrateProfile.IsEnabled = $false
                 $tb_JumpCloudUserName.IsEnabled = $false
                 $tb_tempPassword.IsEnabled = $false
+
                 Write-ToLog "Cannot migrate profile for '$SelectedUserName' - profile is currently loaded"
+
+                # --- WSHELL POPUP ALERT START ---
+                $msgTitle = "Profile Currently In Use"
+                $msgBody = "The profile for user '$SelectedUserName' is currently loaded by the system.`n`nYou cannot migrate a profile while the user is logged in.`n`nPlease ensure the user is fully signed out and try again."
+
+                $wshell = New-Object -ComObject WScript.Shell
+                $wshell.Popup($msgBody, 0, $msgTitle) | Out-Null
+                # --- WSHELL POPUP ALERT END ---
+
             } else {
                 # User is not loaded, safe to migrate
                 $tb_JumpCloudUserName.IsEnabled = $true
@@ -891,16 +912,25 @@ function Show-SelectionForm {
         })
 
     $lvMigratedAccounts.Add_SelectionChanged({
-            # Only enable the button if we are on the Restore tab and an item is selected
             if ($MainTabControl.SelectedIndex -eq 1) {
                 if ($lvMigratedAccounts.SelectedItems.Count -gt 0) {
-                    # Check if user profile is currently loaded using the Loaded property from Win32_UserProfile
-                    if ($lvMigratedAccounts.SelectedItem.Loaded -eq $true) {
-                        # User is currently loaded, cannot revert
+
+                    # Check if Loaded is true (handles both boolean $true and string "True")
+                    if ($lvMigratedAccounts.SelectedItem.Loaded -eq $true -or $lvMigratedAccounts.SelectedItem.Loaded -eq "True") {
+
                         $btn_migrateProfile.IsEnabled = $false
                         Write-ToLog "Cannot restore profile for '$($lvMigratedAccounts.SelectedItem.UserName)' - profile is currently loaded"
+
+                        # --- WSHELL POPUP (FORCED ON TOP) ---
+                        $msgTitle = "Profile Currently In Use"
+                        $msgBody = "The profile for user '$($lvMigratedAccounts.SelectedItem.UserName)' is currently loaded.`n`nPlease sign out the user before restoring."
+
+                        $wshell = New-Object -ComObject WScript.Shell
+
+                        $wshell.Popup($msgBody, 0, $msgTitle) | Out-Null
+                        # ------------------------------------
+
                     } else {
-                        # User is not loaded, safe to revert
                         $btn_migrateProfile.IsEnabled = $true
                     }
                 } else {

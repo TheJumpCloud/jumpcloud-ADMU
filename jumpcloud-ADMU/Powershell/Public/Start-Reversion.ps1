@@ -83,13 +83,6 @@ function Start-Reversion {
             throw "UserSID provided could not be translated"
         }
 
-        # VALIDATION: Check if user profile is currently loaded
-        if (Test-UserProfileLoaded -UserSID $UserSID) {
-            $errorMessage = "Cannot revert user profile for SID: $UserSID. The user's profile is currently loaded in memory. Please ensure the user is logged out before attempting reversion."
-            Write-ToLog -Message $errorMessage -Level Error
-            throw $errorMessage
-        }
-
         # Regex pattern to identify .ADMU profile paths
         $admuPathPattern = '\.ADMU$'
 
@@ -140,10 +133,17 @@ function Start-Reversion {
         }
 
         $profileSize = Get-ProfileSize -ProfilePath $TargetProfileImagePath
-
+        # Casing fixed to 'revertInit'
+        Write-ToProgress -form $form -Status "revertInit" -ProgressBar $ProgressBar -ProfileSize $profileSize -LocalPath $TargetProfileImagePath -StatusMap $revertMessageMap
         # Prefer the progress form created in Form.ps1 so updates apply to the first window the user sees
         if ((-not $script:ProgressBar) -and ($form)) {
             $script:ProgressBar = New-ProgressForm
+        }
+        # VALIDATION: Check if user profile is currently loaded
+        if (Test-UserProfileLoaded -UserSID $UserSID) {
+            $errorMessage = "Cannot revert user profile for SID: $UserSID. The user's profile is currently loaded in memory. Please ensure the user is logged out before attempting reversion."
+            Write-ToLog -Message $errorMessage -Level Error
+            throw $errorMessage
         }
     }
 
@@ -151,8 +151,6 @@ function Start-Reversion {
         try {
             #region Validate Registry and Determine Profile Path
             Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
-            # Casing fixed to 'revertInit'
-            Write-ToProgress -form $form -Status "revertInit" -ProgressBar $ProgressBar -ProfileSize $profileSize -LocalPath $TargetProfileImagePath -StatusMap $revertMessageMap
 
             # Get profile information from registry for validation
             $profileRegistryPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"

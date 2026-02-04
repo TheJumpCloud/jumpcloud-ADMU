@@ -175,7 +175,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.12.1"
+        $admuVersion = "2.12.2"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -1361,7 +1361,6 @@ function Start-Migration {
                 # $admuTracker.renameHomeDirectory.pass = $true
             }
             #endregion renameHomeDirectory
-
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath + '.' + "ADMU")
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
             $trackAccountMerge = $true
@@ -1408,7 +1407,6 @@ function Start-Migration {
                 Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and source user have have Full Control `n$($validateUsrClassDatPermissionsResults | Out-String)") -Level Warning
             }
             #endRegion Validate Hive Permissions
-
             ### Active Setup Registry Entry ###
             #region Set UWP Registry Keys
             Write-ToLog -Message:('Creating HKLM Registry Entries')

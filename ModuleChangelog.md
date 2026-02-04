@@ -1,3 +1,13 @@
+## 2.12.2
+
+Release Date: February 4, 2026
+
+#### RELEASE NOTES
+
+```
+Added functionality to validate if the user is logged on during pre-migration stage
+```
+
 ## 2.12.1
 
 Release Date: January 20, 2026
