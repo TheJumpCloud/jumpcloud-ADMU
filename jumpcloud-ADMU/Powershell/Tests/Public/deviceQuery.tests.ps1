@@ -30,7 +30,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
         $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
         $functionMatches = [regex]::Matches($scriptContent, $pattern)
 
-        \        # We replace 'exit 1' with a Throw.
+        # We replace 'exit 1' with a Throw.
         # This allows Pester to catch the failure without crashing the test runner.
         $sanitizedFunctions = $functionMatches.Value -replace 'exit 1', 'throw "EXIT_CALLED"'
 
