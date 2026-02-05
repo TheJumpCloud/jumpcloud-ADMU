@@ -1,4 +1,4 @@
-Function Show-SelectionForm {
+function Show-SelectionForm {
     [CmdletBinding()]
     param (
         [Parameter(HelpMessage = "Parameter for testing, default behavior is to not hide and show the contents of the xaml form")]
@@ -33,7 +33,7 @@ Function Show-SelectionForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.12.0"
+        Title="JumpCloud ADMU 2.12.2"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -301,17 +301,17 @@ Function Show-SelectionForm {
 
     # Read XAML
     $reader = (New-Object System.Xml.XmlNodeReader $xaml)
-    Try {
+    try {
         $Form = [Windows.Markup.XamlReader]::Load($reader)
-    } Catch {
+    } catch {
         Write-Error "Unable to load Windows.Markup.XamlReader. Some possible causes for this problem include: .NET Framework is missing PowerShell must be launched with PowerShell -sta, invalid XAML code was encountered.";
-        Exit;
+        exit;
     }
     #===========================================================================
     # Store Form Objects In PowerShell
     #===========================================================================
-    $xaml.SelectNodes("//*[@*[contains(translate(name(.),'n','N'),'Name')]]")  | ForEach-Object {
-        New-Variable  -Name $_.Name -Value $Form.FindName($_.Name) -Force
+    $xaml.SelectNodes("//*[@*[contains(translate(name(.),'n','N'),'Name')]]") | ForEach-Object {
+        New-Variable -Name $_.Name -Value $Form.FindName($_.Name) -Force
     }
     $JCLogoImg.Source = Get-ImageFromB64 -ImageBase64 $JCLogoBase64
     $img_connectKeyInfo.Source = Get-ImageFromB64 -ImageBase64 $BlueBase64
@@ -432,12 +432,12 @@ Function Show-SelectionForm {
     $loadingForm.Add_Shown({ $loadingForm.Activate() })
     $null = $loadingForm.Show()   # non-blocking
 
-    Try {
+    try {
         $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-    } Catch {
+    } catch {
         $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
     }
-    Write-progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..' -PercentComplete 25
+    Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..' -PercentComplete 25
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..'
 
     #Update Progress Bar
@@ -447,9 +447,9 @@ Function Show-SelectionForm {
     }
 
     if ($WmiComputerSystem.PartOfDomain) {
-        Try {
+        try {
             $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
-        } Catch {
+        } catch {
             $WmiComputerDomain = Get-CimInstance -Class:('Win32_ntDomain')
         }
         try {
@@ -547,20 +547,35 @@ Function Show-SelectionForm {
         $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
     }
 
+    # Get the SID of the user currently running this script to exclude them
+    $currentUserSID = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+
     # 1. Initialize TWO lists
     $systemUsers = @()
     $migratedUsers = @()
 
     foreach ($listItem in $profileList) {
-        $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+$"
-        $isValidFormat = [regex]::IsMatch($($listItem.PSChildName), $sidPattern);
+        $sidPattern = "^S-\d-\d+-(\d+-){1,14}\d+(?:\.bak)?$"
+        $rawSid = $listItem.PSChildName
+        $normalizedSid = $rawSid -replace '\.bak$', ''
+        $isValidFormat = [regex]::IsMatch($normalizedSid, $sidPattern);
 
         if ($isValidFormat) {
-            # Create the Object first
+            # Check if this is the current user; if so, skip adding to the list
+            if ($normalizedSid -eq $currentUserSID) {
+                continue
+            }
+
+            # Check if this is a TEMP profile; if so, skip adding to the list
+            if ($listItem.ProfileImagePath -like "*\TEMP") {
+                continue
+            }
+
+            # Normalize SIDs stored as .bak keys so lookups and display names work consistently
             $userObj = [PSCustomObject]@{
-                Name              = Convert-SecurityIdentifier $listItem.PSChildName
+                Name              = Convert-SecurityIdentifier $normalizedSid
                 LocalPath         = $listItem.ProfileImagePath
-                SID               = $listItem.PSChildName
+                SID               = $normalizedSid
                 IsLocalAdmin      = $null
                 LocalProfileSize  = $null
                 Loaded            = $null
@@ -578,9 +593,9 @@ Function Show-SelectionForm {
     }
 
     # Get Win32 Profiles to merge data with valid SIDs
-    Try {
+    try {
         $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-    } Catch {
+    } catch {
         $win32UserProfiles = Get-CimInstance -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
     }
 
@@ -652,10 +667,10 @@ Function Show-SelectionForm {
     $cb_installJCAgent.Add_Checked( { $img_connectKeyValid.Visibility = 'Visible' })
     $cb_installJCAgent.Add_Checked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If (((Test-IsNotEmpty $tb_JumpCloudConnectKey.Password) -and (Test-HasNoSpace $tb_JumpCloudConnectKey.Password)) -eq $false) {
+            if (((Test-IsNotEmpty $tb_JumpCloudConnectKey.Password) -and (Test-HasNoSpace $tb_JumpCloudConnectKey.Password)) -eq $false) {
                 $tb_JumpCloudConnectKey.Background = "#FFC6CBCF"
                 $tb_JumpCloudConnectKey.BorderBrush = "#FFF90000"
-            } Else {
+            } else {
                 $tb_JumpCloudConnectKey.Background = "white"
                 $tb_JumpCloudConnectKey.Tooltip = $null
                 $tb_JumpCloudConnectKey.FontWeight = "Normal"
@@ -671,10 +686,10 @@ Function Show-SelectionForm {
     $cb_installJCAgent.Add_Unchecked( { $img_connectKeyValid.Visibility = 'Hidden' })
     $cb_installJCAgent.Add_Unchecked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If (((Test-IsNotEmpty $tb_JumpCloudConnectKey.Password) -and (Test-HasNoSpace $tb_JumpCloudConnectKey.Password) -or ($cb_installJCAgent.IsEnabled)) -eq $false) {
+            if (((Test-IsNotEmpty $tb_JumpCloudConnectKey.Password) -and (Test-HasNoSpace $tb_JumpCloudConnectKey.Password) -or ($cb_installJCAgent.IsEnabled)) -eq $false) {
                 $tb_JumpCloudConnectKey.Background = "#FFC6CBCF"
                 $tb_JumpCloudConnectKey.BorderBrush = "#FFF90000"
-            } Else {
+            } else {
                 $tb_JumpCloudConnectKey.Background = "white"
                 $tb_JumpCloudConnectKey.Tooltip = $null
                 $tb_JumpCloudConnectKey.FontWeight = "Normal"
@@ -693,10 +708,10 @@ Function Show-SelectionForm {
     # $cb_bindAsAdmin.Add_Checked( { $BindAsAdmin = $true })
     $cb_autobindJCUser.Add_Checked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If (Test-IsNotEmpty $tb_JumpCloudAPIKey.Password ) {
+            if (Test-IsNotEmpty $tb_JumpCloudAPIKey.Password ) {
                 $tb_JumpCloudAPIKey.Background = "#FFC6CBCF"
                 $tb_JumpCloudAPIKey.BorderBrush = "#FFF90000"
-            } Else {
+            } else {
                 $tb_JumpCloudAPIKey.Background = "white"
                 $tb_JumpCloudAPIKey.Tooltip = $null
                 $tb_JumpCloudAPIKey.FontWeight = "Normal"
@@ -717,10 +732,10 @@ Function Show-SelectionForm {
     # $cb_bindAsAdmin.Add_Unchecked( { $BindAsAdmin = $false })
     $cb_autobindJCUser.Add_Unchecked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If ((!(Test-IsNotEmpty $tb_JumpCloudAPIKey.Password) -or ($cb_autobindJCUser.IsEnabled)) -eq $false) {
+            if ((!(Test-IsNotEmpty $tb_JumpCloudAPIKey.Password) -or ($cb_autobindJCUser.IsEnabled)) -eq $false) {
                 $tb_JumpCloudAPIKey.Background = "#FFC6CBCF"
                 $tb_JumpCloudAPIKey.BorderBrush = "#FFF90000"
-            } Else {
+            } else {
                 $tb_JumpCloudAPIKey.Background = "white"
                 $tb_JumpCloudAPIKey.Tooltip = $null
                 $tb_JumpCloudAPIKey.FontWeight = "Normal"
@@ -746,7 +761,7 @@ Function Show-SelectionForm {
     # JumpCloud username validation handler
     $tb_JumpCloudUserName.Add_TextChanged( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If (
+            if (
                 (Test-IsNotEmpty $tb_JumpCloudUserName.Text) -or `
                 (!(Test-HasNoSpace $tb_JumpCloudUserName.Text)) -or `
                 (Test-LocalUsername -username $tb_JumpCloudUserName.Text -win32UserProfiles $win32UserProfiles -localUserProfiles $nonSIDLocalUsers) -or `
@@ -756,7 +771,7 @@ Function Show-SelectionForm {
                 $tb_JumpCloudUserName.BorderBrush = "#FFF90000"
                 $img_localAccountValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
                 $img_localAccountValid.ToolTip = "Local account username can not:`nBe empty or contain spaces.`nAlready exist on the local system.`nMatch the local computer name.`nContain more than 20 characters."
-            } Else {
+            } else {
                 $tb_JumpCloudUserName.Background = "white"
                 $tb_JumpCloudUserName.FontWeight = "Normal"
                 $tb_JumpCloudUserName.BorderBrush = "#FFC6CBCF"
@@ -768,12 +783,12 @@ Function Show-SelectionForm {
     # Validate Connect Key
     $tb_JumpCloudConnectKey.Add_PasswordChanged( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If ((-Not (Test-IsNotEmpty $tb_JumpCloudConnectKey.Password) -and -NOT (Test-HasNoSpace $tb_JumpCloudConnectKey.Password))) {
+            if ((-not (Test-IsNotEmpty $tb_JumpCloudConnectKey.Password) -and -not (Test-HasNoSpace $tb_JumpCloudConnectKey.Password))) {
                 $tb_JumpCloudConnectKey.Background = "#FFC6CBCF"
                 $tb_JumpCloudConnectKey.BorderBrush = "#FFF90000"
                 $img_connectKeyValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
                 $img_connectKeyValid.ToolTip = "Connect Key must not be null or contain spaces."
-            } Else {
+            } else {
                 $tb_JumpCloudConnectKey.Background = "white"
                 $tb_JumpCloudConnectKey.FontWeight = "Normal"
                 $tb_JumpCloudConnectKey.BorderBrush = "#FFC6CBCF"
@@ -786,13 +801,13 @@ Function Show-SelectionForm {
     $tb_JumpCloudAPIKey.Add_PasswordChanged( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
             Write-ToLog "Validating API Key... Global URI: $($global:JCUrl)"
-            If (Test-IsNotEmpty $tb_JumpCloudAPIKey.Password) {
+            if (Test-IsNotEmpty $tb_JumpCloudAPIKey.Password) {
                 $tb_JumpCloudAPIKey.Background = "#FFC6CBCF"
                 $tb_JumpCloudAPIKey.BorderBrush = "#FFF90000"
                 $img_apiKeyValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
                 $img_apiKeyValid.ToolTip = "Please enter a valid JumpCloud API Key"
 
-            } Else {
+            } else {
                 # Get org name/ id
                 try {
                     $OrgSelection, $mtpAdmin = Get-MtpOrganization -ApiKey $tb_JumpCloudAPIKey.Password -inputType
@@ -826,12 +841,12 @@ Function Show-SelectionForm {
     # Validate Temp Password
     $tb_tempPassword.Add_TextChanged( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            If ((Test-IsNotEmpty $tb_tempPassword.Text) -or (-NOT (Test-HasNoSpace $tb_tempPassword.Text))) {
+            if ((Test-IsNotEmpty $tb_tempPassword.Text) -or (-not (Test-HasNoSpace $tb_tempPassword.Text))) {
                 $tb_tempPassword.Background = "#FFC6CBCF"
                 $tb_tempPassword.BorderBrush = "#FFF90000"
                 $img_localAccountPasswordValid.Source = Get-ImageFromB64 -ImageBase64 $ErrorBase64
                 $img_localAccountPasswordValid.ToolTip = "Local Account Temp Password should:`nNot be empty or contain spaces.`n should also meet local password policy requirements on the system."
-            } Else {
+            } else {
                 $tb_tempPassword.Background = "white"
                 $tb_tempPassword.Tooltip = $null
                 $tb_tempPassword.FontWeight = "Normal"
@@ -842,21 +857,31 @@ Function Show-SelectionForm {
         })
 
     # Change button when profile selected
-    $lvProfileList.Add_SelectionChanged( {
+    $lvProfileList.Add_SelectionChanged({
             $SelectedUserName = $($lvProfileList.SelectedItem.username)
-            Set-HKEYUserMount
+
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
-            try {
-                $SelectedUserSID = ((New-Object System.Security.Principal.NTAccount($SelectedUserName)).Translate( [System.Security.Principal.SecurityIdentifier]).Value)
-            } catch {
-                $SelectedUserSID = $SelectedUserName
-            }
-            $hku = ('HKU:\' + $SelectedUserSID)
-            if (Test-Path -Path $hku) {
+
+            # Check if user profile is currently loaded using the Loaded property from Win32_UserProfile
+            if ($lvProfileList.SelectedItem.Loaded -eq $true) {
+                # User is currently loaded, cannot migrate
                 $btn_migrateProfile.IsEnabled = $false
                 $tb_JumpCloudUserName.IsEnabled = $false
                 $tb_tempPassword.IsEnabled = $false
+
+                Write-ToLog "Cannot migrate profile for '$SelectedUserName' - profile is currently loaded"
+
+                # --- WSHELL POPUP ALERT START ---
+                $msgTitle = "Profile Currently In Use"
+                $msgBody = "The profile for user '$SelectedUserName' is currently loaded by the system.`n`nYou cannot migrate a profile while the user is logged in.`n`nPlease ensure the user is fully signed out and try again."
+
+                $wshell = New-Object -ComObject WScript.Shell
+                # 48 adds the Exclamation/Warning Icon
+                $wshell.Popup($msgBody, 0, $msgTitle, 48) | Out-Null
+                # --- WSHELL POPUP ALERT END ---
+
             } else {
+                # User is not loaded, safe to migrate
                 $tb_JumpCloudUserName.IsEnabled = $true
                 $tb_tempPassword.IsEnabled = $true
             }
@@ -893,10 +918,27 @@ Function Show-SelectionForm {
         })
 
     $lvMigratedAccounts.Add_SelectionChanged({
-            # Only enable the button if we are on the Restore tab and an item is selected
             if ($MainTabControl.SelectedIndex -eq 1) {
                 if ($lvMigratedAccounts.SelectedItems.Count -gt 0) {
-                    $btn_migrateProfile.IsEnabled = $true
+
+                    # Check if Loaded is true (handles both boolean $true and string "True")
+                    if ($lvMigratedAccounts.SelectedItem.Loaded -eq $true -or $lvMigratedAccounts.SelectedItem.Loaded -eq "True") {
+
+                        $btn_migrateProfile.IsEnabled = $false
+                        Write-ToLog "Cannot restore profile for '$($lvMigratedAccounts.SelectedItem.UserName)' - profile is currently loaded"
+
+                        # --- WSHELL POPUP (FORCED ON TOP) ---
+                        $msgTitle = "Profile Currently In Use"
+                        $msgBody = "The profile for user '$($lvMigratedAccounts.SelectedItem.UserName)' is currently loaded.`n`nPlease sign out the user before restoring."
+
+                        $wshell = New-Object -ComObject WScript.Shell
+                        # 48 adds the Exclamation/Warning Icon
+                        $wshell.Popup($msgBody, 0, $msgTitle, 48) | Out-Null
+                        # ------------------------------------
+
+                    } else {
+                        $btn_migrateProfile.IsEnabled = $true
+                    }
                 } else {
                     $btn_migrateProfile.IsEnabled = $false
                 }
@@ -923,7 +965,7 @@ Function Show-SelectionForm {
             } else {
                 # MIGRATION LOGIC
                 # Only runs if button text is NOT "Restore Profile"
-                if ($tb_JumpCloudAPIKey.Password -And $tb_JumpCloudUserName.Text -And $cb_autobindJCUser.IsChecked) {
+                if ($tb_JumpCloudAPIKey.Password -and $tb_JumpCloudUserName.Text -and $cb_autobindJCUser.IsChecked) {
                     if ((Test-IsNotEmpty $tb_JumpCloudConnectKey.Password)) {
                         # Validate the the JumpCLoud Agent Conf File exists:
                         $keyResult = Test-JumpCloudSystemKey -WindowsDrive $(Get-WindowsDrive)
@@ -1069,8 +1111,8 @@ Function Show-SelectionForm {
             $Form.DragMove()
         })
     # allow form to be clicked and remove focus from text fields
-    Function RefreshData {
-        $Test = "Testing" | Out-Gridview
+    function RefreshData {
+        $Test = "Testing" | Out-GridView
     }
     $Form.Add_PreviewMouseDown({
             $grid1.Focus()
@@ -1087,13 +1129,13 @@ Function Show-SelectionForm {
     # Shows the form & allow move
     #===========================================================================
 
-    if (-Not $hideForm) {
+    if (-not $hideForm) {
         $Form.ShowDialog() | Out-Null
     }
 
     # if the migrate button is enabled and it is clicked, send formResults to Start-Migration
-    If (($btn_migrateProfile.IsEnabled -eq $true) -AND $btn_migrateProfile.Add_Click -And ($btn_migrateProfile.Content -ne "Restore Profile")) {
-        Return $FormResults
+    if (($btn_migrateProfile.IsEnabled -eq $true) -and $btn_migrateProfile.Add_Click -and ($btn_migrateProfile.Content -ne "Restore Profile")) {
+        return $FormResults
     }
 
 }

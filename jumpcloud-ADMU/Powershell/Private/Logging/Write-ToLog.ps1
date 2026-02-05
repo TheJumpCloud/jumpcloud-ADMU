@@ -1,6 +1,6 @@
-Function Write-ToLog {
+function Write-ToLog {
    [CmdletBinding()]
-   Param
+   param
    (
       [Parameter(Mandatory = $true, ValueFromPipelineByPropertyName = $true)][ValidateNotNullOrEmpty()][Alias("LogContent")][string]$Message,
       [Parameter(Mandatory = $false)][Alias('LogPath')][string]$Path = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log",
@@ -8,10 +8,10 @@ Function Write-ToLog {
       [Parameter(Mandatory = $false)][string]$Step,
       [Parameter(Mandatory = $false)][switch]$MigrationStep
    )
-   Begin {
+   begin {
       $VerbosePreference = 'Continue'
    }
-   Process {
+   process {
       if (!(Test-Path $Path)) {
          Write-Verbose "Creating $Path."
          New-Item $Path -Force -ItemType File | Out-Null
@@ -47,7 +47,7 @@ Function Write-ToLog {
       # Write to appropriate pipeline and optionally to console
       switch ($Level) {
          'Error' { Write-Error $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
-         'Warn' { Write-Warning $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
+         'Warning' { Write-Warning $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
          'Info' { if ($Script:AdminDebug) { Write-Host $logMessage } }
          'Verbose' { Write-Verbose $logMessage; if ($Script:AdminDebug) { Write-Host $logMessage } }
       }
@@ -58,5 +58,5 @@ Function Write-ToLog {
       }
       Add-Content -Value $logMessage -Path $Path -Encoding utf8
    }
-   End {}
+   end {}
 }

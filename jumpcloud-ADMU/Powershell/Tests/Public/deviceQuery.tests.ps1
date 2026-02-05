@@ -25,16 +25,20 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
         . "$helpFunctionDir\Initialize-TestUser.ps1"
 
         # import functions from the remote invoke script
-        # get the function definitions from the script
+        # Get the function definitions from the script
         $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
         $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
         $functionMatches = [regex]::Matches($scriptContent, $pattern)
 
-        # set the matches.value to a temp file and import the functions
-        $tempFunctionFile = Join-Path $PSScriptRoot 'deviceQueryFunctions.ps1'
-        $functionMatches.Value | Set-Content -Path $tempFunctionFile -Force
+        # We replace 'exit 1' with a Throw.
+        # This allows Pester to catch the failure without crashing the test runner.
+        $sanitizedFunctions = $functionMatches.Value -replace 'exit 1', 'throw "EXIT_CALLED"'
 
-        # import the functions from the temp file
+        # Write the sanitized version to a temp file for testing
+        $tempFunctionFile = Join-Path $PSScriptRoot 'deviceQueryFunctions.ps1'
+        $sanitizedFunctions | Set-Content -Path $tempFunctionFile -Force
+
+        # Import the SAFE functions
         . $tempFunctionFile
     }
 
@@ -44,6 +48,36 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
         Write-Host "Character Count of Device Query Script: $($measured.Characters) | Limit: 32767"
         $measured.Characters | Should -BeLessThan 32767
     }
+
+    Context "API Key Functionality" {
+        It "Set-System: System Context when JCApiKey is NOT provided" {
+            Mock Get-Content -MockWith { return 'systemKey":"mockKey";"agentServerHost":"agent.jumpcloud.com"' }
+
+            Mock Test-Path -MockWith { return $true }
+
+            # This mimics the static method the script calls: [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($privKey)
+            if (-not ([System.Management.Automation.PSTypeName]'RSAEncryption.RSAEncryptionProvider').Type) {
+                Add-Type -TypeDefinition @"
+                    namespace RSAEncryption {
+                        public class RSAEncryptionProvider {
+                            public static System.Security.Cryptography.RSACryptoServiceProvider GetRSAProviderFromPemFile(string s, object p) {
+                                return new System.Security.Cryptography.RSACryptoServiceProvider();
+                            }
+                        }
+                    }
+"@
+            }
+
+            Mock Invoke-RestMethod -MockWith { return $true } -ParameterFilter {
+                $Headers.ContainsKey("Authorization") -and $Headers["Authorization"] -match "Signature keyId="
+            }
+
+            Set-System -prop "Description" -Payload "TestPayload"
+
+            Assert-MockCalled Invoke-RestMethod -Times 1
+        }
+    }
+
     Context "Get-System Tests" {
         It "Should get the system data" {
             Get-System -systemContextBinding $true | Should -Not -Be $null
@@ -383,6 +417,51 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             $foundUser = ($systemAfter.Description | ConvertFrom-Json) | Where-Object { $_.sid -eq $admuUsers[0].sid }
             $foundUser.st | Should -Be "Complete"
             $foundUser.msg | Should -Be "User previously migrated"
+        }
+    }
+    Context "Set-System Retry and Error Handling" {
+        It "Should attempt retries and exit with code 1 upon exhaustion" {
+            # 1. Mock Get-Content to bypass systemKey/URL discovery
+            Mock Get-Content -MockWith { return 'systemKey":"mockKey";"agentServerHost":"agent.jumpcloud.com"' }
+
+            # 2. Mock Invoke-RestMethod to ALWAYS fail
+            # This triggers the 'catch' block in Set-System
+            Mock Invoke-RestMethod -MockWith { throw "Connection Timeout" }
+
+            # 3. Use a small retry count/delay to keep the test fast
+            $params = @{
+                prop              = "Description"
+                payload           = "Test"
+                maxRetries        = 2
+                retryDelaySeconds = 0
+            }
+
+            # 4. We use a try/catch in the test to catch the 'exit' call
+            # In Pester, 'exit' inside a scriptblock usually throws a specific
+            # termination error that we can inspect.
+            { Set-System @params } | Should -Throw
+
+            # 5. Verify the mocks were called exactly 'maxRetries' times
+            Assert-MockCalled Invoke-RestMethod -Times 2
+        }
+
+        It "Should wait for exponential backoff between retries" {
+            Mock Get-Content -MockWith { return 'systemKey":"mockKey";"agentServerHost":"agent.jumpcloud.com"' }
+            Mock Invoke-RestMethod -MockWith { throw "Temporary Failure" }
+
+            # Mock Start-Sleep so the test doesn't actually wait
+            Mock Start-Sleep -MockWith { return }
+
+            $maxRetries = 3
+            try {
+                Set-System -prop "Description" -payload "Test" -maxRetries $maxRetries -retryDelaySeconds 1
+            } catch {
+                # We catch the 'exit 1' / 'Write-Error' here so the test
+                # can proceed to the Assert-MockCalled lines below.
+                Write-Host "Caught expected exhaustion exit: $($_.Exception.Message)"
+            }
+            # Verify Start-Sleep was called for retries (maxRetries - 1)
+            Assert-MockCalled Start-Sleep -Times 2
         }
     }
 }

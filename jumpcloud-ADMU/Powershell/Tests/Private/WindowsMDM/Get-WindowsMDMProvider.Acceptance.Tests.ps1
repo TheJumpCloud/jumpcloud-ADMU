@@ -17,23 +17,6 @@ Describe "Get-WindowsMDMProvider Acceptance Tests" -Tag "Acceptance" {
         }
         . "$helpFunctionDir\$fileName"
     }
-    It "Given a system with MDM Enrollment, Should Get the MDM Provider Information" -skip {
-        $mdmEnrollments = Get-WindowsMDMProvider
-        # Should not be null or empty
-        $mdmEnrollments | Should -Not -BeNullOrEmpty
-        $mdmEnrollments.Count | Should -BeGreaterThan 0
-        foreach ($enrollment in $mdmEnrollments) {
-            $enrollment.EnrollmentGUID | Should -Not -BeNullOrEmpty
-            $enrollment.ProviderID | Should -Not -BeNullOrEmpty
-            $enrollment.UPN | Should -Not -BeNullOrEmpty
-        }
-    }
-    It "Given a system without MDM Enrollment, Should Return No MDM Provider Information" -skip {
-        # This test assumes the test system is not MDM enrolled.
-        $mdmEnrollments = Get-WindowsMDMProvider
-        # Should be null or empty
-        $mdmEnrollments | Should -BeNullOrEmpty
-    }
     It "Mocked MDM Enrollment should return data" {
         # Add acceptance test logic and assertions (against a real system)
         $newGUID = [guid]::NewGuid().ToString()

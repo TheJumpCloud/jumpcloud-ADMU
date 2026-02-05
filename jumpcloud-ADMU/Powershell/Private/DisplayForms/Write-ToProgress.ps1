@@ -97,7 +97,7 @@ function Write-ToProgress {
                 }
             } elseif ($SystemDescription.ValidatedApiKey) {
                 try {
-                    Invoke-SystemAPI -JcApiKey $SystemDescription.JCApiKey -jcOrgID $SystemDescription.JumpCloudOrgID -systemId $SystemDescription.DeviceID -Body @{'description' = ($descriptionArray | ConvertTo-Json) }
+                    Invoke-SystemAPI -JcApiKey $SystemDescription.JCApiKey -jcOrgID $SystemDescription.JumpCloudOrgID -systemId $SystemDescription.DeviceID -Body @{'description' = ($descriptionArray | ConvertTo-Json) } | Out-Null
                 } catch {
                     Write-ToLog -Message "Error occurred while reporting migration progress to API: $_" -Level Error
                 }
