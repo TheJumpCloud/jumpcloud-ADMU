@@ -25,16 +25,20 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
         . "$helpFunctionDir\Initialize-TestUser.ps1"
 
         # import functions from the remote invoke script
-        # get the function definitions from the script
+        # Get the function definitions from the script
         $scriptContent = Get-Content -Path $global:remoteInvoke -Raw
         $pattern = '\#region functionDefinitions[\s\S]*\#endregion functionDefinitions'
         $functionMatches = [regex]::Matches($scriptContent, $pattern)
 
-        # set the matches.value to a temp file and import the functions
-        $tempFunctionFile = Join-Path $PSScriptRoot 'deviceQueryFunctions.ps1'
-        $functionMatches.Value | Set-Content -Path $tempFunctionFile -Force
+        \        # We replace 'exit 1' with a Throw.
+        # This allows Pester to catch the failure without crashing the test runner.
+        $sanitizedFunctions = $functionMatches.Value -replace 'exit 1', 'throw "EXIT_CALLED"'
 
-        # import the functions from the temp file
+        # Write the sanitized version to a temp file for testing
+        $tempFunctionFile = Join-Path $PSScriptRoot 'deviceQueryFunctions.ps1'
+        $sanitizedFunctions | Set-Content -Path $tempFunctionFile -Force
+
+        # Import the SAFE functions
         . $tempFunctionFile
     }
 
