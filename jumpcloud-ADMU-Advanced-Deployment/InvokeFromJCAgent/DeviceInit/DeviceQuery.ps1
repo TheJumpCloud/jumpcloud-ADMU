@@ -211,7 +211,7 @@ function Set-System {
         }
     }
     # Final failure block
-    Write-Error "CRITICAL: SetSystem failed after $maxRetries attempts. Last Error: $($lastError.Exception.Message)"
+    Write-Host "[status] CRITICAL: SetSystem failed after $maxRetries attempts. Last Error: $($lastError.Exception.Message)"
     exit 1
 }
 
