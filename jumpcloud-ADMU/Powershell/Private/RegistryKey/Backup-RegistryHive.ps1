@@ -18,14 +18,27 @@ Function Backup-RegistryHive {
             Copy-Item -Path "$profileImagePath\NTUSER.DAT" -Destination "$profileImagePath\NTUSER.DAT.BAK" -ErrorAction Stop
             Copy-Item -Path "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" -Destination "$profileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -ErrorAction Stop
         } catch {
-            $processList = Get-ProcessByOwner -username $domainUsername
-            if ($processList) {
-                Show-ProcessListResult -ProcessList $processList -domainUsername $domainUsername
-                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
+            $closeResults = Close-ProcessesBySid -Sid $SID -Force
+            if ($closeResults) {
+                $closedCount = ($closeResults | Where-Object { $_.Closed } | Measure-Object).Count
+                $blockedCount = ($closeResults | Where-Object { $_.WasBlockedByBlacklist } | Measure-Object).Count
+                $totalCount = ($closeResults | Measure-Object).Count
+                Write-ToLog -Message "Closed processes: $closedCount, blocked: $blockedCount, total scanned: $totalCount" -Level Verbose -Step "Backup-RegistryHive"
+            }
+
+            try {
+                Set-RegistryExe -op Unload -hive root -UserSid $SID -ProfilePath $profileImagePath -ThrowOnFailure | Out-Null
+            } catch {
+                Write-ToLog -Message "Unload root failed after process close: $($_.Exception.Message)" -Level Warning -Step "Backup-RegistryHive"
             }
             try {
+                Set-RegistryExe -op Unload -hive classes -UserSid $SID -ProfilePath $profileImagePath -ThrowOnFailure | Out-Null
+            } catch {
+                Write-ToLog -Message "Unload classes failed after process close: $($_.Exception.Message)" -Level Warning -Step "Backup-RegistryHive"
+            }
+
+            try {
                 Write-ToLog -Message("Initial backup was not successful, trying again...") -Level Verbose -Step "Backup-RegistryHive"
-                Write-ToLog $CloseResults -Level Verbose -Step "Backup-RegistryHive"
                 Start-Sleep 1
                 # retry:
                 Copy-Item -Path "$profileImagePath\NTUSER.DAT" -Destination "$profileImagePath\NTUSER.DAT.BAK" -ErrorAction Stop
