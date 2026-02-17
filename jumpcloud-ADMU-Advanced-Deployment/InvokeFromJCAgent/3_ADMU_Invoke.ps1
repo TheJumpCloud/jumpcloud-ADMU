@@ -6,7 +6,7 @@
 ####
 #region variables
 
-# Data source for migration users: "CSV"
+# Data source for migration users: "CSV" or "Description"
 $dataSource = 'CSV'
 
 # CSV variables - only required if dataSource is set to 'CSV'
@@ -73,9 +73,6 @@ function Confirm-MigrationParameter {
         if ([string]::IsNullOrWhiteSpace($JumpCloudAPIKey) -or $JumpCloudAPIKey -eq 'YOURAPIKEY') {
             throw "JumpCloudAPIKey required when systemContextBinding is false."
         }
-        if ([string]::IsNullOrWhiteSpace($JumpCloudOrgID) -or $JumpCloudOrgID -eq 'YOURORGID') {
-            throw "JumpCloudOrgID required when systemContextBinding is false."
-        }
     }
     return $true
 }
@@ -89,12 +86,14 @@ function Get-MigrationUser {
         [Parameter(Mandatory = $false)]
         [string]$csvName = 'jcdiscovery.csv',
         [Parameter(Mandatory = $true)]
-        [boolean]$systemContextBinding
+        [boolean]$systemContextBinding,
+        [string]$JumpCloudAPIKey,
+        [string]$JumpCloudOrgID
     )
     if ($source -eq 'CSV') {
         return Get-MgUserFromCSV -csvName $csvName -systemContextBinding $systemContextBinding
     } elseif ($source -eq 'Description') {
-        return Get-MgUserFromDesc -systemContextBinding $systemContextBinding
+        return Get-MgUserFromDesc -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID
     }
 }
 
@@ -161,11 +160,15 @@ function Get-MgUserFromCSV {
 function Get-MgUserFromDesc {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
-    param([Parameter(Mandatory = $true)][boolean]$systemContextBinding)
+    param(
+        [Parameter(Mandatory = $true)][boolean]$systemContextBinding,
+        [string]$JumpCloudAPIKey,
+        [string]$JumpCloudOrgID
+    )
     process {
         try {
             Write-Host "[status] Retrieving system description..."
-            $systemDescription = Get-SystemDescription -systemContextBinding $systemContextBinding
+            $systemDescription = Get-SystemDescription -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID
         } catch {
             throw "Failed to retrieve system description: $_"
         }
@@ -465,39 +468,59 @@ function Get-DomainStatus {
     }
 }
 function Get-SystemDescription {
-    param([bool]$systemContextBinding)
-    if (-not $systemContextBinding) { throw "Description source requires systemContextBinding=`$true" }
+    param(
+        [bool]$systemContextBinding,
+        [string]$JumpCloudAPIKey,
+        [string]$JumpCloudOrgID
+    )
     try {
+        # Retrieve System ID and Host URL from Agent Config
+        if (-not (Test-Path 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf')) { throw "JumpCloud Agent config file not found." }
         $cfg = Get-Content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
         $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
-        if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey" }
+        if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey found in config" }
         $host_match = [regex]::Match($cfg, 'agentServerHost["]?:["]?agent\.(\w+)\.jumpcloud\.com').Groups[1].Value
         $url = if ($host_match -eq "eu") { "https://console.jumpcloud.eu" }else { "https://console.jumpcloud.com" }
-        $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
-        if (-not(Test-Path $privKey)) { throw "Key not found" }
-        if ($PSVersionTable.PSVersion.Major -eq 5) {
-            if (-not([System.Management.Automation.PSTypeName]'RSAEncryption.RSAEncryptionProvider').Type) {
-                $rsaType = @'
+
+        $h = @{ "Accept" = "application/json" }
+
+        # Authenticate (System Context vs API Key)
+        if ($systemContextBinding) {
+            $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
+            if (-not(Test-Path $privKey)) { throw "Key not found for SystemContext binding" }
+            if ($PSVersionTable.PSVersion.Major -eq 5) {
+                if (-not([System.Management.Automation.PSTypeName]'RSAEncryption.RSAEncryptionProvider').Type) {
+                    $rsaType = @'
 using System;using System.Collections.Generic;using System.IO;using System.Net;using System.Runtime.InteropServices;using System.Security;using System.Security.Cryptography;using System.Text;namespace RSAEncryption{public class RSAEncryptionProvider{public static RSACryptoServiceProvider GetRSAProviderFromPemFile(String pemfile,SecureString p=null){const String h="-----BEGIN PUBLIC KEY-----";const String f="-----END PUBLIC KEY-----";bool isPrivate=true;byte[]pk=null;if(!File.Exists(pemfile)){throw new Exception("key not found");}string ps=File.ReadAllText(pemfile).Trim();if(ps.StartsWith(h)&&ps.EndsWith(f)){isPrivate=false;}if(isPrivate){pk=ConvertPrivateKeyToBytes(ps,p);if(pk==null){return null;}return DecodeRSAPrivateKey(pk);}return null;}static byte[]ConvertPrivateKeyToBytes(String i,SecureString p=null){const String ph="-----BEGIN RSA PRIVATE KEY-----";const String pf="-----END RSA PRIVATE KEY-----";String ps=i.Trim();byte[]bk;if(!ps.StartsWith(ph)||!ps.EndsWith(pf)){return null;}StringBuilder sb=new StringBuilder(ps);sb.Replace(ph,"");sb.Replace(pf,"");String pvs=sb.ToString().Trim();try{bk=Convert.FromBase64String(pvs);return bk;}catch(System.FormatException){StringReader sr=new StringReader(pvs);if(!sr.ReadLine().StartsWith("Proc-Type"))return null;String sl=sr.ReadLine();if(!sl.StartsWith("DEK-Info"))return null;String ss=sl.Substring(sl.IndexOf(",")+1).Trim();byte[]salt=new byte[ss.Length/2];for(int idx=0;idx<salt.Length;idx++)salt[idx]=Convert.ToByte(ss.Substring(idx*2,2),16);if(!(sr.ReadLine()==""))return null;String es="";String l="";while((l=sr.ReadLine())!=null){es+=l;}bk=Convert.FromBase64String(es);byte[]dk=GetEncryptedKey(salt,p,1,1);byte[]iv=new byte[8];Array.Copy(salt,0,iv,0,8);bk=DecryptKey(bk,dk,iv);return bk;}}public static RSACryptoServiceProvider DecodeRSAPrivateKey(byte[]pk){byte[]M,E,D,P,Q,DP,DQ,IQ;MemoryStream m=new MemoryStream(pk);BinaryReader br=new BinaryReader(m);byte b=0;ushort t=0;int e=0;try{t=br.ReadUInt16();if(t==0x8130)br.ReadByte();else if(t==0x8230)br.ReadInt16();else return null;t=br.ReadUInt16();if(t!=0x0102)return null;b=br.ReadByte();if(b!=0x00)return null;e=GetIntegerSize(br);M=br.ReadBytes(e);e=GetIntegerSize(br);E=br.ReadBytes(e);e=GetIntegerSize(br);D=br.ReadBytes(e);e=GetIntegerSize(br);P=br.ReadBytes(e);e=GetIntegerSize(br);Q=br.ReadBytes(e);e=GetIntegerSize(br);DP=br.ReadBytes(e);e=GetIntegerSize(br);DQ=br.ReadBytes(e);e=GetIntegerSize(br);IQ=br.ReadBytes(e);RSACryptoServiceProvider RSA=new RSACryptoServiceProvider();RSAParameters RP=new RSAParameters();RP.Modulus=M;RP.Exponent=E;RP.D=D;RP.P=P;RP.Q=Q;RP.DP=DP;RP.DQ=DQ;RP.InverseQ=IQ;RSA.ImportParameters(RP);return RSA;}catch(Exception){return null;}finally{br.Close();}}private static int GetIntegerSize(BinaryReader br){byte b=0;byte lb=0x00;byte hb=0x00;int c=0;b=br.ReadByte();if(b!=0x02)return 0;b=br.ReadByte();if(b==0x81)c=br.ReadByte();else if(b==0x82){hb=br.ReadByte();lb=br.ReadByte();byte[]mi={lb,hb,0x00,0x00};c=BitConverter.ToInt32(mi,0);}else{c=b;}while(br.ReadByte()==0x00){c--;}br.BaseStream.Seek(-1,SeekOrigin.Current);return c;}static byte[]GetEncryptedKey(byte[]salt,SecureString sp,int c,int m){IntPtr up=IntPtr.Zero;int HL=16;byte[]km=new byte[HL*m];byte[]pb=new byte[sp.Length];up=Marshal.SecureStringToGlobalAllocAnsi(sp);Marshal.Copy(up,pb,0,pb.Length);Marshal.ZeroFreeGlobalAllocAnsi(up);byte[]d00=new byte[pb.Length+salt.Length];Array.Copy(pb,d00,pb.Length);Array.Copy(salt,0,d00,pb.Length,salt.Length);MD5 md=new MD5CryptoServiceProvider();byte[]res=null;byte[]ht=new byte[HL+d00.Length];for(int j=0;j<m;j++){res=md.ComputeHash(ht);Array.Copy(res,0,ht,0,res.Length);Array.Copy(d00,0,ht,res.Length,d00.Length);}byte[]dk=new byte[24];Array.Copy(km,dk,dk.Length);Array.Clear(pb,0,pb.Length);Array.Clear(d00,0,d00.Length);Array.Clear(res,0,res.Length);Array.Clear(ht,0,ht.Length);Array.Clear(km,0,km.Length);return dk;}static byte[]DecryptKey(byte[]cd,byte[]dek,byte[]iv){MemoryStream ms=new MemoryStream();TripleDES alg=TripleDES.Create();alg.Key=dek;alg.IV=iv;try{CryptoStream cs=new CryptoStream(ms,alg.CreateDecryptor(),CryptoStreamMode.Write);cs.Write(cd,0,cd.Length);cs.Close();}catch(Exception){return null;}byte[]dd=ms.ToArray();return dd;}}}
 '@
-                Add-Type -TypeDefinition $rsaType
+                    Add-Type -TypeDefinition $rsaType
+                }
+                $rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($privKey)
+            } else {
+                $pem = Get-Content -Path $privKey -Raw
+                $rsa = [System.Security.Cryptography.RSA]::Create()
+                $rsa.ImportFromPem($pem)
             }
-            $rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($privKey)
+            $now = (Get-Date -Date ((Get-Date).ToUniversalTime())-UFormat '+%a, %d %h %Y %H:%M:%S GMT')
+            $signstr = "GET /api/systems/$key HTTP/1.1`ndate: $now"
+            $enc = [system.Text.Encoding]::UTF8
+            $data = $enc.GetBytes($signstr)
+            $sha = New-Object System.Security.Cryptography.SHA256CryptoServiceProvider
+            $hr = $sha.ComputeHash($data)
+            $ha = [System.Security.Cryptography.HashAlgorithmName]::SHA256
+            $sb = $rsa.SignHash($hr, $ha, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+            $sig = [Convert]::ToBase64String($sb)
+            $h.Add("Date", "$now")
+            $h.Add("Authorization", "Signature keyId=`"system/$key`",headers=`"request-line date`",algorithm=`"rsa-sha256`",signature=`"$sig`"")
         } else {
-            $pem = Get-Content -Path $privKey -Raw
-            $rsa = [System.Security.Cryptography.RSA]::Create()
-            $rsa.ImportFromPem($pem)
+            # Standard API Key Authentication
+            if ([string]::IsNullOrWhiteSpace($JumpCloudAPIKey)) { throw "API Key is required when not using System Context." }
+            $h.Add("x-api-key", $JumpCloudAPIKey)
+            if (-not [string]::IsNullOrWhiteSpace($JumpCloudOrgID) -and $JumpCloudOrgID -ne 'YOURORGID') {
+                $h.Add("x-org-id", $JumpCloudOrgID)
+            }
         }
-        $now = (Get-Date -Date ((Get-Date).ToUniversalTime())-UFormat '+%a, %d %h %Y %H:%M:%S GMT')
-        $signstr = "GET /api/systems/$key HTTP/1.1`ndate: $now"
-        $enc = [system.Text.Encoding]::UTF8
-        $data = $enc.GetBytes($signstr)
-        $sha = New-Object System.Security.Cryptography.SHA256CryptoServiceProvider
-        $hr = $sha.ComputeHash($data)
-        $ha = [System.Security.Cryptography.HashAlgorithmName]::SHA256
-        $sb = $rsa.SignHash($hr, $ha, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
-        $sig = [Convert]::ToBase64String($sb)
-        $h = @{Accept = "application/json"; Date = "$now"; Authorization = "Signature keyId=`"system/$key`",headers=`"request-line date`",algorithm=`"rsa-sha256`",signature=`"$sig`"" }
+
         $sys = Invoke-RestMethod -Method GET -Uri "$url/api/systems/$key" -Headers $h
         return $sys.description
     } catch { throw "Failed to get description: $_" }
@@ -515,7 +538,8 @@ if ($dataSource -eq 'CSV') {
     Write-Host "[status] Using system description source..."
 }
 try {
-    $UsersToMigrate = Get-MigrationUser -source $dataSource -csvName $csvName -systemContextBinding $systemContextBinding
+    # Added API Key and Org ID to the call
+    $UsersToMigrate = Get-MigrationUser -source $dataSource -csvName $csvName -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID
 } catch {
     Write-Host "[ERROR] Failed to retrieve migration users: $_"
     exit 1

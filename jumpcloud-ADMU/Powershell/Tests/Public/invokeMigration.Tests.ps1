@@ -115,17 +115,9 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 # Create a hashtable for splatting
                 $params = @{
                     JumpCloudAPIKey = 'YOURAPIKEY' # Default placeholder
-                    JumpCloudOrgID  = 'OrgID'
+                    JumpCloudOrgID  = 'MyValidOrgId'
                 }
                 { Confirm-MigrationParameter @params } | Should -Throw "JumpCloudAPIKey required when systemContextBinding is false."
-            }
-
-            It "Should THROW when systemContextBinding is false and JumpCloudOrgID is the default placeholder" {
-                $params = @{
-                    JumpCloudAPIKey = 'MyValidApiKey'
-                    JumpCloudOrgID  = 'YOURORGID' # Default placeholder
-                }
-                { Confirm-MigrationParameter @params } | Should -Throw "JumpCloudOrgID required when systemContextBinding is false."
             }
 
             It "Should THROW when systemContextBinding is false and JumpCloudAPIKey is empty" {
@@ -708,7 +700,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act & Assert
-                { Get-MgUserFromDesc -systemContextBinding $true } | Should -Throw -ExpectedMessage "*Failed to retrieve system description:*"
+                { Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null } | Should -Throw -ExpectedMessage "*Failed to retrieve system description:*"
             }
 
             It "Should THROW when systemDescription JSON is invalid" {
@@ -718,7 +710,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act & Assert
-                { Get-MgUserFromDesc -systemContextBinding $true } | Should -Throw -ExpectedMessage "*Invalid JSON:*"
+                { Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null } | Should -Throw -ExpectedMessage "*Invalid JSON:*"
             }
         }
 
@@ -730,7 +722,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act
-                $result = Get-MgUserFromDesc -systemContextBinding $true
+                $result = Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null
 
                 # Assert
                 $result | Should -Be $null
@@ -743,7 +735,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act
-                $result = Get-MgUserFromDesc -systemContextBinding $true
+                $result = Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null
 
                 # Assert
                 $result | Should -Be $null
@@ -756,7 +748,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act
-                $result = Get-MgUserFromDesc -systemContextBinding $true
+                $result = Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null
 
                 # Assert
                 $result | Should -Be $null
@@ -771,7 +763,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act
-                $result = Get-MgUserFromDesc -systemContextBinding $true
+                $result = Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null
 
                 # Assert
                 $result.Count | Should -Be 1
@@ -785,7 +777,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act
-                $result = Get-MgUserFromDesc -systemContextBinding $true
+                $result = Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null
 
                 # Assert
                 $result.Count | Should -Be 1
@@ -799,7 +791,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act
-                $result = Get-MgUserFromDesc -systemContextBinding $true
+                $result = Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null
 
                 # Assert
                 $result.Count | Should -Be 1
@@ -813,7 +805,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act
-                $result = Get-MgUserFromDesc -systemContextBinding $true
+                $result = Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null
 
                 # Assert
                 $result.Count | Should -Be 1
@@ -830,7 +822,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act & Assert
-                { Get-MgUserFromDesc -systemContextBinding $true } | Should -Throw "User 'user1' missing 'uid'."
+                { Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null } | Should -Throw "User 'user1' missing 'uid'."
             }
 
         }
@@ -843,7 +835,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act
-                $result = Get-MgUserFromDesc -systemContextBinding $true
+                $result = Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null
 
                 # Assert
                 $result -is [System.Collections.ArrayList] | Should -Be $true
@@ -858,7 +850,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act
-                $result = Get-MgUserFromDesc -systemContextBinding $true
+                $result = Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null
 
                 # Assert
                 $result.Count | Should -Be 2
@@ -875,7 +867,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act
-                $result = Get-MgUserFromDesc -systemContextBinding $true
+                $result = Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null
 
                 # Assert
                 $result[0].SelectedUsername | Should -Be "S-1-5-21-ABC"
@@ -892,7 +884,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act
-                $result = Get-MgUserFromDesc -systemContextBinding $true
+                $result = Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null
 
                 # Assert
                 $result.GetType().Name | Should -Be "ArrayList"
@@ -916,7 +908,7 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
                 }
 
                 # Act
-                $result = Get-MgUserFromDesc -systemContextBinding $true
+                $result = Get-MgUserFromDesc -systemContextBinding $true -JumpCloudAPIKey $null -JumpCloudOrgID $null
 
                 # Assert
                 $result.Count | Should -Be 1
