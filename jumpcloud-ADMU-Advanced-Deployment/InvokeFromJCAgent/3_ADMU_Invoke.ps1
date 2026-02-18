@@ -20,25 +20,23 @@ $ForceReboot = $true
 $UpdateHomePath = $false
 $AutoBindJCUser = $true
 $PrimaryUser = $false
-$BindAsAdmin = $false # Bind user as admin (default False)
-$JumpCloudAPIKey = 'YOURAPIKEY' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
-$JumpCloudOrgID = 'YOURORGID' # This field is required if you use a MTP API Key
-$SetDefaultWindowsUser = $true # Set the default last logged on windows user to the JumpCloud user (default True)
-$ReportStatus = $false # Report status back to JumpCloud Description (default False)
+$BindAsAdmin = $false # Bind user as admin
+$JumpCloudAPIKey = 'YOURAPIKEY' # Required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
+$JumpCloudOrgID = '' # Required if you use a MTP API Key
+$SetDefaultWindowsUser = $true
+$ReportStatus = $false # Report status back to JumpCloud Description
 
 # Option to shutdown or restart
-# Restarting the system is the default behavior
-# If you want to shutdown the system, set the postMigrationBehavior to Shutdown
 # The 'shutdown' behavior performs a shutdown of the system in a much faster manner than 'restart' which can take 5 mins form the time the command is issued
 $postMigrationBehavior = 'Restart' # Restart or Shutdown
 
 # Option to remove the existing MDM
-$removeMDM = $false # Remove the existing MDM (default false)
+$removeMDM = $false # Remove the existing MDM
 
 # option to bind using the systemContext API
-$systemContextBinding = $false # Bind using the systemContext API (default False)
+$systemContextBinding = $false # Bind using the systemContext API
 # If you want to bind using the systemContext API, set the systemContextBinding to true
-# The systemContextBinding option is only available for devices that have enrolled a device using a JumpCloud Administrators Connect Key
+# The systemContextBinding option is only available for devices that are JC Enrolled
 # for more information, see the JumpCloud documentation: https://docs.jumpcloud.com/api/2.0/index.html#section/System-Context
 #endregion variables
 ####
@@ -61,7 +59,7 @@ function Confirm-MigrationParameter {
         [bool]$removeMDM = $true,
         [bool]$systemContextBinding = $false,
         [string]$JumpCloudAPIKey = 'YOURAPIKEY',
-        [string]$JumpCloudOrgID = 'YOURORGID',
+        [string]$JumpCloudOrgID = '',
         [bool]$ReportStatus = $false,
         [ValidateSet('Restart', 'Shutdown')][string]$postMigrationBehavior = 'Restart'
     )
@@ -80,13 +78,13 @@ function Get-MigrationUser {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory)]
         [ValidateSet('CSV', 'Description')]
         [string]$source,
         [Parameter(Mandatory = $false)]
         [string]$csvName = 'jcdiscovery.csv',
-        [Parameter(Mandatory = $true)]
-        [boolean]$systemContextBinding,
+        [Parameter(Mandatory)]
+        [bool]$systemContextBinding,
         [string]$JumpCloudAPIKey,
         [string]$JumpCloudOrgID
     )
@@ -101,10 +99,10 @@ function Get-MgUserFromCSV {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory)]
         [string]$csvName,
-        [Parameter(Mandatory = $true)]
-        [boolean]$systemContextBinding
+        [Parameter(Mandatory)]
+        [bool]$systemContextBinding
     )
     begin {
         $csvPath = "C:\Windows\Temp\$csvName"
@@ -161,7 +159,7 @@ function Get-MgUserFromDesc {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param(
-        [Parameter(Mandatory = $true)][boolean]$systemContextBinding,
+        [Parameter(Mandatory)][bool]$systemContextBinding,
         [string]$JumpCloudAPIKey,
         [string]$JumpCloudOrgID
     )
@@ -210,7 +208,7 @@ function Get-LatestADMUGUIExe {
         $headers = @{"Accept" = "application/vnd.github.v3+json" }
         if (-not [string]::IsNullOrEmpty($GitHubToken)) {
             $headers["Authorization"] = "Bearer $GitHubToken"
-            Write-Host "Using authenticated GitHub API" -ForegroundColor Cyan
+            Write-Host "Using authenticated GitHub API"
         }
     }
     process {
@@ -219,26 +217,26 @@ function Get-LatestADMUGUIExe {
         while ($attempt -lt $MaxRetries -and -not $success) {
             $attempt++
             try {
-                if ($attempt -gt 1) { Write-Host "Retry attempt $attempt of $MaxRetries..." -ForegroundColor Yellow }
-                Write-Host "Querying GitHub for latest release..." -ForegroundColor Yellow
+                if ($attempt -gt 1) { Write-Host "Retry attempt $attempt of $MaxRetries..." }
+                Write-Host "Querying GitHub for latest release..."
                 $latestRelease = Invoke-RestMethod -Uri $apiUrl -Headers $headers -ErrorAction Stop
                 $exeAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
                 if ($exeAsset) {
                     $downloadUrl = $exeAsset.browser_download_url
                     $fileName = $exeAsset.name
                     $fullPath = Join-Path -Path $destinationPath -ChildPath $fileName
-                    Write-Host "Downloading '$fileName' (Version $($latestRelease.tag_name))..." -ForegroundColor Yellow
+                    Write-Host "Downloading '$fileName' (Version $($latestRelease.tag_name))..."
                     $dlAttempt = 0
                     while ($dlAttempt -lt $MaxRetries) {
                         $dlAttempt++
                         try {
                             Invoke-WebRequest -Uri $downloadUrl -OutFile $fullPath -ErrorAction Stop
-                            Write-Host "Download complete!" -ForegroundColor Green
+                            Write-Host "Download complete!"
                             $success = $true
                             break
                         } catch {
                             if ($dlAttempt -lt $MaxRetries) {
-                                Write-Host "Download failed. Retrying in $RetryDelaySeconds seconds..." -ForegroundColor Yellow
+                                Write-Host "Download failed. Retrying in $RetryDelaySeconds seconds..."
                                 Start-Sleep -Seconds $RetryDelaySeconds
                             } else {
                                 throw "$($_.Exception.Message)"
@@ -251,13 +249,13 @@ function Get-LatestADMUGUIExe {
             } catch {
                 $errorMessage = $_.Exception.Message
                 if ($errorMessage -match "rate limit|403") {
-                    Write-Host "GitHub API rate limit issue." -ForegroundColor Yellow
+                    Write-Host "GitHub API rate limit issue."
                     if ([string]::IsNullOrEmpty($GitHubToken)) {
-                        Write-Host "Hint: Use -GitHubToken for higher limits." -ForegroundColor Cyan
+                        Write-Host "Hint: Use -GitHubToken for higher limits."
                     }
                 }
                 if ($attempt -lt $MaxRetries) {
-                    Write-Host "Waiting $RetryDelaySeconds seconds..." -ForegroundColor Yellow
+                    Write-Host "Waiting $RetryDelaySeconds seconds..."
                     Start-Sleep -Seconds $RetryDelaySeconds
                 } else {
                     throw "Failed after $MaxRetries attempts: $errorMessage"
@@ -308,7 +306,7 @@ function Get-JcadmuGuiSha256 {
         while ($attempt -lt $MaxRetries) {
             $attempt++
             try {
-                if ($attempt -gt 1) { Write-Host "Retry attempt $attempt..." -ForegroundColor Yellow }
+                if ($attempt -gt 1) { Write-Host "Retry attempt $attempt..." }
                 $releases = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers -ErrorAction Stop
                 if ($null -eq $releases -or $releases.Count -eq 0) { throw "No releases found." }
                 $latestRelease = $releases[0]
@@ -321,10 +319,10 @@ function Get-JcadmuGuiSha256 {
                 }
             } catch {
                 if ($_.Exception.Message -match "rate limit|403") {
-                    Write-Host "GitHub API rate limit issue." -ForegroundColor Yellow
+                    Write-Host "GitHub API rate limit issue."
                 }
                 if ($attempt -lt $MaxRetries) {
-                    Write-Host "Retrying in $RetryDelaySeconds seconds..." -ForegroundColor Yellow
+                    Write-Host "Retrying in $RetryDelaySeconds seconds..."
                     Start-Sleep -Seconds $RetryDelaySeconds
                 } else {
                     throw "Failed after $MaxRetries attempts: $($_.Exception.Message)"
@@ -335,7 +333,7 @@ function Get-JcadmuGuiSha256 {
 }
 function Test-ExeSHA {
     param (
-        [Parameter(Mandatory = $true)][string]$filePath,
+        [Parameter(Mandatory)][string]$filePath,
         [Parameter(Mandatory = $false)][string]$GitHubToken
     )
     process {
@@ -354,8 +352,8 @@ function Test-ExeSHA {
 function Invoke-UserMigrationBatch {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)][array]$UsersToMigrate,
-        [Parameter(Mandatory = $true)][hashtable]$MigrationConfig
+        [Parameter(Mandatory)][array]$UsersToMigrate,
+        [Parameter(Mandatory)][hashtable]$MigrationConfig
     )
     $results = [PSCustomObject]@{
         TotalUsers           = $UsersToMigrate.Count
@@ -433,9 +431,9 @@ function Invoke-UserMigrationBatch {
 function Invoke-SingleUserMigration {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)][PSCustomObject]$User,
-        [Parameter(Mandatory = $true)][hashtable]$MigrationParams,
-        [Parameter(Mandatory = $true)][string]$GuiJcadmuPath
+        [Parameter(Mandatory)][PSCustomObject]$User,
+        [Parameter(Mandatory)][hashtable]$MigrationParams,
+        [Parameter(Mandatory)][string]$GuiJcadmuPath
     )
     if (-not (Test-Path -Path $GuiJcadmuPath)) { throw "File not found: '$GuiJcadmuPath'." }
     $convertedParams = ConvertTo-ArgumentList -InputHashtable $MigrationParams
@@ -474,17 +472,16 @@ function Get-SystemDescription {
         [string]$JumpCloudOrgID
     )
     try {
-        # Retrieve System ID and Host URL from Agent Config
+        # Retrieve System ID
         if (-not (Test-Path 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf')) { throw "JumpCloud Agent config file not found." }
         $cfg = Get-Content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
         $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
-        if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey found in config" }
+        if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey" }
         $host_match = [regex]::Match($cfg, 'agentServerHost["]?:["]?agent\.(\w+)\.jumpcloud\.com').Groups[1].Value
         $url = if ($host_match -eq "eu") { "https://console.jumpcloud.eu" }else { "https://console.jumpcloud.com" }
-
         $h = @{ "Accept" = "application/json" }
 
-        # Authenticate (System Context vs API Key)
+        # Authenticate
         if ($systemContextBinding) {
             $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
             if (-not(Test-Path $privKey)) { throw "Key not found for SystemContext binding" }
@@ -513,14 +510,12 @@ using System;using System.Collections.Generic;using System.IO;using System.Net;u
             $h.Add("Date", "$now")
             $h.Add("Authorization", "Signature keyId=`"system/$key`",headers=`"request-line date`",algorithm=`"rsa-sha256`",signature=`"$sig`"")
         } else {
-            # Standard API Key Authentication
             if ([string]::IsNullOrWhiteSpace($JumpCloudAPIKey)) { throw "API Key is required when not using System Context." }
             $h.Add("x-api-key", $JumpCloudAPIKey)
-            if (-not [string]::IsNullOrWhiteSpace($JumpCloudOrgID) -and $JumpCloudOrgID -ne 'YOURORGID') {
+            if (-not [string]::IsNullOrWhiteSpace($JumpCloudOrgID)) {
                 $h.Add("x-org-id", $JumpCloudOrgID)
             }
         }
-
         $sys = Invoke-RestMethod -Method GET -Uri "$url/api/systems/$key" -Headers $h
         return $sys.description
     } catch { throw "Failed to get description: $_" }
@@ -538,7 +533,6 @@ if ($dataSource -eq 'CSV') {
     Write-Host "[status] Using system description source..."
 }
 try {
-    # Added API Key and Org ID to the call
     $UsersToMigrate = Get-MigrationUser -source $dataSource -csvName $csvName -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID
 } catch {
     Write-Host "[ERROR] Failed to retrieve migration users: $_"

@@ -128,12 +128,12 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 { Confirm-MigrationParameter @params } | Should -Throw "JumpCloudAPIKey required when systemContextBinding is false."
             }
 
-            It "Should return TRUE when systemContextBinding is TRUE, even with default API parameters" {
+            It "Should return TRUE when systemContextBinding is TRUE, even with default or null API parameters" {
                 # When systemContextBinding is true, the API key and Org ID checks should be skipped.
                 $params = @{
                     systemContextBinding = $true
                     JumpCloudAPIKey      = 'YOURAPIKEY' # This would normally fail
-                    JumpCloudOrgID       = 'YOURORGID'  # This would normally fail
+                    JumpCloudOrgID       = $null        # Testing null explicitly
                 }
                 Confirm-MigrationParameter @params | Should -Be $true
             }
