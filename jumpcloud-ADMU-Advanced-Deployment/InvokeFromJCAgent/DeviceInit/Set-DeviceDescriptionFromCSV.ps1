@@ -234,6 +234,12 @@ function Sync-DeviceDescriptions {
         $changes = @()
         $updateConfirmed = @()
         $validationErrors = @()
+        # Return object: ModifiedDevices (hashtable keyed by DeviceID), Cancelled (bool), ValidationErrors (array)
+        $script:syncResult = @{
+            ModifiedDevices   = @{}
+            Cancelled         = $false
+            ValidationErrors  = @()
+        }
     }
 
     process {
@@ -342,16 +348,19 @@ function Sync-DeviceDescriptions {
             }
         }
 
+        # Populate return object with validation errors
+        $script:syncResult.ValidationErrors = @($validationErrors)
+
         # Show validation errors if any
         if ($validationErrors.Count -gt 0) {
             Write-Host "`n========================================="
             Write-Host "VALIDATION ERRORS"
             Write-Host "=========================================`n"
 
-            foreach ($error in $validationErrors) {
-                Write-Host "[Device] $($error.Hostname) ($($error.DeviceID))"
-                Write-Host "[User] $($error.Username) / $($error.UserID) (SID: $($error.SID))"
-                Write-Host "[Error] $($error.Errors)"
+            foreach ($err in $validationErrors) {
+                Write-Host "[Device] $($err.Hostname) ($($err.DeviceID))"
+                Write-Host "[User] $($err.Username) / $($err.UserID) (SID: $($err.SID))"
+                Write-Host "[Error] $($err.Errors)"
                 Write-Host ""
             }
 
@@ -379,7 +388,8 @@ function Sync-DeviceDescriptions {
                 $response = Read-Host "Do you want to apply these changes? (yes/no)"
                 if ($response -ne "yes") {
                     Write-Host "[status] Update cancelled by user."
-                    return $false
+                    $script:syncResult.Cancelled = $true
+                    return $script:syncResult
                 }
             }
         }
@@ -392,6 +402,10 @@ function Sync-DeviceDescriptions {
                 try {
                     $updatedJson = @($deviceUpdate.UpdatedUsers) | ConvertTo-Json -Depth 5
                     Update-JCSystemDescription -SystemID $deviceUpdate.DeviceID -NewDescription $updatedJson
+                    $script:syncResult.ModifiedDevices[$deviceUpdate.DeviceID] = @{
+                        Hostname      = $deviceUpdate.Hostname
+                        NewDescription = $updatedJson
+                    }
                     Write-Host "[success] Updated device: $($deviceUpdate.Hostname)"
                 } catch {
                     Write-Host "[error] Failed to update device '$($deviceUpdate.Hostname)': $_"
@@ -409,7 +423,7 @@ function Sync-DeviceDescriptions {
             Write-Host "[status] No changes detected across all devices."
         }
 
-        return $true
+        return $script:syncResult
     }
 }
 #endregion Functions
@@ -423,11 +437,14 @@ try {
 
     $syncResult = Sync-DeviceDescriptions -CsvPath $CsvPath -PreviewChanges $ShowDifferencesOnly
 
-    if ($syncResult) {
-        Write-Host "`n[SUCCESS] Device description synchronization completed."
-    } else {
+    if ($syncResult.Cancelled) {
         Write-Host "`n[INFO] Synchronization was not applied."
         exit 1
+    }
+    if ($syncResult.ModifiedDevices.Count -gt 0) {
+        Write-Host "`n[SUCCESS] Device description synchronization completed. $($syncResult.ModifiedDevices.Count) device(s) updated."
+    } else {
+        Write-Host "`n[INFO] No changes were applied to any device."
     }
 
 } catch {

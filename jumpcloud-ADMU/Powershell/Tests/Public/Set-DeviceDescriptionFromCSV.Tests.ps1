@@ -52,7 +52,12 @@ Describe "Set-DeviceDescriptionFromCSV Tests" -Tag "InstallJC" {
 
             $result = Sync-DeviceDescriptions -CsvPath $csvPath -PreviewChanges $true -Confirm $false
 
-            $result | Should -Be $true
+            $result.Cancelled | Should -Be $false
+            @($result.ModifiedDevices.Keys).Count | Should -Be 1
+            $result.ModifiedDevices["dev-123"] | Should -Not -BeNullOrEmpty
+            $result.ModifiedDevices["dev-123"].Hostname | Should -Be "HOST1"
+            $result.ModifiedDevices["dev-123"].NewDescription | Should -Match "jcuser1"
+            $result.ModifiedDevices["dev-123"].NewDescription | Should -Match "jcuid1"
             Assert-MockCalled Set-JCSystem -Times 1 -Scope It
             Assert-MockCalled Set-JCSystem -ParameterFilter { $SystemID -eq "dev-123" } -Scope It
         }
@@ -84,7 +89,8 @@ Describe "Set-DeviceDescriptionFromCSV Tests" -Tag "InstallJC" {
 
             $result = Sync-DeviceDescriptions -CsvPath $csvPath -PreviewChanges $true -Confirm $true
 
-            $result | Should -Be $false
+            $result.Cancelled | Should -Be $true
+            $result.ModifiedDevices.Count | Should -Be 0
             Assert-MockCalled Set-JCSystem -Times 0 -Scope It
         }
     }
@@ -116,7 +122,8 @@ Describe "Set-DeviceDescriptionFromCSV Tests" -Tag "InstallJC" {
 
             $result = Sync-DeviceDescriptions -CsvPath $csvPath -PreviewChanges $false -Confirm $false
 
-            $result | Should -Be $true
+            $result.ValidationErrors.Count | Should -BeGreaterThan 0
+            $result.ModifiedDevices.Count | Should -Be 0
             Assert-MockCalled Set-JCSystem -Times 0 -Scope It
         }
     }
@@ -147,7 +154,7 @@ Describe "Set-DeviceDescriptionFromCSV Tests" -Tag "InstallJC" {
 
             $result = Sync-DeviceDescriptions -CsvPath $csvPath -PreviewChanges $false -Confirm $false
 
-            $result | Should -Be $true
+            $result.ModifiedDevices.Count | Should -Be 0
             Assert-MockCalled Set-JCSystem -Times 0 -Scope It
         }
 
@@ -176,7 +183,7 @@ Describe "Set-DeviceDescriptionFromCSV Tests" -Tag "InstallJC" {
 
             $result = Sync-DeviceDescriptions -CsvPath $csvPath -PreviewChanges $false -Confirm $false
 
-            $result | Should -Be $true
+            $result.ModifiedDevices.Count | Should -Be 0
             Assert-MockCalled Set-JCSystem -Times 0 -Scope It
         }
     }

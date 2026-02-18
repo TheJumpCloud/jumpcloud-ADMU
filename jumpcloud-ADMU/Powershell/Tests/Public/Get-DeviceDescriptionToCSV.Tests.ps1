@@ -62,7 +62,7 @@ Describe "Get-DeviceDescriptionToCSV Tests" -Tag "InstallJC" {
                 )
             }
             $outPath = Join-Path $TestDrive "report.csv"
-            $result = Get-DeviceDescriptionToCSV -OutputPath $outPath
+            $result = @(Get-DeviceDescriptionToCSV -OutputPath $outPath)
             $result | Should -Not -Be $null
             $result.Count | Should -Be 1
             $result[0].DeviceID | Should -Be "device-id-1"
@@ -89,7 +89,7 @@ Describe "Get-DeviceDescriptionToCSV Tests" -Tag "InstallJC" {
                 )
             }
             $outPath = Join-Path $TestDrive "single.csv"
-            $result = Get-DeviceDescriptionToCSV -OutputPath $outPath
+            $result = @(Get-DeviceDescriptionToCSV -OutputPath $outPath)
             $result | Should -Not -Be $null
             $result.Count | Should -Be 1
             $result[0].SID | Should -Be "S-1-5-21-456"
@@ -113,7 +113,7 @@ Describe "Get-DeviceDescriptionToCSV Tests" -Tag "InstallJC" {
                 )
             }
             $outPath = Join-Path $TestDrive "mixed.csv"
-            $result = Get-DeviceDescriptionToCSV -OutputPath $outPath
+            $result = @(Get-DeviceDescriptionToCSV -OutputPath $outPath)
             $result | Should -Not -Be $null
             $result.Count | Should -Be 1
             $result[0].Hostname | Should -Be "WITH_DESC"
@@ -153,7 +153,7 @@ Describe "Get-DeviceDescriptionToCSV Tests" -Tag "InstallJC" {
             }
             $outPath = Join-Path $TestDrive "columns.csv"
             $null = Get-DeviceDescriptionToCSV -OutputPath $outPath
-            $rows = Import-Csv -Path $outPath
+            $rows = @(Import-Csv -Path $outPath)
             $rows.Count | Should -Be 1
             $expectedColumns = @('DeviceID', 'Hostname', 'DisplayName', 'SID', 'Username', 'Status', 'Message', 'LocalPath', 'UserID', 'LastLogin')
             foreach ($col in $expectedColumns) {
