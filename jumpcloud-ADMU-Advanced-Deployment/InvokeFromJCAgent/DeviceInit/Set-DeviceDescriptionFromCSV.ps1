@@ -215,7 +215,9 @@ function Sync-DeviceDescriptions {
         [Parameter(Mandatory = $true)]
         [string]$CsvPath,
         [Parameter(Mandatory = $false)]
-        [bool]$PreviewChanges = $true
+        [bool]$PreviewChanges = $true,
+        [Parameter(Mandatory = $false)]
+        [bool]$Confirm = $true
     )
 
     begin {
@@ -373,11 +375,12 @@ function Sync-DeviceDescriptions {
             }
 
             Write-Host "=========================================`n"
-            $response = Read-Host "Do you want to apply these changes? (yes/no)"
-
-            if ($response -ne "yes") {
-                Write-Host "[status] Update cancelled by user."
-                return $false
+            if ($Confirm) {
+                $response = Read-Host "Do you want to apply these changes? (yes/no)"
+                if ($response -ne "yes") {
+                    Write-Host "[status] Update cancelled by user."
+                    return $false
+                }
             }
         }
 
