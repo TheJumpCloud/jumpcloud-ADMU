@@ -5,7 +5,6 @@
 
 #region Configuration
 $OutputCsvPath = ".\DeviceDescriptionReport.csv"
-$Env:JCApiKey = "YOUR_API_KEY_HERE"
 #endregion Configuration
 
 #region Functions
@@ -29,7 +28,7 @@ function Get-DeviceDescriptionToCSV {
             Write-Host "[status] Retrieving Windows devices from JumpCloud organization..."
 
             # Fetch all Windows systems
-            $allSystems = Get-JcSdkSystem
+            $allSystems = Get-JcSdkSystem -Filter @("osFamily:eq:windows")
 
             Write-Host "[status] Found $($allSystems.Count) Windows device(s). Processing descriptions..."
 
@@ -107,11 +106,7 @@ function Get-DeviceDescriptionToCSV {
 
 #region Main
 try {
-    if ([string]::IsNullOrWhiteSpace($Env:JCApiKey) -or $Env:JCApiKey -eq "YOUR_API_KEY_HERE") {
-        Write-Host "[ERROR] Please configure the JCApiKey variable at the top of this script."
-        exit 1
-    }
-
+    Connect-JCOnline
     $report = Get-DeviceDescriptionToCSV -OutputPath $OutputCsvPath
 
     if ($report) {

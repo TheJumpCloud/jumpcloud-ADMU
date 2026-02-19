@@ -5,7 +5,6 @@
 #region Configuration
 $CsvPath = ".\DeviceDescriptionReport.csv"
 $ShowDifferencesOnly = $true  # Set to $true to review changes before updating
-$Env:JCApiKey = "YOUR_API_KEY_HERE"
 #endregion Configuration
 
 #region Functions
@@ -236,9 +235,9 @@ function Sync-DeviceDescriptions {
         $validationErrors = @()
         # Return object: ModifiedDevices (hashtable keyed by DeviceID), Cancelled (bool), ValidationErrors (array)
         $script:syncResult = @{
-            ModifiedDevices   = @{}
-            Cancelled         = $false
-            ValidationErrors  = @()
+            ModifiedDevices  = @{}
+            Cancelled        = $false
+            ValidationErrors = @()
         }
     }
 
@@ -403,7 +402,7 @@ function Sync-DeviceDescriptions {
                     $updatedJson = @($deviceUpdate.UpdatedUsers) | ConvertTo-Json -Depth 5
                     Update-JCSystemDescription -SystemID $deviceUpdate.DeviceID -NewDescription $updatedJson
                     $script:syncResult.ModifiedDevices[$deviceUpdate.DeviceID] = @{
-                        Hostname      = $deviceUpdate.Hostname
+                        Hostname       = $deviceUpdate.Hostname
                         NewDescription = $updatedJson
                     }
                     Write-Host "[success] Updated device: $($deviceUpdate.Hostname)"
@@ -430,19 +429,16 @@ function Sync-DeviceDescriptions {
 
 #region Main
 try {
-    if ([string]::IsNullOrWhiteSpace($Env:JCApiKey) -or $Env:JCApiKey -eq "YOUR_API_KEY_HERE") {
-        Write-Host "[ERROR] Please configure the JCApiKey variable at the top of this script."
-        exit 1
-    }
-
+    Connect-JCOnline
     $syncResult = Sync-DeviceDescriptions -CsvPath $CsvPath -PreviewChanges $ShowDifferencesOnly
-
-    if ($syncResult.Cancelled) {
+    # Dynamically pull the object array
+    $summaryData = $syncResult | Where-Object { $null -ne $_.Cancelled }
+    if ($summaryData.Cancelled) {
         Write-Host "`n[INFO] Synchronization was not applied."
         exit 1
     }
-    if ($syncResult.ModifiedDevices.Count -gt 0) {
-        Write-Host "`n[SUCCESS] Device description synchronization completed. $($syncResult.ModifiedDevices.Count) device(s) updated."
+    if ($summaryData.ModifiedDevices.Count -gt 0) {
+        Write-Host "`n[SUCCESS] Device description synchronization completed. $($summaryData.ModifiedDevices.Count) device(s) updated."
     } else {
         Write-Host "`n[INFO] No changes were applied to any device."
     }
