@@ -58,7 +58,7 @@ if ($ExportToGitHub) {
 }
 
 # set the $discoveryCSVLocation if the $exportPath variable has been set, otherwise set it to a temp location:
-If ($ExportPath) {
+if ($ExportPath) {
     # test that the export path is a valid directory
     if (-not (Test-Path -Path $ExportPath)) {
         Write-Host "[status] Export path: $ExportPath does not exist yet, creating..."
@@ -68,7 +68,7 @@ If ($ExportPath) {
     $discoveryCSVLocation = Join-Path -Path $ExportPath -ChildPath 'jcdiscovery.csv'
 } else {
     # If system is Mac, save to home directory
-    If ($IsMacOS) {
+    if ($IsMacOS) {
         $tempDir = '~/'
         $newJsonOutputDir = $tempDir + '/' + $env:COMPUTERNAME + '.json'
         $workingDir = $tempDir + '\jumpcloud-discovery'
@@ -84,11 +84,11 @@ If ($ExportPath) {
         $workingDir = $windowsTemp + '\jumpcloud-discovery'
     }
     # create the working directory if it doesn't exist
-    if (-NOT (Test-Path -Path $workingDir)) {
+    if (-not (Test-Path -Path $workingDir)) {
         New-Item -ItemType Directory -Force -Path $workingDir | Out-Null
     }
     # set the export CSV location
-    $discoveryCSVLocation = join-path -path $workingDir -ChildPath '\jcdiscovery.csv'
+    $discoveryCSVLocation = Join-Path -Path $workingDir -ChildPath '\jcdiscovery.csv'
 }
 
 Write-Host "[status] Export path: $discoveryCSVLocation"
@@ -102,7 +102,7 @@ function Get-ADMUSystemsForMigration {
         $systemID
     )
     begin {
-        If ('systemID' -in $PSBoundParameters) {
+        if ('systemID' -in $PSBoundParameters) {
             $systems = Get-JCSystem -SystemID $systemID
         } else {
             $systems = Get-JCSystem -os windows
@@ -112,19 +112,62 @@ function Get-ADMUSystemsForMigration {
     }
     process {
         foreach ($system in $systems) {
-            $users = Get-JCsdkSystemInsightUser -Filter @("system_id:eq:$($system.id)")
+            #$users = Get-JcSdkSystemInsightUser -Filter @("system_id:eq:$($system.id)")
+            $headers = @{
+                'Accept'       = 'application/json';
+                'Content-Type' = 'application/json';
+                'x-api-key'    = $global:JcApiKey;
+                'x-org-id'     = $global:JcOrgId;
+            }
+
+            $pageLimit = 100
+            $skip = 0
+            $totalCount = $null
+            $aggregatedUsers = [System.Collections.Generic.List[object]]::new()
+
+            while ($null -eq $totalCount -or $skip -lt $totalCount) {
+                $uri = "https://console.jumpcloud.com/api/v2/systeminsights/users?filter=system_id:eq:$($system.id)&skip=$skip&limit=$pageLimit"
+                $webResponse = Invoke-WebRequest -Uri $uri -Headers $headers -UseBasicParsing -Method GET
+
+                if ($null -eq $totalCount) {
+                    $rawTotal = $webResponse.Headers['x-total-count']
+                    $parsedTotal = 0
+                    if (-not [int]::TryParse([string]$rawTotal, [ref]$parsedTotal)) {
+                        $parsedTotal = 0
+                    }
+                    $totalCount = $parsedTotal
+                }
+
+                $pageUsers = $webResponse.Content | ConvertFrom-Json
+                if ($null -ne $pageUsers) {
+                    $rows = if ($pageUsers -is [System.Array]) {
+                        $pageUsers
+                    } elseif ($null -ne $pageUsers.PSObject.Properties['results']) {
+                        @($pageUsers.results)
+                    } else {
+                        @($pageUsers)
+                    }
+                    foreach ($row in $rows) {
+                        [void]$aggregatedUsers.Add($row)
+                    }
+                }
+
+                $skip += $pageLimit
+            }
+            $users = $aggregatedUsers
+
             # get the administrator account:
             $adminUser = $users | Where-Object { $_.uid -eq 500 }
             $machineSID = ($adminUser.uuid -split "-")[0..6] -join "-"
 
-            $adUsers = $users | Where-Object { ($_.uuid -notmatch $machineSID) -AND ($_.RealUser -eq $true) }
+            $adUsers = $users | Where-Object { ($_.uuid -notmatch $machineSID) -and ($_.RealUser -eq $true) }
             $adUsers | ForEach-Object {
                 $list.Add(
                     [PSCustomObject]@{
                         SID               = $_.Uuid
                         LocalPath         = $_.Directory
                         LocalComputerName = $system.hostname
-                        LocalUsername     = if (-NOT [system.string]::IsNullOrEmpty($_.Username)) { $_.Username } else {
+                        LocalUsername     = if (-not [system.string]::IsNullOrEmpty($_.Username)) { $_.Username } else {
                             $_.Uuid
                         }
                         JumpCloudUserName = $null
@@ -141,26 +184,26 @@ function Get-ADMUSystemsForMigration {
     }
 }
 # get the users
-write-host "[status] Getting AD users and devices from JumpCloud..."
+Write-Host "[status] Getting AD users and devices from JumpCloud..."
 $allUsers = Get-ADMUSystemsForMigration
 # convert the users to a CSV
 $combinedJSON = $AllUsers | ConvertTo-Csv -NoTypeInformation | Out-File $discoveryCSVLocation
 
 
-If ($ExportToCSV) {
+if ($ExportToCSV) {
     # write the CSV to the working directory
-    $discoveryCSVContent = (get-content -Path $discoveryCSVLocation -Raw)
+    $discoveryCSVContent = (Get-Content -Path $discoveryCSVLocation -Raw)
     Write-Host "CSV file created at: $discoveryCSVLocation"
 }
 
-If ($ExportToGitHub) {
+if ($ExportToGitHub) {
     # write the CSV to the working directory
-    $discoveryCSVContent = (get-content -Path $discoveryCSVLocation -Raw)
+    $discoveryCSVContent = (Get-Content -Path $discoveryCSVLocation -Raw)
     Write-Host "CSV file created at: $discoveryCSVLocation"
     # upload to github
     try {
         Set-GitHubContent -OwnerName $GitHubUsername -RepositoryName $GitHubRepoName -BranchName 'main' -Path "jcdiscovery.csv" -CommitMessage "CSV Upload $(Get-Date)" -Content $discoveryCSVContent
-        Write-host "Upload of CSV complete"
+        Write-Host "Upload of CSV complete"
         Write-Host "Wrote $($discoveryCSVContent.count) lines to the GitHub CSV file"
     } catch {
         Write-Host "Upload of CSV failed, please check your GitHub credentials"

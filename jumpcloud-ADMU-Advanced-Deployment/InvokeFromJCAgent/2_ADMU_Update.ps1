@@ -13,14 +13,14 @@ param (
 ################################################################################
 
 # test that the file exists at the $FilePath
-If (-not (Test-Path -Path $FilePath)) {
+if (-not (Test-Path -Path $FilePath)) {
     Write-Host "[status] File not found at $FilePath, exiting..."
     exit 1
 } else {
     Write-Host "[status] File found at $FilePath"
 }
 
-write-host "[status] Importing data from previous CSV file..."
+Write-Host "[status] Importing data from previous CSV file..."
 $ImportedCSV = Import-Csv -Path $FilePath
 function Get-ADMUSystemsForMigration {
     [OutputType([System.Collections.ArrayList])]
@@ -31,7 +31,7 @@ function Get-ADMUSystemsForMigration {
         $systemID
     )
     begin {
-        If ('systemID' -in $PSBoundParameters) {
+        if ('systemID' -in $PSBoundParameters) {
             $systems = Get-JCSystem -SystemID $systemID
         } else {
             $systems = Get-JCSystem -os windows
@@ -41,19 +41,61 @@ function Get-ADMUSystemsForMigration {
     }
     process {
         foreach ($system in $systems) {
-            $users = Get-JCsdkSystemInsightUser -Filter @("system_id:eq:$($system.id)")
+            #$users = Get-JCsdkSystemInsightUser -Filter @("system_id:eq:$($system.id)")
+            $headers = @{
+                'Accept'       = 'application/json';
+                'Content-Type' = 'application/json';
+                'x-api-key'    = $global:JcApiKey;
+                'x-org-id'     = $global:JcOrgId;
+            }
+
+            $pageLimit = 100
+            $skip = 0
+            $totalCount = $null
+            $aggregatedUsers = [System.Collections.Generic.List[object]]::new()
+
+            while ($null -eq $totalCount -or $skip -lt $totalCount) {
+                $uri = "https://console.jumpcloud.com/api/v2/systeminsights/users?filter=system_id:eq:$($system.id)&skip=$skip&limit=$pageLimit"
+                $webResponse = Invoke-WebRequest -Uri $uri -Headers $headers -UseBasicParsing -Method GET
+
+                if ($null -eq $totalCount) {
+                    $rawTotal = $webResponse.Headers['x-total-count']
+                    $parsedTotal = 0
+                    if (-not [int]::TryParse([string]$rawTotal, [ref]$parsedTotal)) {
+                        $parsedTotal = 0
+                    }
+                    $totalCount = $parsedTotal
+                }
+
+                $pageUsers = $webResponse.Content | ConvertFrom-Json
+                if ($null -ne $pageUsers) {
+                    $rows = if ($pageUsers -is [System.Array]) {
+                        $pageUsers
+                    } elseif ($null -ne $pageUsers.PSObject.Properties['results']) {
+                        @($pageUsers.results)
+                    } else {
+                        @($pageUsers)
+                    }
+                    foreach ($row in $rows) {
+                        [void]$aggregatedUsers.Add($row)
+                    }
+                }
+
+                $skip += $pageLimit
+            }
+            $users = $aggregatedUsers
             # get the administrator account:
             $adminUser = $users | Where-Object { $_.uid -eq 500 }
             $machineSID = ($adminUser.uuid -split "-")[0..6] -join "-"
 
-            $adUsers = $users | Where-Object { ($_.uuid -notmatch $machineSID) -AND ($_.RealUser -eq $true) }
+            $adUsers = $users | Where-Object { ($_.uuid -notmatch $machineSID) -and ($_.RealUser -eq $true) }
             $adUsers | ForEach-Object {
                 $list.Add(
                     [PSCustomObject]@{
                         SID               = $_.Uuid
                         LocalPath         = $_.Directory
                         LocalComputerName = $system.hostname
-                        LocalUsername     = if (-NOT [system.string]::IsNullOrEmpty($_.Username)) { $_.Username } else {
+                        LocalUsername     = if (-not [system.string]::IsNullOrEmpty($_.Username)) { $_.Username } else {
                             $_.Uuid
                         }
                         JumpCloudUserName = $null
@@ -71,13 +113,13 @@ function Get-ADMUSystemsForMigration {
 }
 
 # get any updated lines from JumpCLoud
-if (-Not $SkipCheck) {
-    write-host "[status] Getting AD users and devices from JumpCloud..."
+if (-not $SkipCheck) {
+    Write-Host "[status] Getting AD users and devices from JumpCloud..."
     $allUsers = Get-ADMUSystemsForMigration
     $KeyProperties = "SID", "JumpCloudSystemID", "SerialNumber"
     # if there are any missing rows of data between $importedCSV and $allUsers, add them to the $importedCSV array
     $missingUsers = Compare-Object -ReferenceObject $allUsers -DifferenceObject $ImportedCSV -Property $KeyProperties -PassThru | Where-Object { $_.SideIndicator -eq '<=' }
-    If ($missingUsers) {
+    if ($missingUsers) {
         Write-Host "Imported CSV contained $($ImportedCSV.count) rows, JumpCloud contained $($allUsers.count) rows"
         foreach ($missingUser in $missingUsers) {
             # remove the sideindicator property from the object
@@ -90,7 +132,7 @@ if (-Not $SkipCheck) {
 
 # update the JumpCloud userIDs if a username is provided
 foreach ($line in $ImportedCSV) {
-    if ((-NOT [string]::IsNullOrEmpty($line.JumpCloudUsername) -AND ([string]::IsNullOrEmpty($line.JumpCloudUserID)))) {
+    if ((-not [string]::IsNullOrEmpty($line.JumpCloudUsername) -and ([string]::IsNullOrEmpty($line.JumpCloudUserID)))) {
         $user = Get-JCUser -username $line.JumpCloudUsername
         if ($user) {
             Write-Host "[status] Found JumpCloud user: $($line.JumpCloudUsername), updating userID value"
