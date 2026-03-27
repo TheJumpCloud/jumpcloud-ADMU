@@ -88,7 +88,7 @@ function Get-ADMUSystemsForMigration {
             $adminUser = $users | Where-Object { $_.uid -eq 500 }
             $machineSID = ($adminUser.uuid -split "-")[0..6] -join "-"
 
-            $adUsers = $users | Where-Object { ($_.uuid -notmatch $machineSID) -and ($_.RealUser -eq $true) }
+            $adUsers = $users | Where-Object { ($_.uuid -notmatch $machineSID) -and ($_.real_user -eq $true) }
             $adUsers | ForEach-Object {
                 $list.Add(
                     [PSCustomObject]@{
