@@ -126,7 +126,18 @@ function Get-ADMUSystemsForMigration {
             $aggregatedUsers = [System.Collections.Generic.List[object]]::new()
 
             while ($null -eq $totalCount -or $skip -lt $totalCount) {
-                $uri = "https://console.jumpcloud.com/api/v2/systeminsights/users?filter=system_id:eq:$($system.id)&skip=$skip&limit=$pageLimit"
+switch ($env:JCEnvironment) {
+    "STANDARD" { 
+        $uri = "https://console.jumpcloud.com/api/v2/systeminsights/users?filter=system_id:eq:$($system.id)&skip=$skip&limit=$pageLimit" 
+    }
+    "EU" {
+        $uri = "https://console.eu.jumpcloud.com/api/v2/systeminsights/users?filter=system_id:eq:$($system.id)&skip=$skip&limit=$pageLimit" 
+
+    }
+    Default {
+        $uri = "https://console.jumpcloud.com/api/v2/systeminsights/users?filter=system_id:eq:$($system.id)&skip=$skip&limit=$pageLimit" 
+    }
+}
                 $webResponse = Invoke-WebRequest -Uri $uri -Headers $headers -UseBasicParsing -Method GET
 
                 if ($null -eq $totalCount) {
