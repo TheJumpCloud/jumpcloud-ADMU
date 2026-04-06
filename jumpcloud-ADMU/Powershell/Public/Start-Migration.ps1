@@ -196,7 +196,6 @@ function Start-Migration {
 
             $apiUrl = 'https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/releases/latest'
             $headers = @{ Accept = 'application/vnd.github.v3+json' }
-            $backoffDelays = @(30, 60, 120)
             $attempt = 0
 
             while ($attempt -lt $MaxRetries) {
@@ -229,9 +228,8 @@ function Start-Migration {
                     }
 
                     if ($attempt -lt $MaxRetries) {
-                        $delay = if ($attempt -le $backoffDelays.Count) { $backoffDelays[$attempt - 1] } else { $backoffDelays[-1] }
-                        Write-ToLog -Message ("Retrying UWP release lookup in $delay seconds.") -Level Warning
-                        Start-Sleep -Seconds $delay
+                        Write-ToLog -Message ("Retrying UWP release lookup in $RetryDelaySeconds seconds.") -Level Warning
+                        Start-Sleep -Seconds $RetryDelaySeconds
                     } else {
                         throw "Failed after $MaxRetries attempts: $errorMessage"
                     }
