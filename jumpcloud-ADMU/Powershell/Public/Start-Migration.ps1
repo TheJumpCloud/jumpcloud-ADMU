@@ -286,8 +286,8 @@ function Start-Migration {
                 }
             } catch {
                 $errorMessage = $_.Exception.Message
-                if ($AllowUnvalidatedOnApiFailure -and $errorMessage -match 'rate limit|403') {
-                    Write-ToLog -Message 'Could not validate local uwp_jcadmu.exe because the GitHub API is rate limited. Using the local file.' -Level Warning
+                if ($AllowUnvalidatedOnApiFailure) {
+                    Write-ToLog -Message 'Could not validate local uwp_jcadmu.exe because the GitHub API is unreachable or rate limited. Using the local file.' -Level Warning
                     return [PSCustomObject]@{
                         FilePath              = $FilePath
                         LocalVersion          = $localVersion
