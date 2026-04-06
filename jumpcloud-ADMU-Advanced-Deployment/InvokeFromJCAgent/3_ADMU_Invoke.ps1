@@ -457,9 +457,8 @@ function Test-ExeSHA {
             }
         } catch {
             $errorMessage = $_.Exception.Message
-            if ($AllowUnvalidatedOnApiFailure -and $errorMessage -match "rate limit|403") {
-                Write-Host "[WARNING] Could not validate local GUI executable because the GitHub API is rate limited." -ForegroundColor Yellow
-                Write-Host "[WARNING] Using the local file in C:\Windows\Temp as requested by localEXEs mode." -ForegroundColor Yellow
+            if ($AllowUnvalidatedOnApiFailure) {
+                Write-Host "[WARNING] Could not validate local GUI executable because the GitHub API is unreachable or rate limited. Using the local file in C:\Windows\Temp as requested by localEXEs mode." -ForegroundColor Yellow
                 return [PSCustomObject]@{
                     FilePath              = $filePath
                     LocalVersion          = $localVersion

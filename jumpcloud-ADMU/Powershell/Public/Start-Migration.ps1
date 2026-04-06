@@ -1672,11 +1672,15 @@ function Start-Migration {
             try {
                 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
                 $resolvedUwpExePath = Get-UwpJcadmuExe -WindowsDrive $windowsDrive -localEXEs $localEXEs
-                Write-ToLog -Message ("uwp_jcadmu.exe ready at $resolvedUwpExePath")
+                if ($null -eq $resolvedUwpExePath) {
+                    Write-ToLog -Message 'UWP app restoration will be skipped: uwp_jcadmu.exe could not be prepared.' -Level Warning
+                } else {
+                    Write-ToLog -Message ("uwp_jcadmu.exe ready at $resolvedUwpExePath")
+                }
             } catch {
                 Write-ToLog -Message('Could not prepare uwp_jcadmu.exe for UWP migration.') -Level Warning
                 Write-ToLog -Message($_.Exception.Message) -Level Warning
-                throw
+                # Do not throw; continue migration
             }
             #endRegion Download UWP App
 
