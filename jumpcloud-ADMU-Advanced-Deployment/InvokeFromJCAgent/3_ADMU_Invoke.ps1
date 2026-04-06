@@ -48,7 +48,7 @@ $localEXEs = $false # When true, require gui_jcadmu.exe in C:\Windows\Temp and u
 if ($localEXEs) {
     $uwpTempPath = 'C:\Windows\Temp\uwp_jcadmu.exe'
     $uwpDestPath = 'C:\Windows\uwp_jcadmu.exe'
-    if ((Test-Path -Path $uwpTempPath -PathType Leaf) -and (-not (Test-Path -Path $uwpDestPath -PathType Leaf))) {
+    if (Test-Path -Path $uwpTempPath -PathType Leaf) {
         try {
             Copy-Item -Path $uwpTempPath -Destination $uwpDestPath -Force
             Write-Host "[status] Copied uwp_jcadmu.exe from Temp to Windows directory."
