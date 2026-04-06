@@ -497,9 +497,11 @@ function Invoke-UserMigrationBatch {
             SetDefaultWindowsUser = $MigrationConfig.SetDefaultWindowsUser
             LeaveDomain           = $leaveDomainParam
             RemoveMDM             = $removeMDMParam
-            localEXEs             = $MigrationConfig.localEXEs
             adminDebug            = $true
             ReportStatus          = $MigrationConfig.ReportStatus
+        }
+        if ($MigrationConfig.localEXEs -eq $true) {
+            $migrationParams.Add('localEXEs', $true)
         }
         if (-not [string]::IsNullOrEmpty($MigrationConfig.JumpCloudOrgID)) {
             $migrationParams.Add('JumpCloudOrgID', $MigrationConfig.JumpCloudOrgID)
