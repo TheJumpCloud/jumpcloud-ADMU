@@ -335,14 +335,16 @@ function Start-Migration {
                 Write-ToLog -Message 'Local uwp_jcadmu.exe is not the latest validated release. Downloading the latest version from GitHub.' -Level Warning
             }
 
-            $releaseInfo = Get-UwpJcadmuReleaseInfo -MaxRetries $MaxRetries -RetryDelaySeconds $RetryDelaySeconds
+
+            # Use the direct download URL for the latest release (not rate-limited)
+            $directDownloadUrl = 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe'
             $attempt = 0
             $success = $false
 
             while ($attempt -lt $MaxRetries -and -not $success) {
                 $attempt++
                 try {
-                    Invoke-WebRequest -Uri $releaseInfo.DownloadUrl -OutFile $destinationPath -UseBasicParsing -ErrorAction Stop
+                    Invoke-WebRequest -Uri $directDownloadUrl -OutFile $destinationPath -UseBasicParsing -ErrorAction Stop
                     Start-Sleep -Seconds 1
                     Get-Item -Path $destinationPath -ErrorAction Stop | Out-Null
                     $success = $true
@@ -358,7 +360,9 @@ function Start-Migration {
             }
 
             if (-not $success -or -not (Test-Path -Path $destinationPath -PathType Leaf)) {
-                throw "Could not retrieve uwp_jcadmu.exe to '$destinationPath'."
+                # TODO: Test and return non terminating error here if failure
+                Write-ToLog -Message "WARNING: Could not retrieve uwp_jcadmu.exe to '$destinationPath'. UWP app restoration will be skipped." -Level Warning
+                return $null
             }
 
             return $destinationPath
