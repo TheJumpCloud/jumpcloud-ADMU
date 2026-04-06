@@ -43,6 +43,21 @@ $systemContextBinding = $false # Bind using the systemContext API (default False
 
 # Option to require locally uploaded exe files
 $localEXEs = $false # When true, require gui_jcadmu.exe in C:\Windows\Temp and uwp_jcadmu.exe in C:\Windows
+
+# If localEXEs is enabled, ensure uwp_jcadmu.exe is copied from Temp to Windows if needed
+if ($localEXEs) {
+    $uwpTempPath = 'C:\Windows\Temp\uwp_jcadmu.exe'
+    $uwpDestPath = 'C:\Windows\uwp_jcadmu.exe'
+    if ((Test-Path -Path $uwpTempPath -PathType Leaf) -and (-not (Test-Path -Path $uwpDestPath -PathType Leaf))) {
+        try {
+            Copy-Item -Path $uwpTempPath -Destination $uwpDestPath -Force
+            Write-Host "[status] Copied uwp_jcadmu.exe from Temp to Windows directory."
+        } catch {
+            Write-Host "[error] Failed to copy uwp_jcadmu.exe: $_" -ForegroundColor Red
+            throw
+        }
+    }
+}
 #endregion variables
 ####
 # Do not edit below
