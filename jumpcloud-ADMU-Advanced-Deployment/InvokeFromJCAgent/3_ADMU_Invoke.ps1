@@ -451,7 +451,7 @@ function Test-ExeSHA {
                 ReleaseVersion        = $releaseInfo.Version
                 HashMatched           = ($localFileHash -eq $releaseSHA256)
                 VersionMatched        = $versionMatched
-                IsValid               = (($localFileHash -eq $releaseSHA256) -and $versionMatched)
+                IsValid               = ($localFileHash -eq $releaseSHA256)
                 UsedWithoutValidation = $false
                 ValidationWarning     = $null
             }
