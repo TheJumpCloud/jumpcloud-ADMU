@@ -278,7 +278,7 @@ function Get-LatestADMUGUIExe {
 
         $attempt = 0
         $success = $false
-        $backoffDelays = @(30, 60, 120)
+        # Use a uniform retry delay for all retries, as specified by $RetryDelaySeconds
         while ($attempt -lt $MaxRetries -and -not $success) {
             $attempt++
             try {
@@ -299,9 +299,8 @@ function Get-LatestADMUGUIExe {
                             break
                         } catch {
                             if ($dlAttempt -lt $MaxRetries) {
-                                $downloadDelay = if ($dlAttempt -le $backoffDelays.Count) { $backoffDelays[$dlAttempt - 1] } else { $backoffDelays[-1] }
-                                Write-Host "Download failed. Retrying in $downloadDelay seconds..." -ForegroundColor Yellow
-                                Start-Sleep -Seconds $downloadDelay
+                                Write-Host "Download failed. Retrying in $RetryDelaySeconds seconds..." -ForegroundColor Yellow
+                                Start-Sleep -Seconds $RetryDelaySeconds
                             } else {
                                 throw "$($_.Exception.Message)"
                             }
@@ -319,9 +318,8 @@ function Get-LatestADMUGUIExe {
                     }
                 }
                 if ($attempt -lt $MaxRetries) {
-                    $apiDelay = if ($attempt -le $backoffDelays.Count) { $backoffDelays[$attempt - 1] } else { $backoffDelays[-1] }
-                    Write-Host "Waiting $apiDelay seconds..." -ForegroundColor Yellow
-                    Start-Sleep -Seconds $apiDelay
+                    Write-Host "Waiting $RetryDelaySeconds seconds..." -ForegroundColor Yellow
+                    Start-Sleep -Seconds $RetryDelaySeconds
                 } else {
                     throw "Failed after $MaxRetries attempts: $errorMessage"
                 }
