@@ -11,7 +11,7 @@
     # Only diagnostic records of the specified severity will be generated.
     # Uncomment the following line if you only want Errors and Warnings but
     # not Information diagnostic records.
-    Severity     = @('Error', 'Warning')
+    Severity     = @( 'Error', 'Warning', 'Information', 'Verbose', 'Debug' )
 
     # Analyze **only** the following rules. Use IncludeRules when you want
     # to invoke only a small subset of the default rules.
