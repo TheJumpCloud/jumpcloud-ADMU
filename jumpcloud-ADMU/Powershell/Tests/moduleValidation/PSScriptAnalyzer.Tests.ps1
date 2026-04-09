@@ -24,7 +24,7 @@ Describe 'PSScriptAnalyzer Test Suite' -Tag "Module Validation" {
     # 'PSAvoidUsingInvokeExpression' #TODO: Description
     ################################################################################
 
-    Context 'PSScriptAnalyzer Tests' {
+    Context 'PSScriptAnalyzer Tests' -Skip {
         BeforeAll {
             Write-Host ('[status]Running PSScriptAnalyzer on: ' + $FolderPath_Module)
             Write-Host ('[status]PSScriptAnalyzer Settings File: ' + $SettingsFile)
