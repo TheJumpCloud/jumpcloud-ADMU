@@ -25,4 +25,8 @@ Describe "Set-JcUrl Acceptance Tests" -Tag "Acceptance" {
         Set-JcUrl -Region "EU"
         $global:JCUrl | Should -Be "https://console.eu.jumpcloud.com"
     }
+    It "Set JCUrl to IN region" {
+        Set-JcUrl -Region "IN"
+        $global:JCUrl | Should -Be "https://console.in.jumpcloud.com"
+    }
 }
