@@ -9,9 +9,8 @@
 # https://github.com/PowerShell/PSScriptAnalyzer/tree/master/Engine/Settings
 @{
     # Only diagnostic records of the specified severity will be generated.
-    # Uncomment the following line if you only want Errors and Warnings but
-    # not Information diagnostic records.
-    Severity     = @( 'Error', 'Warning', 'Information', 'Verbose', 'Debug' )
+    # Valid values: Error, Warning, Information, ParseError (PSScriptAnalyzer does not use Verbose/Debug).
+    Severity     = @( 'Error', 'Warning', 'Information', 'ParseError' )
 
     # Analyze **only** the following rules. Use IncludeRules when you want
     # to invoke only a small subset of the default rules.
@@ -31,6 +30,8 @@
     # the default rules except for those you exclude below.
     # Note: if a rule is in both IncludeRules and ExcludeRules, the rule
     # will be excluded.
+    # Skipping PSUseShouldProcessForStateChangingFunctions because most of these functions are not going to make use of it
+    # Skipping 'PSAvoidUsingConvertToSecureStringWithPlainText', 'PSAvoidUsingPlainTextForPassword', 'PSAvoidUsingUsernameAndPasswordParams' - Wont have any effect on the inputted password from the form
     ExcludeRules = @('PSAvoidUsingWriteHost',
         'PSUseShouldProcessForStateChangingFunctions',
         'PSAvoidUsingConvertToSecureStringWithPlainText'
