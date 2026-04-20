@@ -11,8 +11,8 @@ function Test-usernameOrSID {
         $convertedUser = Convert-UserName $usernameOrSID
         $registryProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
         $list = @()
-        foreach ($profile in $registryProfiles) {
-            $list += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
+        foreach ($registryProfile in $registryProfiles) {
+            $list += Get-ItemProperty -Path $registryProfile.PSPath | Select-Object PSChildName, ProfileImagePath
         }
         $users = @()
         foreach ($listItem in $list) {
