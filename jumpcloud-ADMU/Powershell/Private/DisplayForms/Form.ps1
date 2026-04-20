@@ -432,11 +432,7 @@ function Show-SelectionForm {
     $loadingForm.Add_Shown({ $loadingForm.Activate() })
     $null = $loadingForm.Show()   # non-blocking
 
-    try {
-        $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-    } catch {
-        $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
-    }
+    $WmiComputerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..' -PercentComplete 25
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..'
 
@@ -447,11 +443,7 @@ function Show-SelectionForm {
     }
 
     if ($WmiComputerSystem.PartOfDomain) {
-        try {
-            $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
-        } catch {
-            $WmiComputerDomain = Get-CimInstance -Class:('Win32_ntDomain')
-        }
+        $WmiComputerDomain = Get-CimInstance -ClassName Win32_NTDomain
         try {
             $secureChannelStatus = Test-ComputerSecureChannel
         } catch {
@@ -593,11 +585,8 @@ function Show-SelectionForm {
     }
 
     # Get Win32 Profiles to merge data with valid SIDs
-    try {
-        $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-    } catch {
-        $win32UserProfiles = Get-CimInstance -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-    }
+    $win32UserProfiles = Get-CimInstance -ClassName Win32_UserProfile -Property * |
+        Where-Object { $_.Special -eq $false }
 
     $nonSIDLocalUsers = Get-LocalUser
     $date_format = "yyyy-MM-dd HH:mm"
