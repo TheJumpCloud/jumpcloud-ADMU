@@ -32,6 +32,7 @@
     # Note: if a rule is in both IncludeRules and ExcludeRules, the rule
     # will be excluded.
     ExcludeRules = @('PSAvoidUsingWriteHost',
+        'PSUseShouldProcessForStateChangingFunctions',
         'PSAvoidUsingConvertToSecureStringWithPlainText'
         'PSAvoidUsingPlainTextForPassword',
         'PSAvoidUsingUsernameAndPasswordParams',
