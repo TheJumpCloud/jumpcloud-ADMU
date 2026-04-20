@@ -1,5 +1,9 @@
 Function Get-AppxListByUser {
     [CmdletBinding()]
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute(
+        'PSUseUsingScopeModifierInNewRunspaces',
+        '',
+        Justification = 'homePath is passed into the job via Start-Job -ArgumentList and param(); PSScriptAnalyzer can false-positive here (see PSScriptAnalyzer issue #1504).')]
     param (
         [Parameter(Mandatory = $true, HelpMessage = "Supply a user security identifier to identify Microsoft AppX packages by")]
         [System.String]
@@ -49,6 +53,10 @@ Function Get-AppxListByUser {
             $homePath = Get-ProfileImagePath -UserSid $SID
             $j = Start-Job -ScriptBlock {
                 param($homePath)
+
+                if ([string]::IsNullOrWhiteSpace($homePath)) {
+                    return $null
+                }
 
                 try {
                     $appxList = Get-AppxPackage -AllUsers | Select-Object InstallLocation
