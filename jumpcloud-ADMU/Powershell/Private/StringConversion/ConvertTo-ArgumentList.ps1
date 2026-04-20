@@ -18,36 +18,39 @@ function ConvertTo-ArgumentList {
         A list of strings, where each string is a formatted command-line argument.
     #>
     [CmdletBinding()]
+    [OutputType([System.Collections.Generic.List[string]])]
     param (
         [Parameter(Mandatory = $true, ValueFromPipeline = $true)]
         [hashtable]
         $InputHashtable
     )
 
-    # Initialize a generic list to hold the formatted arguments.
-    $argumentList = [System.Collections.Generic.List[string]]::new()
+    process {
+        # Initialize a generic list to hold the formatted arguments.
+        $argumentList = [System.Collections.Generic.List[string]]::new()
 
-    # Iterate through each key-value pair in the input hashtable.
-    foreach ($entry in $InputHashtable.GetEnumerator()) {
-        # Only process entries where the value is not null or an empty string.
-        if ($null -ne $entry.Value -and (-not ($entry.Value -is [string]) -or $entry.Value -ne '')) {
-            $key = $entry.Key
-            $value = $entry.Value
+        # Iterate through each key-value pair in the input hashtable.
+        foreach ($entry in $InputHashtable.GetEnumerator()) {
+            # Only process entries where the value is not null or an empty string.
+            if ($null -ne $entry.Value -and (-not ($entry.Value -is [string]) -or $entry.Value -ne '')) {
+                $key = $entry.Key
+                $value = $entry.Value
 
-            # Format the value. Booleans are converted to lowercase string literals like '$true'.
-            # Other types are used as-is (they will be converted to strings automatically).
-            $formattedValue = if ($value -is [bool]) {
-                '$' + $value.ToString().ToLower()
-            } else {
-                $value
+                # Format the value. Booleans are converted to lowercase string literals like '$true'.
+                # Other types are used as-is (they will be converted to strings automatically).
+                $formattedValue = if ($value -is [bool]) {
+                    '$' + $value.ToString().ToLower()
+                } else {
+                    $value
+                }
+
+                # Construct the argument string in the format -Key:Value and add it to the list.
+                $argument = "-{0}:{1}" -f $key, $formattedValue
+                $argumentList.Add($argument)
             }
-
-            # Construct the argument string in the format -Key:Value and add it to the list.
-            $argument = "-{0}:{1}" -f $key, $formattedValue
-            $argumentList.Add($argument)
         }
-    }
 
-    # Return the completed list of arguments.
-    return $argumentList
+        # Return the completed list of arguments.
+        return $argumentList
+    }
 }
