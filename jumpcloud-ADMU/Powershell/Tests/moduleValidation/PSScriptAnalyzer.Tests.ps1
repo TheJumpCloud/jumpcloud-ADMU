@@ -1,7 +1,11 @@
 
 Describe 'PSScriptAnalyzer Test Suite' -Tag "Module Validation" {
     BeforeAll {
-        $FolderPath_Module = (Get-Item -Path("$PSScriptRoot/../../")).FullName
+        $ModuleRoot = (Get-Item -Path (Join-Path $PSScriptRoot '../..')).FullName
+        $AnalysisPaths = @(
+            (Join-Path $ModuleRoot 'Private')
+            (Join-Path $ModuleRoot 'Public')
+        )
         $SettingsFile = "$PSScriptRoot\PSScriptAnalyzerSettings.psd1"
         # Import Settings:
         $SettingsFromFile = Import-PowerShellDataFile $SettingsFile
@@ -24,11 +28,16 @@ Describe 'PSScriptAnalyzer Test Suite' -Tag "Module Validation" {
     # 'PSAvoidUsingInvokeExpression' #TODO: Description
     ################################################################################
 
-    Context 'PSScriptAnalyzer Tests' -Skip {
+    Context 'PSScriptAnalyzer Tests' {
         BeforeAll {
-            Write-Host ('[status]Running PSScriptAnalyzer on: ' + $FolderPath_Module)
+            Write-Host ('[status]Running PSScriptAnalyzer on: ' + ($AnalysisPaths -join ', '))
             Write-Host ('[status]PSScriptAnalyzer Settings File: ' + $SettingsFile)
-            $ScriptAnalyzerResults = Invoke-ScriptAnalyzer -Path:($FolderPath_Module) -Recurse -Settings $settingsObject -ReportSummary
+            $ScriptAnalyzerResults = foreach ($analysisPath in $AnalysisPaths) {
+                if (-not (Test-Path -LiteralPath $analysisPath)) {
+                    throw "PSScriptAnalyzer analysis path not found: $analysisPath"
+                }
+                Invoke-ScriptAnalyzer -Path $analysisPath -Recurse -Settings $settingsObject -ReportSummary
+            }
             if (-not [System.String]::IsNullOrEmpty($ScriptAnalyzerResults)) {
                 $ScriptAnalyzerResults | ForEach-Object {
                     Write-Error ('[PSScriptAnalyzer][' + $_.Severity + '][' + $_.RuleName + '] ' + $_.Message + ' found in "' + $_.ScriptPath + '" at line ' + $_.Line + ':' + $_.Column)
