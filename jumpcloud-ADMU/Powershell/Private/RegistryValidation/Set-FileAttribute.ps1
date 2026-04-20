@@ -1,5 +1,6 @@
 function Set-FileAttribute {
     [CmdletBinding()]
+    [OutputType([System.Boolean])]
     param (
         # Profile path
         [Parameter(Mandatory = $true)]

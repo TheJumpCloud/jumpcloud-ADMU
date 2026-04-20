@@ -1,4 +1,5 @@
 Function Test-CharLen {
+    [OutputType([System.Boolean])]
     [CmdletBinding()]
     param (
         # Char Length to test
