@@ -335,16 +335,16 @@ function Show-SelectionForm {
 
     # Add rounded corners to form
     $loadingForm.Add_Paint({
-            param($sender, $e)
+            param($paintSource)
             $radius = 15
-            $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+            $rect = [System.Drawing.Rectangle]::new(0, 0, $paintSource.Width, $paintSource.Height)
             $path = New-Object System.Drawing.Drawing2D.GraphicsPath
             $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
             $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
             $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
             $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
             $path.CloseFigure()
-            $sender.Region = New-Object System.Drawing.Region($path)
+            $paintSource.Region = New-Object System.Drawing.Region($path)
             $path.Dispose()
         })
 
@@ -372,16 +372,16 @@ function Show-SelectionForm {
 
     # Add rounded corners to background
     $barBackground.Add_Paint({
-            param($sender, $e)
+            param($paintSource)
             $radius = 5
-            $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+            $rect = [System.Drawing.Rectangle]::new(0, 0, $paintSource.Width, $paintSource.Height)
             $path = New-Object System.Drawing.Drawing2D.GraphicsPath
             $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
             $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
             $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
             $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
             $path.CloseFigure()
-            $sender.Region = New-Object System.Drawing.Region($path)
+            $paintSource.Region = New-Object System.Drawing.Region($path)
             $path.Dispose()
         })
 
@@ -395,17 +395,17 @@ function Show-SelectionForm {
 
     # Add rounded corners to progress bar
     $bar.Add_Paint({
-            param($sender, $e)
-            if ($sender.Width -gt 0) {
+            param($paintSource)
+            if ($paintSource.Width -gt 0) {
                 $radius = 5
-                $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+                $rect = [System.Drawing.Rectangle]::new(0, 0, $paintSource.Width, $paintSource.Height)
                 $path = New-Object System.Drawing.Drawing2D.GraphicsPath
                 $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
                 $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
                 $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
                 $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
                 $path.CloseFigure()
-                $sender.Region = New-Object System.Drawing.Region($path)
+                $paintSource.Region = New-Object System.Drawing.Region($path)
                 $path.Dispose()
             }
         })
@@ -543,8 +543,8 @@ function Show-SelectionForm {
     # Get Valid SIDs from the Registry and build user object
     $registryProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
     $profileList = @()
-    foreach ($profile in $registryProfiles) {
-        $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
+    foreach ($registryProfile in $registryProfiles) {
+        $profileList += Get-ItemProperty -Path $registryProfile.PSPath | Select-Object PSChildName, ProfileImagePath
     }
 
     # Get the SID of the user currently running this script to exclude them
@@ -987,8 +987,8 @@ function Show-SelectionForm {
                     if ( -not [string]::IsNullOrEmpty($JCSystemUsername) ) {
                         $registryProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
                         $profileList = @()
-                        foreach ($profile in $registryProfiles) {
-                            $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath, @{ Name = "username"; Expression = { $sysUsername = Convert-SecurityIdentifier -sid $_.PSChildName; $sysUsername.Split('\')[1] } }
+                        foreach ($registryProfile in $registryProfiles) {
+                            $profileList += Get-ItemProperty -Path $registryProfile.PSPath | Select-Object PSChildName, ProfileImagePath, @{ Name = "username"; Expression = { $sysUsername = Convert-SecurityIdentifier -sid $_.PSChildName; $sysUsername.Split('\')[1] } }
                         }
                         if ($JCSystemUsername -in $profileList.username) {
                             Write-ToLog "JCSystemUsername $($JCSystemUsername) is the same as the another profile on this system"
