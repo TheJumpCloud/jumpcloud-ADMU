@@ -1,5 +1,6 @@
 function Get-MdmEnrollmentGuidFromTaskScheduler {
     [CmdletBinding()]
+    [OutputType([System.Object[]])]
     param()
 
     Write-ToLog "Searching for MDM enrollment GUIDs in Task Scheduler folder: \Microsoft\Windows\EnterpriseMgmt\"
