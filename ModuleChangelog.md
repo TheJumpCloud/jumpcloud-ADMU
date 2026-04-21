@@ -22,7 +22,7 @@ Release Date: April 21, 2026
 
 ## 2.12.2
 
-Release Date: April 21, 2026
+Release Date: February 5, 2026
 
 #### RELEASE NOTES
 
