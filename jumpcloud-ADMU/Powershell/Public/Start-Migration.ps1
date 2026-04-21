@@ -1583,7 +1583,11 @@ function Start-Migration {
 
                             # for the local domain un-join
                             try {
-                                $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+                                $null = Invoke-CimMethod -InputObject $WmiComputerSystem -MethodName 'UnjoinDomainOrWorkgroup' -Arguments @{
+                                    Password        = $null
+                                    UserName        = $null
+                                    FUnjoinOptions  = 0
+                                }
                                 $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
                                 Write-ToLog -Message:("After running UnJoinDomainOrWorkGroup, the domain status is as follows:") -Level:('Info')
                                 Write-ToLog -Message:("AzureADStatus: $AzureADStatus") -Level:('Info')
@@ -1605,7 +1609,11 @@ function Start-Migration {
                             }
                         }
                         "LocalJoined" {
-                            $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+                            $null = Invoke-CimMethod -InputObject $WmiComputerSystem -MethodName 'UnjoinDomainOrWorkgroup' -Arguments @{
+                                Password       = $null
+                                UserName       = $null
+                                FUnjoinOptions = 0
+                            }
                             $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
                             if ($AzureADStatus -match 'NO' -and $LocalDomainStatus -match 'NO') {
                                 Write-ToLog -Message:('Left local domain successfully') -Level:('Info')
