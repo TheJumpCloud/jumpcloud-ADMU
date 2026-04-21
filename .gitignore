@@ -10,3 +10,4 @@ Deploy/admuTemplate.ps1
 *jcdiscovery.csv
 *invokeFunctions.ps1
 *invokeScript.ps1
+*DeviceDescription*Functions.ps1

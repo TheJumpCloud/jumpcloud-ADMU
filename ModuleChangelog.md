@@ -12,6 +12,14 @@ Release Date: April 21, 2026
 
 - Implemented PSScriptAnalyzer for code analysis on the repository
   - Fixed any subsequent errors for a healthier codebase following best practices
+- Updated Bulk ADMU with device migration using the device description
+```
+
+#### FEATURES:
+
+- Additional functions to Get the device description and save it to a CSV file.
+- Additional function to Set the device description based on the CSV file.
+- Added support for API key with bulk ADMU Invoke
 
 ## 2.12.2
 
