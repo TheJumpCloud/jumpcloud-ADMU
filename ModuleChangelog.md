@@ -1,6 +1,17 @@
-## 2.12.2
+## 2.12.3
 
-Release Date: February 5, 2026
+Release Date: April 21, 2026
+
+#### RELEASE NOTES
+
+```
+- Implemented PSScriptAnalyzer and fixed any findings
+```
+
+#### IMPROVEMENTS:
+
+- Implemented PSScriptAnalyzer for code analysis on the repository
+  - Fixed any subsequent errors for a healthier codebase following best practices
 
 #### RELEASE NOTES
 
@@ -21,9 +32,9 @@ Release Date: February 5, 2026
 - Test added to validate new features and existing functionality.
 - Added new functions and features to handle potential edge cases when removing Windows MDM providers
 - Added functionality for Invoke-SystemAPI to create, update, and delete attributes
-Added support for secret variables in DeviceQuery for bulk ADMU
+  Added support for secret variables in DeviceQuery for bulk ADMU
 - Resolved an issue where renaming a created temp profile fails and freezes the migration
-This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
+  This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
 
 #### BUG FIXES:
 
