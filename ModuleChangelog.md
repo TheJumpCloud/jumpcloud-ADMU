@@ -13,6 +13,10 @@ Release Date: April 21, 2026
 - Implemented PSScriptAnalyzer for code analysis on the repository
   - Fixed any subsequent errors for a healthier codebase following best practices
 
+## 2.12.2
+
+Release Date: February 5, 2026
+
 #### RELEASE NOTES
 
 ```
