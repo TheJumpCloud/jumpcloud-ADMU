@@ -73,25 +73,25 @@ Describe 'PSScriptAnalyzer Test Suite' -Tag "Module Validation" {
                 return $false
             }
 
-            $scriptFilesToAnalyze = foreach ($analysisPath in $AnalysisPaths) {
-                if (-not (Test-Path -LiteralPath $analysisPath)) {
-                    throw "PSScriptAnalyzer analysis path not found: $analysisPath"
-                }
-                Get-ChildItem -LiteralPath $analysisPath -Recurse -File |
-                    Where-Object { $_.Extension -in '.ps1', '.psm1' } |
-                    Where-Object { -not (Test-PSScriptAnalyzerPathExcluded -CandidatePath $_.FullName -ModuleRoot $ModuleRoot -ExcludedPaths $PSScriptAnalyzerExcludedPaths) }
-            }
-
             Write-Host ('[status]Running PSScriptAnalyzer on: ' + ($AnalysisPaths -join ', '))
             if ($PSScriptAnalyzerExcludedPaths) {
                 Write-Host ('[status]PSScriptAnalyzer excluded paths: ' + ($PSScriptAnalyzerExcludedPaths -join ', '))
             }
             Write-Host ('[status]PSScriptAnalyzer Settings File: ' + $SettingsFile)
-            $ScriptAnalyzerResults = if ($scriptFilesToAnalyze) {
-                Invoke-ScriptAnalyzer -Path @($scriptFilesToAnalyze.FullName) -Settings $settingsObject -ReportSummary
+            # Invoke-ScriptAnalyzer -Path is [string] on older PSScriptAnalyzer builds; analyze each root and drop excluded ScriptPath rows.
+            $rawScriptAnalyzerResults = foreach ($analysisPath in $AnalysisPaths) {
+                if (-not (Test-Path -LiteralPath $analysisPath)) {
+                    throw "PSScriptAnalyzer analysis path not found: $analysisPath"
+                }
+                Invoke-ScriptAnalyzer -Path $analysisPath -Recurse -Settings $settingsObject -ReportSummary
+            }
+            $ScriptAnalyzerResults = if ($PSScriptAnalyzerExcludedPaths) {
+                @($rawScriptAnalyzerResults) | Where-Object {
+                    (-not $_.ScriptPath) -or
+                    -not (Test-PSScriptAnalyzerPathExcluded -CandidatePath $_.ScriptPath -ModuleRoot $ModuleRoot -ExcludedPaths $PSScriptAnalyzerExcludedPaths)
+                }
             } else {
-                Write-Host ('[warning]No script files found under analysis paths after exclusions')
-                @()
+                $rawScriptAnalyzerResults
             }
             if (-not [System.String]::IsNullOrEmpty($ScriptAnalyzerResults)) {
                 $ScriptAnalyzerResults | ForEach-Object {
