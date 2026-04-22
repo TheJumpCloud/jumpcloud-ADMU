@@ -1,6 +1,6 @@
 ## 2.12.3
 
-Release Date: April 21, 2026
+Release Date: April 22, 2026
 
 #### RELEASE NOTES
 
@@ -13,6 +13,7 @@ Release Date: April 21, 2026
 - Implemented PSScriptAnalyzer for code analysis on the repository
   - Fixed any subsequent errors for a healthier codebase following best practices
 - Updated Bulk ADMU with device migration using the device description
+
 ```
 
 #### FEATURES:
@@ -28,10 +29,12 @@ Release Date: February 5, 2026
 #### RELEASE NOTES
 
 ```
+
 - Added functionality to validate if the user is logged on during pre-migration stage
 - This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
 - Bug fix release addressing issues with Agent Install, reverting profiles with .bak.
 - Updated Windows MDM removal logic
+
 ```
 
 #### FEATURES:
@@ -61,7 +64,9 @@ Release Date: January 20, 2026
 #### RELEASE NOTES
 
 ```
+
 Added Bug fix for temp user directory renaming
+
 ```
 
 #### BUG FIXES:
@@ -75,7 +80,9 @@ Release Date: January 15, 2026
 #### RELEASE NOTES
 
 ```
+
 This release includes the option to update ADMU status on the JumpCloud system description field when migrating remotely. This allows administrators to track migration progress remotely.
+
 ```
 
 #### FEATURES:
@@ -93,10 +100,13 @@ Release Date: January 2, 2026
 #### RELEASE NOTES
 
 ```
+
 Patch release focused on reducing GUI and Progress bar wait times and preloading the migration progress form.
+
 - Added functionality to backup profileImage permissions
 - Added Start-Reversion Function
 - Integrated Reverse Migration functionality in the GUI
+
 ```
 
 #### IMPROVEMENTS:
@@ -112,7 +122,9 @@ Release Date: December 15, 2025
 #### RELEASE NOTES
 
 ```
+
 This release reduces the time required to perform a migration by deferring the file permission traversal and setting to a scheduled task that runs in the background after migration completes. This should significantly reduce the time required to perform a migration on systems with large user profiles. This release includes a bug fix for flashing icons post-migration due to Windows UCPD preventing process from changing certain file default preferences like https/http/.
+
 ```
 
 #### IMPROVEMENTS:
@@ -130,7 +142,9 @@ Release Date: November 18, 2025
 #### RELEASE NOTES
 
 ```
+
 Patch release to address several issues.
+
 ```
 
 #### BUG FIXES:
@@ -151,7 +165,9 @@ Release Date: November 06, 2025
 #### RELEASE NOTES
 
 ```
+
 Added GUI API support for JC EU Organizations
+
 ```
 
 #### IMPROVEMENTS:
@@ -1586,6 +1602,8 @@ September 6, 2019
 - Introduce custom config.xml to remove APAPI prompt.
 
 - Introduce custom migapp.xml and miguser.xml to add more applications and downloads folder migration.
+
+```
 
 ```
 
