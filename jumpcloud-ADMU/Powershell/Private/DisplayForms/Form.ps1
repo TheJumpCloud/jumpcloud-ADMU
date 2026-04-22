@@ -599,10 +599,32 @@ function Show-SelectionForm {
             if ($($user.SID) -eq $($win32user.SID)) {
                 $user.RoamingConfigured = $win32user.RoamingConfigured
                 $user.Loaded = $win32user.Loaded
-                if ([string]::IsNullOrEmpty($($win32user.LastUseTime))) {
+                # Get-CimInstance exposes LastUseTime as [datetime]; WMI used DMTF strings and ManagementDateTimeConverter.
+                $lastUse = $win32user.LastUseTime
+                if ($null -eq $lastUse) {
                     $user.LastLogin = "N/A"
-                } else {
-                    $user.LastLogin = [System.Management.ManagementDateTimeConverter]::ToDateTime($($win32user.LastUseTime)).ToUniversalTime().ToSTring($date_format)
+                }
+                elseif ($lastUse -is [datetime]) {
+                    if ($lastUse -eq [datetime]::MinValue) {
+                        $user.LastLogin = "N/A"
+                    }
+                    else {
+                        $user.LastLogin = $lastUse.ToUniversalTime().ToString($date_format)
+                    }
+                }
+                else {
+                    $dmtf = [string]$lastUse
+                    if ([string]::IsNullOrWhiteSpace($dmtf)) {
+                        $user.LastLogin = "N/A"
+                    }
+                    else {
+                        try {
+                            $user.LastLogin = [System.Management.ManagementDateTimeConverter]::ToDateTime($dmtf).ToUniversalTime().ToString($date_format)
+                        }
+                        catch {
+                            $user.LastLogin = "N/A"
+                        }
+                    }
                 }
             }
         }
