@@ -5,20 +5,15 @@ Release Date: April 21, 2026
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+Updated Bulk ADMU with device migration using the device description
 ```
 
 #### FEATURES:
 
-{{Fill in the Features}}
-
-#### IMPROVEMENTS:
-
-{{Fill in the Improvements}}
-
-#### BUG FIXES:
-
-{{Fill in the Bug Fixes}}
+- Additional functions to Get the device description and save it to a CSV file.
+- Additional function to Set the device description based on the CSV file.
+- Added support for API key with bulk ADMU Invoke
+- Added Local Exe parameter to bypass downloading the one from github everytime.
 
 ## 2.12.2
 
