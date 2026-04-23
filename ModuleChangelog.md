@@ -1,11 +1,11 @@
 ## 2.12.3
 
-Release Date: April 21, 2026
+Release Date: April 23, 2026
 
 #### RELEASE NOTES
 
 ```
-Updated Bulk ADMU with device migration using the device description
+Updated Bulk ADMU with device migration using the device description and Added Local Exe parameter to bypass downloading the one from github
 ```
 
 #### FEATURES:

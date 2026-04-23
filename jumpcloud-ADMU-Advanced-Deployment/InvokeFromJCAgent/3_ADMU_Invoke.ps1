@@ -289,7 +289,6 @@ function Get-LatestADMUGUIExe {
                 $exeAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
                 if ($exeAsset) {
                     $downloadUrl = $exeAsset.browser_download_url
-                    Write-Host "Downloading '$fileName' (Version $($latestRelease.tag_name))..." -ForegroundColor Yellow
                     $fileName = $exeAsset.name
                     $fullPath = Join-Path -Path $destinationPath -ChildPath $fileName
                     Write-Host "Downloading '$fileName' (Version $($latestRelease.tag_name))..."
