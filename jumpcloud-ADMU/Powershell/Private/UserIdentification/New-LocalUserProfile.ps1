@@ -2,7 +2,7 @@ function New-LocalUserProfile {
 
     [CmdletBinding()]
     [Alias()]
-    [OutputType([int])]
+    [OutputType([System.String])]
     Param
     (
         # Param1 help description
@@ -57,6 +57,6 @@ function New-LocalUserProfile {
         # $status
     }
     end {
-        return $SID
+        return [String]$SID
     }
 }
