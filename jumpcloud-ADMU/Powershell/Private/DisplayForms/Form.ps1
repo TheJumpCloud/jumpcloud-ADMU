@@ -33,7 +33,7 @@ function Show-SelectionForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.12.2"
+        Title="JumpCloud ADMU 2.12.3"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -547,9 +547,6 @@ function Show-SelectionForm {
         $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
     }
 
-    # Get the SID of the user currently running this script to exclude them
-    $currentUserSID = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-
     # 1. Initialize TWO lists
     $systemUsers = @()
     $migratedUsers = @()
@@ -561,10 +558,6 @@ function Show-SelectionForm {
         $isValidFormat = [regex]::IsMatch($normalizedSid, $sidPattern);
 
         if ($isValidFormat) {
-            # Check if this is the current user; if so, skip adding to the list
-            if ($normalizedSid -eq $currentUserSID) {
-                continue
-            }
 
             # Check if this is a TEMP profile; if so, skip adding to the list
             if ($listItem.ProfileImagePath -like "*\TEMP") {

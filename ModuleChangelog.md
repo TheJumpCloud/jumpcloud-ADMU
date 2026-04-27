@@ -1,3 +1,13 @@
+## 2.12.3
+
+Release Date: April 27, 2026
+
+#### RELEASE NOTES
+
+```
+- This update restores the visibility of the currently logged-in user in the form GUI, reversing the change introduced in the previous version.
+```
+
 ## 2.12.2
 
 Release Date: February 5, 2026
