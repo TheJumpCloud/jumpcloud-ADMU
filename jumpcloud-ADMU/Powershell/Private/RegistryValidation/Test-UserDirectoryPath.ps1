@@ -21,6 +21,7 @@
 #>
 function Test-UserDirectoryPath {
     [CmdletBinding()]
+    [OutputType([System.Boolean])]
     param (
         [Parameter(Mandatory = $true)]
         [string]$SelectedUserSID

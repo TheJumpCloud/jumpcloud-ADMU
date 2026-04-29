@@ -335,16 +335,16 @@ function Show-SelectionForm {
 
     # Add rounded corners to form
     $loadingForm.Add_Paint({
-            param($sender, $e)
+            param($paintSource)
             $radius = 15
-            $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+            $rect = [System.Drawing.Rectangle]::new(0, 0, $paintSource.Width, $paintSource.Height)
             $path = New-Object System.Drawing.Drawing2D.GraphicsPath
             $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
             $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
             $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
             $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
             $path.CloseFigure()
-            $sender.Region = New-Object System.Drawing.Region($path)
+            $paintSource.Region = New-Object System.Drawing.Region($path)
             $path.Dispose()
         })
 
@@ -372,16 +372,16 @@ function Show-SelectionForm {
 
     # Add rounded corners to background
     $barBackground.Add_Paint({
-            param($sender, $e)
+            param($paintSource)
             $radius = 5
-            $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+            $rect = [System.Drawing.Rectangle]::new(0, 0, $paintSource.Width, $paintSource.Height)
             $path = New-Object System.Drawing.Drawing2D.GraphicsPath
             $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
             $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
             $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
             $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
             $path.CloseFigure()
-            $sender.Region = New-Object System.Drawing.Region($path)
+            $paintSource.Region = New-Object System.Drawing.Region($path)
             $path.Dispose()
         })
 
@@ -395,17 +395,17 @@ function Show-SelectionForm {
 
     # Add rounded corners to progress bar
     $bar.Add_Paint({
-            param($sender, $e)
-            if ($sender.Width -gt 0) {
+            param($paintSource)
+            if ($paintSource.Width -gt 0) {
                 $radius = 5
-                $rect = [System.Drawing.Rectangle]::new(0, 0, $sender.Width, $sender.Height)
+                $rect = [System.Drawing.Rectangle]::new(0, 0, $paintSource.Width, $paintSource.Height)
                 $path = New-Object System.Drawing.Drawing2D.GraphicsPath
                 $path.AddArc($rect.X, $rect.Y, $radius * 2, $radius * 2, 180, 90)
                 $path.AddArc($rect.Right - $radius * 2, $rect.Y, $radius * 2, $radius * 2, 270, 90)
                 $path.AddArc($rect.Right - $radius * 2, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 0, 90)
                 $path.AddArc($rect.X, $rect.Bottom - $radius * 2, $radius * 2, $radius * 2, 90, 90)
                 $path.CloseFigure()
-                $sender.Region = New-Object System.Drawing.Region($path)
+                $paintSource.Region = New-Object System.Drawing.Region($path)
                 $path.Dispose()
             }
         })
@@ -432,11 +432,7 @@ function Show-SelectionForm {
     $loadingForm.Add_Shown({ $loadingForm.Activate() })
     $null = $loadingForm.Show()   # non-blocking
 
-    try {
-        $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-    } catch {
-        $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
-    }
+    $WmiComputerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
     Write-Progress -Activity 'JumpCloud ADMU' -Status 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..' -PercentComplete 25
     Write-ToLog 'Loading JumpCloud ADMU. Please Wait.. Checking AzureAD Status..'
 
@@ -447,11 +443,7 @@ function Show-SelectionForm {
     }
 
     if ($WmiComputerSystem.PartOfDomain) {
-        try {
-            $WmiComputerDomain = Get-WmiObject -Class:('Win32_ntDomain')
-        } catch {
-            $WmiComputerDomain = Get-CimInstance -Class:('Win32_ntDomain')
-        }
+        $WmiComputerDomain = Get-CimInstance -ClassName Win32_NTDomain
         try {
             $secureChannelStatus = Test-ComputerSecureChannel
         } catch {
@@ -543,8 +535,8 @@ function Show-SelectionForm {
     # Get Valid SIDs from the Registry and build user object
     $registryProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
     $profileList = @()
-    foreach ($profile in $registryProfiles) {
-        $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath
+    foreach ($registryProfile in $registryProfiles) {
+        $profileList += Get-ItemProperty -Path $registryProfile.PSPath | Select-Object PSChildName, ProfileImagePath
     }
 
     # Get the SID of the user currently running this script to exclude them
@@ -593,11 +585,8 @@ function Show-SelectionForm {
     }
 
     # Get Win32 Profiles to merge data with valid SIDs
-    try {
-        $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-    } catch {
-        $win32UserProfiles = Get-CimInstance -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-    }
+    $win32UserProfiles = Get-CimInstance -ClassName Win32_UserProfile -Property * |
+        Where-Object { $_.Special -eq $false }
 
     $nonSIDLocalUsers = Get-LocalUser
     $date_format = "yyyy-MM-dd HH:mm"
@@ -610,10 +599,32 @@ function Show-SelectionForm {
             if ($($user.SID) -eq $($win32user.SID)) {
                 $user.RoamingConfigured = $win32user.RoamingConfigured
                 $user.Loaded = $win32user.Loaded
-                if ([string]::IsNullOrEmpty($($win32user.LastUseTime))) {
+                # Get-CimInstance exposes LastUseTime as [datetime]; WMI used DMTF strings and ManagementDateTimeConverter.
+                $lastUse = $win32user.LastUseTime
+                if ($null -eq $lastUse) {
                     $user.LastLogin = "N/A"
-                } else {
-                    $user.LastLogin = [System.Management.ManagementDateTimeConverter]::ToDateTime($($win32user.LastUseTime)).ToUniversalTime().ToSTring($date_format)
+                }
+                elseif ($lastUse -is [datetime]) {
+                    if ($lastUse -eq [datetime]::MinValue) {
+                        $user.LastLogin = "N/A"
+                    }
+                    else {
+                        $user.LastLogin = $lastUse.ToUniversalTime().ToString($date_format)
+                    }
+                }
+                else {
+                    $dmtf = [string]$lastUse
+                    if ([string]::IsNullOrWhiteSpace($dmtf)) {
+                        $user.LastLogin = "N/A"
+                    }
+                    else {
+                        try {
+                            $user.LastLogin = [System.Management.ManagementDateTimeConverter]::ToDateTime($dmtf).ToUniversalTime().ToString($date_format)
+                        }
+                        catch {
+                            $user.LastLogin = "N/A"
+                        }
+                    }
                 }
             }
         }
@@ -987,8 +998,8 @@ function Show-SelectionForm {
                     if ( -not [string]::IsNullOrEmpty($JCSystemUsername) ) {
                         $registryProfiles = Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
                         $profileList = @()
-                        foreach ($profile in $registryProfiles) {
-                            $profileList += Get-ItemProperty -Path $profile.PSPath | Select-Object PSChildName, ProfileImagePath, @{ Name = "username"; Expression = { $sysUsername = Convert-SecurityIdentifier -sid $_.PSChildName; $sysUsername.Split('\')[1] } }
+                        foreach ($registryProfile in $registryProfiles) {
+                            $profileList += Get-ItemProperty -Path $registryProfile.PSPath | Select-Object PSChildName, ProfileImagePath, @{ Name = "username"; Expression = { $sysUsername = Convert-SecurityIdentifier -sid $_.PSChildName; $sysUsername.Split('\')[1] } }
                         }
                         if ($JCSystemUsername -in $profileList.username) {
                             Write-ToLog "JCSystemUsername $($JCSystemUsername) is the same as the another profile on this system"

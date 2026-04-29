@@ -16,12 +16,12 @@ $env:ModuleVersionType = $ModuleVersionType
 # Import pester module
 $PesterInstalledVersion = Get-InstalledModule -Name Pester
 Import-Module -Name Pester -RequiredVersion $PesterInstalledVersion.Version
-Write-host "Running Pester Tests using Pester Version: $($PesterInstalledVersion.Version)"
+Write-Host "Running Pester Tests using Pester Version: $($PesterInstalledVersion.Version)"
 # Run Pester tests
 $PesterResultsFileXmlDir = "$PSScriptRoot/../test_results/"
 # $PesterResultsFileXml = $PesterResultsFileXmlDir + "results.xml"
 if (-not (Test-Path $PesterResultsFileXmlDir)) {
-    new-item -path $PesterResultsFileXmlDir -ItemType Directory
+    New-Item -Path $PesterResultsFileXmlDir -ItemType Directory
 }
 
 # Import the module functions + helper functions
@@ -36,7 +36,7 @@ $PesterTests = Get-ChildItem -Path $PSScriptRoot -Filter *.Tests.ps1 -Recurse | 
     Get-PesterTag -Path $_.FullName # Assuming Get-PesterTag returns a string or array of strings
 }
 
-$uniqueTags = ($PesterTests.Tags | Select-Object -Unique ) -Replace ([regex]'``|"' , '')
+$uniqueTags = ($PesterTests.Tags | Select-Object -Unique ) -replace ([regex]'``|"' , '')
 
 Write-Host "[Status] $($PesterTests.Count) Test Files Found"
 Write-Host "[Status] $($uniqueTags.Count) Unique Tags Found"
@@ -81,9 +81,9 @@ if ($env:CI) {
         }
     }
 } else {
-    $IncludeTags = If ($IncludeTagList) {
+    $IncludeTags = if ($IncludeTagList) {
         $IncludeTagList
-    } Else {
+    } else {
         $uniqueTags | Where-Object { $_ -notin $ExcludeTags } | Select-Object -Unique
     }
 }
@@ -93,6 +93,7 @@ $PesterRunPath = "$PSScriptRoot/Tests/*"
 
 # Set Pester Configuration
 $configuration = New-PesterConfiguration
+$configuration.Output.Verbosity = 'Detailed'
 $configuration.Run.Path = $PesterRunPath
 $configuration.Should.ErrorAction = 'Continue'
 $configuration.CodeCoverage.Enabled = $true
@@ -104,18 +105,18 @@ $configuration.CodeCoverage.OutputPath = ($PesterResultsFileXmlDir + 'coverage.x
 $configuration.testResult.OutputPath = ($PesterResultsFileXmlDir + 'results.xml')
 Write-Host ("[RUN COMMAND] Invoke-Pester -Path:('$PesterRunPath') -TagFilter:('$($IncludeTags -join "','")') -ExcludeTagFilter:('$($ExcludeTagList -join "','")') -PassThru") -BackgroundColor:('Black') -ForegroundColor:('Magenta')
 
-Invoke-Pester -configuration $configuration
+Invoke-Pester -Configuration $configuration
 
 $PesterTestResultPath = (Get-ChildItem -Path:("$($PesterResultsFileXmlDir)")).FullName | Where-Object { $_ -match "results.xml" }
-If (Test-Path -Path:($PesterTestResultPath)) {
+if (Test-Path -Path:($PesterTestResultPath)) {
     [xml]$PesterResults = Get-Content -Path:($PesterTestResultPath)
-    If ($PesterResults.ChildNodes.failures -gt 0) {
+    if ($PesterResults.ChildNodes.failures -gt 0) {
         Write-Error ("Test Failures: $($PesterResults.ChildNodes.failures)")
     }
-    If ($PesterResults.ChildNodes.errors -gt 0) {
+    if ($PesterResults.ChildNodes.errors -gt 0) {
         Write-Error ("Test Errors: $($PesterResults.ChildNodes.errors)")
     }
-} Else {
+} else {
     Write-Error ("Unable to find file path: $PesterTestResultPath")
 }
 Write-Host -ForegroundColor Green '-------------Done-------------'

@@ -27,11 +27,7 @@ Function Test-MigrationButton {
         [System.String]
         $selectedOrgID
     )
-    try {
-        $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-    } catch {
-        $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
-    }
+    $WmiComputerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
     function Test-SelectedUser {
         param (
             # Parameter help description
@@ -60,11 +56,8 @@ Function Test-MigrationButton {
         )
         begin {
             # Get Win32 Profiles to merge data with valid SIDs
-            try {
-                $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-            } catch {
-                $win32UserProfiles = Get-CimInstance -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-            }
+            $win32UserProfiles = Get-CimInstance -ClassName Win32_UserProfile -Property * |
+                Where-Object { $_.Special -eq $false }
             # get localUsers (can contain users who have not logged in yet/ do not have a SID)
             $nonSIDLocalUsers = Get-LocalUser
         }
