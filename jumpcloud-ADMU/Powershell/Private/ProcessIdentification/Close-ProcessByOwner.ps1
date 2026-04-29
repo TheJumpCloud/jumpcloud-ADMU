@@ -1,5 +1,6 @@
 function Close-ProcessByOwner {
     [CmdletBinding()]
+    [OutputType([System.Collections.ArrayList])]
     param (
         # Parameter help description
         [Parameter(Mandatory = $true)]

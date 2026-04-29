@@ -46,17 +46,14 @@ Function Get-AppxListByUser {
         }
         if (-NOT $appxList) {
             Write-ToLog "Starting Job to Get AppxList" -Level Verbose -Step "Get-AppxListByUser"
-            $homePath = Get-ProfileImagePath -UserSid $SID
             $j = Start-Job -ScriptBlock {
-                param($homePath)
-
                 try {
                     $appxList = Get-AppxPackage -AllUsers | Select-Object InstallLocation
                 } catch {
                     "A critical error occurred: $($_.Exception.Message)"
                 }
                 return $appxList
-            } -ArgumentList $homePath
+            }
 
             # timeout
             $timeout = 20

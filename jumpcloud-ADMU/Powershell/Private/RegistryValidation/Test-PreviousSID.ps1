@@ -21,6 +21,7 @@
 #>
 function Test-PreviousSID {
     [CmdletBinding()]
+    [OutputType([System.Boolean])]
     param (
         [Parameter(Mandatory = $true)]
         [string]$UserSid
