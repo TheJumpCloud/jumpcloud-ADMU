@@ -53,6 +53,7 @@ function Get-MtpOrganization {
             $Content = $Request.Content | ConvertFrom-Json
             $results += $Content
         } else {
+             $baseUrl = "$($global:JCUrl)/api/organizations"
             Write-ToLog -Message "No OrgID specified, attempting to search for valid orgs..." -Level Verbose -Step "Get-MtpOrganization"
             while ($paginate) {
                 try {

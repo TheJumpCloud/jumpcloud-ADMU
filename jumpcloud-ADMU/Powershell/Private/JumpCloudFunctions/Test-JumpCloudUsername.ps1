@@ -37,6 +37,7 @@ function Test-JumpCloudUsername {
     }
     Process {
         $regions = @("US", "EU", "IN")
+        $found = $false
         foreach($region in $regions){
             Set-JcUrl -Region $region
             try {
@@ -44,10 +45,14 @@ function Test-JumpCloudUsername {
                 $Response = Invoke-WebRequest -Method 'Post' -Uri $baseUrl -Headers $Headers -Body $Body -UseBasicParsing
                 $Results = $Response.Content | ConvertFrom-Json
                 $StatusCode = $Response.StatusCode
+                $found = $true
                 break;
             } catch {
                 continue;
             }
+        }
+        if(-not $found) {
+            throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key and OrgID are valid."
         }
     }
     End {
