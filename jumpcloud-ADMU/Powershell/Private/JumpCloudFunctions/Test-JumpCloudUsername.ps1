@@ -36,19 +36,18 @@ function Test-JumpCloudUsername {
         $Body = $Form | ConvertTo-Json -Depth 4
     }
     Process {
-        try {
-            Set-JcUrl -Region "US"
-            $baseUrl = "$($global:JCUrl)/api/search/systemusers"
-            $Response = Invoke-WebRequest -Method 'Post' -Uri $baseUrl -Headers $Headers -Body $Body -UseBasicParsing
-            $Results = $Response.Content | ConvertFrom-Json
-            $StatusCode = $Response.StatusCode
-        } catch {
-            # Call EU endpoint if US fails
-            Set-JcUrl -Region "EU"
-            $baseUrl = "$($global:JCUrl)/api/search/systemusers"
-            $Response = Invoke-WebRequest -Method 'Post' -Uri $baseUrl -Headers $Headers -Body $Body -UseBasicParsing
-            $Results = $Response.Content | ConvertFrom-Json
-            $StatusCode = $Response.StatusCode
+        $regions = @("US", "EU", "IN")
+        foreach($region in $regions){
+            Set-JcUrl -Region $region
+            try {
+                $baseUrl = "$($global:JCUrl)/api/search/systemusers"
+                $Response = Invoke-WebRequest -Method 'Post' -Uri $baseUrl -Headers $Headers -Body $Body -UseBasicParsing
+                $Results = $Response.Content | ConvertFrom-Json
+                $StatusCode = $Response.StatusCode
+                break;
+            } catch {
+                continue;
+            }
         }
     }
     End {

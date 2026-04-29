@@ -24,25 +24,31 @@ function Get-MtpOrganization {
             'x-api-key'    = "$($apiKey)";
         }
         $results = @()
-        if ($orgID) {
-            Write-ToLog -Message "OrgID specified, attempting to validate org..." -Level Verbose -Step "Get-MtpOrganization"
+        $regions = @("US", "EU", "IN")
+        $currentRegion = $null
+        $Request = $null
+        # Found correct region
+        foreach($region in $regions) {
+            Set-JcUrl -Region $region
+            $baseUrl = "$($global:JCUrl)/api/organizations/$($orgID)"
             try {
-                Set-JcUrl -Region "US"
-                $baseUrl = "$($global:JCUrl)/api/organizations/$($orgID)"
-                try {
-                    $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
-                } catch {
-                    Throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key is valid. $($_.Exception.Message)"
-                }
+                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=1&skip=0" -Method Get -Headers $Headers -UseBasicParsing
             } catch {
-                # Call EU endpoint if US fails
-                Set-JcUrl -Region "EU"
-                $baseUrl = "$($global:JCUrl)/api/organizations/$($orgID)"
-                try {
-                    $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
-                } catch {
-                    Throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key is valid. $($_.Exception.Message)"
-                }
+                continue;
+            }
+            $currentRegion = $region
+            break;
+        }
+        if ($currentRegion -eq $null) {
+            throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key is valid."
+        }
+        if ($orgID) {
+            Write-ToLog -Message "OrgID specified, attempting to validate org..." -Level Verbose -Step "Get-MtpOrganization"          
+            try {
+                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+            } catch {
+                throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key and OrgID are valid. $($_.Exception.Message)"
+                break;
             }
             $Content = $Request.Content | ConvertFrom-Json
             $results += $Content
@@ -50,22 +56,10 @@ function Get-MtpOrganization {
             Write-ToLog -Message "No OrgID specified, attempting to search for valid orgs..." -Level Verbose -Step "Get-MtpOrganization"
             while ($paginate) {
                 try {
-                    Set-JcUrl -Region "US"
-                    $baseUrl = "$($global:JCUrl)/api/organizations"
-                    try {
-                        $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
-                    } catch {
-                        Throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key is valid. $($_.Exception.Message)"
-                    }
+                    $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
                 } catch {
-                    # Call EU endpoint if US fails
-                    Set-JcUrl -Region "EU"
-                    $baseUrl = "$($global:JCUrl)/api/organizations"
-                    try {
-                        $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
-                    } catch {
-                        throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key is valid. $($_.Exception.Message)"
-                    }
+                    throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key is valid. $($_.Exception.Message)"
+                    break;
                 }
                 $Content = $Request.Content | ConvertFrom-Json
                 $results += $Content.results
