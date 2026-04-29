@@ -1,15 +1,31 @@
 # JumpCloud Active Directory Migration Utility
 
-![admu-landging-image](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/images/ADMU-landing.png)
+![ADMU overview](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/images/ADMU-landing.png)
 
-The JumpCloud Active Directory Migration Utility (ADMU) is designed to migrate Active Directory or Azure Active Directory accounts to local account for subsequent JumpCloud takeover and management. Active Directory accounts on a system can not be directly taken over by the JumpCloud Agent. Those accounts must first be converted to a local account before the JumpCloud agent can take-over and manage that account on a given system. The ADMU aims to help admins automate the otherwise tedious process of account migration.
+The JumpCloud Active Directory Migration Utility (ADMU) migrates **Active Directory** or **Entra ID / Azure AD**–joined Windows users to **local accounts** so the [JumpCloud agent](https://jumpcloud.com/) can manage them. Domain accounts cannot be taken over directly by the agent; they must be converted to a local profile first. ADMU automates profile, registry, permissions, and optional domain-unbind / agent steps that would otherwise be manual.
 
-### Releases
+## Documentation
 
-Check out the [Releases](https://github.com/TheJumpCloud/jumpcloud-ADMU/releases) page for the GUI and PowerShell tool downloads.
+Detailed guides, limitations, and troubleshooting live in the **[Wiki](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki)**. Good starting points:
 
-Continue to the [Wiki](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki) for more information and documentation for remote migration scenarios.
+| Topic                                                  | Wiki                                                                                                                                                                  |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Planning and first run                                 | [Getting Started](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Getting-Started)                                                                                |
+| Tool Options + GUI                                     | [GUI Parameters](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/admu-gui)                                                                                        |
+| Known constraints (certs, credentials, defaults, etc.) | [Limitations](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Limitations-of-User-Account-Conversion)                                                             |
+| Logs and failures                                      | [Logging](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Logging), [Troubleshooting](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Troubleshooting-errors) |
+| Remote migration (CLI, JumpCloud Commands, bulk)       | [Invoke admu from JumpCloud Agent](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Invoke-admu-from-jcagent)                                                      |
 
-### Have questions? feature request? issues?
+## Releases
 
-Please use the GitHub issues tab, email [support@jumpcloud.com](support@jumpcloud.com) or the [feedback form](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/feedback-form).
+- **GUI and CLI:** Download the latest build from **[Releases](https://github.com/TheJumpCloud/jumpcloud-ADMU/releases)**. Each release includes **`gui_jcadmu.exe`** (interactive GUI and CLI in one binary) and **`uwp_jcadmu.exe`**, which migration deploys into the Windows directory to fix UWP Appx package issues.
+
+Only the `gui_jcadmu.exe` file is required for the ADMU, double click to run the GUI or pass parameters for scripted CLI use. The `uwp_jcadmu.exe` file is automatically downloaded and deployed into the Windows directory during migration to fix UWP Appx package issues.
+
+## Support
+
+Questions, bugs, and feature requests: **GitHub Issues** on this repository, [support@jumpcloud.com](mailto:support@jumpcloud.com), or the [feedback form](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Feedback-Form).
+
+## License
+
+This project is licensed under the [MIT License](./LICENSE).
