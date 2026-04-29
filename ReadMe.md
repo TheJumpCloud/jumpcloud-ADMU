@@ -8,7 +8,7 @@ The JumpCloud Active Directory Migration Utility (ADMU) is designed to migrate A
 
 Check out the [Releases](https://github.com/TheJumpCloud/jumpcloud-ADMU/releases) page for the GUI and PowerShell tool downloads.
 
-Continue to [Getting Started](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Getting-Started) and the [Wiki](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki) for further information.
+Continue to the [Wiki](https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki) for more information and documentation for remote migration scenarios.
 
 ### Have questions? feature request? issues?
 
