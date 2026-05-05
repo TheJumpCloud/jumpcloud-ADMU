@@ -25,6 +25,7 @@ function Build-MigrationDescription {
     .PARAMETER authMethod
     The authentication method used for reporting.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute("PSUseApprovedVerbs", '', Justification = 'Build is technically an approved verb')]
     param(
 
         [Parameter(Mandatory = $true)]

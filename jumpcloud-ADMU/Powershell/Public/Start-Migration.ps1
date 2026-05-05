@@ -158,11 +158,7 @@ function Start-Migration {
 
         # Define misc static variables
         $netBiosName = Get-NetBiosName
-        try {
-            $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-        } catch {
-            $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
-        }
+        $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
         $localComputerName = $WmiComputerSystem.Name
         $systemVersion = Get-ComputerInfo | Select-Object OSName, OSVersion, OsHardwareAbstractionLayer, OsBuildNumber, WindowsEditionId
         $windowsDrive = Get-WindowsDrive
@@ -1549,11 +1545,8 @@ function Start-Migration {
             write-tolog -Message $admuTracker.leaveDomain.step -MigrationStep
             Write-ToProgress -ProgressBar $ProgressBar -Status "leaveDomain" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
 
-            try {
-                $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-            } catch {
-                $WmiComputerSystem = Get-CimInstance -ClassName:('Win32_ComputerSystem')
-            }
+            $WmiComputerSystem = Get-CimInstance -ClassName:('Win32_ComputerSystem')
+
             if ($LeaveDomain -eq $true) {
                 if ($AzureADStatus -match 'YES' -and $LocalDomainStatus -match 'YES') {
                     Write-ToLog -Message:('Device is HYBRID joined')
@@ -1590,7 +1583,11 @@ function Start-Migration {
 
                             # for the local domain un-join
                             try {
-                                $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+                                $null = Invoke-CimMethod -InputObject $WmiComputerSystem -MethodName 'UnjoinDomainOrWorkgroup' -Arguments @{
+                                    Password        = $null
+                                    UserName        = $null
+                                    FUnjoinOptions  = 0
+                                }
                                 $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
                                 Write-ToLog -Message:("After running UnJoinDomainOrWorkGroup, the domain status is as follows:") -Level:('Info')
                                 Write-ToLog -Message:("AzureADStatus: $AzureADStatus") -Level:('Info')
@@ -1612,7 +1609,11 @@ function Start-Migration {
                             }
                         }
                         "LocalJoined" {
-                            $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+                            $null = Invoke-CimMethod -InputObject $WmiComputerSystem -MethodName 'UnjoinDomainOrWorkgroup' -Arguments @{
+                                Password       = $null
+                                UserName       = $null
+                                FUnjoinOptions = 0
+                            }
                             $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
                             if ($AzureADStatus -match 'NO' -and $LocalDomainStatus -match 'NO') {
                                 Write-ToLog -Message:('Left local domain successfully') -Level:('Info')
