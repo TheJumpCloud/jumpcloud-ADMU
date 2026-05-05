@@ -539,9 +539,6 @@ function Show-SelectionForm {
         $profileList += Get-ItemProperty -Path $registryProfile.PSPath | Select-Object PSChildName, ProfileImagePath
     }
 
-    # Get the SID of the user currently running this script to exclude them
-    $currentUserSID = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-
     # 1. Initialize TWO lists
     $systemUsers = @()
     $migratedUsers = @()
@@ -553,10 +550,6 @@ function Show-SelectionForm {
         $isValidFormat = [regex]::IsMatch($normalizedSid, $sidPattern);
 
         if ($isValidFormat) {
-            # Check if this is the current user; if so, skip adding to the list
-            if ($normalizedSid -eq $currentUserSID) {
-                continue
-            }
 
             # Check if this is a TEMP profile; if so, skip adding to the list
             if ($listItem.ProfileImagePath -like "*\TEMP") {

@@ -1,10 +1,13 @@
 ## 2.12.3
 
-Release Date: April 22, 2026
+
+Release Date: April 27, 2026
+
 
 #### RELEASE NOTES
 
 ```
+- This update restores the visibility of the currently logged-in user in the form GUI, reversing the change introduced in the previous version.
 - Implemented PSScriptAnalyzer and fixed any findings
 ```
 
@@ -14,7 +17,6 @@ Release Date: April 22, 2026
   - Fixed any subsequent errors for a healthier codebase following best practices
 - Updated Bulk ADMU with device migration using the device description
 
-```
 
 #### FEATURES:
 
