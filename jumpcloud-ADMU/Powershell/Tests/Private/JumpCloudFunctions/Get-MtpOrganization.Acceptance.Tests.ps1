@@ -18,9 +18,9 @@ Describe "Get-MtpOrganization Acceptance Tests" -Tag "Acceptance" {
         . "$helpFunctionDir\$fileName"
     }
     Context "Get-MtpOrganization Function Tests" {
-        It "Should return an organization with a valid API Key" {
+        It "Should return an organization with a valid API Key (non-mtp-key)" {
             # Add acceptance test logic and assertions (against a real system)
-            $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY_MTP
+            $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
             Write-Host "org selection: $OrgSelection"
             $OrgName = "$($OrgSelection[1])"
             $OrgID = "$($OrgSelection[0])"
