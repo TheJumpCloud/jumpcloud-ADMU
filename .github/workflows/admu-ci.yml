@@ -177,13 +177,12 @@ jobs:
         shell: powershell
         env:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
-          PESTER_APIKEY: ${{ secrets.PESTER_APIKEY }}
-          PESTER_ORGID: ${{ secrets.PESTER_ORGID }}
-          PESTER_CONNECTKEY: ${{ secrets.PESTER_CONNECTKEY }}
+          PESTER_APIKEY: ${{ secrets.PESTER_APIKEY_IN }}
+          PESTER_ORGID: ${{ secrets.PESTER_ORGID_IN }}
+          PESTER_CONNECTKEY: ${{ secrets.PESTER_CONNECTKEY_IN }}
         run: |
           $env:job_group = ${{ matrix.job_group }}
-          # CUT-4958
-          # Uncomment below to alternate between US and EU test environments based on run number when Connect-JCOnline supports EU region.
+          # # alternate between US and EU test environments.
           # if (${{ github.run_number }} % 2 -eq 0) {
           #   Write-Host "[status] Using US Pester ENV Variables"
           #   $env:PESTER_APIKEY = "${{ secrets.PESTER_APIKEY }}"
