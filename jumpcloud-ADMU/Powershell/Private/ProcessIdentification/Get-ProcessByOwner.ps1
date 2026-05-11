@@ -30,29 +30,26 @@ function Get-ProcessByOwner {
         foreach ($process in $processes) {
             if ($process.id) {
                 # TODO: processItem would throw a null value exception
-                try {
-                    $processItem = (Get-WmiObject -Class Win32_Process -Filter:("ProcessId = $($Process.Id)"))
-                } catch {
-                    $processItem = (Get-CimInstance -Class Win32_Process -Filter:("ProcessId = $($Process.Id)"))
-                }
-                if (![string]::IsNullOrEmpty($processItem)) {
-                    # Create null value check for processItem
-                    $owner = $processItem.GetOwner()
-                    $processList.Add(
-                        [PSCustomObject]@{
-                            ProcessName = if ($process.Name) {
-                                $process.Name
-                            } else {
-                                "NA"
+                $processItem = Get-CimInstance -ClassName Win32_Process -Filter "ProcessId = $($Process.Id)"
+                if ($null -ne $processItem) {
+                    $ownerResult = Invoke-CimMethod -InputObject $processItem -MethodName GetOwner
+                    if ($null -ne $ownerResult -and $ownerResult.ReturnValue -eq 0) {
+                        $processList.Add(
+                            [PSCustomObject]@{
+                                ProcessName = if ($process.Name) {
+                                    $process.Name
+                                } else {
+                                    "NA"
+                                }
+                                ProcessId   = if ($process.Id) {
+                                    $process.Id
+                                } else {
+                                    "NA"
+                                }
+                                Owner       = "$($ownerResult.Domain)\$($ownerResult.User)"
                             }
-                            ProcessId   = if ($process.Id) {
-                                $process.Id
-                            } else {
-                                "NA"
-                            }
-                            Owner       = "$($owner.Domain)\$($owner.User)"
-                        }
-                    ) | Out-Null
+                        ) | Out-Null
+                    }
                 }
             }
         }

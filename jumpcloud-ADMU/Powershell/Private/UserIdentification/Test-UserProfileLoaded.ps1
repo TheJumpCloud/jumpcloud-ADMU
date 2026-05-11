@@ -33,14 +33,14 @@ function Test-UserProfileLoaded {
     process {
         try {
             # Primary method: Query Win32_UserProfile
-            $profile = Get-CimInstance -Class Win32_UserProfile -Filter "SID='$UserSID'" -ErrorAction Stop
+            $cimUserProfile = Get-CimInstance -Class Win32_UserProfile -Filter "SID='$UserSID'" -ErrorAction Stop
 
-            if ($null -eq $profile) {
+            if ($null -eq $cimUserProfile) {
                 Write-Verbose "Profile not found for SID '$UserSID'"
                 return $false
             }
 
-            $isLoaded = $profile.Loaded -eq $true
+            $isLoaded = $cimUserProfile.Loaded -eq $true
             Write-Verbose "Profile loaded status: $isLoaded"
             return $isLoaded
 

@@ -374,6 +374,7 @@ function Invoke-SystemContextAPI {
                     }
                 } catch {
                     # If parsing fails, treat as generic body
+                    Write-Verbose "Failed to parse body as JSON: $_"
                 }
             }
 

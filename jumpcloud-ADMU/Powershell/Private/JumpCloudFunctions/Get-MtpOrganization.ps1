@@ -1,5 +1,6 @@
 function Get-MtpOrganization {
     [CmdletBinding()]
+    [OutputType([System.Object[]])]
     param (
         [Parameter(Mandatory = $true)]
         [System.String]
