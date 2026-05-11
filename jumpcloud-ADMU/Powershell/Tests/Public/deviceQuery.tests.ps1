@@ -191,6 +191,55 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             $migratedUser.st | Should -Be "Complete"
             $migratedUser.msg | Should -Be "User previously migrated"
         }
+        It "Should default DefaultUserState to 'Auto' when parameter is omitted (fresh users get Pending or Skip)" {
+            $admuUsers = Get-ADMUUser -localUsers
+            $admuUsers | Should -Not -Be $null
+            $freshUsers = $admuUsers | Where-Object { $_.st -ne 'Complete' }
+            foreach ($user in $freshUsers) {
+                $user.st | Should -BeIn @('Pending', 'Skip')
+            }
+        }
+        It "Should mark all fresh users as 'Pending' when -DefaultUserState 'Pending' is specified" {
+            $admuUsers = Get-ADMUUser -localUsers -DefaultUserState 'Pending'
+            $admuUsers | Should -Not -Be $null
+            $freshUsers = $admuUsers | Where-Object { $_.st -ne 'Complete' }
+            $freshUsers.Count | Should -BeGreaterThan 0
+            foreach ($user in $freshUsers) {
+                $user.st | Should -Be 'Pending'
+                $user.msg | Should -Be 'Planned'
+            }
+        }
+        It "Should mark all fresh users as 'Skip' with the multi-user msg when -DefaultUserState 'Skip' is specified" {
+            $admuUsers = Get-ADMUUser -localUsers -DefaultUserState 'Skip'
+            $admuUsers | Should -Not -Be $null
+            $freshUsers = $admuUsers | Where-Object { $_.st -ne 'Complete' }
+            $freshUsers.Count | Should -BeGreaterThan 0
+            foreach ($user in $freshUsers) {
+                $user.st | Should -Be 'Skip'
+                $user.msg | Should -Be 'Multiple AD users found; awaiting admin selection'
+            }
+        }
+        It "Should reject -DefaultUserState values outside the validated set" {
+            { Get-ADMUUser -localUsers -DefaultUserState 'Bogus' } | Should -Throw
+        }
+        It "In Auto mode with multiple fresh users on the device, fresh users should be marked 'Skip'" {
+            # Create a second test user so the device has >1 fresh AD candidate
+            $testUser1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $testUser2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $tempPassword = "Temp123!Temp123!"
+            Initialize-TestUser -username $testUser1 -password $tempPassword
+            Initialize-TestUser -username $testUser2 -password $tempPassword
+
+            $admuUsers = Get-ADMUUser -localUsers -DefaultUserState 'Auto'
+            $admuUsers | Should -Not -Be $null
+            $freshUsers = @($admuUsers | Where-Object { $_.st -ne 'Complete' })
+            # Sanity: confirm Auto resolved to Skip when fresh count > 1
+            $freshUsers.Count | Should -BeGreaterThan 1
+            foreach ($user in $freshUsers) {
+                $user.st | Should -Be 'Skip'
+                $user.msg | Should -Be 'Multiple AD users found; awaiting admin selection'
+            }
+        }
     }
     Context "Set-SystemDesc Tests" {
         BeforeEach {
@@ -397,6 +446,208 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             $systemData = Get-System -systemContextBinding $true
             $admuAttr = $systemData.attributes | Where-Object { $_.name -eq "admu" }
             $admuAttr.value | Should -Be "Complete"
+        }
+        It "Should return 'Pending' when ALL users are Skip and zero are Complete (awaiting admin selection)" {
+            # Multi-user device discovered in Auto mode: every fresh user is Skip,
+            # nothing is Complete. The device-level rollup must report 'Pending'
+            # so admins can see it still needs attention.
+            $testUsers = @(
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-allskip-001-001-001-1001"
+                    localPath = "C:\Users\AllSkip1"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                },
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-allskip-002-002-002-1002"
+                    localPath = "C:\Users\AllSkip2"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                },
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-allskip-003-003-003-1003"
+                    localPath = "C:\Users\AllSkip3"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            $descResult = Set-SystemDesc -ADMUUsers $testUsers
+            $descResult.Status | Should -Be "Pending"
+            $systemData = Get-System -systemContextBinding $true
+            $admuAttr = $systemData.attributes | Where-Object { $_.name -eq "admu" }
+            $admuAttr.value | Should -Be "Pending"
+        }
+        It "Should preserve Skip users in the description across subsequent Set-SystemDesc calls" {
+            # Skip users used to be stripped on merge. Now they must persist so
+            # an admin can later flip one of them to Pending.
+            $initialUsers = @(
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-persist-001-001-001-1001"
+                    localPath = "C:\Users\Persist1"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                },
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-persist-002-002-002-1002"
+                    localPath = "C:\Users\Persist2"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $initialUsers | Out-Null
+            # Second discovery pass returns the same Skip users
+            Set-SystemDesc -ADMUUsers $initialUsers | Out-Null
+
+            $systemData = Get-System -systemContextBinding $true
+            $desc = @($systemData.description | ConvertFrom-Json)
+            $desc.Count | Should -Be 2
+            foreach ($u in $initialUsers) {
+                $found = $desc | Where-Object { $_.sid -eq $u.sid }
+                $found | Should -Not -Be $null
+                $found.st | Should -Be 'Skip'
+            }
+        }
+        It "Should NOT overwrite an admin-set 'Pending' state when re-discovery returns 'Skip'" {
+            # Admin manually flipped one user to Pending and populated un/uid.
+            # The next DeviceQuery run (Auto mode, multi-user) would re-discover
+            # everyone as Skip. Admin's choice and mapping must be preserved.
+            $adminCurated = @(
+                [PSCustomObject]@{
+                    st        = 'Pending'
+                    msg       = 'Planned'
+                    sid       = "S-1-5-21-curated-001-001-001-1001"
+                    localPath = "C:\Users\AdminPick"
+                    un        = "target.user"
+                    uid       = "admin-set-uid-12345"
+                    lastLogin = $null
+                },
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-curated-002-002-002-1002"
+                    localPath = "C:\Users\Other"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $adminCurated | Out-Null
+
+            # Re-discovery: same SIDs, but defaults reset to Skip and un/uid blank
+            $rediscovered = @(
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-curated-001-001-001-1001"
+                    localPath = "C:\Users\AdminPick"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                },
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-curated-002-002-002-1002"
+                    localPath = "C:\Users\Other"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
+
+            $systemData = Get-System -systemContextBinding $true
+            $desc = $systemData.description | ConvertFrom-Json
+            $picked = $desc | Where-Object { $_.sid -eq "S-1-5-21-curated-001-001-001-1001" }
+            $picked.st | Should -Be 'Pending'
+            $picked.un | Should -Be 'target.user'
+            $picked.uid | Should -Be 'admin-set-uid-12345'
+        }
+        It "Should NOT overwrite an admin-set 'Skip' state when re-discovery returns 'Pending'" {
+            # Admin intentionally skipped a stale account. A subsequent run with
+            # DefaultUserState='Pending' (or Auto with only 1 fresh user) must not
+            # silently re-queue the skipped user.
+            $adminCurated = @(
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Stale account; do not migrate'
+                    sid       = "S-1-5-21-skipme-001-001-001-1001"
+                    localPath = "C:\Users\Stale"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $adminCurated | Out-Null
+
+            $rediscovered = @(
+                [PSCustomObject]@{
+                    st        = 'Pending'
+                    msg       = 'Planned'
+                    sid       = "S-1-5-21-skipme-001-001-001-1001"
+                    localPath = "C:\Users\Stale"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
+
+            $systemData = Get-System -systemContextBinding $true
+            $desc = $systemData.description | ConvertFrom-Json
+            $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-skipme-001-001-001-1001" }
+            $found.st | Should -Be 'Skip'
+            $found.msg | Should -Be 'Stale account; do not migrate'
+        }
+        It "Should overwrite to 'Complete' when re-discovery confirms a previous migration" {
+            # The only auto-overwrite still allowed: discovery has detected the
+            # .ADMU profile suffix, so the entry transitions to Complete.
+            $initial = @(
+                [PSCustomObject]@{
+                    st        = 'Pending'
+                    msg       = 'Planned'
+                    sid       = "S-1-5-21-migration-001-001-001-1001"
+                    localPath = "C:\Users\Migrate"
+                    un        = "migrated.user"
+                    uid       = "mig-uid"
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $initial | Out-Null
+
+            $rediscovered = @(
+                [PSCustomObject]@{
+                    st        = 'Complete'
+                    msg       = 'User previously migrated'
+                    sid       = "S-1-5-21-migration-001-001-001-1001"
+                    localPath = "C:\Users\Migrate"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
+
+            $systemData = Get-System -systemContextBinding $true
+            $desc = $systemData.description | ConvertFrom-Json
+            $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-migration-001-001-001-1001" }
+            $found.st | Should -Be 'Complete'
+            $found.msg | Should -Be 'User previously migrated'
         }
         It "When the Set-Desc runs twice and no updates are made, the system description remains the same" {
             $admuUsers = Get-ADMUUser -localUsers

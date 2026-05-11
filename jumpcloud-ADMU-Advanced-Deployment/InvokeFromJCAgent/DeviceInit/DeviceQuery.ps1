@@ -3,6 +3,16 @@
 # Optional JumpCloud API Key for authentication. Variable syntax supported: {/{/ variable.name /}/}/ (without '/' character)
 $JCAPIKEY = $null
 
+# Default state assigned to newly-discovered (non-migrated) AD users when writing
+# them to the system description for the first time.
+#   'Auto'    : Pending if exactly 1 fresh AD user is found on the device,
+#               Skip   if more than 1 fresh AD user is found.
+#               (Recommended. Single-user devices migrate automatically; multi-user
+#               devices wait for an admin to manually flip the right user to Pending.)
+#   'Pending' : Always Pending. Every discovered user is queued for migration.
+#   'Skip'    : Always Skip.    Every discovered user must be manually opted in.
+$DefaultUserState = 'Auto'
+
 #endregion scriptParameters
 
 #region functionDefinitions
@@ -220,7 +230,10 @@ function Get-ADMUUser {
     [OutputType([PSCustomObject[]])]
     param(
         [Parameter(Mandatory = $false)]
-        [switch]$localUsers
+        [switch]$localUsers,
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Auto', 'Pending', 'Skip')]
+        [string]$DefaultUserState = 'Auto'
     )
 
     try {
@@ -250,6 +263,29 @@ function Get-ADMUUser {
         # get the profileList from registry
         $profileListPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
         $profileList = Get-ChildItem -Path $profileListPath
+
+        # Pre-pass: count fresh (not previously migrated) AD users so we can resolve
+        # the default state for new entries. The default for fresh users depends on
+        # how many migration candidates exist, not on the total profile count.
+        $freshUserCount = 0
+        foreach ($aU in $adUsers) {
+            $up = $profileList | Where-Object { $_.PSChildName -eq $aU.uuid }
+            if (-not $up) { continue }
+            $pp = (Get-ItemProperty -Path $up.PSPath).ProfileImagePath
+            if (-not ($pp -and $pp.EndsWith('.ADMU'))) { $freshUserCount++ }
+        }
+
+        $resolvedDefault = switch ($DefaultUserState) {
+            'Pending' { 'Pending' }
+            'Skip' { 'Skip' }
+            default { if ($freshUserCount -le 1) { 'Pending' } else { 'Skip' } }
+        }
+        $resolvedMsg = if ($resolvedDefault -eq 'Skip') {
+            'Multiple AD users found; awaiting admin selection'
+        } else {
+            'Planned'
+        }
+        Write-Host "[status] DefaultUserState='$DefaultUserState'; $freshUserCount fresh AD user(s); new entries will be marked '$resolvedDefault'."
 
         # Create ADMU user objects
         $admuUsers = New-Object system.Collections.ArrayList
@@ -287,10 +323,10 @@ function Get-ADMUUser {
                             lastLogin = $lastLogin
                         }
                     } else {
-                        Write-Host "user not yet migrated, marking as pending: $($aU.uuid)"
+                        Write-Host "user not yet migrated, marking as '$resolvedDefault': $($aU.uuid)"
                         $uObj = [PSCustomObject]@{
-                            st        = 'Pending'
-                            msg       = 'Planned'
+                            st        = $resolvedDefault
+                            msg       = $resolvedMsg
                             sid       = $aU.uuid
                             localPath = $aU.directory
                             un        = $null
@@ -387,18 +423,21 @@ function Set-SystemDesc {
                     }
                     $merged += $newUsers
 
-                    # Check for status updates on existing users (e.g., Complete status from re-running on previously migrated users)
+                    # Only auto-overwrite an existing entry when discovery confirms a
+                    # previous migration (Complete + 'User previously migrated'). Any
+                    # other state (Pending/Skip) is treated as admin intent and left
+                    # alone so re-running discovery does not revert the admin's choice
+                    # of which user to migrate on a multi-user device.
                     foreach ($aU in $ADMUUsers) {
                         $existingUser = $merged | Where-Object { $_.sid -eq $aU.sid }
-                        if (($existingUser -and $existingUser.st -ne $aU.st) -or ($existingUser -and $aU.st -eq 'Complete' -and $aU.msg -eq 'User previously migrated')) {
-                            Write-Host "[status] Updating status for user $($aU.sid) from '$($existingUser.st)' to '$($aU.st)'..."
+                        if (-not $existingUser) { continue }
+                        if ($aU.st -eq 'Complete' -and $aU.msg -eq 'User previously migrated' -and $existingUser.st -ne 'Complete') {
+                            Write-Host "[status] Updating user $($aU.sid) state '$($existingUser.st)' -> 'Complete' (previously migrated)..."
                             $existingUser.st = $aU.st
                             $existingUser.msg = $aU.msg
                             $needsUpdate = $true
                         }
                     }
-
-                    $merged = $merged | Where-Object { $_.st -ne 'Skip' }
                 } else {
                     # Valid JSON but not ADMU objects - replace
                     Write-Host "[status] Description contains non-ADMU objects, replacing..."
@@ -429,11 +468,16 @@ function Set-SystemDesc {
         # Check for unknown/custom states (anything that's not Error, Pending, Complete, or Skip)
         $inProgress = @($merged | Where-Object { $_.st -notin @('Error', 'Pending', 'Complete', 'Skip') })
 
+        # A device with only Skip users (and no Complete) is awaiting admin action,
+        # not finished. Roll that up as 'Pending' so the device-level admu attribute
+        # honestly reflects "no migration has happened yet". A device with at least
+        # one Complete user plus Skip users is genuinely Complete - the Skip users
+        # are intentionally excluded.
         $amuStatus = if ($errors.Count -gt 0) {
             'Error'
         } elseif ($inProgress.Count -gt 0) {
             'InProgress'
-        } elseif ($pending.Count -gt 0) {
+        } elseif ($pending.Count -gt 0 -or ($skipped.Count -gt 0 -and $complete.Count -eq 0)) {
             'Pending'
         } else {
             'Complete'
@@ -462,7 +506,7 @@ function Set-SystemDesc {
 #region mainScript
 if (-not(Confirm-ExecutionPolicy)) { throw "ExecutionPolicy failed"; exit 1 }
 # retrieve JumpCloud installation path
-$admuUsers = Get-ADMUUser
+$admuUsers = Get-ADMUUser -DefaultUserState $DefaultUserState
 $descResult = Set-SystemDesc -ADMUUsers $admuUsers -JCApiKey $JCApiKey
 if ($descResult.Error) {
     Write-Host "[ERROR] $($descResult.Error)"
