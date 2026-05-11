@@ -177,9 +177,9 @@ jobs:
         shell: powershell
         env:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
-          PESTER_APIKEY: ${{ secrets.PESTER_APIKEY_IN }}
-          PESTER_ORGID: ${{ secrets.PESTER_ORGID_IN }}
-          PESTER_CONNECTKEY: ${{ secrets.PESTER_CONNECTKEY_IN }}
+          PESTER_APIKEY: ${{ secrets.PESTER_APIKEY_EU }}
+          PESTER_ORGID: ${{ secrets.PESTER_ORGID_EU }}
+          PESTER_CONNECTKEY: ${{ secrets.PESTER_CONNECTKEY_EU }}
         run: |
           $env:job_group = ${{ matrix.job_group }}
           # # alternate between US and EU test environments.
