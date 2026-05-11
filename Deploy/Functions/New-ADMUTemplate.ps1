@@ -118,7 +118,11 @@ function New-ADMUTemplate {
 
         [Parameter()]
         [bool]
-        `$removeMDM
+        `$removeMDM,
+
+        [Parameter()]
+        [bool]
+        `$localExes
     )
 "@
 

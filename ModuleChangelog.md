@@ -1,12 +1,11 @@
 ## 2.12.3
 
-
-Release Date: April 27, 2026
-
+Release Date: May 11, 2026
 
 #### RELEASE NOTES
 
 ```
+- Updated Bulk ADMU with device migration using the device description and Added Local Exe parameter to bypass downloading the one from github.
 - This update restores the visibility of the currently logged-in user in the form GUI, reversing the change introduced in the previous version.
 - Implemented PSScriptAnalyzer and fixed any findings
 ```
@@ -23,6 +22,7 @@ Release Date: April 27, 2026
 - Additional functions to Get the device description and save it to a CSV file.
 - Additional function to Set the device description based on the CSV file.
 - Added support for API key with bulk ADMU Invoke
+- Added Local Exe parameter to bypass downloading the one from github everytime.
 
 ## 2.12.2
 

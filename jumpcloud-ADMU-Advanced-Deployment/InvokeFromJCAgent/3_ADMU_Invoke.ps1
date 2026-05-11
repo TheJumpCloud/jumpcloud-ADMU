@@ -38,6 +38,24 @@ $systemContextBinding = $false # Bind using the systemContext API
 # If you want to bind using the systemContext API, set the systemContextBinding to true
 # The systemContextBinding option is only available for devices that are JC Enrolled
 # for more information, see the JumpCloud documentation: https://docs.jumpcloud.com/api/2.0/index.html#section/System-Context
+
+# Option to require locally uploaded exe files
+$localEXEs = $false # When true, require gui_jcadmu.exe in C:\Windows\Temp and uwp_jcadmu.exe in C:\Windows
+
+# If localEXEs is enabled, ensure uwp_jcadmu.exe is copied from Temp to Windows if needed
+if ($localEXEs) {
+    $uwpTempPath = 'C:\Windows\Temp\uwp_jcadmu.exe'
+    $uwpDestPath = 'C:\Windows\uwp_jcadmu.exe'
+    if (Test-Path -Path $uwpTempPath -PathType Leaf) {
+        try {
+            Copy-Item -Path $uwpTempPath -Destination $uwpDestPath -Force
+            Write-Host "[status] Copied uwp_jcadmu.exe from Temp to Windows directory."
+        } catch {
+            Write-Host "[error] Failed to copy uwp_jcadmu.exe: $_" -ForegroundColor Red
+            throw
+        }
+    }
+}
 #endregion variables
 ####
 # Do not edit below
@@ -61,7 +79,8 @@ function Confirm-MigrationParameter {
         [string]$JumpCloudAPIKey = 'YOURAPIKEY',
         [string]$JumpCloudOrgID = '',
         [bool]$ReportStatus = $false,
-        [ValidateSet('Restart', 'Shutdown')][string]$postMigrationBehavior = 'Restart'
+        [ValidateSet('Restart', 'Shutdown')][string]$postMigrationBehavior = 'Restart',
+        [bool]$localEXEs = $false
     )
     if ($dataSource -eq 'CSV' -and [string]::IsNullOrWhiteSpace($csvName)) {
         throw "csvName required when dataSource is 'CSV'."
@@ -74,6 +93,33 @@ function Confirm-MigrationParameter {
     }
     return $true
 }
+
+function Test-RequiredLocalExeFiles {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][bool]$localEXEs
+    )
+    process {
+        if (-not $localEXEs) {
+            return $true
+        }
+
+        $requiredFiles = @(
+            [PSCustomObject]@{ Name = 'gui_jcadmu.exe'; Path = 'C:\Windows\Temp\gui_jcadmu.exe' },
+            [PSCustomObject]@{ Name = 'uwp_jcadmu.exe'; Path = 'C:\Windows\uwp_jcadmu.exe' }
+        )
+
+        foreach ($requiredFile in $requiredFiles) {
+            if (-not (Test-Path -Path $requiredFile.Path -PathType Leaf)) {
+                throw "localEXEs is enabled, but required file '$($requiredFile.Name)' was not found at '$($requiredFile.Path)'."
+            }
+            Write-Host "[status] Found required local file: $($requiredFile.Path)"
+        }
+
+        return $true
+    }
+}
+
 function Get-MigrationUser {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
@@ -194,12 +240,13 @@ function Get-MgUserFromDesc {
 }
 function Get-LatestADMUGUIExe {
     [CmdletBinding()]
-    [OutputType([PSCustomObject[]])]
+    [OutputType([string])]
     param(
         [Parameter(Mandatory = $false)][string]$destinationPath = "C:\Windows\Temp",
         [Parameter(Mandatory = $false)][string]$GitHubToken,
         [Parameter(Mandatory = $false)][int]$MaxRetries = 3,
-        [Parameter(Mandatory = $false)][int]$RetryDelaySeconds = 20
+        [Parameter(Mandatory = $false)][int]$RetryDelaySeconds = 20,
+        [Parameter(Mandatory = $false)][bool]$useLocalEXEs = $false
     )
     begin {
         $owner = "TheJumpCloud"
@@ -212,8 +259,27 @@ function Get-LatestADMUGUIExe {
         }
     }
     process {
+        $fileName = 'gui_jcadmu.exe'
+        $fullPath = Join-Path -Path $destinationPath -ChildPath $fileName
+
+        if ($useLocalEXEs) {
+            Write-Host "[status] localEXEs is enabled. Validating local GUI executable at '$fullPath'."
+            $localValidationResult = Test-ExeSHA -filePath $fullPath -GitHubToken $GitHubToken -MaxRetries $MaxRetries -RetryDelaySeconds $RetryDelaySeconds -AllowUnvalidatedOnApiFailure $true
+            if ($localValidationResult.IsValid) {
+                if ($localValidationResult.UsedWithoutValidation) {
+                    Write-Host "[WARNING] GUI executable could not be validated against GitHub. Using local file due to localEXEs mode." -ForegroundColor Yellow
+                } else {
+                    Write-Host "[status] Local GUI executable validation passed. Skipping download." -ForegroundColor Green
+                }
+                return $fullPath
+            }
+
+            Write-Host "[WARNING] Local GUI executable is present but is not the latest validated release. Downloading the latest version from GitHub." -ForegroundColor Yellow
+        }
+
         $attempt = 0
         $success = $false
+        # Use a uniform retry delay for all retries, as specified by $RetryDelaySeconds
         while ($attempt -lt $MaxRetries -and -not $success) {
             $attempt++
             try {
@@ -262,6 +328,12 @@ function Get-LatestADMUGUIExe {
                 }
             }
         }
+
+        if (-not $success -or -not (Test-Path -Path $fullPath -PathType Leaf)) {
+            throw "Unable to retrieve '$fileName'."
+        }
+
+        return $fullPath
     }
 }
 function ConvertTo-ArgumentList {
@@ -295,7 +367,7 @@ function Get-JcadmuGuiSha256 {
         [Parameter(Mandatory = $false)][int]$RetryDelaySeconds = 5
     )
     begin {
-        $apiUrl = "https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/releases"
+        $apiUrl = "https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/releases/latest"
         $headers = @{"Accept" = "application/vnd.github.v3+json" }
         if (-not [string]::IsNullOrEmpty($GitHubToken)) {
             $headers["Authorization"] = "Bearer $GitHubToken"
@@ -306,14 +378,18 @@ function Get-JcadmuGuiSha256 {
         while ($attempt -lt $MaxRetries) {
             $attempt++
             try {
-                if ($attempt -gt 1) { Write-Host "Retry attempt $attempt..." }
-                $releases = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers -ErrorAction Stop
-                if ($null -eq $releases -or $releases.Count -eq 0) { throw "No releases found." }
-                $latestRelease = $releases[0]
+                if ($attempt -gt 1) { Write-Host "Retry attempt $attempt..." -ForegroundColor Yellow }
+                $latestRelease = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers -ErrorAction Stop
+                if ($null -eq $latestRelease) { throw "No release found." }
                 $targetAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
                 if ($targetAsset -and $targetAsset.digest -match "sha256:") {
                     $sha256 = $targetAsset.digest.Split(':')[1]
-                    return [PSCustomObject]@{ TagName = $latestRelease.tag_name; SHA256 = $sha256 }
+                    $releaseVersion = $latestRelease.tag_name.TrimStart('v', 'V')
+                    return [PSCustomObject]@{
+                        TagName = $latestRelease.tag_name
+                        Version = $releaseVersion
+                        SHA256  = $sha256
+                    }
                 } else {
                     throw "SHA256 digest not found for 'gui_jcadmu.exe'."
                 }
@@ -333,19 +409,71 @@ function Get-JcadmuGuiSha256 {
 }
 function Test-ExeSHA {
     param (
-        [Parameter(Mandatory)][string]$filePath,
-        [Parameter(Mandatory = $false)][string]$GitHubToken
+        [Parameter(Mandatory = $true)][string]$filePath,
+        [Parameter(Mandatory = $false)][string]$GitHubToken,
+        [Parameter(Mandatory = $false)][int]$MaxRetries = 3,
+        [Parameter(Mandatory = $false)][int]$RetryDelaySeconds = 5,
+        [Parameter(Mandatory = $false)][bool]$AllowUnvalidatedOnApiFailure = $false
     )
     process {
         if (-not (Test-Path -Path $filePath)) { throw "File not found: '$filePath'." }
-        $releaseSHA256 = if ($GitHubToken) { (Get-JcadmuGuiSha256 -GitHubToken $GitHubToken).SHA256 } else { (Get-JcadmuGuiSha256).SHA256 }
+
+        $localFile = Get-Item -Path $filePath -ErrorAction Stop
+        $localVersion = $localFile.VersionInfo.FileVersion
         $localFileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash.ToLower()
-        Write-Host "[status] Official SHA256: $releaseSHA256"
-        Write-Host "[status] Local SHA256:    $localFileHash"
-        if ($localFileHash -eq $releaseSHA256.ToLower()) {
-            Write-Host "[status] SUCCESS: Hash validation passed!"
-        } else {
-            throw "[status] Hash mismatch! File differs from official release."
+
+        try {
+            $releaseInfo = if ($GitHubToken) {
+                Get-JcadmuGuiSha256 -GitHubToken $GitHubToken -MaxRetries $MaxRetries -RetryDelaySeconds $RetryDelaySeconds
+            } else {
+                Get-JcadmuGuiSha256 -MaxRetries $MaxRetries -RetryDelaySeconds $RetryDelaySeconds
+            }
+
+            $releaseSHA256 = $releaseInfo.SHA256.ToLower()
+            $versionMatched = $true
+            if (-not [string]::IsNullOrWhiteSpace($releaseInfo.Version) -and -not [string]::IsNullOrWhiteSpace($localVersion)) {
+                try {
+                    $versionMatched = ([version]$localVersion -eq [version]$releaseInfo.Version)
+                } catch {
+                    $versionMatched = ($localVersion -eq $releaseInfo.Version)
+                }
+            }
+
+            Write-Host "[status] Latest release tag: $($releaseInfo.TagName)"
+            Write-Host "[status] Latest release version: $($releaseInfo.Version)"
+            Write-Host "[status] Local GUI version:      $localVersion"
+            Write-Host "[status] Official SHA256:        $releaseSHA256"
+            Write-Host "[status] Local SHA256:           $localFileHash"
+
+            return [PSCustomObject]@{
+                FilePath              = $filePath
+                LocalVersion          = $localVersion
+                ReleaseTag            = $releaseInfo.TagName
+                ReleaseVersion        = $releaseInfo.Version
+                HashMatched           = ($localFileHash -eq $releaseSHA256)
+                VersionMatched        = $versionMatched
+                IsValid               = ($localFileHash -eq $releaseSHA256)
+                UsedWithoutValidation = $false
+                ValidationWarning     = $null
+            }
+        } catch {
+            $errorMessage = $_.Exception.Message
+            if ($AllowUnvalidatedOnApiFailure) {
+                Write-Host "[WARNING] Could not validate local GUI executable because the GitHub API is unreachable or rate limited. Using the local file in C:\Windows\Temp as requested by localEXEs mode." -ForegroundColor Yellow
+                return [PSCustomObject]@{
+                    FilePath              = $filePath
+                    LocalVersion          = $localVersion
+                    ReleaseTag            = $null
+                    ReleaseVersion        = $null
+                    HashMatched           = $false
+                    VersionMatched        = $false
+                    IsValid               = $true
+                    UsedWithoutValidation = $true
+                    ValidationWarning     = $errorMessage
+                }
+            }
+
+            throw "Failed to validate GUI executable: $errorMessage"
         }
     }
 }
@@ -386,6 +514,9 @@ function Invoke-UserMigrationBatch {
             RemoveMDM             = $removeMDMParam
             adminDebug            = $true
             ReportStatus          = $MigrationConfig.ReportStatus
+        }
+        if ($MigrationConfig.localEXEs -eq $true) {
+            $migrationParams.Add('localEXEs', $true)
         }
         if (-not [string]::IsNullOrEmpty($MigrationConfig.JumpCloudOrgID)) {
             $migrationParams.Add('JumpCloudOrgID', $MigrationConfig.JumpCloudOrgID)
@@ -522,8 +653,16 @@ using System;using System.Collections.Generic;using System.IO;using System.Net;u
 }
 #endregion functionDefinitions
 #region validation
-$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus
+$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus -localEXEs $localEXEs
 if ($confirmMigrationParameters) { Write-Host "[STATUS] Migration parameters validated successfully." }
+
+try {
+    $localExeValidation = Test-RequiredLocalExeFiles -localEXEs $localEXEs
+    if ($localExeValidation) { Write-Host "[STATUS] Local executable pre-check completed successfully." }
+} catch {
+    Write-Host "[ERROR] Local executable validation failed: $_"
+    exit 1
+}
 #endregion validation
 #region dataImport
 if ($dataSource -eq 'CSV') {
@@ -567,9 +706,7 @@ if ($ForceReboot) {
 }
 #endregion logoffUsers (implied)
 #region migration
-$guiJcadmuPath = "C:\Windows\Temp\gui_jcadmu.exe"
-Get-LatestADMUGUIExe
-Test-ExeSHA -filePath $guiJcadmuPath
+$guiJcadmuPath = Get-LatestADMUGUIExe -useLocalEXEs $localEXEs
 $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig @{
     TempPassword              = $TempPassword
     UpdateHomePath            = $UpdateHomePath
@@ -583,6 +720,7 @@ $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -M
     systemContextBinding      = $systemContextBinding
     LeaveDomainAfterMigration = $LeaveDomainAfterMigration
     removeMDM                 = $removeMDM
+    localEXEs                 = $localEXEs
     guiJcadmuPath             = $guiJcadmuPath
 }
 Write-Host "`nResults - Total: $($migrationResults.TotalUsers), Success: $($migrationResults.SuccessfulMigrations), Failed: $($migrationResults.FailedMigrations)"
