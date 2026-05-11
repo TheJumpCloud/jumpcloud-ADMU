@@ -204,5 +204,12 @@ jobs:
               $modulePSD1 = Get-ChildItem "C:\Users\runneradmin\Documents\PowerShell\Modules\$module" -Recurse -filter "*.psd1"
               Write-Host "[status] Importing: $module at path $($modulePSD1.fullname)"
               Import-Module "$($modulePSD1.fullname)" -force
+              # set EU Environment
+              if ($Module -eq "JumpCloud"){
+                Set-JCSettingsFile -JCEnvironmentLocation "EU"
+                # re-import
+                Import-Module "$($modulePSD1.fullname)" -force
+              }
+
           }
           . "./jumpcloud-ADMU/Powershell/InvokePester.ps1" $env:RELEASE_TYPE
