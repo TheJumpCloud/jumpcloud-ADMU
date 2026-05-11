@@ -166,7 +166,7 @@ function Set-System {
                     "x-api-key"    = "$JCApiKey"
                 }
             } else {
-                Write-Host "[status] Using SystemAPI for authentication."
+                Write-Host "[status] Using SystemContextAPI for authentication."
                 $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
                 if (-not(Test-Path $privKey)) { throw "Key not found" }
                 $rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($privKey)
@@ -358,9 +358,9 @@ function Get-ADMUUser {
                 $hasCachedSize = $false
                 if ($cached) {
                     $hasCachedSize = ($cached.PSObject.Properties.Match('profileSize').Count -gt 0) -and `
-                        ($null -ne $cached.profileSize) -and `
-                        ($cached.PSObject.Properties.Match('localPath').Count -gt 0) -and `
-                        ($cached.localPath -eq $aU.directory)
+                    ($null -ne $cached.profileSize) -and `
+                    ($cached.PSObject.Properties.Match('localPath').Count -gt 0) -and `
+                    ($cached.localPath -eq $aU.directory)
                 }
                 if ($hasCachedSize) {
                     $profileSize = $cached.profileSize

@@ -1,3 +1,25 @@
+## 2.13.0
+
+Release Date: May 11, 2026
+
+#### RELEASE NOTES
+
+```
+This release includes the ability to remotely query AD users on a device and store the migration data directly in the device's description field. This allows administrators to track migration progress remotely.
+```
+
+#### FEATURES:
+
+- Added functionality to remotely query AD users on a device and store the migration data directly in the device's description field. This allows administrators to track migration progress remotely.
+
+#### IMPROVEMENTS:
+
+NA
+
+#### BUG FIXES:
+
+NA
+
 ## 2.12.2
 
 Release Date: February 5, 2026
@@ -21,9 +43,9 @@ Release Date: February 5, 2026
 - Test added to validate new features and existing functionality.
 - Added new functions and features to handle potential edge cases when removing Windows MDM providers
 - Added functionality for Invoke-SystemAPI to create, update, and delete attributes
-Added support for secret variables in DeviceQuery for bulk ADMU
+  Added support for secret variables in DeviceQuery for bulk ADMU
 - Resolved an issue where renaming a created temp profile fails and freezes the migration
-This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
+  This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
 
 #### BUG FIXES:
 
