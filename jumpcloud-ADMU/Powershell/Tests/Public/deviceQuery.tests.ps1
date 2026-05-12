@@ -197,7 +197,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
         It "Should default DefaultUserState to 'Auto' when parameter is omitted (fresh users get Pending or Skip)" {
             $admuUsers = Get-ADMUUser -localUsers
             $admuUsers | Should -Not -Be $null
-            $freshUsers = @($admuUsers | Where-Object { $_.st -ne 'Complete' })
+            $freshUsers = $admuUsers | Where-Object { $_.st -ne 'Complete' }
             foreach ($user in $freshUsers) {
                 $user.st | Should -BeIn @('Pending', 'Skip')
             }
@@ -205,7 +205,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
         It "Should mark all fresh users as 'Pending' when -DefaultUserState 'Pending' is specified" {
             $admuUsers = Get-ADMUUser -localUsers -DefaultUserState 'Pending'
             $admuUsers | Should -Not -Be $null
-            $freshUsers = @($admuUsers | Where-Object { $_.st -ne 'Complete' })
+            $freshUsers = $admuUsers | Where-Object { $_.st -ne 'Complete' }
             $freshUsers.Count | Should -BeGreaterThan 0
             foreach ($user in $freshUsers) {
                 $user.st | Should -Be 'Pending'
@@ -215,7 +215,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
         It "Should mark all fresh users as 'Skip' with the multi-user msg when -DefaultUserState 'Skip' is specified" {
             $admuUsers = Get-ADMUUser -localUsers -DefaultUserState 'Skip'
             $admuUsers | Should -Not -Be $null
-            $freshUsers = @($admuUsers | Where-Object { $_.st -ne 'Complete' })
+            $freshUsers = $admuUsers | Where-Object { $_.st -ne 'Complete' }
             $freshUsers.Count | Should -BeGreaterThan 0
             foreach ($user in $freshUsers) {
                 $user.st | Should -Be 'Skip'
@@ -365,49 +365,6 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
         }
     }
     Context "Set-SystemDesc Tests" {
-        BeforeAll {
-            # Windows PowerShell 5.1: ConvertFrom-Json turns a JSON array of objects with the
-            # same property names into one PSCustomObject whose members are parallel arrays,
-            # not an Object[] of rows. Normalize to an array of per-user objects for tests.
-            function ConvertFrom-AdmuSystemDescriptionJson {
-                param(
-                    [Parameter(ValueFromPipeline)]
-                    [AllowEmptyString()]
-                    [AllowNull()]
-                    [string]$Description
-                )
-                if ($null -eq $Description -or [string]::IsNullOrWhiteSpace($Description)) {
-                    return @()
-                }
-                $parsed = $Description | ConvertFrom-Json
-                if ($null -eq $parsed) {
-                    return @()
-                }
-                if ($parsed -is [System.Array]) {
-                    return [object[]]$parsed
-                }
-                $sidVal = $parsed.PSObject.Properties['sid'].Value
-                if ($sidVal -is [System.Array] -and $sidVal.Count -gt 0) {
-                    $n = $sidVal.Count
-                    $names = foreach ($p in $parsed.PSObject.Properties) { $p.Name }
-                    $rows = @()
-                    for ($i = 0; $i -lt $n; $i++) {
-                        $h = [ordered]@{}
-                        foreach ($name in $names) {
-                            $v = $parsed.$name
-                            if ($v -is [System.Array]) {
-                                $h[$name] = $v[$i]
-                            } else {
-                                $h[$name] = $v
-                            }
-                        }
-                        $rows += [pscustomobject]$h
-                    }
-                    return [object[]]$rows
-                }
-                return @($parsed)
-            }
-        }
         BeforeEach {
             # set the system description to null before each test
             Set-System -prop "Description" -Payload ""
@@ -417,7 +374,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             $descResult = Set-SystemDesc -ADMUUsers $admuUsers
             # retrieve system description
             $systemData = Get-System -systemContextBinding $true
-            $retrievedDescription = ConvertFrom-AdmuSystemDescriptionJson -Description $systemData.description
+            $retrievedDescription = $systemData.description | ConvertFrom-Json
             foreach ($user in $admuUsers) {
                 $foundUser = $retrievedDescription | Where-Object { $_.sid -eq $user.sid }
                 $foundUser | Should -Not -Be $null
@@ -446,7 +403,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             $descResult = Set-SystemDesc -ADMUUsers $admuUsers
             # retrieve system description
             $systemData = Get-System -systemContextBinding $true
-            $retrievedDescription = ConvertFrom-AdmuSystemDescriptionJson -Description $systemData.description
+            $retrievedDescription = $systemData.description | ConvertFrom-Json
             $foundUser = $retrievedDescription | Where-Object { $_.sid -eq $newUserSID }
             $foundUser | Should -Not -Be $null
             $foundUser.un | Should -Be $newUser.un
@@ -680,7 +637,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             Set-SystemDesc -ADMUUsers $initialUsers | Out-Null
 
             $systemData = Get-System -systemContextBinding $true
-            $desc = ConvertFrom-AdmuSystemDescriptionJson -Description $systemData.description
+            $desc = @($systemData.description | ConvertFrom-Json)
             $desc.Count | Should -Be 2
             foreach ($u in $initialUsers) {
                 $found = $desc | Where-Object { $_.sid -eq $u.sid }
@@ -738,7 +695,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
 
             $systemData = Get-System -systemContextBinding $true
-            $desc = ConvertFrom-AdmuSystemDescriptionJson -Description $systemData.description
+            $desc = $systemData.description | ConvertFrom-Json
             $picked = $desc | Where-Object { $_.sid -eq "S-1-5-21-curated-001-001-001-1001" }
             $picked.st | Should -Be 'Pending'
             $picked.un | Should -Be 'target.user'
@@ -775,11 +732,9 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
 
             $systemData = Get-System -systemContextBinding $true
-            $desc = ConvertFrom-AdmuSystemDescriptionJson -Description $systemData.description
+            $desc = $systemData.description | ConvertFrom-Json
             $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-skipme-001-001-001-1001" }
-            #TODO: Expected: 'Skip' But was:  'Pending'
             $found.st | Should -Be 'Skip'
-            # TODO: Expected: 'Stale account; do not migrate' But was:  'Planned'
             $found.msg | Should -Be 'Stale account; do not migrate'
         }
         It "Should overwrite to 'Complete' when re-discovery confirms a previous migration" {
@@ -812,7 +767,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
 
             $systemData = Get-System -systemContextBinding $true
-            $desc = ConvertFrom-AdmuSystemDescriptionJson -Description $systemData.description
+            $desc = $systemData.description | ConvertFrom-Json
             $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-migration-001-001-001-1001" }
             $found.st | Should -Be 'Complete'
             $found.msg | Should -Be 'User previously migrated'
@@ -854,7 +809,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
 
             $systemData = Get-System -systemContextBinding $true
-            $desc = ConvertFrom-AdmuSystemDescriptionJson -Description $systemData.description
+            $desc = $systemData.description | ConvertFrom-Json
             $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-refresh-001-001-001-1001" }
             $found | Should -Not -BeNullOrEmpty
             $found.lastLogin | Should -Be "2026-05-01T15:30:00.0000000Z"
@@ -896,7 +851,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             Set-SystemDesc -ADMUUsers $newUsers | Out-Null
 
             $systemData = Get-System -systemContextBinding $true
-            $desc = ConvertFrom-AdmuSystemDescriptionJson -Description $systemData.description
+            $desc = $systemData.description | ConvertFrom-Json
             $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-legacy-001-001-001-1001" }
             $found | Should -Not -BeNullOrEmpty
             # Backfilled fields are now present and populated
@@ -946,7 +901,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
 
             $systemData = Get-System -systemContextBinding $true
-            $desc = ConvertFrom-AdmuSystemDescriptionJson -Description $systemData.description
+            $desc = $systemData.description | ConvertFrom-Json
             $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-mixed-001-001-001-1001" }
             # Admin-curated state preserved
             $found.st | Should -Be 'Pending'
@@ -974,7 +929,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             Start-Sleep -Seconds 2
             $descResult2 = Set-SystemDesc -ADMUUsers $admuUsers
             $systemAfter = Get-System -systemContextBinding $true
-            $foundUser = (ConvertFrom-AdmuSystemDescriptionJson -Description $systemAfter.Description) | Where-Object { $_.sid -eq $admuUsers[0].sid }
+            $foundUser = ($systemAfter.Description | ConvertFrom-Json) | Where-Object { $_.sid -eq $admuUsers[0].sid }
             $foundUser.st | Should -Be "Complete"
             $foundUser.msg | Should -Be "User previously migrated"
         }

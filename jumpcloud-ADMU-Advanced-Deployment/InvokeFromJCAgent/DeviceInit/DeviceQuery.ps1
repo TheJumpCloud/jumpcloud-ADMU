@@ -413,9 +413,7 @@ function Get-ADMUUser {
             }
         }
 
-        # Enumerate the ArrayList so callers get Object[] of user rows. Using @(, $list)
-        # would return a one-element array containing the list itself and breaks .Count / Where-Object in 5.1.
-        return @($admuUsers)
+        return @(, $admuUsers)
     } catch {
         throw "Failed to retrieve ADMU users: $_"
     }
