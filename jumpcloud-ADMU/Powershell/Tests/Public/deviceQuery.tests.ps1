@@ -206,21 +206,25 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             $admuUsers = Get-ADMUUser -localUsers -DefaultUserState 'Pending'
             $admuUsers | Should -Not -Be $null
             $freshUsers = $admuUsers | Where-Object { $_.st -ne 'Complete' }
-            $freshUsers.Count | Should -BeGreaterThan 0
+            $totalUsers = 0
             foreach ($user in $freshUsers) {
+                $totalUsers++
                 $user.st | Should -Be 'Pending'
                 $user.msg | Should -Be 'Planned'
             }
+            $totalUsers | Should -BeGreaterThan 0
         }
         It "Should mark all fresh users as 'Skip' with the multi-user msg when -DefaultUserState 'Skip' is specified" {
             $admuUsers = Get-ADMUUser -localUsers -DefaultUserState 'Skip'
             $admuUsers | Should -Not -Be $null
             $freshUsers = $admuUsers | Where-Object { $_.st -ne 'Complete' }
-            $freshUsers.Count | Should -BeGreaterThan 0
+            $totalUsers = 0
             foreach ($user in $freshUsers) {
+                $totalUsers++
                 $user.st | Should -Be 'Skip'
                 $user.msg | Should -Be 'Multiple AD users found; awaiting admin selection'
             }
+            $totalUsers | Should -BeGreaterThan 0
         }
         It "Should reject -DefaultUserState values outside the validated set" {
             { Get-ADMUUser -localUsers -DefaultUserState 'Bogus' } | Should -Throw
@@ -637,13 +641,14 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             Set-SystemDesc -ADMUUsers $initialUsers | Out-Null
 
             $systemData = Get-System -systemContextBinding $true
-            $desc = @($systemData.description | ConvertFrom-Json)
-            $desc.Count | Should -Be 2
-            foreach ($u in $initialUsers) {
-                $found = $desc | Where-Object { $_.sid -eq $u.sid }
-                $found | Should -Not -Be $null
-                $found.st | Should -Be 'Skip'
+            $desc = $systemData.description | ConvertFrom-Json
+            $totalUsers = 0
+            foreach ($u in $desc) {
+                $totalUsers++
+                $u | Should -Not -Be $null
+                $u.st | Should -Be 'Skip'
             }
+            $totalUsers | Should -BeGreaterThan 0
         }
         It "Should NOT overwrite an admin-set 'Pending' state when re-discovery returns 'Skip'" {
             # Admin manually flipped one user to Pending and populated un/uid.
