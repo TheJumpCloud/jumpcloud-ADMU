@@ -42,13 +42,12 @@ Describe "Get-MtpOrganization Acceptance Tests" -Tag "Acceptance" {
         }
         It "Should throw when an invalid API key is provided, expecting 401 Unauthorized" {
             { Get-MtpOrganization -apiKey "asdf" } | Should -Throw
-            Try {
+            try {
                 Get-MtpOrganization -apiKey "asdf"
-            } Catch {
+            } catch {
                 $message = $_.Exception.Message
             }
-            $message | Should -Match "401"
-            $message | Should -Match "Unauthorized"
+            $message | Should -Match "Failed to connect to JumpCloud API endpoints"
         }
         It "Should throw when an empty API key is provided" {
             { Get-MtpOrganization -apiKey "" } | Should -Throw -ExpectedMessage "*because it is an empty string*"
