@@ -709,7 +709,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
         It "Should NOT overwrite an admin-set 'Skip' state when re-discovery returns 'Pending'" {
             # Initial: admin-curated entry with un/uid populated and Pending state
             # set the system description with users on the system:
-            $admuUsers = Get-ADMUUser -DefaultUserState $DefaultUserState -ExistingEntries $existingEntries
+            $admuUsers = Get-ADMUUser -DefaultUserState "auto" -ExistingEntries $existingEntries
             $descResult = Set-SystemDesc -ADMUUsers $admuUsers
             $systemData = Get-System -systemContextBinding $true
             $existingEntries = $systemData.description | ConvertFrom-Json
@@ -859,7 +859,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
         It "Should update discovery fields when a user is migrated" {
             # Initial: admin-curated entry with un/uid populated and Pending state
             # set the system description with users on the system:
-            $admuUsers = Get-ADMUUser -DefaultUserState $DefaultUserState -ExistingEntries $existingEntries
+            $admuUsers = Get-ADMUUser -DefaultUserState "auto" -ExistingEntries $existingEntries
             $descResult = Set-SystemDesc -ADMUUsers $admuUsers
             $systemData = Get-System -systemContextBinding $true
             $existingEntries = $systemData.description | ConvertFrom-Json
