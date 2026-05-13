@@ -428,6 +428,10 @@ function Set-SystemDesc {
         [string]$JCApiKey
     )
 
+    # Normalize to Object[]: callers may pass a lone PSCustomObject; description JSON
+    # round-trip can deserialize as a single object. $merged += requires an array LHS.
+    $ADMUUsers = @($ADMUUsers)
+
     try {
         $sDescRaw = $null
         $result = [PSCustomObject]@{
@@ -458,12 +462,9 @@ function Set-SystemDesc {
                 # Try to parse as JSON
                 $eData = $sDescRaw | ConvertFrom-Json
 
-                # Normalize to array
-                $eUsers = if ($eData -is [array]) {
-                    $eData
-                } else {
-                    @($eData)
-                }
+                # Always Object[]: single JSON object or single-element JSON array deserializes
+                # as PSCustomObject; ForEach-Object enumerates one or many rows reliably.
+                $eUsers = @($eData | ForEach-Object { $_ })
 
                 # Validate that objects have ADMU properties (st, msg, sid, localPath, un, uid)
                 $isValidADMU = $true
@@ -482,7 +483,7 @@ function Set-SystemDesc {
                 if ($isValidADMU) {
                     # Valid ADMU objects - merge with new users
                     Write-Host "[status] Merging with existing users..."
-                    $merged = $eUsers
+                    $merged = @($eUsers | ForEach-Object { $_ })
                     $newUsers = @()
                     foreach ($aU in $ADMUUsers) {
                         if (-not($eUsers | Where-Object { $_.sid -eq $aU.sid })) {
@@ -490,7 +491,7 @@ function Set-SystemDesc {
                             $needsUpdate = $true
                         }
                     }
-                    $merged += $newUsers
+                    $merged = @($merged + @($newUsers))
 
                     # Discovery-observed fields refresh every run. Admin-curated
                     # state (st/msg/un/uid) is preserved except for the
@@ -529,8 +530,8 @@ function Set-SystemDesc {
                     $needsUpdate = $true
                 }
             } catch {
-                # Invalid JSON - replace
-                Write-Host "[status] Invalid JSON, replacing..."
+                # JSON parse or merge failure — replace with incoming payload (do not assume invalid JSON)
+                Write-Host "[status] Description merge failed, replacing with ADMUUsers: $($_.Exception.Message)"
                 $merged = @($ADMUUsers)
                 $needsUpdate = $true
             }
