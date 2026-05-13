@@ -707,29 +707,39 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             $picked.uid | Should -Be 'admin-set-uid-12345'
         }
         It "Should NOT overwrite an admin-set 'Skip' state when re-discovery returns 'Pending'" {
-            # Initial: admin-curated entry with un/uid populated and Pending state
-            # set the system description with users on the system:
-            $admuUsers = Get-ADMUUser -DefaultUserState "auto" -ExistingEntries $existingEntries
-            $descResult = Set-SystemDesc -ADMUUsers $admuUsers
-            $systemData = Get-System -systemContextBinding $true
-            $existingEntries = $systemData.description | ConvertFrom-Json
+            # Admin intentionally skipped a stale account. A subsequent run with
+            # DefaultUserState='Pending' (or Auto with only 1 fresh user) must not
+            # silently re-queue the skipped user.
+            $adminCurated = @(
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Stale account; do not migrate'
+                    sid       = "S-1-5-21-skipme-001-001-001-1001"
+                    localPath = "C:\Users\Stale"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $adminCurated | Out-Null
 
-            # pick one of these users that's skipped
-            $skippedUser = $existingEntries | Where-Object { $_.st -eq 'Skip' } | Select-Object -First 1
-            $skippedUser.st | Should -Be 'Skip'
-            # set skip to pending
-            $skippedUser.st = 'Pending'
-            $skippedUser.msg = 'Pending'
-            # push the updated description back to the system
-            $descResult = Set-SystemDesc -ADMUUsers $existingEntries
-            # get the data again:
-            $systemData = Get-System -systemContextBinding $true
-            $descAfter = $systemData.description | ConvertFrom-Json
+            $rediscovered = @(
+                [PSCustomObject]@{
+                    st        = 'Pending'
+                    msg       = 'Planned'
+                    sid       = "S-1-5-21-skipme-001-001-001-1001"
+                    localPath = "C:\Users\Stale"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
 
-            # assert the user is now complete
-            $found = $descAfter | Where-Object { $_.sid -eq $skippedUser.sid }
-            $found.st | Should -Be 'Pending'
-            $found.msg | Should -Be 'Pending'
+            $desc = $systemData.description | ConvertFrom-Json
+            $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-skipme-001-001-001-1001" }
+            $found.st | Should -Be 'Skip'
+            $found.msg | Should -Be 'Stale account; do not migrate'
         }
         It "Should overwrite to 'Complete' when re-discovery confirms a previous migration" {
             # The only auto-overwrite still allowed: discovery has detected the
@@ -857,29 +867,53 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             $found.profileSize | Should -Be 2.5
         }
         It "Should update discovery fields when a user is migrated" {
-            # Initial: admin-curated entry with un/uid populated and Pending state
-            # set the system description with users on the system:
-            $admuUsers = Get-ADMUUser -DefaultUserState "auto" -ExistingEntries $existingEntries
-            $descResult = Set-SystemDesc -ADMUUsers $admuUsers
-            $systemData = Get-System -systemContextBinding $true
-            $existingEntries = $systemData.description | ConvertFrom-Json
+            $initial = @(
+                [PSCustomObject]@{
+                    st             = 'Pending'
+                    msg            = 'Planned'
+                    sid            = "S-1-5-21-mixed-001-001-001-1001"
+                    localPath      = "C:\Users\Mixed"
+                    un             = "admin.picked.user"
+                    uid            = "admin-set-uid-12345"
+                    lastLogin      = "2025-01-01T10:00:00.0000000Z"
+                    lastWrite      = "2025-01-01T10:00:05.0000000Z"
+                    lastLoginValid = $true
+                    profileSize    = 1.0
+                }
+            )
+            Set-SystemDesc -ADMUUsers $initial | Out-Null
 
-            # pick one of these users that's skipped
-            $skippedUser = $existingEntries | Where-Object { $_.st -eq 'Skip' } | Select-Object -First 1
-            $skippedUser.st | Should -Be 'Skip'
-            # set skip to pending
-            $skippedUser.st = 'Complete'
-            $skippedUser.msg = 'User previously migrated'
-            # push the updated description back to the system
-            $descResult = Set-SystemDesc -ADMUUsers $existingEntries
-            # get the data again:
-            $systemData = Get-System -systemContextBinding $true
-            $descAfter = $systemData.description | ConvertFrom-Json
+            # Re-discovery returns Skip default with un/uid blank AND newer
+            # discovery values. The merge must:
+            #   - PRESERVE admin-curated st/msg/un/uid (Pending + admin's mappings)
+            #   - REFRESH lastLogin/lastWrite/lastLoginValid/profileSize
+            $rediscovered = @(
+                [PSCustomObject]@{
+                    st             = 'Complete'
+                    msg            = 'User previously migrated'
+                    sid            = "S-1-5-21-mixed-001-001-001-1001"
+                    localPath      = "C:\Users\Mixed"
+                    un             = $null
+                    uid            = $null
+                    lastLogin      = "2026-06-01T12:00:00.0000000Z"
+                    lastWrite      = "2026-06-01T12:00:00.0000000Z"
+                    lastLoginValid = $true
+                    profileSize    = 5.5
+                }
+            )
+            Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
 
-            # assert the user is now complete
-            $found = $descAfter | Where-Object { $_.sid -eq $skippedUser.sid }
+            $desc = $systemData.description | ConvertFrom-Json
+            $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-mixed-001-001-001-1001" }
+            # Admin-curated state preserved
             $found.st | Should -Be 'Complete'
             $found.msg | Should -Be 'User previously migrated'
+            $found.un | Should -Be 'admin.picked.user'
+            $found.uid | Should -Be 'admin-set-uid-12345'
+            # Discovery fields refreshed
+            $found.lastLogin | Should -Be "2026-06-01T12:00:00.0000000Z"
+            $found.lastWrite | Should -Be "2026-06-01T12:00:00.0000000Z"
+            $found.profileSize | Should -Be 5.5
         }
         It "When the Set-Desc runs twice and no updates are made, the system description remains the same" {
             $admuUsers = Get-ADMUUser -localUsers
