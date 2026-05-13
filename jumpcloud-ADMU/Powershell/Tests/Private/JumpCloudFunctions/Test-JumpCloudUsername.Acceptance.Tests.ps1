@@ -17,31 +17,24 @@ Describe "Test-JumpCloudUsername Acceptance Tests" -Tag "Acceptance" {
         }
         . "$helpFunctionDir\$fileName"
 
-        Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -force
+        Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
 
-    }
-    BeforeAll {
-        $users = Get-JcSdkUser
-        if ($users.Count -eq 0) {
-            # create a user
-            $user = New-JcSdkUser -Email "testuser@alderaan.admu.com" -Username "testuser" -Password "Temp123!Temp123!"
-        }
     }
     It 'Valid Username Returns True' {
         # Get the first user
         $user = Get-JcSdkUser | Select-Object -First 1
         # Test username w/o modification
-        $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgID $env:PESTER_ORGID -Username $user.Username
+        $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:PESTER_APIKEY -Username $user.Username
         $testResult | Should -Be $true
         $userID | Should -Be $user.Id
         # toUpper
         $upper = ($user.Username).ToUpper()
-        $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgID $env:PESTER_ORGID -Username $upper
+        $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:PESTER_APIKEY -Username $upper
         $testResult | Should -Be $true
         $userID | Should -Be $user.Id
         # to lower
         $lower = ($user.Username).ToLower()
-        $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgID $env:PESTER_ORGID -Username $lower
+        $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:PESTER_APIKEY -Username $lower
         $testResult | Should -Be $true
         $userID | Should -Be $user.Id
     }
@@ -51,7 +44,7 @@ Describe "Test-JumpCloudUsername Acceptance Tests" -Tag "Acceptance" {
         # Append random string to username
         $newUsername = $user.Username + "jdksf45kjfds"
         # Test function
-        $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgID $env:PESTER_ORGID -Username $newUsername
+        $testResult, $userID, $FoundUsername, $FoundSystemUsername = Test-JumpCloudUsername -JumpCloudApiKey $env:PESTER_APIKEY -Username $newUsername
         $testResult | Should -Be $false
         $userID | Should -Be $null
     }
