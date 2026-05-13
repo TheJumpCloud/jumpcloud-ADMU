@@ -521,13 +521,6 @@ function Set-SystemDesc {
                             $existingUser.msg = $aU.msg
                             $needsUpdate = $true
                         }
-                        # if the user is pending and the existing user is skip, set the existing user to pending
-                        if ($aU.st -eq 'Pending' -and $existingUser.st -eq 'Skip') {
-                            Write-Host "[status] Updating user $($aU.sid) state '$($existingUser.st)' -> 'Pending' (pending)..."
-                            $existingUser.st = $aU.st
-                            $existingUser.msg = $aU.msg
-                            $needsUpdate = $true
-                        }
                     }
                 } else {
                     # Valid JSON but not ADMU objects - replace

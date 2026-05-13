@@ -735,7 +735,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
                 }
             )
             Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
-
+            $systemData = Get-System -systemContextBinding $true
             $desc = $systemData.description | ConvertFrom-Json
             $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-skipme-001-001-001-1001" }
             $found.st | Should -Be 'Skip'
@@ -902,7 +902,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
                 }
             )
             Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
-
+            $systemData = Get-System -systemContextBinding $true
             $desc = $systemData.description | ConvertFrom-Json
             $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-mixed-001-001-001-1001" }
             # Admin-curated state preserved
