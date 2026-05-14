@@ -49,7 +49,6 @@ function Get-MtpOrganization {
                 $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
             } catch {
                 throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key and OrgID are valid. $($_.Exception.Message)"
-                break;
             }
             $Content = $Request.Content | ConvertFrom-Json
             $results += $Content
@@ -61,7 +60,6 @@ function Get-MtpOrganization {
                     $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
                 } catch {
                     throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key is valid. $($_.Exception.Message)"
-                    break;
                 }
                 $Content = $Request.Content | ConvertFrom-Json
                 $results += $Content.results

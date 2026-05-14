@@ -177,12 +177,13 @@ jobs:
         shell: powershell
         env:
           RELEASE_TYPE: ${{ needs.Check-PR-Labels.outputs.RELEASE_TYPE }}
-          PESTER_APIKEY: ${{ secrets.PESTER_APIKEY_EU }}
-          PESTER_ORGID: ${{ secrets.PESTER_ORGID_EU }}
-          PESTER_CONNECTKEY: ${{ secrets.PESTER_CONNECTKEY_EU }}
+          PESTER_APIKEY: ${{ secrets.PESTER_APIKEY }}
+          PESTER_ORGID: ${{ secrets.PESTER_ORGID }}
+          PESTER_CONNECTKEY: ${{ secrets.PESTER_CONNECTKEY }}
         run: |
           $env:job_group = ${{ matrix.job_group }}
-          # # alternate between US and EU test environments.
+          # CUT-4958
+          # Uncomment below to alternate between US and EU test environments based on run number when Connect-JCOnline supports EU region.
           # if (${{ github.run_number }} % 2 -eq 0) {
           #   Write-Host "[status] Using US Pester ENV Variables"
           #   $env:PESTER_APIKEY = "${{ secrets.PESTER_APIKEY }}"
@@ -204,12 +205,5 @@ jobs:
               $modulePSD1 = Get-ChildItem "C:\Users\runneradmin\Documents\PowerShell\Modules\$module" -Recurse -filter "*.psd1"
               Write-Host "[status] Importing: $module at path $($modulePSD1.fullname)"
               Import-Module "$($modulePSD1.fullname)" -force
-              # set EU Environment
-              if ($Module -eq "JumpCloud"){
-                Set-JCSettingsFile -JCEnvironmentLocation "EU"
-                # re-import
-                Import-Module "$($modulePSD1.fullname)" -force
-              }
-
           }
           . "./jumpcloud-ADMU/Powershell/InvokePester.ps1" $env:RELEASE_TYPE
