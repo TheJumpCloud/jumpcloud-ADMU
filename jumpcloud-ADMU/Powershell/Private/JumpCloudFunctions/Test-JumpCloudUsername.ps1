@@ -36,19 +36,23 @@ function Test-JumpCloudUsername {
         $Body = $Form | ConvertTo-Json -Depth 4
     }
     Process {
-        try {
-            Set-JcUrl -Region "US"
-            $baseUrl = "$($global:JCUrl)/api/search/systemusers"
-            $Response = Invoke-WebRequest -Method 'Post' -Uri $baseUrl -Headers $Headers -Body $Body -UseBasicParsing
-            $Results = $Response.Content | ConvertFrom-Json
-            $StatusCode = $Response.StatusCode
-        } catch {
-            # Call EU endpoint if US fails
-            Set-JcUrl -Region "EU"
-            $baseUrl = "$($global:JCUrl)/api/search/systemusers"
-            $Response = Invoke-WebRequest -Method 'Post' -Uri $baseUrl -Headers $Headers -Body $Body -UseBasicParsing
-            $Results = $Response.Content | ConvertFrom-Json
-            $StatusCode = $Response.StatusCode
+        $regions = @("US", "EU", "IN")
+        $found = $false
+        foreach($region in $regions){
+            Set-JcUrl -Region $region
+            try {
+                $baseUrl = "$($global:JCUrl)/api/search/systemusers"
+                $Response = Invoke-WebRequest -Method 'Post' -Uri $baseUrl -Headers $Headers -Body $Body -UseBasicParsing
+                $Results = $Response.Content | ConvertFrom-Json
+                $StatusCode = $Response.StatusCode
+                $found = $true
+                break;
+            } catch {
+                continue;
+            }
+        }
+        if(-not $found) {
+            throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key and OrgID are valid."
         }
     }
     End {

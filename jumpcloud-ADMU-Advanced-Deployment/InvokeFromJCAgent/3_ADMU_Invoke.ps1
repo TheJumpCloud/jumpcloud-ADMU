@@ -609,7 +609,11 @@ function Get-SystemDescription {
         $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
         if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey" }
         $host_match = [regex]::Match($cfg, 'agentServerHost["]?:["]?agent\.(\w+)\.jumpcloud\.com').Groups[1].Value
-        $url = if ($host_match -eq "eu") { "https://console.jumpcloud.eu" }else { "https://console.jumpcloud.com" }
+        switch ($host_match) {
+            "eu" { $url = "https://console.eu.jumpcloud.com" }
+            "in" { $url = "https://console.in.jumpcloud.com" }
+            default { $url = "https://console.jumpcloud.com" }
+        }
         $h = @{ "Accept" = "application/json" }
 
         # Authenticate

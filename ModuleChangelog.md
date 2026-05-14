@@ -1,3 +1,10 @@
+## 2.12.4
+
+Release Date: April 29, 2026
+
+````
+- Added support to indian region.
+````
 ## 2.12.3
 
 Release Date: May 11, 2026
