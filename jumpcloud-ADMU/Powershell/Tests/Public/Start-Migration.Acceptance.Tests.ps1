@@ -458,7 +458,9 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $matchedUser = $systemDescObj | Where-Object { $_.sid -eq $userToMigrateFromSID }
                     $matchedUser.sid | Should -Be $userToMigrateFromSID
                     $matchedUser.un | Should -Be $GeneratedUser.Username
-                    $matchedUser.st | Should -Be "Completed"
+                    # Vocab aligned with DeviceQuery: Build-MigrationDescription writes
+                    # 'Complete'/'Error' to match the device-level admu attribute.
+                    $matchedUser.st | Should -Be "Complete"
 
                     # validate the admu attributes were written:
                     $matchedAttribute = $system.attributes | Where-Object { $_.Name -eq 'admu' }
@@ -515,7 +517,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $matchedUser = $systemDescObj | Where-Object { $_.sid -eq $userToMigrateFromSID }
                     $matchedUser.sid | Should -Be $userToMigrateFromSID
                     $matchedUser.un | Should -Be $GeneratedUser.Username
-                    $matchedUser.st | Should -Be "Completed"
+                    $matchedUser.st | Should -Be "Complete"
 
                     # validate the admu attributes were written:
                     $matchedAttribute = $system.attributes | Where-Object { $_.Name -eq 'admu' }

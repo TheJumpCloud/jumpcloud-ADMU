@@ -46,11 +46,16 @@ function Build-MigrationDescription {
         [string]$authMethod
     )
 
-    # Determine the status value based on percent
+    # Determine the status value based on percent.
+    # Vocabulary aligns with DeviceQuery.ps1's per-user state values
+    # (Pending/Skip/Complete/Error) and with Start-Migration's device-level
+    # `admu` attribute writes (Complete/Error). Keeps the description's
+    # per-user `st` honest at the moment migration finishes, so DeviceQuery's
+    # rollup doesn't have to wait for a follow-up run to correct the state.
     $statusValue = if ($Percent -eq "ERROR") {
-        "Failed"
+        "Error"
     } elseif ($Percent -eq "100%") {
-        "Completed"
+        "Complete"
     } else {
         "InProgress"
     }
@@ -86,15 +91,22 @@ function Build-MigrationDescription {
                 $foundUser.msg = $StatusMessage
                 $foundUser.st = $statusValue
             } else {
-                # User not found in existing description, add new entry
+                # User not found in existing description, add new entry.
+                # New schema fields (lastWrite, lastLoginValid, profileSize) are
+                # initialized to $null here so the description JSON stays
+                # homogeneous across entries written by ADMU vs. DeviceQuery.
+                # DeviceQuery's next run will populate them with real values.
                 $description += [PSCustomObject]@{
-                    sid       = $UserSID
-                    un        = $MigrationUsername
-                    localPath = if ($LocalPath) { $LocalPath.Replace('\', '/') } else { $null }
-                    msg       = $StatusMessage
-                    st        = $statusValue
-                    uid       = $null
-                    lastLogin = $null
+                    sid            = $UserSID
+                    un             = $MigrationUsername
+                    localPath      = if ($LocalPath) { $LocalPath.Replace('\', '/') } else { $null }
+                    msg            = $StatusMessage
+                    st             = $statusValue
+                    uid            = $null
+                    lastLogin      = $null
+                    lastWrite      = $null
+                    lastLoginValid = $null
+                    profileSize    = $null
                 }
             }
         } catch {
@@ -103,16 +115,20 @@ function Build-MigrationDescription {
             $description = $null
         }
     }
-    # Create new description if not already initialized - always as array
+    # Create new description if not already initialized - always as array.
+    # Same schema as the new-entry append path above (see comment there).
     if (-not $description) {
         $description = @([PSCustomObject]@{
-                sid       = $UserSID
-                un        = $MigrationUsername
-                localPath = if ($LocalPath) { $LocalPath.Replace('\', '/') } else { $null }
-                msg       = $StatusMessage
-                st        = $statusValue
-                uid       = $null
-                lastLogin = $null
+                sid            = $UserSID
+                un             = $MigrationUsername
+                localPath      = if ($LocalPath) { $LocalPath.Replace('\', '/') } else { $null }
+                msg            = $StatusMessage
+                st             = $statusValue
+                uid            = $null
+                lastLogin      = $null
+                lastWrite      = $null
+                lastLoginValid = $null
+                profileSize    = $null
             })
     }
     # Ensure return is always an array (use unary comma for PowerShell 5.1 compatibility)

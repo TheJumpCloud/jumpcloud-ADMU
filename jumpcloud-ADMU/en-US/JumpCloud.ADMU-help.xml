@@ -536,7 +536,8 @@
       </maml:description>
     </command:details>
     <maml:description>
-      <maml:para>This function reverts a user migration by: 1. Looking up the account SID in the Windows registry ProfileList 2. Identifying the .ADMU profile path 3. Restoring original NTUSER.DAT and UsrClass.dat files from backups 4. Preserving migrated files with _migrated suffix for rollback purposes</maml:para>
+      <maml:para>This function reverts a user migration by:</maml:para>
+      <maml:para>1.  Looking up the account SID in the Windows registry ProfileList 2.  Identifying the .ADMU profile path 3.  Restoring original NTUSER.DAT and UsrClass.dat files from backups 4.  Preserving migrated files with _migrated suffix for rollback purposes</maml:para>
     </maml:description>
     <command:syntax>
       <command:syntaxItem>
@@ -568,7 +569,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>form</maml:name>
           <maml:description>
-            <maml:para>{{ Fill form Description }}</maml:para>
+            <maml:para>The form parameter specifies whether to launch the reversion process in a graphical user interface (GUI) form. For CLI usage, this parameter should be set to $false.</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
           <dev:type>
@@ -576,30 +577,6 @@
             <maml:uri />
           </dev:type>
           <dev:defaultValue>False</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>UserName</maml:name>
-          <maml:description>
-            <maml:para>{{ Fill UserName Description }}</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>ProfileSize</maml:name>
-          <maml:description>
-            <maml:para>{{ Fill ProfileSize Description }}</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
         </command:parameter>
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>DryRun</maml:name>
@@ -675,7 +652,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>form</maml:name>
         <maml:description>
-          <maml:para>{{ Fill form Description }}</maml:para>
+          <maml:para>The form parameter specifies whether to launch the reversion process in a graphical user interface (GUI) form. For CLI usage, this parameter should be set to $false.</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>
@@ -683,30 +660,6 @@
           <maml:uri />
         </dev:type>
         <dev:defaultValue>False</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>UserName</maml:name>
-        <maml:description>
-          <maml:para>{{ Fill UserName Description }}</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-        <dev:type>
-          <maml:name>System.String</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>ProfileSize</maml:name>
-        <maml:description>
-          <maml:para>{{ Fill ProfileSize Description }}</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-        <dev:type>
-          <maml:name>System.String</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
       </command:parameter>
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>DryRun</maml:name>
