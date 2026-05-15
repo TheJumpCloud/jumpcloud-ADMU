@@ -121,6 +121,12 @@ function Start-Migration {
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU requires a local uwp_jcadmu.exe in C:\\Windows and will validate it against the latest GitHub release when possible. If GitHub is rate limited, the local file will still be used with a warning. If the local file is missing, the ADMU will throw and exit.")]
+        [bool]
+        $localEXEs = $false,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
             HelpMessage = "When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will attempt to set the specified user as the PrimarySystemUser for this device in JumpCloud. This is set to false by default.")]
         [bool]
         $PrimaryUser = $false,
@@ -158,11 +164,7 @@ function Start-Migration {
 
         # Define misc static variables
         $netBiosName = Get-NetBiosName
-        try {
-            $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-        } catch {
-            $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
-        }
+        $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
         $localComputerName = $WmiComputerSystem.Name
         $systemVersion = Get-ComputerInfo | Select-Object OSName, OSVersion, OsHardwareAbstractionLayer, OsBuildNumber, WindowsEditionId
         $windowsDrive = Get-WindowsDrive
@@ -180,6 +182,7 @@ function Start-Migration {
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
         $trackAccountMerge = $false
+
         # Track migration steps
         $admuTracker = [Ordered]@{
             init                          = @{
@@ -1481,18 +1484,18 @@ function Start-Migration {
             # $admuTracker.uwpAppXPackages = $true
             Write-ToProgress -ProgressBar $ProgressBar -Status "uwpDownloadExe" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
 
-            # Download the appx register exe
-            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-            Invoke-WebRequest -Uri 'https://github.com/TheJumpCloud/jumpcloud-ADMU/releases/latest/download/uwp_jcadmu.exe' -OutFile 'C:\windows\uwp_jcadmu.exe' -UseBasicParsing
-            Start-Sleep -Seconds 1
             try {
-                Get-Item -Path "$windowsDrive\Windows\uwp_jcadmu.exe" -ErrorAction Stop | Out-Null
+                [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+                $resolvedUwpExePath = Get-UwpJcadmuExe -WindowsDrive $windowsDrive -localEXEs $localEXEs
+                if ($null -eq $resolvedUwpExePath) {
+                    Write-ToLog -Message 'UWP app restoration will be skipped: uwp_jcadmu.exe could not be prepared.' -Level Warning
+                } else {
+                    Write-ToLog -Message ("uwp_jcadmu.exe ready at $resolvedUwpExePath")
+                }
             } catch {
-                Write-ToLog -Message("Could not find uwp_jcadmu.exe in $windowsDrive\Windows\ UWP Apps will not migrate") -Level Warning
+                Write-ToLog -Message('Could not prepare uwp_jcadmu.exe for UWP migration.') -Level Warning
                 Write-ToLog -Message($_.Exception.Message) -Level Warning
-                # TODO: Test and return non terminating error here if failure
-                # TODO: Get the checksum
-                # $admuTracker.uwpDownloadExe = $true
+                # Do not throw; continue migration
             }
             #endRegion Download UWP App
 
@@ -1549,11 +1552,8 @@ function Start-Migration {
             write-tolog -Message $admuTracker.leaveDomain.step -MigrationStep
             Write-ToProgress -ProgressBar $ProgressBar -Status "leaveDomain" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
 
-            try {
-                $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-            } catch {
-                $WmiComputerSystem = Get-CimInstance -ClassName:('Win32_ComputerSystem')
-            }
+            $WmiComputerSystem = Get-CimInstance -ClassName:('Win32_ComputerSystem')
+
             if ($LeaveDomain -eq $true) {
                 if ($AzureADStatus -match 'YES' -and $LocalDomainStatus -match 'YES') {
                     Write-ToLog -Message:('Device is HYBRID joined')
@@ -1590,7 +1590,11 @@ function Start-Migration {
 
                             # for the local domain un-join
                             try {
-                                $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+                                $null = Invoke-CimMethod -InputObject $WmiComputerSystem -MethodName 'UnjoinDomainOrWorkgroup' -Arguments @{
+                                    Password        = $null
+                                    UserName        = $null
+                                    FUnjoinOptions  = 0
+                                }
                                 $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
                                 Write-ToLog -Message:("After running UnJoinDomainOrWorkGroup, the domain status is as follows:") -Level:('Info')
                                 Write-ToLog -Message:("AzureADStatus: $AzureADStatus") -Level:('Info')
@@ -1612,7 +1616,11 @@ function Start-Migration {
                             }
                         }
                         "LocalJoined" {
-                            $WmiComputerSystem.UnJoinDomainOrWorkGroup($null, $null, 0)
+                            $null = Invoke-CimMethod -InputObject $WmiComputerSystem -MethodName 'UnjoinDomainOrWorkgroup' -Arguments @{
+                                Password       = $null
+                                UserName       = $null
+                                FUnjoinOptions = 0
+                            }
                             $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
                             if ($AzureADStatus -match 'NO' -and $LocalDomainStatus -match 'NO') {
                                 Write-ToLog -Message:('Left local domain successfully') -Level:('Info')

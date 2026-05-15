@@ -49,6 +49,10 @@ function Invoke-SystemContextAPI {
                     Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: EU."
                     Set-JCUrl -Region "EU"
                 }
+                "in" {
+                    Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: IN."
+                    Set-JCUrl -Region "IN"
+                }
                 default {
                     Write-ToLog -Message "Determined JumpCloud Region based on agentServerHost: US."
                     Set-JCUrl -Region "US"
@@ -374,6 +378,7 @@ function Invoke-SystemContextAPI {
                     }
                 } catch {
                     # If parsing fails, treat as generic body
+                    Write-Verbose "Failed to parse body as JSON: $_"
                 }
             }
 

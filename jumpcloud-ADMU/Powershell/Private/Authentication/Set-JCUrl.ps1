@@ -13,6 +13,9 @@ function Set-JCUrl {
             "EU" {
                 $global:JCUrl = "https://console.eu.jumpcloud.com"
             }
+            "IN" {
+                $global:JCUrl = "https://console.in.jumpcloud.com"
+            }
         }
     }
 }

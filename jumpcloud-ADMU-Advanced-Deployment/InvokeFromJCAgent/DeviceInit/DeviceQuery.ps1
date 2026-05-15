@@ -86,7 +86,11 @@ function Get-System {
             $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
             if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey" }
             $host_match = [regex]::Match($cfg, 'agentServerHost["]?:["]?agent\.(\w+)\.jumpcloud\.com').Groups[1].Value
-            $url = if ($host_match -eq "eu") { "https://console.jumpcloud.eu" }else { "https://console.jumpcloud.com" }
+            switch ($host_match) {
+                "eu" { $url = "https://console.eu.jumpcloud.com" }
+                "in" { $url = "https://console.in.jumpcloud.com" }
+                default { $url = "https://console.jumpcloud.com" }
+            }
             $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
             if (-not(Test-Path $privKey)) { throw "Key not found" }
             if ($PSVersionTable.PSVersion.Major -eq 5) {
@@ -152,7 +156,11 @@ function Set-System {
             }
             $cfg = Get-Content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
             $host_match = [regex]::Match($cfg, 'agentServerHost["]?:["]?agent\.(\w+)\.jumpcloud\.com').Groups[1].Value
-            $url = if ($host_match -eq "eu") { "https://console.jumpcloud.eu" } else { "https://console.jumpcloud.com" }
+            switch ($host_match) {
+                "eu" { $url = "https://console.eu.jumpcloud.com" }
+                "in" { $url = "https://console.in.jumpcloud.com" }
+                default { $url = "https://console.jumpcloud.com" }
+            }
             $now = (Get-Date -Date ((Get-Date).ToUniversalTime())-UFormat '+%a, %d %h %Y %H:%M:%S GMT')
             $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
 

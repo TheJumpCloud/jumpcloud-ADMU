@@ -17,17 +17,17 @@ Describe "Test-MigrationButton Acceptance Tests" -Tag "Acceptance" {
         }
         . "$helpFunctionDir\$fileName"
 
-        # mock the wmi command
-        Mock -CommandName 'Get-WmiObject' {
-            $wmiReturn = @{
-                "Domain"              = "mockDomain.org"
-                "Manufacturer"        = "mockManufacturer"
-                "Model"               = "mockModel"
-                "Name"                = "mockSystemName"
-                "PrimaryOwnerName"    = "mockUsername"
-                "TotalPhysicalMemory" = "436880384"
+        # Production queries Win32_ComputerSystem via CIM; mock only that class so
+        # Win32_UserProfile queries in Test-JumpCloudUser still use the real CIM command.
+        Mock -CommandName 'Get-CimInstance' -ParameterFilter { $ClassName -eq 'Win32_ComputerSystem' } {
+            @{
+                Domain              = 'mockDomain.org'
+                Manufacturer        = 'mockManufacturer'
+                Model               = 'mockModel'
+                Name                = 'mockSystemName'
+                PrimaryOwnerName    = 'mockUsername'
+                TotalPhysicalMemory = '436880384'
             }
-            return $wmiReturn
         }
     }
     BeforeEach {

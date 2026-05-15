@@ -26,6 +26,7 @@ function New-RegPermissionTask {
     .OUTPUTS
     Returns $true if the task was created successfully, $false otherwise.
     #>
+    [OutputType([System.Boolean])]
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)]

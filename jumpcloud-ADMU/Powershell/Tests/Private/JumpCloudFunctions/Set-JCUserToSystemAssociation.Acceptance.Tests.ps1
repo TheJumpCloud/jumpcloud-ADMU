@@ -19,7 +19,7 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
 
         # for these tests, the jumpCloud agent needs to be installed:
         $AgentService = Get-Service -Name "jumpcloud-agent" -ErrorAction SilentlyContinue
-        If (-Not $AgentService) {
+        if (-not $AgentService) {
             # set install variables
             $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
             $AGENT_PATH = Join-Path ${env:ProgramFiles} "JumpCloud"
@@ -32,18 +32,18 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
             Install-JumpCloudAgent -AGENT_INSTALLER_URL:($AGENT_INSTALLER_URL) -AGENT_INSTALLER_PATH:($AGENT_INSTALLER_PATH) -AGENT_CONF_PATH:($AGENT_CONF_PATH) -JumpCloudConnectKey:($CONNECT_KEY) -AGENT_PATH:($AGENT_PATH) -AGENT_BINARY_NAME:($AGENT_BINARY_NAME)
         }
 
-        Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -Force
+        Connect-JCOnline -JumpCloudApiKey $env:PESTER_APIKEY -JumpCloudOrgId $env:PESTER_ORGID -force
 
         # mock windows Drive in CI to reflect install location
         if ($env:CI) {
             Mock Get-WindowsDrive { return "C:" }
         }
         # get the org details
-        $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
+        $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY -orgID $env:PESTER_ORGID
         $OrgName = "$($OrgSelection[1])"
         $OrgID = "$($OrgSelection[0])"
         # get the system key
-        $config = get-content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
+        $config = Get-Content "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
         $regex = 'systemKey\":\"(\w+)\"'
         $systemKey = [regex]::Match($config, $regex).Groups[1].Value
     }
@@ -53,7 +53,7 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
         $Password = "Temp123!"
         $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
         # If User Exists, remove from the org
-        $users = Get-JCSdkUser
+        $users = Get-JcSdkUser
         if ("$($user.JCUsername)" -in $users.Username) {
             $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
             Write-Host "Found JumpCloud User, $($existing.Id) removing..."
@@ -61,11 +61,17 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
         }
         $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
         # Begin Test
-        Get-JCAssociation -Type user -Id:($($GeneratedUser.Id)) | Remove-JCAssociation -Force
+        # Get the user to device associations are remove it if they exist
+        $associations = Get-JcSdkUserTraverseSystem -UserId $GeneratedUser.Id
+        foreach ($association in $associations) {
+            if ($association.type -eq 'system') {
+                Set-JcSdkUserAssociation -UserId $GeneratedUser.Id -Id $association.id -Type $association.type -Op remove
+            }
+        }
         $bind = Set-JCUserToSystemAssociation -JcApiKey $env:PESTER_APIKEY -JcOrgId $OrgID -JcUserID $GeneratedUser.Id
         $bind | Should -Be $true
-        $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
-        $association | Should -not -BeNullOrEmpty
+        $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+        $association | Should -Not -BeNullOrEmpty
         $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
         # Clean Up
         Remove-JcSdkUser -Id $GeneratedUser.Id
@@ -76,7 +82,7 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
         $Password = "Temp123!"
         $user1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
         # If User Exists, remove from the org
-        $users = Get-JCSDKUser
+        $users = Get-JcSdkUser
         if ("$($user.JCUsername)" -in $users.Username) {
             $existing = $users | Where-Object { $_.username -eq "$($user.JCUsername)" }
             Write-Host "Found JumpCloud User, $($existing.Id) removing..."
@@ -84,12 +90,17 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
         }
         $GeneratedUser = New-JcSdkUser -Email:("$($user1)@jumpcloudadmu.com") -Username:("$($user1)") -Password:("$($Password)")
         # Begin Test
-        Get-JCAssociation -Type user -Id:($($GeneratedUser.Id)) | Remove-JCAssociation -Force
+        $associations = Get-JcSdkUserTraverseSystem -UserId $GeneratedUser.Id
+        foreach ($association in $associations) {
+            if ($association.type -eq 'system') {
+                Set-JcSdkUserAssociation -UserId $GeneratedUser.Id -Id $association.id -Type $association.type -Op remove
+            }
+        }
         $bind = Set-JCUserToSystemAssociation -JcApiKey $env:PESTER_APIKEY -JcOrgId $OrgID -JcUserID $GeneratedUser.Id -BindAsAdmin $true
         $bind | Should -Be $true
         # ((Get-JCAssociation -Type:user -Id:($($GeneratedUser.Id))).id).count | Should -Be '1'
-        $association = Get-JcSdkSystemAssociation -systemid $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
-        $association | Should -not -BeNullOrEmpty
+        $association = Get-JcSdkSystemAssociation -SystemId $systemKey -Targets user | Where-Object { $_.ToId -eq $($GeneratedUser.Id) }
+        $association | Should -Not -BeNullOrEmpty
         $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
         # Clean Up
         Remove-JcSdkUser -Id $GeneratedUser.Id
@@ -104,7 +115,7 @@ Describe "Set-JCUserToSystemAssociation Acceptance Tests" -Tag "Acceptance", "In
         Remove-JcSdkUser -Id $GeneratedUser.Id
     }
 
-    It 'Agent not installed' -skip {
+    It 'Agent not installed' -Skip {
         #TODO: Is this test necessary, it breaks the migration tests
         if ((Test-Path -Path "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf") -eq $True) {
             Remove-Item "C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf"
