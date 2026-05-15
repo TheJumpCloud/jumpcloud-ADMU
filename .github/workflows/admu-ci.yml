@@ -180,6 +180,8 @@ jobs:
           PESTER_APIKEY: ${{ secrets.PESTER_APIKEY }}
           PESTER_ORGID: ${{ secrets.PESTER_ORGID }}
           PESTER_CONNECTKEY: ${{ secrets.PESTER_CONNECTKEY }}
+          PESTER_APIKEY_MTP: ${{ secrets.PESTER_APIKEY_MTP }}
+          PESTER_ORGID_MTP: ${{ secrets.PESTER_ORGID_MTP }}
         run: |
           $env:job_group = ${{ matrix.job_group }}
           # CUT-4958

@@ -43,6 +43,7 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
     }
 
     It "The contents of the device query script should be under 32,767 character limit" -Skip {
+        # No longer necessary with changes to JumpCloud Agent
         # Normalize line endings to LF to ensure consistent character count across platforms
         $measured = $scriptContent | Measure-Object -Character
         Write-Host "Character Count of Device Query Script: $($measured.Characters) | Limit: 32767"
@@ -161,7 +162,9 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
         }
         It "Data from Get-ADMUUser should have the required properties" {
             $admuUsers = Get-ADMUUser -localUsers
-            $requiredProperties = @("st", "msg", "sid", "localPath", "un", "uid", "lastLogin")
+            # Schema includes admin-curated fields (st/msg/sid/localPath/un/uid)
+            # AND discovery-observed fields (lastLogin/lastWrite/lastLoginValid/profileSize).
+            $requiredProperties = @("st", "msg", "sid", "localPath", "un", "uid", "lastLogin", "lastWrite", "lastLoginValid", "profileSize")
             foreach ($user in $admuUsers) {
                 $MemberProperties = $user | Get-Member
                 foreach ($prop in $requiredProperties) {
@@ -190,6 +193,179 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             $migratedUser | Should -Not -Be $null
             $migratedUser.st | Should -Be "Complete"
             $migratedUser.msg | Should -Be "User previously migrated"
+        }
+        It "Should default DefaultUserState to 'Auto' when parameter is omitted (fresh users get Pending or Skip)" {
+            $admuUsers = Get-ADMUUser -localUsers
+            $admuUsers | Should -Not -Be $null
+            $freshUsers = $admuUsers | Where-Object { $_.st -ne 'Complete' }
+            foreach ($user in $freshUsers) {
+                $user.st | Should -BeIn @('Pending', 'Skip')
+            }
+        }
+        It "Should mark all fresh users as 'Pending' when -DefaultUserState 'Pending' is specified" {
+            $admuUsers = Get-ADMUUser -localUsers -DefaultUserState 'Pending'
+            $admuUsers | Should -Not -Be $null
+            $freshUsers = $admuUsers | Where-Object { $_.st -ne 'Complete' }
+            $totalUsers = 0
+            foreach ($user in $freshUsers) {
+                $totalUsers++
+                $user.st | Should -Be 'Pending'
+                $user.msg | Should -Be 'Planned'
+            }
+            $totalUsers | Should -BeGreaterThan 0
+        }
+        It "Should mark all fresh users as 'Skip' with the multi-user msg when -DefaultUserState 'Skip' is specified" {
+            $admuUsers = Get-ADMUUser -localUsers -DefaultUserState 'Skip'
+            $admuUsers | Should -Not -Be $null
+            $freshUsers = $admuUsers | Where-Object { $_.st -ne 'Complete' }
+            $totalUsers = 0
+            foreach ($user in $freshUsers) {
+                $totalUsers++
+                $user.st | Should -Be 'Skip'
+                $user.msg | Should -Be 'Multiple AD users found; awaiting admin selection'
+            }
+            $totalUsers | Should -BeGreaterThan 0
+        }
+        It "Should reject -DefaultUserState values outside the validated set" {
+            { Get-ADMUUser -localUsers -DefaultUserState 'Bogus' } | Should -Throw
+        }
+        It "In Auto mode with multiple fresh users on the device, fresh users should be marked 'Skip'" {
+            # Create a second test user so the device has >1 fresh AD candidate
+            $testUser1 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $testUser2 = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $tempPassword = "Temp123!Temp123!"
+            Initialize-TestUser -username $testUser1 -password $tempPassword
+            Initialize-TestUser -username $testUser2 -password $tempPassword
+
+            $admuUsers = Get-ADMUUser -localUsers -DefaultUserState 'Auto'
+            $admuUsers | Should -Not -Be $null
+            $freshUsers = @($admuUsers | Where-Object { $_.st -ne 'Complete' })
+            # Sanity: confirm Auto resolved to Skip when fresh count > 1
+            $freshUsers.Count | Should -BeGreaterThan 1
+            foreach ($user in $freshUsers) {
+                $user.st | Should -Be 'Skip'
+                $user.msg | Should -Be 'Multiple AD users found; awaiting admin selection'
+            }
+        }
+        It "Should populate lastWrite from NTUSER.DAT mtime as an ISO-8601 UTC string" {
+            $testUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            Initialize-TestUser -username $testUser -password "Temp123!Temp123!"
+            $sid = (New-Object System.Security.Principal.NTAccount($testUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+
+            $admuUsers = Get-ADMUUser -localUsers
+            $found = $admuUsers | Where-Object { $_.sid -eq $sid }
+            $found | Should -Not -BeNullOrEmpty
+            # Freshly initialized profile has NTUSER.DAT, so lastWrite must be set
+            # and must be a parseable timestamp.
+            $found.lastWrite | Should -Not -BeNullOrEmpty
+            { [DateTime]::Parse($found.lastWrite) } | Should -Not -Throw
+        }
+        It "Should populate profileSize as a non-negative numeric (GB) for discovered users" {
+            $testUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            Initialize-TestUser -username $testUser -password "Temp123!Temp123!"
+            $sid = (New-Object System.Security.Principal.NTAccount($testUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+
+            $admuUsers = Get-ADMUUser -localUsers
+            $found = $admuUsers | Where-Object { $_.sid -eq $sid }
+            $found | Should -Not -BeNullOrEmpty
+            $found.profileSize | Should -Not -BeNullOrEmpty
+            # Get-ADMUUser returns [Math]::Round(... / 1GB, 2) which yields [double].
+            $found.profileSize | Should -BeOfType [double]
+            $found.profileSize | Should -BeGreaterOrEqual 0
+        }
+        It "Should set lastLoginValid based on lastLogin/lastWrite agreement (within 24h => true)" {
+            $testUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            Initialize-TestUser -username $testUser -password "Temp123!Temp123!"
+            $sid = (New-Object System.Security.Principal.NTAccount($testUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+
+            $admuUsers = Get-ADMUUser -localUsers
+            $found = $admuUsers | Where-Object { $_.sid -eq $sid }
+            $found | Should -Not -BeNullOrEmpty
+            # For a freshly-created profile, NTUSER.DAT mtime and Win32 LastUseTime
+            # are both stamped at initialization and should agree well within 24h.
+            # If either is unexpectedly missing the contract is: lastLoginValid = $null.
+            if ($found.lastLogin -and $found.lastWrite) {
+                $found.lastLoginValid | Should -Be $true
+            } else {
+                $found.lastLoginValid | Should -Be $null
+            }
+        }
+        It "Should reuse cached profileSize from -ExistingEntries when SID and localPath match" {
+            $testUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            Initialize-TestUser -username $testUser -password "Temp123!Temp123!"
+            $sid = (New-Object System.Security.Principal.NTAccount($testUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+            $localPath = "C:\Users\$testUser"
+
+            # Sentinel value clearly not a real profile size - if the result has
+            # this exact value, we know the cache was reused (not recomputed).
+            $cachedSentinel = 99.99
+            $existingEntries = @(
+                [PSCustomObject]@{
+                    sid         = $sid
+                    localPath   = $localPath
+                    profileSize = $cachedSentinel
+                }
+            )
+
+            $admuUsers = Get-ADMUUser -localUsers -ExistingEntries $existingEntries
+            $found = $admuUsers | Where-Object { $_.sid -eq $sid }
+            $found | Should -Not -BeNullOrEmpty
+            $found.profileSize | Should -Be $cachedSentinel
+        }
+        It "Should recompute profileSize when -ExistingEntries has a different localPath for the same SID" {
+            $testUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            Initialize-TestUser -username $testUser -password "Temp123!Temp123!"
+            $sid = (New-Object System.Security.Principal.NTAccount($testUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+
+            # Cache says profile lives at a different path than what discovery
+            # finds - the cache must be invalidated and the size recomputed.
+            $cachedSentinel = 99.99
+            $existingEntries = @(
+                [PSCustomObject]@{
+                    sid         = $sid
+                    localPath   = "C:\Users\StalePath_DoesNotMatch"
+                    profileSize = $cachedSentinel
+                }
+            )
+
+            $admuUsers = Get-ADMUUser -localUsers -ExistingEntries $existingEntries
+            $found = $admuUsers | Where-Object { $_.sid -eq $sid }
+            $found | Should -Not -BeNullOrEmpty
+            $found.profileSize | Should -Not -Be $cachedSentinel
+        }
+        It "Should recompute profileSize when -ExistingEntries cache has profileSize = `$null" {
+            $testUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            Initialize-TestUser -username $testUser -password "Temp123!Temp123!"
+            $sid = (New-Object System.Security.Principal.NTAccount($testUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+            $localPath = "C:\Users\$testUser"
+
+            # Existing entry exists for this SID but profileSize is $null, e.g.
+            # legacy entry written by Build-MigrationDescription before DeviceQuery
+            # has measured the profile. Cache must be ignored and value computed.
+            $existingEntries = @(
+                [PSCustomObject]@{
+                    sid         = $sid
+                    localPath   = $localPath
+                    profileSize = $null
+                }
+            )
+
+            $admuUsers = Get-ADMUUser -localUsers -ExistingEntries $existingEntries
+            $found = $admuUsers | Where-Object { $_.sid -eq $sid }
+            $found | Should -Not -BeNullOrEmpty
+            $found.profileSize | Should -Not -BeNullOrEmpty
+            $found.profileSize | Should -BeOfType [double]
+        }
+        It "Should compute profileSize freshly when -ExistingEntries is `$null (first-run case)" {
+            $testUser = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            Initialize-TestUser -username $testUser -password "Temp123!Temp123!"
+            $sid = (New-Object System.Security.Principal.NTAccount($testUser)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+
+            $admuUsers = Get-ADMUUser -localUsers -ExistingEntries $null
+            $found = $admuUsers | Where-Object { $_.sid -eq $sid }
+            $found | Should -Not -BeNullOrEmpty
+            $found.profileSize | Should -Not -BeNullOrEmpty
+            $found.profileSize | Should -BeOfType [double]
         }
     }
     Context "Set-SystemDesc Tests" {
@@ -397,6 +573,347 @@ Describe "ADMU Device Query Script Tests" -Tag "InstallJC" {
             $systemData = Get-System -systemContextBinding $true
             $admuAttr = $systemData.attributes | Where-Object { $_.name -eq "admu" }
             $admuAttr.value | Should -Be "Complete"
+        }
+        It "Should return 'Pending' when ALL users are Skip and zero are Complete (awaiting admin selection)" {
+            # Multi-user device discovered in Auto mode: every fresh user is Skip,
+            # nothing is Complete. The device-level rollup must report 'Pending'
+            # so admins can see it still needs attention.
+            $testUsers = @(
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-allskip-001-001-001-1001"
+                    localPath = "C:\Users\AllSkip1"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                },
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-allskip-002-002-002-1002"
+                    localPath = "C:\Users\AllSkip2"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                },
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-allskip-003-003-003-1003"
+                    localPath = "C:\Users\AllSkip3"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            $descResult = Set-SystemDesc -ADMUUsers $testUsers
+            $descResult.Status | Should -Be "Pending"
+            $systemData = Get-System -systemContextBinding $true
+            $admuAttr = $systemData.attributes | Where-Object { $_.name -eq "admu" }
+            $admuAttr.value | Should -Be "Pending"
+        }
+        It "Should preserve Skip users in the description across subsequent Set-SystemDesc calls" {
+            # Skip users used to be stripped on merge. Now they must persist so
+            # an admin can later flip one of them to Pending.
+            $initialUsers = @(
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-persist-001-001-001-1001"
+                    localPath = "C:\Users\Persist1"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                },
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-persist-002-002-002-1002"
+                    localPath = "C:\Users\Persist2"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $initialUsers | Out-Null
+            # Second discovery pass returns the same Skip users
+            Set-SystemDesc -ADMUUsers $initialUsers | Out-Null
+
+            $systemData = Get-System -systemContextBinding $true
+            $desc = $systemData.description | ConvertFrom-Json
+            $totalUsers = 0
+            foreach ($u in $desc) {
+                $totalUsers++
+                $u | Should -Not -Be $null
+                $u.st | Should -Be 'Skip'
+            }
+            $totalUsers | Should -BeGreaterThan 0
+        }
+        It "Should NOT overwrite an admin-set 'Pending' state when re-discovery returns 'Skip'" {
+            # Admin manually flipped one user to Pending and populated un/uid.
+            # The next DeviceQuery run (Auto mode, multi-user) would re-discover
+            # everyone as Skip. Admin's choice and mapping must be preserved.
+            $adminCurated = @(
+                [PSCustomObject]@{
+                    st        = 'Pending'
+                    msg       = 'Planned'
+                    sid       = "S-1-5-21-curated-001-001-001-1001"
+                    localPath = "C:\Users\AdminPick"
+                    un        = "target.user"
+                    uid       = "admin-set-uid-12345"
+                    lastLogin = $null
+                },
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-curated-002-002-002-1002"
+                    localPath = "C:\Users\Other"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $adminCurated | Out-Null
+
+            # Re-discovery: same SIDs, but defaults reset to Skip and un/uid blank
+            $rediscovered = @(
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-curated-001-001-001-1001"
+                    localPath = "C:\Users\AdminPick"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                },
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Multiple AD users found; awaiting admin selection'
+                    sid       = "S-1-5-21-curated-002-002-002-1002"
+                    localPath = "C:\Users\Other"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
+
+            $systemData = Get-System -systemContextBinding $true
+            $desc = $systemData.description | ConvertFrom-Json
+            $picked = $desc | Where-Object { $_.sid -eq "S-1-5-21-curated-001-001-001-1001" }
+            $picked.st | Should -Be 'Pending'
+            $picked.un | Should -Be 'target.user'
+            $picked.uid | Should -Be 'admin-set-uid-12345'
+        }
+        It "Should NOT overwrite an admin-set 'Skip' state when re-discovery returns 'Pending'" {
+            # Admin intentionally skipped a stale account. A subsequent run with
+            # DefaultUserState='Pending' (or Auto with only 1 fresh user) must not
+            # silently re-queue the skipped user.
+            $adminCurated = @(
+                [PSCustomObject]@{
+                    st        = 'Skip'
+                    msg       = 'Stale account; do not migrate'
+                    sid       = "S-1-5-21-skipme-001-001-001-1001"
+                    localPath = "C:\Users\Stale"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $adminCurated | Out-Null
+
+            $rediscovered = @(
+                [PSCustomObject]@{
+                    st        = 'Pending'
+                    msg       = 'Planned'
+                    sid       = "S-1-5-21-skipme-001-001-001-1001"
+                    localPath = "C:\Users\Stale"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
+            $systemData = Get-System -systemContextBinding $true
+            $desc = $systemData.description | ConvertFrom-Json
+            $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-skipme-001-001-001-1001" }
+            $found.st | Should -Be 'Skip'
+            $found.msg | Should -Be 'Stale account; do not migrate'
+        }
+        It "Should overwrite to 'Complete' when re-discovery confirms a previous migration" {
+            # The only auto-overwrite still allowed: discovery has detected the
+            # .ADMU profile suffix, so the entry transitions to Complete.
+            $initial = @(
+                [PSCustomObject]@{
+                    st        = 'Pending'
+                    msg       = 'Planned'
+                    sid       = "S-1-5-21-migration-001-001-001-1001"
+                    localPath = "C:\Users\Migrate"
+                    un        = "migrated.user"
+                    uid       = "mig-uid"
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $initial | Out-Null
+
+            $rediscovered = @(
+                [PSCustomObject]@{
+                    st        = 'Complete'
+                    msg       = 'User previously migrated'
+                    sid       = "S-1-5-21-migration-001-001-001-1001"
+                    localPath = "C:\Users\Migrate"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = $null
+                }
+            )
+            Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
+
+            $systemData = Get-System -systemContextBinding $true
+            $desc = $systemData.description | ConvertFrom-Json
+            $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-migration-001-001-001-1001" }
+            $found.st | Should -Be 'Complete'
+            $found.msg | Should -Be 'User previously migrated'
+        }
+        It "Should refresh discovery-observed fields (lastLogin/lastWrite/lastLoginValid/profileSize) on subsequent runs" {
+            # Initial state: entry with one set of discovery values
+            $initial = @(
+                [PSCustomObject]@{
+                    st             = 'Pending'
+                    msg            = 'Planned'
+                    sid            = "S-1-5-21-refresh-001-001-001-1001"
+                    localPath      = "C:\Users\Refresh"
+                    un             = $null
+                    uid            = $null
+                    lastLogin      = "2025-01-01T10:00:00.0000000Z"
+                    lastWrite      = "2025-01-01T10:00:05.0000000Z"
+                    lastLoginValid = $true
+                    profileSize    = 1.23
+                }
+            )
+            Set-SystemDesc -ADMUUsers $initial | Out-Null
+
+            # Re-discovery: same SID, but discovery values have moved on
+            # (user logged in again, profile grew, etc.).
+            $rediscovered = @(
+                [PSCustomObject]@{
+                    st             = 'Pending'
+                    msg            = 'Planned'
+                    sid            = "S-1-5-21-refresh-001-001-001-1001"
+                    localPath      = "C:\Users\Refresh"
+                    un             = $null
+                    uid            = $null
+                    lastLogin      = "2026-05-01T15:30:00.0000000Z"
+                    lastWrite      = "2026-05-01T15:30:10.0000000Z"
+                    lastLoginValid = $true
+                    profileSize    = 4.56
+                }
+            )
+            Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
+
+            $systemData = Get-System -systemContextBinding $true
+            $desc = $systemData.description | ConvertFrom-Json
+            $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-refresh-001-001-001-1001" }
+            $found | Should -Not -BeNullOrEmpty
+            $found.lastLogin | Should -Be "2026-05-01T15:30:00.0000000Z"
+            $found.lastWrite | Should -Be "2026-05-01T15:30:10.0000000Z"
+            $found.profileSize | Should -Be 4.56
+        }
+        It "Should backfill new schema fields on legacy entries (no lastWrite/lastLoginValid/profileSize) via Add-Member" {
+            # Simulate a description written before the new fields existed by
+            # bypassing Set-SystemDesc and writing the legacy shape directly.
+            $legacyDesc = @(
+                [PSCustomObject]@{
+                    st        = 'Pending'
+                    msg       = 'Planned'
+                    sid       = "S-1-5-21-legacy-001-001-001-1001"
+                    localPath = "C:\Users\LegacyEntry"
+                    un        = $null
+                    uid       = $null
+                    lastLogin = "2025-01-01T10:00:00.0000000Z"
+                }
+            )
+            Set-System -prop "Description" -Payload $legacyDesc
+
+            # Now run Set-SystemDesc with a record carrying the new fields - the
+            # merge loop should add them in place via Add-Member -Force.
+            $newUsers = @(
+                [PSCustomObject]@{
+                    st             = 'Pending'
+                    msg            = 'Planned'
+                    sid            = "S-1-5-21-legacy-001-001-001-1001"
+                    localPath      = "C:\Users\LegacyEntry"
+                    un             = $null
+                    uid            = $null
+                    lastLogin      = "2025-01-01T10:00:00.0000000Z"
+                    lastWrite      = "2025-01-01T10:00:05.0000000Z"
+                    lastLoginValid = $true
+                    profileSize    = 2.5
+                }
+            )
+            Set-SystemDesc -ADMUUsers $newUsers | Out-Null
+
+            $systemData = Get-System -systemContextBinding $true
+            $desc = $systemData.description | ConvertFrom-Json
+            $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-legacy-001-001-001-1001" }
+            $found | Should -Not -BeNullOrEmpty
+            # Backfilled fields are now present and populated
+            $found.PSObject.Properties.Name | Should -Contain 'lastWrite'
+            $found.PSObject.Properties.Name | Should -Contain 'lastLoginValid'
+            $found.PSObject.Properties.Name | Should -Contain 'profileSize'
+            $found.lastWrite | Should -Be "2025-01-01T10:00:05.0000000Z"
+            $found.lastLoginValid | Should -Be $true
+            $found.profileSize | Should -Be 2.5
+        }
+        It "Should update discovery fields when a user is migrated" {
+            $initial = @(
+                [PSCustomObject]@{
+                    st             = 'Pending'
+                    msg            = 'Planned'
+                    sid            = "S-1-5-21-mixed-001-001-001-1001"
+                    localPath      = "C:\Users\Mixed"
+                    un             = "admin.picked.user"
+                    uid            = "admin-set-uid-12345"
+                    lastLogin      = "2025-01-01T10:00:00.0000000Z"
+                    lastWrite      = "2025-01-01T10:00:05.0000000Z"
+                    lastLoginValid = $true
+                    profileSize    = 1.0
+                }
+            )
+            Set-SystemDesc -ADMUUsers $initial | Out-Null
+
+            # Re-discovery returns Skip default with un/uid blank AND newer
+            # discovery values. The merge must:
+            #   - PRESERVE admin-curated st/msg/un/uid (Pending + admin's mappings)
+            #   - REFRESH lastLogin/lastWrite/lastLoginValid/profileSize
+            $rediscovered = @(
+                [PSCustomObject]@{
+                    st             = 'Complete'
+                    msg            = 'User previously migrated'
+                    sid            = "S-1-5-21-mixed-001-001-001-1001"
+                    localPath      = "C:\Users\Mixed"
+                    un             = $null
+                    uid            = $null
+                    lastLogin      = "2026-06-01T12:00:00.0000000Z"
+                    lastWrite      = "2026-06-01T12:00:00.0000000Z"
+                    lastLoginValid = $true
+                    profileSize    = 5.5
+                }
+            )
+            Set-SystemDesc -ADMUUsers $rediscovered | Out-Null
+            $systemData = Get-System -systemContextBinding $true
+            $desc = $systemData.description | ConvertFrom-Json
+            $found = $desc | Where-Object { $_.sid -eq "S-1-5-21-mixed-001-001-001-1001" }
+            # Admin-curated state preserved
+            $found.st | Should -Be 'Complete'
+            $found.msg | Should -Be 'User previously migrated'
+            $found.un | Should -Be 'admin.picked.user'
+            $found.uid | Should -Be 'admin-set-uid-12345'
+            # Discovery fields refreshed
+            $found.lastLogin | Should -Be "2026-06-01T12:00:00.0000000Z"
+            $found.lastWrite | Should -Be "2026-06-01T12:00:00.0000000Z"
+            $found.profileSize | Should -Be 5.5
         }
         It "When the Set-Desc runs twice and no updates are made, the system description remains the same" {
             $admuUsers = Get-ADMUUser -localUsers

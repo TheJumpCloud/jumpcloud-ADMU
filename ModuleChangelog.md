@@ -1,21 +1,27 @@
-## 2.12.4
+## 2.13.0
 
-Release Date: April 29, 2026
-
-````
-- Added support to indian region.
-````
-## 2.12.3
-
-Release Date: May 11, 2026
+Release Date: May 15, 2026
 
 #### RELEASE NOTES
 
+````
+- This release features several quality of life improvements for remote migration including:
+  - The option to manually upload the `gui_jcadmu.exe` & `uwp_jcadmu.exe` files to bypass download from github.
+  - Additional reporting fields for `deviceQuery.ps1` script and migration using the `description` field.
+  - A new script to update device descriptions in bulk for identifying users to migrate
+- This release includes several code quality improvements including:
+  - Additional PSScriptAnalyzer tests.
+  - A baseline set of changes to comply with PSScriptAnalyzer linting. 
 ```
-- Updated Bulk ADMU with device migration using the device description and Added Local Exe parameter to bypass downloading the one from github.
-- This update restores the visibility of the currently logged-in user in the form GUI, reversing the change introduced in the previous version.
-- Implemented PSScriptAnalyzer and fixed any findings
-```
+
+#### FEATURES:
+
+- Added support to indian region.
+- Additional functions to Get the device description and save it to a CSV file.
+- Additional function to Set the device description based on the CSV file.
+- Added support for API key with bulk ADMU Invoke
+- Added Local Exe parameter to bypass downloading the ADMU releases from github.
+- Added functionality to remotely query AD users on a device and store the migration data directly in the device's description field. This allows administrators to track migration progress remotely.
 
 #### IMPROVEMENTS:
 
@@ -24,12 +30,10 @@ Release Date: May 11, 2026
 - Updated Bulk ADMU with device migration using the device description
 
 
-#### FEATURES:
+#### BUG FIXES:
 
-- Additional functions to Get the device description and save it to a CSV file.
-- Additional function to Set the device description based on the CSV file.
-- Added support for API key with bulk ADMU Invoke
-- Added Local Exe parameter to bypass downloading the one from github everytime.
+- This update restores the visibility of the currently logged-in user in the form GUI, reversing the change introduced in the previous version.
+
 
 ## 2.12.2
 
