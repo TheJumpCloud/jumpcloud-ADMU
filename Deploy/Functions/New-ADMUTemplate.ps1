@@ -10,257 +10,279 @@ This parameter optionally adds the code snippet to run the forms with or without
 
 #>
 function New-ADMUTemplate {
-
     [CmdletBinding()]
     param (
         [Parameter(
-            HelpMessage = "When specified, this parameter will add or remove the code to hide the debug powershell window. By default this is set to `$true which will hide the powershell window when the code is executed."
+            HelpMessage = 'When specified, this parameter will add or remove the code to hide the debug powershell window. By default this is set to $true which will hide the powershell window when the code is executed.'
         )]
         [bool]
-        $hidePowerShellWindow = $true,
+        $hidePowerShellWindow = $false,
         [Parameter(
-            HelpMessage = "The path to export the file template."
+            HelpMessage = 'The path to export the file template.'
         )]
         [System.String]
         $ExportPath = "$PSScriptRoot/admuTemplate.ps1"
     )
-    begin {
-        # define empty string to build the template file
-        $templateString = ""
-        # Public Functions
-        $Public = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Public/*.ps1" -Recurse)
-        # Load all functions from private folders except for the forms and assets
-        $Private = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/*.ps1" -Recurse | Where-Object { ($_.fullname -notmatch "DisplayForms") -and ($_.fullname -notmatch "DisplayAssets") } )
-    }
-    process {
 
-        # Define the parameter block for the top of the script
-        $paramBlockString = @"
- Param (
-        [Parameter()]
+    $templateString = ''
+    $Public = @(Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Public/*.ps1" -Recurse)
+    $Private = @(Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/*.ps1" -Recurse | Where-Object {
+            ($_.fullname -notmatch 'DisplayForms') -and ($_.fullname -notmatch 'DisplayAssets')
+        })
+
+    # Single-quoted here-strings pass through literally to the generated template (no backtick escaping).
+    $paramBlockString = @'
+[CmdletBinding(DefaultParameterSetName = 'Migrate')]
+param (
+        [Parameter(ParameterSetName = 'Revert')]
+        [switch]
+        $Revert,
+
+        [Parameter(ParameterSetName = 'Revert', Mandatory = $true)]
+        [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+(?:\.bak)?$")]
         [string]
-        `$JumpCloudUserName,
+        $UserSID,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Revert')]
         [string]
-        `$SelectedUserName,
+        $TargetProfileImagePath,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Revert')]
+        [switch]
+        $DryRun,
+
+        [Parameter(ParameterSetName = 'Revert')]
+        [switch]
+        $Force,
+
+        [Parameter(ParameterSetName = 'Migrate')]
+        [string]
+        $JumpCloudUserName,
+
+        [Parameter(ParameterSetName = 'Migrate')]
+        [string]
+        $SelectedUserName,
+
+        [Parameter(ParameterSetName = 'Migrate')]
         [ValidateNotNullOrEmpty()]
         [string]
-        `$TempPassword,
+        $TempPassword,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        `$LeaveDomain,
+        $LeaveDomain,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        `$ForceReboot,
+        $ForceReboot,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        `$UpdateHomePath,
+        $UpdateHomePath,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        `$InstallJCAgent,
+        $InstallJCAgent,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        `$AutoBindJCUser,
+        $AutoBindJCUser,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        `$PrimaryUser,
+        $PrimaryUser,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        `$BindAsAdmin,
+        $BindAsAdmin,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        `$SetDefaultWindowsUser,
+        $SetDefaultWindowsUser,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        `$AdminDebug,
+        $AdminDebug,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [string]
-        `$JumpCloudConnectKey,
+        $JumpCloudConnectKey,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [string]
-        `$JumpCloudAPIKey,
+        $JumpCloudAPIKey,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [string]
-        `$JumpCloudOrgID,
+        $JumpCloudOrgID,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        `$ValidateUserShellFolder,
+        $ValidateUserShellFolder,
 
         [Parameter(
+            ParameterSetName = 'Migrate',
             DontShow)]
         [bool]
-        `$systemContextBinding,
+        $systemContextBinding,
 
         [Parameter(
+            ParameterSetName = 'Migrate',
             DontShow)]
         [string]
-        `$JumpCloudUserID,
+        $JumpCloudUserID,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        `$ReportStatus,
+        $ReportStatus,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        `$removeMDM,
+        $removeMDM,
 
-        [Parameter()]
+        [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        `$localExes
+        $localExes
     )
-"@
+'@
 
-        # Add the param block to the template string
-        $templateString += $paramBlockString + [Environment]::NewLine
+    $globalUrlString = @'
+    $global:JCUrl = 'https://console.jumpcloud.com'
+'@
 
-        # Define the global URL
-        $globalUrlString = @"
-        `$Global:JCUrl = 'https://console.jumpcloud.com'
-"@
-        # add global URL to template
-        $templateString += "$($globalUrlString)" + [Environment]::NewLine
-
-        #define Run As Admin block
-        $adminString = @"
+    $adminString = @'
 # Validate the user is an administrator
-if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -match "S-1-5-32-544")) -eq `$false) {
+if (([bool](([System.Security.Principal.WindowsIdentity]::GetCurrent()).groups -match "S-1-5-32-544")) -eq $false) {
     Write-Host 'ADMU must be ran as an administrator.'
     Read-Host -Prompt "Press Enter to exit"
     exit
 }
-"@
-        # add admin required string to template
-        $templateString += "$($adminString)" + [Environment]::NewLine
+'@
 
-        # Define string for private functions
-        $PrivateFunctionsContent = ""
-        # add every private function to the new string
-        foreach ($item in $Private) {
-            $functionContent = Get-Content $item.FullName -Raw
-            $PrivateFunctionsContent += "$($functionContent)" + [Environment]::NewLine
-        }
-
-        # Set the private region:
-        $privateFunctionsRegion = @"
-## Region Private Functions ##
-$PrivateFunctionsContent
-## End Region Private Functions ##
-"@
-        # add private functions region to template
-        $templateString += $privateFunctionsRegion + [Environment]::NewLine
-
-        # Define string for forms
-        $formsContent = ""
-        # Add Form Assets to template:
-        $Assets = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/DisplayAssets/*.ps1" -Recurse )
-        foreach ($item in $Assets) {
-            $AssetContent = Get-Content $item.FullName -Raw
-            $formsContent += "$($AssetContent)" + [Environment]::NewLine
-        }
-        $Forms = @( Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/DisplayForms/*.ps1" -Recurse )
-        # Optionally hide debug window:
-        if ($hidePowerShellWindow) {
-            $hideRegion = @"
+    $hideRegion = @'
 # Hides Powershell Window
-`$ShowWindowAsync = Add-Type -MemberDefinition `@"
+$ShowWindowAsync = Add-Type -MemberDefinition @"
     [DllImport("user32.dll")]
     public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
-`"@ -Name "Win32ShowWindowAsync" -Namespace "Win32Functions" -PassThru
+"@ -Name "Win32ShowWindowAsync" -Namespace "Win32Functions" -PassThru
 # PID of the current process
 # Get PID of the current process
-`$FormWindowPIDHandle = (Get-Process -Id `$pid).MainWindowHandle
-`$ShowWindowAsync::ShowWindowAsync(`$FormWindowPIDHandle, 0) | Out-Null
+$FormWindowPIDHandle = (Get-Process -Id $pid).MainWindowHandle
+$ShowWindowAsync::ShowWindowAsync($FormWindowPIDHandle, 0) | Out-Null
 # PID
-"@
-            $formsContent += $hideRegion + [Environment]::NewLine + [Environment]::NewLine
-        }
-        # add each form file to the form string:
-        foreach ($item in $Forms) {
-            $FormContent = Get-Content $item.FullName -Raw
-            $formsContent += "$($FormContent)" + [Environment]::NewLine
-        }
 
-        # define forms region:
-        $formsRegion = @"
-## Region Forms ##
-$formsContent
-## End Region Forms ##
-"@
+'@
 
-        # add the forms region to the template
-        $templateString += $formsRegion + [Environment]::NewLine
-
-        # add each public function to the template:
-        foreach ($item in $Public) {
-            $functionContent = Get-Content $item.FullName -Raw
-            $templateString += "$($functionContent)" + [Environment]::NewLine
-        }
-
-        #TODO: Check for auto param
-        $executableRegion = @"
-if (`$PSBoundParameters.Count -eq 0) {
+    $executableRegion = @'
+if ($PSBoundParameters.Count -eq 0) {
 
     # --- GUI MODE ---
     Write-ToLog "No command-line parameters found. Launching graphical user interface."
-    `$formResults = Show-SelectionForm
+    $formResults = Show-SelectionForm
 
-    If (`$formResults) {
+    If ($formResults) {
         # The user clicked "Migrate" in the form.
-        Start-Migration -inputObject `$formResults
+        Start-Migration -inputObject $formResults
     } Else {
         # The user closed the form without migrating.
         Write-Output 'Exiting ADMU process.'
     }
+} elseif ($PSCmdlet.ParameterSetName -eq 'Revert') {
+
+    # --- REVERSION COMMAND-LINE MODE ---
+    Write-ToLog "Command-line parameters detected. Running profile reversion in non-interactive mode."
+
+    $revertParams = @{
+        UserSID = $UserSID
+        Force   = $Force.IsPresent
+    }
+    if ($PSBoundParameters.ContainsKey('TargetProfileImagePath')) {
+        $revertParams['TargetProfileImagePath'] = $TargetProfileImagePath
+    }
+    if ($DryRun) {
+        $revertParams['DryRun'] = $true
+    }
+
+    $revertResult = Start-Reversion @revertParams
+    if (-not $revertResult.Success) {
+        Write-ToLog -Message "JumpCloud ADMU was unable to revert UserSID: $UserSID. Errors: $($revertResult.Errors -join '; ')" -Level Error
+        exit 1
+    }
 } else {
 
-    # --- COMMAND-LINE MODE ---
-    # If any parameters are present, assume non-interactive command-line execution.
-    Write-ToLog "Command-line parameters detected. Running in non-interactive mode."
+    # --- MIGRATION COMMAND-LINE MODE ---
+    Write-ToLog "Command-line parameters detected. Running migration in non-interactive mode."
 
     Start-Migration @PSBoundParameters
 
 }
-"@
-        # add executable region to the template
-        $templateString += $executableRegion + [Environment]::NewLine
-        # replace the validation region [System.Management.Automation.ValidationMetadataException] lines with Write-ToLog Error Lines and exit 1
-        $replacementRegex = [regex]'throw\s+\[System\.Management\.Automation\.ValidationMetadataException\]\s([\s\S].*)'
-        $replacementMatches = $replacementRegex.Matches($templateString)
-        foreach ($match in $replacementMatches) {
-            $ErrorMatchMessage = $match.Groups[1].Value.Trim()
-            # build the replacement string
-            $replacement = "Write-ToLog -Message $ErrorMatchMessage -Level Error;exit 1"
-            # replace the line in the template string
-            $templateString = $templateString -replace [regex]::Escape($match.Value), $replacement
-        }
+'@
 
-        # finally replace the exe exit code region
-        $replacement = @'
+    $exeExitCodeReplacement = @'
 #region exeExitCode
             Write-ToLog -Message "JumpCloud ADMU was unable to migrate $selectedUserName" -Level Error
             exit 1
             #endregion exeExitCode
 '@
-        $templateString = $templateString -replace '#region\sexeExitCode[\s\S+]+#endregion\sexeExitCode', $replacement
+
+    $templateString += $paramBlockString + [Environment]::NewLine
+    $templateString += $globalUrlString + [Environment]::NewLine
+    $templateString += $adminString + [Environment]::NewLine
+
+    $PrivateFunctionsContent = ''
+    foreach ($item in $Private) {
+        $functionContent = Get-Content $item.FullName -Raw
+        $PrivateFunctionsContent += "$($functionContent)" + [Environment]::NewLine
     }
-    end {
-        # write out the file
-        $templateString | Out-File $ExportPath -Force
+
+    $privateFunctionsRegion = @'
+## Region Private Functions ##
+'@ + [Environment]::NewLine + $PrivateFunctionsContent + [Environment]::NewLine + @'
+## End Region Private Functions ##
+'@
+
+    $templateString += $privateFunctionsRegion + [Environment]::NewLine
+
+    $formsContent = ''
+    $Assets = @(Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/DisplayAssets/*.ps1" -Recurse)
+    foreach ($item in $Assets) {
+        $AssetContent = Get-Content $item.FullName -Raw
+        $formsContent += "$($AssetContent)" + [Environment]::NewLine
     }
+    $Forms = @(Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/DisplayForms/*.ps1" -Recurse)
+    if ($hidePowerShellWindow) {
+        # $formsContent += $hideRegion + [Environment]::NewLine
+    }
+    foreach ($item in $Forms) {
+        $FormContent = Get-Content $item.FullName -Raw
+        $formsContent += "$($FormContent)" + [Environment]::NewLine
+    }
+
+    $formsRegion = @'
+## Region Forms ##
+'@ + [Environment]::NewLine + $formsContent + [Environment]::NewLine + @'
+## End Region Forms ##
+'@
+
+    $templateString += $formsRegion + [Environment]::NewLine
+
+    foreach ($item in $Public) {
+        $functionContent = Get-Content $item.FullName -Raw
+        $templateString += "$($functionContent)" + [Environment]::NewLine
+    }
+
+    $templateString += $executableRegion + [Environment]::NewLine
+
+    $replacementRegex = [regex]'throw\s+\[System\.Management\.Automation\.ValidationMetadataException\]\s([\s\S].*)'
+    $replacementMatches = $replacementRegex.Matches($templateString)
+    foreach ($match in $replacementMatches) {
+        $ErrorMatchMessage = $match.Groups[1].Value.Trim()
+        $replacement = "Write-ToLog -Message $ErrorMatchMessage -Level Error;exit 1"
+        $templateString = $templateString -replace [regex]::Escape($match.Value), $replacement
+    }
+
+    $templateString = $templateString -replace '#region\sexeExitCode[\s\S]+#endregion\sexeExitCode', $exeExitCodeReplacement
+
+    $templateString | Out-File -FilePath $ExportPath -Force
+    Write-Output "Template file was generated successfully at $ExportPath"
 }
