@@ -16,7 +16,7 @@ function New-ADMUTemplate {
             HelpMessage = 'When specified, this parameter will add or remove the code to hide the debug powershell window. By default this is set to $true which will hide the powershell window when the code is executed.'
         )]
         [bool]
-        $hidePowerShellWindow = $false,
+        $hidePowerShellWindow = $true,
         [Parameter(
             HelpMessage = 'The path to export the file template.'
         )]
