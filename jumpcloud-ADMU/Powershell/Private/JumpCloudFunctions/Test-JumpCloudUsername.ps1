@@ -16,7 +16,7 @@ function Test-JumpCloudUsername {
         [System.Boolean]
         $prompt = $false
     )
-    Begin {
+    begin {
         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
         $Headers = @{
             'Accept'       = 'application/json';
@@ -35,10 +35,10 @@ function Test-JumpCloudUsername {
         }
         $Body = $Form | ConvertTo-Json -Depth 4
     }
-    Process {
+    process {
         $regions = @("US", "EU", "IN")
         $found = $false
-        foreach($region in $regions){
+        foreach ($region in $regions) {
             Set-JcUrl -Region $region
             try {
                 $baseUrl = "$($global:JCUrl)/api/search/systemusers"
@@ -51,17 +51,17 @@ function Test-JumpCloudUsername {
                 continue;
             }
         }
-        if(-not $found) {
-            throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key and OrgID are valid."
+        if (-not $found) {
+            throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key and OrgID are valid. Global URI: $($global:JCUrl)"
         }
     }
-    End {
+    end {
         # Search User should return 200 success
-        If ($StatusCode -ne 200) {
+        if ($StatusCode -ne 200) {
             Write-ToLog -Message "JumpCloud username could not be found" -Level Verbose -Step "Test-JumpCloudUsername"
-            Return $false, $null, $null
+            return $false, $null, $null
         }
-        If ($Results.totalCount -eq 1 -and $($Results.results[0].username) -eq $Username) {
+        if ($Results.totalCount -eq 1 -and $($Results.results[0].username) -eq $Username) {
             # write-host $Results.results[0]._id
             Write-ToLog -Message "Identified JumpCloud User`nUsername: $($Results.results[0].username)`nID: $($Results.results[0]._id)" -Level Verbose -Step "Test-JumpCloudUsername"
             if ($Results.results[0].SystemUsername) {
@@ -78,7 +78,7 @@ function Test-JumpCloudUsername {
                 $wshell = New-Object -ComObject Wscript.Shell
                 $var = $wshell.Popup("$message", 0, "ADMU Status", 0x0 + 0x40)
             }
-            Return $false, $null, $null
+            return $false, $null, $null
         }
     }
 }
