@@ -393,7 +393,7 @@ function Start-Migration {
             }
 
             # Validate JumpCloudSystemUserName to write to the GUI
-            if (-not [string]::IsNullOrEmpty($JumpCloudAPIKey)) {
+            if ($AutoBindJCUser -and (-not [string]::IsNullOrEmpty($JumpCloudAPIKey))) {
                 $ret, $script:JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
             }
             $TempPassword = $inputObject.TempPassword
