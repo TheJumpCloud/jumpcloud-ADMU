@@ -251,7 +251,7 @@ if ($PSBoundParameters.Count -eq 0) {
     }
     $Forms = @(Get-ChildItem -Path "$PSScriptRoot/../../jumpcloud-ADMU/Powershell/Private/DisplayForms/*.ps1" -Recurse)
     if ($hidePowerShellWindow) {
-        # $formsContent += $hideRegion + [Environment]::NewLine
+        $formsContent += $hideRegion + [Environment]::NewLine
     }
     foreach ($item in $Forms) {
         $FormContent = Get-Content $item.FullName -Raw
