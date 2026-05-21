@@ -393,7 +393,9 @@ function Start-Migration {
             }
 
             # Validate JumpCloudSystemUserName to write to the GUI
-            $ret, $script:JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+            if ($AutoBindJCUser -and (-not [string]::IsNullOrEmpty($JumpCloudAPIKey))) {
+                $ret, $script:JumpCloudUserId, $JumpCloudSystemUserName = Test-JumpCloudUsername -JumpCloudApiKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -Username $JumpCloudUserName
+            }
             $TempPassword = $inputObject.TempPassword
             # Write to progress bar
             if ($JumpCloudSystemUserName) {
@@ -1591,9 +1593,9 @@ function Start-Migration {
                             # for the local domain un-join
                             try {
                                 $null = Invoke-CimMethod -InputObject $WmiComputerSystem -MethodName 'UnjoinDomainOrWorkgroup' -Arguments @{
-                                    Password        = $null
-                                    UserName        = $null
-                                    FUnjoinOptions  = 0
+                                    Password       = $null
+                                    UserName       = $null
+                                    FUnjoinOptions = 0
                                 }
                                 $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
                                 Write-ToLog -Message:("After running UnJoinDomainOrWorkGroup, the domain status is as follows:") -Level:('Info')

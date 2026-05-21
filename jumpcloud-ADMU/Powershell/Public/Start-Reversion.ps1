@@ -40,21 +40,21 @@ function Start-Reversion {
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [Parameter(Mandatory = $true, Position = 0)]
+        [Parameter(Mandatory = $true, Position = 0, HelpMessage = "The Windows Security Identifier (SID) of the user account to revert. Can be either the SID or the SID with .bak suffix. Example: S-1-5-21-123456789-1234567890-123456789-1001 or S-1-5-21-123456789-1234567890-123456789-1001.bak")]
         [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+(?:\.bak)?$")]
         [string]$UserSID,
 
-        [Parameter(Mandatory = $false, Position = 1)]
+        [Parameter(Mandatory = $false, Position = 1, HelpMessage = "The actual profile path to revert. If not specified, will use the path from the registry. This path will be validated to ensure it exists and is associated with the UserSID.")]
         [ValidateScript({
                 if (Test-Path $_ -PathType Container) { $true }
                 else { throw "Target profile path does not exist: $_" }
             })]
         [string]$TargetProfileImagePath,
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "The form parameter specifies whether to launch the reversion process in a graphical user interface (GUI) form. For CLI usage, this parameter should be set to false.")]
         [bool]$form = $false,
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Shows what actions would be performed without actually executing them.")]
         [switch]$DryRun,
-        [Parameter(Mandatory = $false)]
+        [Parameter(Mandatory = $false, HelpMessage = "Bypasses confirmation prompts and forces the revert operation.")]
         [switch]$Force
     )
 
@@ -135,7 +135,8 @@ function Start-Reversion {
             }
         }
 
-        $profileSize = Get-ProfileSize -ProfilePath $TargetProfileImagePath
+        # Profile size is calculated in process after the profile path is resolved from the registry.
+        $profileSize = $null
         # Prefer the progress form created in Form.ps1 so updates apply to the first window the user sees
         if ((-not $script:ProgressBar) -and ($form)) {
             $script:ProgressBar = New-ProgressForm
@@ -153,11 +154,8 @@ function Start-Reversion {
             #region Validate Registry and Determine Profile Path
             Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
 
-            Write-ToProgress -form $form -Status "revertInit" -ProgressBar $ProgressBar -ProfileSize $profileSize -LocalPath $TargetProfileImagePath -StatusMap $revertMessageMap
             # Get profile information from registry for validation
             $profileRegistryPath = (Get-ProfileRegistryPath -UserSID $UserSID).ResolvedPath
-            # Casing fixed to 'revertValidateProfilePath', removed -StatusType, added -StatusMap
-            Write-ToProgress -form $form -Status "revertValidateProfilePath" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
 
             $profileRegistryBasePath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"
             $profileRegistryBakPath = "$profileRegistryBasePath.bak"
@@ -244,6 +242,20 @@ function Start-Reversion {
             }
 
             $revertResult.ActualProfilePath = $profileImagePath
+
+            if ($form -and -not [string]::IsNullOrWhiteSpace($profileImagePath)) {
+                try {
+                    $profileSize = Get-ProfileSize -profilePath $profileImagePath
+                } catch {
+                    Write-ToLog -Message "Could not calculate profile size: $($_.Exception.Message)" -Level Verbose -Step "Revert-Migration"
+                    $profileSize = 'Unknown'
+                }
+            } else {
+                $profileSize = 'N/A'
+            }
+
+            Write-ToProgress -form $form -Status "revertInit" -ProgressBar $ProgressBar -ProfileSize $profileSize -LocalPath $profileImagePath -StatusMap $revertMessageMap
+            Write-ToProgress -form $form -Status "revertValidateProfilePath" -ProgressBar $ProgressBar -ProfileSize $profileSize -LocalPath $profileImagePath -StatusMap $revertMessageMap
             #endregion Validate Registry and Determine Profile Path
 
             #region Validate Profile Directory

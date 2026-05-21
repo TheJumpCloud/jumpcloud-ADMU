@@ -1,6 +1,6 @@
 ## 2.13.0
 
-Release Date: May 15, 2026
+Release Date: May 19, 2026
 
 #### RELEASE NOTES
 
@@ -11,7 +11,8 @@ Release Date: May 15, 2026
   - A new script to update device descriptions in bulk for identifying users to migrate
 - This release includes several code quality improvements including:
   - Additional PSScriptAnalyzer tests.
-  - A baseline set of changes to comply with PSScriptAnalyzer linting. 
+  - A baseline set of changes to comply with PSScriptAnalyzer linting.
+  - Adds the option to remotely revert a migration through the gui_jcadmu.exe
 ```
 
 #### FEATURES:
@@ -1621,3 +1622,4 @@ September 6, 2019
 ```
 
 ```
+````

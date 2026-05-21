@@ -41,14 +41,15 @@ function Get-MtpOrganization {
             break;
         }
         if ([string]::IsNullOrEmpty($currentRegion)) {
-            throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key is valid."
+
+            throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key is valid. Global URI: $($global:JCUrl)"
         }
         if ($orgID) {
             Write-ToLog -Message "OrgID specified, attempting to validate org..." -Level Verbose -Step "Get-MtpOrganization"
             try {
                 $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
             } catch {
-                throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key and OrgID are valid. $($_.Exception.Message)"
+                throw "Failed to connect to JumpCloud API endpoints. Please verify network connectivity and that the provided API Key and OrgID are valid. Global URI: $($global:JCUrl) $($_.Exception.Message)"
             }
             $Content = $Request.Content | ConvertFrom-Json
             $results += $Content
