@@ -27,11 +27,7 @@ Function Test-MigrationButton {
         [System.String]
         $selectedOrgID
     )
-    try {
-        $WmiComputerSystem = Get-WmiObject -Class:('Win32_ComputerSystem')
-    } catch {
-        $WmiComputerSystem = Get-CimInstance -Class:('Win32_ComputerSystem')
-    }
+    $WmiComputerSystem = Get-CimInstance -ClassName Win32_ComputerSystem
     function Test-SelectedUser {
         param (
             # Parameter help description
@@ -60,11 +56,8 @@ Function Test-MigrationButton {
         )
         begin {
             # Get Win32 Profiles to merge data with valid SIDs
-            try {
-                $win32UserProfiles = Get-WmiObject -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-            } catch {
-                $win32UserProfiles = Get-CimInstance -Class:('Win32_UserProfile') -Property * | Where-Object { $_.Special -eq $false }
-            }
+            $win32UserProfiles = Get-CimInstance -ClassName Win32_UserProfile -Property * |
+                Where-Object { $_.Special -eq $false }
             # get localUsers (can contain users who have not logged in yet/ do not have a SID)
             $nonSIDLocalUsers = Get-LocalUser
         }
@@ -141,19 +134,23 @@ Function Test-MigrationButton {
                 'Accept'       = 'application/json';
                 'x-api-key'    = "$($tb_JumpCloudAPIKey.Password)";
             }
-            try {
-                Set-JcUrl -Region "US"
-                $baseUrl = "$($global:JCUrl)/api/organizations"
-                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
-            } catch {
-                # Call EU endpoint if US fails
-                Set-JcUrl -Region "EU"
-                $baseUrl = "$($global:JCUrl)/api/organizations"
-                $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+            $regions = @("US", "EU", "IN")
+            $reached = $false
+            $Request = $null
+            foreach($region in $regions){
+                try {
+                    Set-JcUrl -Region $region
+                    $baseUrl = "$($global:JCUrl)/api/organizations"
+                    $Request = Invoke-WebRequest -Uri "$($baseUrl)?limit=$($limit)&skip=$($skip)" -Method Get -Headers $Headers -UseBasicParsing
+                } catch {
+                    continue;
+                }
+                $reached = $true
+                break;
             }
 
-            if (($Request.StatusCode -ne 200)) {
-                throw "A valid apiKey is required"
+            if (-not $reached) {
+                throw "Failed to connect to any region. A valid apiKey is required."
             }
         }
     }

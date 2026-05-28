@@ -19,8 +19,8 @@ Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPass
  [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
  [-AutoBindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-SetDefaultWindowsUser <Boolean>]
  [-AdminDebug <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>]
- [-ValidateUserShellFolder <Boolean>] [-ReportStatus <Boolean>] [-removeMDM <Boolean>] [-PrimaryUser <Boolean>]
- [<CommonParameters>]
+ [-ValidateUserShellFolder <Boolean>] [-ReportStatus <Boolean>] [-removeMDM <Boolean>] [-localEXEs <Boolean>]
+ [-PrimaryUser <Boolean>] [<CommonParameters>]
 ```
 
 ### form
@@ -377,6 +377,21 @@ Accept wildcard characters: False
 
 ### -PrimaryUser
 When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will attempt to set the specified user as the PrimarySystemUser for this device in JumpCloud. This is set to false by default.
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -localEXEs
+When set to true, the ADMU requires a local uwp_jcadmu.exe in C:\\Windows and will validate it against the latest GitHub release when possible. If GitHub is rate limited, the local file will still be used with a warning. If the local file is missing, the ADMU will throw and exit.
 
 ```yaml
 Type: System.Boolean

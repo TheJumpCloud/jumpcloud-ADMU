@@ -18,7 +18,7 @@ Describe "Get-MtpOrganization Acceptance Tests" -Tag "Acceptance" {
         . "$helpFunctionDir\$fileName"
     }
     Context "Get-MtpOrganization Function Tests" {
-        It "Should return an organization with a valid API Key" {
+        It "Should return an organization with a valid API Key (non-mtp-key)" {
             # Add acceptance test logic and assertions (against a real system)
             $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY
             Write-Host "org selection: $OrgSelection"
@@ -31,7 +31,7 @@ Describe "Get-MtpOrganization Acceptance Tests" -Tag "Acceptance" {
         }
         It "Should return an organization with a valid API Key and OrgID" {
             # Add acceptance test logic and assertions (against a real system)
-            $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY -orgID $env:PESTER_ORGID
+            $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY_MTP -orgID $env:PESTER_ORGID_MTP
             Write-Host "org selection: $OrgSelection"
             $OrgName = "$($OrgSelection[1])"
             $OrgID = "$($OrgSelection[0])"
@@ -42,13 +42,12 @@ Describe "Get-MtpOrganization Acceptance Tests" -Tag "Acceptance" {
         }
         It "Should throw when an invalid API key is provided, expecting 401 Unauthorized" {
             { Get-MtpOrganization -apiKey "asdf" } | Should -Throw
-            Try {
+            try {
                 Get-MtpOrganization -apiKey "asdf"
-            } Catch {
+            } catch {
                 $message = $_.Exception.Message
             }
-            $message | Should -Match "401"
-            $message | Should -Match "Unauthorized"
+            $message | Should -Match "Failed to connect to JumpCloud API endpoints"
         }
         It "Should throw when an empty API key is provided" {
             { Get-MtpOrganization -apiKey "" } | Should -Throw -ExpectedMessage "*because it is an empty string*"
@@ -57,11 +56,11 @@ Describe "Get-MtpOrganization Acceptance Tests" -Tag "Acceptance" {
     Context "Get-MtpOrganization Function MTP Tests" {
         It "Should throw when a valid MTP API key is provided but an invalid OrgID is provided, expecting 404 Not Found" -Skip {
             # TODO: Skipping until we add EU MTP API Key & Compatible PWSH Modules CUT-4958
-            { Get-MtpOrganization -apiKey $env:PESTER_MTP_APIKEY -orgID "invalid-org-id" } | Should -Throw -ExpectedMessage { "*404 (Not Found)*" }
+            { Get-MtpOrganization -apiKey $env:PESTER_APIKEY_MTP -orgID "invalid-org-id" } | Should -Throw -ExpectedMessage { "*404 (Not Found)*" }
         }
         It "Should return an organization when a MTP API key is provided and a valid OrgID is provided" -Skip {
             # TODO: Skipping until we add EU MTP API Key & Compatible PWSH Modules CUT-4958
-            $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_MTP_APIKEY -orgID $env:PESTER_MTP_ORGID
+            $OrgSelection, $MTPAdmin = Get-MtpOrganization -apiKey $env:PESTER_APIKEY_MTP -orgID $env:PESTER_ORGID_MTP
             Write-Host "org selection: $OrgSelection"
             $OrgName = "$($OrgSelection[1])"
             $OrgID = "$($OrgSelection[0])"

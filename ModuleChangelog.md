@@ -1,3 +1,41 @@
+## 2.13.0
+
+Release Date: May 21, 2026
+
+#### RELEASE NOTES
+
+````
+- This release features several quality of life improvements for remote migration including:
+  - The option to manually upload the `gui_jcadmu.exe` & `uwp_jcadmu.exe` files to bypass download from github.
+  - Additional reporting fields for `deviceQuery.ps1` script and migration using the `description` field.
+  - A new script to update device descriptions in bulk for identifying users to migrate
+- This release includes several code quality improvements including:
+  - Additional PSScriptAnalyzer tests.
+  - A baseline set of changes to comply with PSScriptAnalyzer linting.
+  - Adds the option to remotely revert a migration through the gui_jcadmu.exe
+```
+
+#### FEATURES:
+
+- Added support to indian region.
+- Additional functions to Get the device description and save it to a CSV file.
+- Additional function to Set the device description based on the CSV file.
+- Added support for API key with bulk ADMU Invoke
+- Added Local Exe parameter to bypass downloading the ADMU releases from github.
+- Added functionality to remotely query AD users on a device and store the migration data directly in the device's description field. This allows administrators to track migration progress remotely.
+
+#### IMPROVEMENTS:
+
+- Implemented PSScriptAnalyzer for code analysis on the repository
+  - Fixed any subsequent errors for a healthier codebase following best practices
+- Updated Bulk ADMU with device migration using the device description
+
+
+#### BUG FIXES:
+
+- This update restores the visibility of the currently logged-in user in the form GUI, reversing the change introduced in the previous version.
+
+
 ## 2.12.2
 
 Release Date: February 5, 2026
@@ -5,10 +43,12 @@ Release Date: February 5, 2026
 #### RELEASE NOTES
 
 ```
+
 - Added functionality to validate if the user is logged on during pre-migration stage
 - This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
 - Bug fix release addressing issues with Agent Install, reverting profiles with .bak.
 - Updated Windows MDM removal logic
+
 ```
 
 #### FEATURES:
@@ -21,9 +61,9 @@ Release Date: February 5, 2026
 - Test added to validate new features and existing functionality.
 - Added new functions and features to handle potential edge cases when removing Windows MDM providers
 - Added functionality for Invoke-SystemAPI to create, update, and delete attributes
-Added support for secret variables in DeviceQuery for bulk ADMU
+  Added support for secret variables in DeviceQuery for bulk ADMU
 - Resolved an issue where renaming a created temp profile fails and freezes the migration
-This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
+  This release includes the option perform the migration reversion successfully even if the registry profilelist is renamed with .bak suffix.
 
 #### BUG FIXES:
 
@@ -38,7 +78,9 @@ Release Date: January 20, 2026
 #### RELEASE NOTES
 
 ```
+
 Added Bug fix for temp user directory renaming
+
 ```
 
 #### BUG FIXES:
@@ -52,7 +94,9 @@ Release Date: January 15, 2026
 #### RELEASE NOTES
 
 ```
+
 This release includes the option to update ADMU status on the JumpCloud system description field when migrating remotely. This allows administrators to track migration progress remotely.
+
 ```
 
 #### FEATURES:
@@ -70,10 +114,13 @@ Release Date: January 2, 2026
 #### RELEASE NOTES
 
 ```
+
 Patch release focused on reducing GUI and Progress bar wait times and preloading the migration progress form.
+
 - Added functionality to backup profileImage permissions
 - Added Start-Reversion Function
 - Integrated Reverse Migration functionality in the GUI
+
 ```
 
 #### IMPROVEMENTS:
@@ -89,7 +136,9 @@ Release Date: December 15, 2025
 #### RELEASE NOTES
 
 ```
+
 This release reduces the time required to perform a migration by deferring the file permission traversal and setting to a scheduled task that runs in the background after migration completes. This should significantly reduce the time required to perform a migration on systems with large user profiles. This release includes a bug fix for flashing icons post-migration due to Windows UCPD preventing process from changing certain file default preferences like https/http/.
+
 ```
 
 #### IMPROVEMENTS:
@@ -107,7 +156,9 @@ Release Date: November 18, 2025
 #### RELEASE NOTES
 
 ```
+
 Patch release to address several issues.
+
 ```
 
 #### BUG FIXES:
@@ -128,7 +179,9 @@ Release Date: November 06, 2025
 #### RELEASE NOTES
 
 ```
+
 Added GUI API support for JC EU Organizations
+
 ```
 
 #### IMPROVEMENTS:
@@ -1567,3 +1620,6 @@ September 6, 2019
 ```
 
 ```
+
+```
+````

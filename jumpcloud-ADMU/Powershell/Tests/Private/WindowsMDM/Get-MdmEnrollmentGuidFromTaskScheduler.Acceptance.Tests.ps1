@@ -1,4 +1,4 @@
-Describe "Set-JcUrl Acceptance Tests" -Tag "Acceptance" {
+Describe "Get-MdmEnrollmentGuidFromTaskScheduler Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         # import all functions
         $currentPath = $PSScriptRoot # Start from the current script's directory.
@@ -17,16 +17,9 @@ Describe "Set-JcUrl Acceptance Tests" -Tag "Acceptance" {
         }
         . "$helpFunctionDir\$fileName"
     }
-    It "Set JCUrl to US region" {
-        Set-JcUrl -Region "US"
-        $global:JCUrl | Should -Be "https://console.jumpcloud.com"
+    It "Should..." {
+        # Add acceptance test logic and assertions (against a real system)
     }
-    It "Set JCUrl to EU region" {
-        Set-JcUrl -Region "EU"
-        $global:JCUrl | Should -Be "https://console.eu.jumpcloud.com"
-    }
-    It "Set JCUrl to IN region" {
-        Set-JcUrl -Region "IN"
-        $global:JCUrl | Should -Be "https://console.in.jumpcloud.com"
-    }
+
+    # Add more acceptance tests as needed
 }

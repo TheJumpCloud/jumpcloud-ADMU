@@ -6,7 +6,7 @@
 ####
 #region variables
 
-# Data source for migration users: "CSV"
+# Data source for migration users: "CSV" or "Description"
 $dataSource = 'CSV'
 
 # CSV variables - only required if dataSource is set to 'CSV'
@@ -20,26 +20,42 @@ $ForceReboot = $true
 $UpdateHomePath = $false
 $AutoBindJCUser = $true
 $PrimaryUser = $false
-$BindAsAdmin = $false # Bind user as admin (default False)
-$JumpCloudAPIKey = 'YOURAPIKEY' # This field is required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
-$JumpCloudOrgID = 'YOURORGID' # This field is required if you use a MTP API Key
-$SetDefaultWindowsUser = $true # Set the default last logged on windows user to the JumpCloud user (default True)
-$ReportStatus = $false # Report status back to JumpCloud Description (default False)
+$BindAsAdmin = $false # Bind user as admin
+$JumpCloudAPIKey = 'YOURAPIKEY' # Required if the device is not eligible to use the systemContext API/ the systemContextBinding variable is set to false
+$JumpCloudOrgID = '' # Required if you use a MTP API Key
+$SetDefaultWindowsUser = $true
+$ReportStatus = $false # Report status back to JumpCloud Description
 
 # Option to shutdown or restart
-# Restarting the system is the default behavior
-# If you want to shutdown the system, set the postMigrationBehavior to Shutdown
 # The 'shutdown' behavior performs a shutdown of the system in a much faster manner than 'restart' which can take 5 mins form the time the command is issued
 $postMigrationBehavior = 'Restart' # Restart or Shutdown
 
 # Option to remove the existing MDM
-$removeMDM = $false # Remove the existing MDM (default false)
+$removeMDM = $false # Remove the existing MDM
 
 # option to bind using the systemContext API
-$systemContextBinding = $false # Bind using the systemContext API (default False)
+$systemContextBinding = $false # Bind using the systemContext API
 # If you want to bind using the systemContext API, set the systemContextBinding to true
-# The systemContextBinding option is only available for devices that have enrolled a device using a JumpCloud Administrators Connect Key
+# The systemContextBinding option is only available for devices that are JC Enrolled
 # for more information, see the JumpCloud documentation: https://docs.jumpcloud.com/api/2.0/index.html#section/System-Context
+
+# Option to require locally uploaded exe files
+$localEXEs = $false # When true, require gui_jcadmu.exe in C:\Windows\Temp and uwp_jcadmu.exe in C:\Windows
+
+# If localEXEs is enabled, ensure uwp_jcadmu.exe is copied from Temp to Windows if needed
+if ($localEXEs) {
+    $uwpTempPath = 'C:\Windows\Temp\uwp_jcadmu.exe'
+    $uwpDestPath = 'C:\Windows\uwp_jcadmu.exe'
+    if (Test-Path -Path $uwpTempPath -PathType Leaf) {
+        try {
+            Copy-Item -Path $uwpTempPath -Destination $uwpDestPath -Force
+            Write-Host "[status] Copied uwp_jcadmu.exe from Temp to Windows directory."
+        } catch {
+            Write-Host "[error] Failed to copy uwp_jcadmu.exe: $_" -ForegroundColor Red
+            throw
+        }
+    }
+}
 #endregion variables
 ####
 # Do not edit below
@@ -61,9 +77,10 @@ function Confirm-MigrationParameter {
         [bool]$removeMDM = $true,
         [bool]$systemContextBinding = $false,
         [string]$JumpCloudAPIKey = 'YOURAPIKEY',
-        [string]$JumpCloudOrgID = 'YOURORGID',
+        [string]$JumpCloudOrgID = '',
         [bool]$ReportStatus = $false,
-        [ValidateSet('Restart', 'Shutdown')][string]$postMigrationBehavior = 'Restart'
+        [ValidateSet('Restart', 'Shutdown')][string]$postMigrationBehavior = 'Restart',
+        [bool]$localEXEs = $false
     )
     if ($dataSource -eq 'CSV' -and [string]::IsNullOrWhiteSpace($csvName)) {
         throw "csvName required when dataSource is 'CSV'."
@@ -73,28 +90,54 @@ function Confirm-MigrationParameter {
         if ([string]::IsNullOrWhiteSpace($JumpCloudAPIKey) -or $JumpCloudAPIKey -eq 'YOURAPIKEY') {
             throw "JumpCloudAPIKey required when systemContextBinding is false."
         }
-        if ([string]::IsNullOrWhiteSpace($JumpCloudOrgID) -or $JumpCloudOrgID -eq 'YOURORGID') {
-            throw "JumpCloudOrgID required when systemContextBinding is false."
-        }
     }
     return $true
 }
+
+function Test-RequiredLocalExeFiles {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)][bool]$localEXEs
+    )
+    process {
+        if (-not $localEXEs) {
+            return $true
+        }
+
+        $requiredFiles = @(
+            [PSCustomObject]@{ Name = 'gui_jcadmu.exe'; Path = 'C:\Windows\Temp\gui_jcadmu.exe' },
+            [PSCustomObject]@{ Name = 'uwp_jcadmu.exe'; Path = 'C:\Windows\uwp_jcadmu.exe' }
+        )
+
+        foreach ($requiredFile in $requiredFiles) {
+            if (-not (Test-Path -Path $requiredFile.Path -PathType Leaf)) {
+                throw "localEXEs is enabled, but required file '$($requiredFile.Name)' was not found at '$($requiredFile.Path)'."
+            }
+            Write-Host "[status] Found required local file: $($requiredFile.Path)"
+        }
+
+        return $true
+    }
+}
+
 function Get-MigrationUser {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory)]
         [ValidateSet('CSV', 'Description')]
         [string]$source,
         [Parameter(Mandatory = $false)]
         [string]$csvName = 'jcdiscovery.csv',
-        [Parameter(Mandatory = $true)]
-        [boolean]$systemContextBinding
+        [Parameter(Mandatory)]
+        [bool]$systemContextBinding,
+        [string]$JumpCloudAPIKey,
+        [string]$JumpCloudOrgID
     )
     if ($source -eq 'CSV') {
         return Get-MgUserFromCSV -csvName $csvName -systemContextBinding $systemContextBinding
     } elseif ($source -eq 'Description') {
-        return Get-MgUserFromDesc -systemContextBinding $systemContextBinding
+        return Get-MgUserFromDesc -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID
     }
 }
 
@@ -102,10 +145,10 @@ function Get-MgUserFromCSV {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
     param(
-        [Parameter(Mandatory = $true)]
+        [Parameter(Mandatory)]
         [string]$csvName,
-        [Parameter(Mandatory = $true)]
-        [boolean]$systemContextBinding
+        [Parameter(Mandatory)]
+        [bool]$systemContextBinding
     )
     begin {
         $csvPath = "C:\Windows\Temp\$csvName"
@@ -161,11 +204,15 @@ function Get-MgUserFromCSV {
 function Get-MgUserFromDesc {
     [CmdletBinding()]
     [OutputType([PSCustomObject[]])]
-    param([Parameter(Mandatory = $true)][boolean]$systemContextBinding)
+    param(
+        [Parameter(Mandatory)][bool]$systemContextBinding,
+        [string]$JumpCloudAPIKey,
+        [string]$JumpCloudOrgID
+    )
     process {
         try {
             Write-Host "[status] Retrieving system description..."
-            $systemDescription = Get-SystemDescription -systemContextBinding $systemContextBinding
+            $systemDescription = Get-SystemDescription -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID
         } catch {
             throw "Failed to retrieve system description: $_"
         }
@@ -193,12 +240,13 @@ function Get-MgUserFromDesc {
 }
 function Get-LatestADMUGUIExe {
     [CmdletBinding()]
-    [OutputType([PSCustomObject[]])]
+    [OutputType([string])]
     param(
         [Parameter(Mandatory = $false)][string]$destinationPath = "C:\Windows\Temp",
         [Parameter(Mandatory = $false)][string]$GitHubToken,
         [Parameter(Mandatory = $false)][int]$MaxRetries = 3,
-        [Parameter(Mandatory = $false)][int]$RetryDelaySeconds = 20
+        [Parameter(Mandatory = $false)][int]$RetryDelaySeconds = 20,
+        [Parameter(Mandatory = $false)][bool]$useLocalEXEs = $false
     )
     begin {
         $owner = "TheJumpCloud"
@@ -207,35 +255,54 @@ function Get-LatestADMUGUIExe {
         $headers = @{"Accept" = "application/vnd.github.v3+json" }
         if (-not [string]::IsNullOrEmpty($GitHubToken)) {
             $headers["Authorization"] = "Bearer $GitHubToken"
-            Write-Host "Using authenticated GitHub API" -ForegroundColor Cyan
+            Write-Host "Using authenticated GitHub API"
         }
     }
     process {
+        $fileName = 'gui_jcadmu.exe'
+        $fullPath = Join-Path -Path $destinationPath -ChildPath $fileName
+
+        if ($useLocalEXEs) {
+            Write-Host "[status] localEXEs is enabled. Validating local GUI executable at '$fullPath'."
+            $localValidationResult = Test-ExeSHA -filePath $fullPath -GitHubToken $GitHubToken -MaxRetries $MaxRetries -RetryDelaySeconds $RetryDelaySeconds -AllowUnvalidatedOnApiFailure $true
+            if ($localValidationResult.IsValid) {
+                if ($localValidationResult.UsedWithoutValidation) {
+                    Write-Host "[WARNING] GUI executable could not be validated against GitHub. Using local file due to localEXEs mode." -ForegroundColor Yellow
+                } else {
+                    Write-Host "[status] Local GUI executable validation passed. Skipping download." -ForegroundColor Green
+                }
+                return $fullPath
+            }
+
+            Write-Host "[WARNING] Local GUI executable is present but is not the latest validated release. Downloading the latest version from GitHub." -ForegroundColor Yellow
+        }
+
         $attempt = 0
         $success = $false
+        # Use a uniform retry delay for all retries, as specified by $RetryDelaySeconds
         while ($attempt -lt $MaxRetries -and -not $success) {
             $attempt++
             try {
-                if ($attempt -gt 1) { Write-Host "Retry attempt $attempt of $MaxRetries..." -ForegroundColor Yellow }
-                Write-Host "Querying GitHub for latest release..." -ForegroundColor Yellow
+                if ($attempt -gt 1) { Write-Host "Retry attempt $attempt of $MaxRetries..." }
+                Write-Host "Querying GitHub for latest release..."
                 $latestRelease = Invoke-RestMethod -Uri $apiUrl -Headers $headers -ErrorAction Stop
                 $exeAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
                 if ($exeAsset) {
                     $downloadUrl = $exeAsset.browser_download_url
                     $fileName = $exeAsset.name
                     $fullPath = Join-Path -Path $destinationPath -ChildPath $fileName
-                    Write-Host "Downloading '$fileName' (Version $($latestRelease.tag_name))..." -ForegroundColor Yellow
+                    Write-Host "Downloading '$fileName' (Version $($latestRelease.tag_name))..."
                     $dlAttempt = 0
                     while ($dlAttempt -lt $MaxRetries) {
                         $dlAttempt++
                         try {
                             Invoke-WebRequest -Uri $downloadUrl -OutFile $fullPath -ErrorAction Stop
-                            Write-Host "Download complete!" -ForegroundColor Green
+                            Write-Host "Download complete!"
                             $success = $true
                             break
                         } catch {
                             if ($dlAttempt -lt $MaxRetries) {
-                                Write-Host "Download failed. Retrying in $RetryDelaySeconds seconds..." -ForegroundColor Yellow
+                                Write-Host "Download failed. Retrying in $RetryDelaySeconds seconds..."
                                 Start-Sleep -Seconds $RetryDelaySeconds
                             } else {
                                 throw "$($_.Exception.Message)"
@@ -248,19 +315,25 @@ function Get-LatestADMUGUIExe {
             } catch {
                 $errorMessage = $_.Exception.Message
                 if ($errorMessage -match "rate limit|403") {
-                    Write-Host "GitHub API rate limit issue." -ForegroundColor Yellow
+                    Write-Host "GitHub API rate limit issue."
                     if ([string]::IsNullOrEmpty($GitHubToken)) {
-                        Write-Host "Hint: Use -GitHubToken for higher limits." -ForegroundColor Cyan
+                        Write-Host "Hint: Use -GitHubToken for higher limits."
                     }
                 }
                 if ($attempt -lt $MaxRetries) {
-                    Write-Host "Waiting $RetryDelaySeconds seconds..." -ForegroundColor Yellow
+                    Write-Host "Waiting $RetryDelaySeconds seconds..."
                     Start-Sleep -Seconds $RetryDelaySeconds
                 } else {
                     throw "Failed after $MaxRetries attempts: $errorMessage"
                 }
             }
         }
+
+        if (-not $success -or -not (Test-Path -Path $fullPath -PathType Leaf)) {
+            throw "Unable to retrieve '$fileName'."
+        }
+
+        return $fullPath
     }
 }
 function ConvertTo-ArgumentList {
@@ -294,7 +367,7 @@ function Get-JcadmuGuiSha256 {
         [Parameter(Mandatory = $false)][int]$RetryDelaySeconds = 5
     )
     begin {
-        $apiUrl = "https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/releases"
+        $apiUrl = "https://api.github.com/repos/TheJumpCloud/jumpcloud-ADMU/releases/latest"
         $headers = @{"Accept" = "application/vnd.github.v3+json" }
         if (-not [string]::IsNullOrEmpty($GitHubToken)) {
             $headers["Authorization"] = "Bearer $GitHubToken"
@@ -306,22 +379,26 @@ function Get-JcadmuGuiSha256 {
             $attempt++
             try {
                 if ($attempt -gt 1) { Write-Host "Retry attempt $attempt..." -ForegroundColor Yellow }
-                $releases = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers -ErrorAction Stop
-                if ($null -eq $releases -or $releases.Count -eq 0) { throw "No releases found." }
-                $latestRelease = $releases[0]
+                $latestRelease = Invoke-RestMethod -Uri $apiUrl -Method Get -Headers $headers -ErrorAction Stop
+                if ($null -eq $latestRelease) { throw "No release found." }
                 $targetAsset = $latestRelease.assets | Where-Object { $_.name -eq 'gui_jcadmu.exe' }
                 if ($targetAsset -and $targetAsset.digest -match "sha256:") {
                     $sha256 = $targetAsset.digest.Split(':')[1]
-                    return [PSCustomObject]@{ TagName = $latestRelease.tag_name; SHA256 = $sha256 }
+                    $releaseVersion = $latestRelease.tag_name.TrimStart('v', 'V')
+                    return [PSCustomObject]@{
+                        TagName = $latestRelease.tag_name
+                        Version = $releaseVersion
+                        SHA256  = $sha256
+                    }
                 } else {
                     throw "SHA256 digest not found for 'gui_jcadmu.exe'."
                 }
             } catch {
                 if ($_.Exception.Message -match "rate limit|403") {
-                    Write-Host "GitHub API rate limit issue." -ForegroundColor Yellow
+                    Write-Host "GitHub API rate limit issue."
                 }
                 if ($attempt -lt $MaxRetries) {
-                    Write-Host "Retrying in $RetryDelaySeconds seconds..." -ForegroundColor Yellow
+                    Write-Host "Retrying in $RetryDelaySeconds seconds..."
                     Start-Sleep -Seconds $RetryDelaySeconds
                 } else {
                     throw "Failed after $MaxRetries attempts: $($_.Exception.Message)"
@@ -333,26 +410,78 @@ function Get-JcadmuGuiSha256 {
 function Test-ExeSHA {
     param (
         [Parameter(Mandatory = $true)][string]$filePath,
-        [Parameter(Mandatory = $false)][string]$GitHubToken
+        [Parameter(Mandatory = $false)][string]$GitHubToken,
+        [Parameter(Mandatory = $false)][int]$MaxRetries = 3,
+        [Parameter(Mandatory = $false)][int]$RetryDelaySeconds = 5,
+        [Parameter(Mandatory = $false)][bool]$AllowUnvalidatedOnApiFailure = $false
     )
     process {
         if (-not (Test-Path -Path $filePath)) { throw "File not found: '$filePath'." }
-        $releaseSHA256 = if ($GitHubToken) { (Get-JcadmuGuiSha256 -GitHubToken $GitHubToken).SHA256 } else { (Get-JcadmuGuiSha256).SHA256 }
+
+        $localFile = Get-Item -Path $filePath -ErrorAction Stop
+        $localVersion = $localFile.VersionInfo.FileVersion
         $localFileHash = (Get-FileHash -Path $filePath -Algorithm SHA256).Hash.ToLower()
-        Write-Host "[status] Official SHA256: $releaseSHA256"
-        Write-Host "[status] Local SHA256:    $localFileHash"
-        if ($localFileHash -eq $releaseSHA256.ToLower()) {
-            Write-Host "[status] SUCCESS: Hash validation passed!"
-        } else {
-            throw "[status] Hash mismatch! File differs from official release."
+
+        try {
+            $releaseInfo = if ($GitHubToken) {
+                Get-JcadmuGuiSha256 -GitHubToken $GitHubToken -MaxRetries $MaxRetries -RetryDelaySeconds $RetryDelaySeconds
+            } else {
+                Get-JcadmuGuiSha256 -MaxRetries $MaxRetries -RetryDelaySeconds $RetryDelaySeconds
+            }
+
+            $releaseSHA256 = $releaseInfo.SHA256.ToLower()
+            $versionMatched = $true
+            if (-not [string]::IsNullOrWhiteSpace($releaseInfo.Version) -and -not [string]::IsNullOrWhiteSpace($localVersion)) {
+                try {
+                    $versionMatched = ([version]$localVersion -eq [version]$releaseInfo.Version)
+                } catch {
+                    $versionMatched = ($localVersion -eq $releaseInfo.Version)
+                }
+            }
+
+            Write-Host "[status] Latest release tag: $($releaseInfo.TagName)"
+            Write-Host "[status] Latest release version: $($releaseInfo.Version)"
+            Write-Host "[status] Local GUI version:      $localVersion"
+            Write-Host "[status] Official SHA256:        $releaseSHA256"
+            Write-Host "[status] Local SHA256:           $localFileHash"
+
+            return [PSCustomObject]@{
+                FilePath              = $filePath
+                LocalVersion          = $localVersion
+                ReleaseTag            = $releaseInfo.TagName
+                ReleaseVersion        = $releaseInfo.Version
+                HashMatched           = ($localFileHash -eq $releaseSHA256)
+                VersionMatched        = $versionMatched
+                IsValid               = ($localFileHash -eq $releaseSHA256)
+                UsedWithoutValidation = $false
+                ValidationWarning     = $null
+            }
+        } catch {
+            $errorMessage = $_.Exception.Message
+            if ($AllowUnvalidatedOnApiFailure) {
+                Write-Host "[WARNING] Could not validate local GUI executable because the GitHub API is unreachable or rate limited. Using the local file in C:\Windows\Temp as requested by localEXEs mode." -ForegroundColor Yellow
+                return [PSCustomObject]@{
+                    FilePath              = $filePath
+                    LocalVersion          = $localVersion
+                    ReleaseTag            = $null
+                    ReleaseVersion        = $null
+                    HashMatched           = $false
+                    VersionMatched        = $false
+                    IsValid               = $true
+                    UsedWithoutValidation = $true
+                    ValidationWarning     = $errorMessage
+                }
+            }
+
+            throw "Failed to validate GUI executable: $errorMessage"
         }
     }
 }
 function Invoke-UserMigrationBatch {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)][array]$UsersToMigrate,
-        [Parameter(Mandatory = $true)][hashtable]$MigrationConfig
+        [Parameter(Mandatory)][array]$UsersToMigrate,
+        [Parameter(Mandatory)][hashtable]$MigrationConfig
     )
     $results = [PSCustomObject]@{
         TotalUsers           = $UsersToMigrate.Count
@@ -385,6 +514,9 @@ function Invoke-UserMigrationBatch {
             RemoveMDM             = $removeMDMParam
             adminDebug            = $true
             ReportStatus          = $MigrationConfig.ReportStatus
+        }
+        if ($MigrationConfig.localEXEs -eq $true) {
+            $migrationParams.Add('localEXEs', $true)
         }
         if (-not [string]::IsNullOrEmpty($MigrationConfig.JumpCloudOrgID)) {
             $migrationParams.Add('JumpCloudOrgID', $MigrationConfig.JumpCloudOrgID)
@@ -430,9 +562,9 @@ function Invoke-UserMigrationBatch {
 function Invoke-SingleUserMigration {
     [CmdletBinding()]
     param (
-        [Parameter(Mandatory = $true)][PSCustomObject]$User,
-        [Parameter(Mandatory = $true)][hashtable]$MigrationParams,
-        [Parameter(Mandatory = $true)][string]$GuiJcadmuPath
+        [Parameter(Mandatory)][PSCustomObject]$User,
+        [Parameter(Mandatory)][hashtable]$MigrationParams,
+        [Parameter(Mandatory)][string]$GuiJcadmuPath
     )
     if (-not (Test-Path -Path $GuiJcadmuPath)) { throw "File not found: '$GuiJcadmuPath'." }
     $convertedParams = ConvertTo-ArgumentList -InputHashtable $MigrationParams
@@ -465,47 +597,76 @@ function Get-DomainStatus {
     }
 }
 function Get-SystemDescription {
-    param([bool]$systemContextBinding)
-    if (-not $systemContextBinding) { throw "Description source requires systemContextBinding=`$true" }
+    param(
+        [bool]$systemContextBinding,
+        [string]$JumpCloudAPIKey,
+        [string]$JumpCloudOrgID
+    )
     try {
+        # Retrieve System ID
+        if (-not (Test-Path 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf')) { throw "JumpCloud Agent config file not found." }
         $cfg = Get-Content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
         $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
         if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey" }
         $host_match = [regex]::Match($cfg, 'agentServerHost["]?:["]?agent\.(\w+)\.jumpcloud\.com').Groups[1].Value
-        $url = if ($host_match -eq "eu") { "https://console.jumpcloud.eu" }else { "https://console.jumpcloud.com" }
-        $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
-        if (-not(Test-Path $privKey)) { throw "Key not found" }
-        if ($PSVersionTable.PSVersion.Major -eq 5) {
-            if (-not([System.Management.Automation.PSTypeName]'RSAEncryption.RSAEncryptionProvider').Type) {
-                $rsaType = @'
+        switch ($host_match) {
+            "eu" { $url = "https://console.eu.jumpcloud.com" }
+            "in" { $url = "https://console.in.jumpcloud.com" }
+            default { $url = "https://console.jumpcloud.com" }
+        }
+        $h = @{ "Accept" = "application/json" }
+
+        # Authenticate
+        if ($systemContextBinding) {
+            $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
+            if (-not(Test-Path $privKey)) { throw "Key not found for SystemContext binding" }
+            if ($PSVersionTable.PSVersion.Major -eq 5) {
+                if (-not([System.Management.Automation.PSTypeName]'RSAEncryption.RSAEncryptionProvider').Type) {
+                    $rsaType = @'
 using System;using System.Collections.Generic;using System.IO;using System.Net;using System.Runtime.InteropServices;using System.Security;using System.Security.Cryptography;using System.Text;namespace RSAEncryption{public class RSAEncryptionProvider{public static RSACryptoServiceProvider GetRSAProviderFromPemFile(String pemfile,SecureString p=null){const String h="-----BEGIN PUBLIC KEY-----";const String f="-----END PUBLIC KEY-----";bool isPrivate=true;byte[]pk=null;if(!File.Exists(pemfile)){throw new Exception("key not found");}string ps=File.ReadAllText(pemfile).Trim();if(ps.StartsWith(h)&&ps.EndsWith(f)){isPrivate=false;}if(isPrivate){pk=ConvertPrivateKeyToBytes(ps,p);if(pk==null){return null;}return DecodeRSAPrivateKey(pk);}return null;}static byte[]ConvertPrivateKeyToBytes(String i,SecureString p=null){const String ph="-----BEGIN RSA PRIVATE KEY-----";const String pf="-----END RSA PRIVATE KEY-----";String ps=i.Trim();byte[]bk;if(!ps.StartsWith(ph)||!ps.EndsWith(pf)){return null;}StringBuilder sb=new StringBuilder(ps);sb.Replace(ph,"");sb.Replace(pf,"");String pvs=sb.ToString().Trim();try{bk=Convert.FromBase64String(pvs);return bk;}catch(System.FormatException){StringReader sr=new StringReader(pvs);if(!sr.ReadLine().StartsWith("Proc-Type"))return null;String sl=sr.ReadLine();if(!sl.StartsWith("DEK-Info"))return null;String ss=sl.Substring(sl.IndexOf(",")+1).Trim();byte[]salt=new byte[ss.Length/2];for(int idx=0;idx<salt.Length;idx++)salt[idx]=Convert.ToByte(ss.Substring(idx*2,2),16);if(!(sr.ReadLine()==""))return null;String es="";String l="";while((l=sr.ReadLine())!=null){es+=l;}bk=Convert.FromBase64String(es);byte[]dk=GetEncryptedKey(salt,p,1,1);byte[]iv=new byte[8];Array.Copy(salt,0,iv,0,8);bk=DecryptKey(bk,dk,iv);return bk;}}public static RSACryptoServiceProvider DecodeRSAPrivateKey(byte[]pk){byte[]M,E,D,P,Q,DP,DQ,IQ;MemoryStream m=new MemoryStream(pk);BinaryReader br=new BinaryReader(m);byte b=0;ushort t=0;int e=0;try{t=br.ReadUInt16();if(t==0x8130)br.ReadByte();else if(t==0x8230)br.ReadInt16();else return null;t=br.ReadUInt16();if(t!=0x0102)return null;b=br.ReadByte();if(b!=0x00)return null;e=GetIntegerSize(br);M=br.ReadBytes(e);e=GetIntegerSize(br);E=br.ReadBytes(e);e=GetIntegerSize(br);D=br.ReadBytes(e);e=GetIntegerSize(br);P=br.ReadBytes(e);e=GetIntegerSize(br);Q=br.ReadBytes(e);e=GetIntegerSize(br);DP=br.ReadBytes(e);e=GetIntegerSize(br);DQ=br.ReadBytes(e);e=GetIntegerSize(br);IQ=br.ReadBytes(e);RSACryptoServiceProvider RSA=new RSACryptoServiceProvider();RSAParameters RP=new RSAParameters();RP.Modulus=M;RP.Exponent=E;RP.D=D;RP.P=P;RP.Q=Q;RP.DP=DP;RP.DQ=DQ;RP.InverseQ=IQ;RSA.ImportParameters(RP);return RSA;}catch(Exception){return null;}finally{br.Close();}}private static int GetIntegerSize(BinaryReader br){byte b=0;byte lb=0x00;byte hb=0x00;int c=0;b=br.ReadByte();if(b!=0x02)return 0;b=br.ReadByte();if(b==0x81)c=br.ReadByte();else if(b==0x82){hb=br.ReadByte();lb=br.ReadByte();byte[]mi={lb,hb,0x00,0x00};c=BitConverter.ToInt32(mi,0);}else{c=b;}while(br.ReadByte()==0x00){c--;}br.BaseStream.Seek(-1,SeekOrigin.Current);return c;}static byte[]GetEncryptedKey(byte[]salt,SecureString sp,int c,int m){IntPtr up=IntPtr.Zero;int HL=16;byte[]km=new byte[HL*m];byte[]pb=new byte[sp.Length];up=Marshal.SecureStringToGlobalAllocAnsi(sp);Marshal.Copy(up,pb,0,pb.Length);Marshal.ZeroFreeGlobalAllocAnsi(up);byte[]d00=new byte[pb.Length+salt.Length];Array.Copy(pb,d00,pb.Length);Array.Copy(salt,0,d00,pb.Length,salt.Length);MD5 md=new MD5CryptoServiceProvider();byte[]res=null;byte[]ht=new byte[HL+d00.Length];for(int j=0;j<m;j++){res=md.ComputeHash(ht);Array.Copy(res,0,ht,0,res.Length);Array.Copy(d00,0,ht,res.Length,d00.Length);}byte[]dk=new byte[24];Array.Copy(km,dk,dk.Length);Array.Clear(pb,0,pb.Length);Array.Clear(d00,0,d00.Length);Array.Clear(res,0,res.Length);Array.Clear(ht,0,ht.Length);Array.Clear(km,0,km.Length);return dk;}static byte[]DecryptKey(byte[]cd,byte[]dek,byte[]iv){MemoryStream ms=new MemoryStream();TripleDES alg=TripleDES.Create();alg.Key=dek;alg.IV=iv;try{CryptoStream cs=new CryptoStream(ms,alg.CreateDecryptor(),CryptoStreamMode.Write);cs.Write(cd,0,cd.Length);cs.Close();}catch(Exception){return null;}byte[]dd=ms.ToArray();return dd;}}}
 '@
-                Add-Type -TypeDefinition $rsaType
+                    Add-Type -TypeDefinition $rsaType
+                }
+                $rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($privKey)
+            } else {
+                $pem = Get-Content -Path $privKey -Raw
+                $rsa = [System.Security.Cryptography.RSA]::Create()
+                $rsa.ImportFromPem($pem)
             }
-            $rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($privKey)
+            $now = (Get-Date -Date ((Get-Date).ToUniversalTime())-UFormat '+%a, %d %h %Y %H:%M:%S GMT')
+            $signstr = "GET /api/systems/$key HTTP/1.1`ndate: $now"
+            $enc = [system.Text.Encoding]::UTF8
+            $data = $enc.GetBytes($signstr)
+            $sha = New-Object System.Security.Cryptography.SHA256CryptoServiceProvider
+            $hr = $sha.ComputeHash($data)
+            $ha = [System.Security.Cryptography.HashAlgorithmName]::SHA256
+            $sb = $rsa.SignHash($hr, $ha, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
+            $sig = [Convert]::ToBase64String($sb)
+            $h.Add("Date", "$now")
+            $h.Add("Authorization", "Signature keyId=`"system/$key`",headers=`"request-line date`",algorithm=`"rsa-sha256`",signature=`"$sig`"")
         } else {
-            $pem = Get-Content -Path $privKey -Raw
-            $rsa = [System.Security.Cryptography.RSA]::Create()
-            $rsa.ImportFromPem($pem)
+            if ([string]::IsNullOrWhiteSpace($JumpCloudAPIKey)) { throw "API Key is required when not using System Context." }
+            $h.Add("x-api-key", $JumpCloudAPIKey)
+            if (-not [string]::IsNullOrWhiteSpace($JumpCloudOrgID)) {
+                $h.Add("x-org-id", $JumpCloudOrgID)
+            }
         }
-        $now = (Get-Date -Date ((Get-Date).ToUniversalTime())-UFormat '+%a, %d %h %Y %H:%M:%S GMT')
-        $signstr = "GET /api/systems/$key HTTP/1.1`ndate: $now"
-        $enc = [system.Text.Encoding]::UTF8
-        $data = $enc.GetBytes($signstr)
-        $sha = New-Object System.Security.Cryptography.SHA256CryptoServiceProvider
-        $hr = $sha.ComputeHash($data)
-        $ha = [System.Security.Cryptography.HashAlgorithmName]::SHA256
-        $sb = $rsa.SignHash($hr, $ha, [System.Security.Cryptography.RSASignaturePadding]::Pkcs1)
-        $sig = [Convert]::ToBase64String($sb)
-        $h = @{Accept = "application/json"; Date = "$now"; Authorization = "Signature keyId=`"system/$key`",headers=`"request-line date`",algorithm=`"rsa-sha256`",signature=`"$sig`"" }
         $sys = Invoke-RestMethod -Method GET -Uri "$url/api/systems/$key" -Headers $h
         return $sys.description
     } catch { throw "Failed to get description: $_" }
 }
 #endregion functionDefinitions
 #region validation
-$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus
+$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus -localEXEs $localEXEs
 if ($confirmMigrationParameters) { Write-Host "[STATUS] Migration parameters validated successfully." }
+
+try {
+    $localExeValidation = Test-RequiredLocalExeFiles -localEXEs $localEXEs
+    if ($localExeValidation) { Write-Host "[STATUS] Local executable pre-check completed successfully." }
+} catch {
+    Write-Host "[ERROR] Local executable validation failed: $_"
+    exit 1
+}
 #endregion validation
 #region dataImport
 if ($dataSource -eq 'CSV') {
@@ -515,7 +676,7 @@ if ($dataSource -eq 'CSV') {
     Write-Host "[status] Using system description source..."
 }
 try {
-    $UsersToMigrate = Get-MigrationUser -source $dataSource -csvName $csvName -systemContextBinding $systemContextBinding
+    $UsersToMigrate = Get-MigrationUser -source $dataSource -csvName $csvName -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID
 } catch {
     Write-Host "[ERROR] Failed to retrieve migration users: $_"
     exit 1
@@ -549,9 +710,7 @@ if ($ForceReboot) {
 }
 #endregion logoffUsers (implied)
 #region migration
-$guiJcadmuPath = "C:\Windows\Temp\gui_jcadmu.exe"
-Get-LatestADMUGUIExe
-Test-ExeSHA -filePath $guiJcadmuPath
+$guiJcadmuPath = Get-LatestADMUGUIExe -useLocalEXEs $localEXEs
 $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig @{
     TempPassword              = $TempPassword
     UpdateHomePath            = $UpdateHomePath
@@ -565,6 +724,7 @@ $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -M
     systemContextBinding      = $systemContextBinding
     LeaveDomainAfterMigration = $LeaveDomainAfterMigration
     removeMDM                 = $removeMDM
+    localEXEs                 = $localEXEs
     guiJcadmuPath             = $guiJcadmuPath
 }
 Write-Host "`nResults - Total: $($migrationResults.TotalUsers), Success: $($migrationResults.SuccessfulMigrations), Failed: $($migrationResults.FailedMigrations)"

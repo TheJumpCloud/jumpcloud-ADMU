@@ -49,7 +49,7 @@ $progressFormVersion | Should -Be $PSD1Version
 If (-Not (Test-Path -Path:("$PSScriptRoot/admuTemplate.ps1"))) {
     "A Template file does not exist, creating template file"
     # Build ADMU.PS1 File:
-    . $PSScriptRoot\New-ADMUTemplate.ps1
+    . $PSScriptRoot\Functions\New-ADMUTemplate.ps1
     New-ADMUTemplate -ExportPath "$PSScriptRoot/admuTemplate.ps1"
 }
 if (-Not (Test-Path -Path:("$PSScriptRoot/admuTemplate.ps1"))) {

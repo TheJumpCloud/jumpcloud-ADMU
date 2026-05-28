@@ -103,6 +103,8 @@ jobs:
               'JumpCloud.SDK.V2'                      = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
               'JumpCloud.SDK.DirectoryInsights'       = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
               'JumpCloud'                             = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
+              'Pester'                                = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
+              'PSScriptAnalyzer'                      = @{Repository = 'PSGallery'; RequiredVersion = 'latest'}
           }
           foreach ($RequiredModule in $PSDependencies.Keys) {
               If ([System.String]::IsNullOrEmpty((Get-InstalledModule | Where-Object { $_.Name -eq $RequiredModule }))) {
@@ -178,6 +180,8 @@ jobs:
           PESTER_APIKEY: ${{ secrets.PESTER_APIKEY }}
           PESTER_ORGID: ${{ secrets.PESTER_ORGID }}
           PESTER_CONNECTKEY: ${{ secrets.PESTER_CONNECTKEY }}
+          PESTER_APIKEY_MTP: ${{ secrets.PESTER_APIKEY_MTP }}
+          PESTER_ORGID_MTP: ${{ secrets.PESTER_ORGID_MTP }}
         run: |
           $env:job_group = ${{ matrix.job_group }}
           # CUT-4958

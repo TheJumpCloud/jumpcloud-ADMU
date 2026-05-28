@@ -7,6 +7,9 @@ JumpCloud.ADMU.nuspec
 Deploy/ADMU.ps1
 Deploy/admuTemplate.ps1
 *.exe
+# ignore files created during tests
 *jcdiscovery.csv
 *invokeFunctions.ps1
 *invokeScript.ps1
+*DeviceDescription*Functions.ps1
+*deviceQueryFunctions.ps1

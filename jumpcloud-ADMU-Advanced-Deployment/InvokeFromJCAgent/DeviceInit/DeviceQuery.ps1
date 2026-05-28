@@ -3,6 +3,16 @@
 # Optional JumpCloud API Key for authentication. Variable syntax supported: {/{/ variable.name /}/}/ (without '/' character)
 $JCAPIKEY = $null
 
+# Default state assigned to newly-discovered (non-migrated) AD users when writing
+# them to the system description for the first time.
+#   'Auto'    : Pending if exactly 1 fresh AD user is found on the device,
+#               Skip   if more than 1 fresh AD user is found.
+#               (Recommended. Single-user devices migrate automatically; multi-user
+#               devices wait for an admin to manually flip the right user to Pending.)
+#   'Pending' : Always Pending. Every discovered user is queued for migration.
+#   'Skip'    : Always Skip.    Every discovered user must be manually opted in.
+$DefaultUserState = 'Auto'
+
 #endregion scriptParameters
 
 #region functionDefinitions
@@ -76,7 +86,11 @@ function Get-System {
             $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
             if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey" }
             $host_match = [regex]::Match($cfg, 'agentServerHost["]?:["]?agent\.(\w+)\.jumpcloud\.com').Groups[1].Value
-            $url = if ($host_match -eq "eu") { "https://console.jumpcloud.eu" }else { "https://console.jumpcloud.com" }
+            switch ($host_match) {
+                "eu" { $url = "https://console.eu.jumpcloud.com" }
+                "in" { $url = "https://console.in.jumpcloud.com" }
+                default { $url = "https://console.jumpcloud.com" }
+            }
             $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
             if (-not(Test-Path $privKey)) { throw "Key not found" }
             if ($PSVersionTable.PSVersion.Major -eq 5) {
@@ -142,7 +156,11 @@ function Set-System {
             }
             $cfg = Get-Content 'C:\Program Files\JumpCloud\Plugins\Contrib\jcagent.conf'
             $host_match = [regex]::Match($cfg, 'agentServerHost["]?:["]?agent\.(\w+)\.jumpcloud\.com').Groups[1].Value
-            $url = if ($host_match -eq "eu") { "https://console.jumpcloud.eu" } else { "https://console.jumpcloud.com" }
+            switch ($host_match) {
+                "eu" { $url = "https://console.eu.jumpcloud.com" }
+                "in" { $url = "https://console.in.jumpcloud.com" }
+                default { $url = "https://console.jumpcloud.com" }
+            }
             $now = (Get-Date -Date ((Get-Date).ToUniversalTime())-UFormat '+%a, %d %h %Y %H:%M:%S GMT')
             $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
 
@@ -156,7 +174,7 @@ function Set-System {
                     "x-api-key"    = "$JCApiKey"
                 }
             } else {
-                Write-Host "[status] Using SystemAPI for authentication."
+                Write-Host "[status] Using SystemContextAPI for authentication."
                 $privKey = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
                 if (-not(Test-Path $privKey)) { throw "Key not found" }
                 $rsa = [RSAEncryption.RSAEncryptionProvider]::GetRSAProviderFromPemFile($privKey)
@@ -220,7 +238,13 @@ function Get-ADMUUser {
     [OutputType([PSCustomObject[]])]
     param(
         [Parameter(Mandatory = $false)]
-        [switch]$localUsers
+        [switch]$localUsers,
+        [Parameter(Mandatory = $false)]
+        [ValidateSet('Auto', 'Pending', 'Skip')]
+        [string]$DefaultUserState = 'Auto',
+        # Existing description entries used to skip recomputing $profileSize.
+        [Parameter(Mandatory = $false)]
+        [object]$ExistingEntries = $null
     )
 
     try {
@@ -251,11 +275,45 @@ function Get-ADMUUser {
         $profileListPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
         $profileList = Get-ChildItem -Path $profileListPath
 
+        # Pre-pass: count fresh (not previously migrated) AD users so we can resolve
+        # the default state for new entries. The default for fresh users depends on
+        # how many migration candidates exist, not on the total profile count.
+        $freshUserCount = 0
+        foreach ($aU in $adUsers) {
+            $up = $profileList | Where-Object { $_.PSChildName -eq $aU.uuid }
+            if (-not $up) { continue }
+            $pp = (Get-ItemProperty -Path $up.PSPath).ProfileImagePath
+            if (-not ($pp -and $pp.EndsWith('.ADMU'))) { $freshUserCount++ }
+        }
+
+        $resolvedDefault = switch ($DefaultUserState) {
+            'Pending' { 'Pending' }
+            'Skip' { 'Skip' }
+            default { if ($freshUserCount -le 1) { 'Pending' } else { 'Skip' } }
+        }
+        $resolvedMsg = if ($resolvedDefault -eq 'Skip') {
+            'Multiple AD users found; awaiting admin selection'
+        } else {
+            'Planned'
+        }
+        Write-Host "[status] DefaultUserState='$DefaultUserState'; $freshUserCount fresh AD user(s); new entries will be marked '$resolvedDefault'."
+
+        # sid -> existing entry lookup for profileSize cache reuse.
+        $existingBySid = @{}
+        if ($null -ne $ExistingEntries) {
+            foreach ($e in @($ExistingEntries)) {
+                if ($null -eq $e) { continue }
+                if ($e.PSObject.Properties.Match('sid').Count -gt 0 -and -not [string]::IsNullOrWhiteSpace($e.sid)) {
+                    $existingBySid[$e.sid] = $e
+                }
+            }
+        }
+
         # Create ADMU user objects
         $admuUsers = New-Object system.Collections.ArrayList
         foreach ($aU in $adUsers) {
             try {
-                # Get last logon time from Windows user profile
+                # lastLogin: Win32_UserProfile.LastUseTime (can be stale).
                 $lastLogin = $null
                 try {
                     $userProfileData = Get-CimInstance -ClassName Win32_UserProfile -Filter "SID = '$($aU.uuid)'" -ErrorAction SilentlyContinue
@@ -267,41 +325,96 @@ function Get-ADMUUser {
                     Write-Host "[status] Could not retrieve last logon time for user $($aU.uuid): $_"
                 }
 
+                # lastWrite: NTUSER.DAT mtime - corroborating timestamp for lastLogin.
+                $lastWrite = $null
+                try {
+                    $ntu = Join-Path $aU.directory 'NTUSER.DAT'
+                    if (Test-Path -LiteralPath $ntu -PathType Leaf) {
+                        $lastWrite = (Get-Item -LiteralPath $ntu -Force -ErrorAction Stop).LastWriteTimeUtc.ToString('O')
+                    }
+                } catch {
+                    Write-Host "[status] Could not read NTUSER.DAT mtime for $($aU.directory): $_"
+                }
+
+                # lastLoginValid: true if both timestamps agree within 24h, else null.
+                $lastLoginValid = $null
+                if ($lastLogin -and $lastWrite) {
+                    try {
+                        $diffHours = [Math]::Abs(([DateTime]$lastLogin - [DateTime]$lastWrite).TotalHours)
+                        $lastLoginValid = ($diffHours -le 24)
+                    } catch {
+                        $lastLoginValid = $null
+                    }
+                }
+
                 # validate the user has not been previously migrated if the profileImagePath for that user ends in .ADMU it's been migrated already
                 $userProfile = $profileList | Where-Object {
                     $sid = $_.PSChildName
                     $sid -eq $aU.uuid
                 }
-                if ($userProfile) {
-                    Write-Host "[status] Found profile for user $($aU.uuid), checking migration status..."
-                    $profilePath = (Get-ItemProperty -Path $userProfile.PSPath).ProfileImagePath
-                    if ($profilePath -and $profilePath.EndsWith(".ADMU")) {
-                        Write-Host "user previously migrated, skipping user: $($aU.uuid)"
-                        $uObj = [PSCustomObject]@{
-                            st        = 'Complete'
-                            msg       = 'User previously migrated'
-                            sid       = $aU.uuid
-                            localPath = $aU.directory
-                            un        = $null
-                            uid       = $null
-                            lastLogin = $lastLogin
-                        }
-                    } else {
-                        Write-Host "user not yet migrated, marking as pending: $($aU.uuid)"
-                        $uObj = [PSCustomObject]@{
-                            st        = 'Pending'
-                            msg       = 'Planned'
-                            sid       = $aU.uuid
-                            localPath = $aU.directory
-                            un        = $null
-                            uid       = $null
-                            lastLogin = $lastLogin
-                        }
-                    }
-                    $admuUsers.add($uObj) | Out-Null
-                } else {
+                if (-not $userProfile) {
                     Write-Host "[status] No profile found for user $($aU.uuid), skipping..."
+                    continue
                 }
+                Write-Host "[status] Found profile for user $($aU.uuid), checking migration status..."
+                $profilePath = (Get-ItemProperty -Path $userProfile.PSPath).ProfileImagePath
+                $isMigrated = ($profilePath -and $profilePath.EndsWith(".ADMU"))
+
+                # profileSize (GB): reuse cached value when SID + localPath unchanged.
+                $profileSize = $null
+                $cached = $existingBySid[$aU.uuid]
+                $hasCachedSize = $false
+                if ($cached) {
+                    $hasCachedSize = ($cached.PSObject.Properties.Match('profileSize').Count -gt 0) -and `
+                    ($null -ne $cached.profileSize) -and `
+                    ($cached.PSObject.Properties.Match('localPath').Count -gt 0) -and `
+                    ($cached.localPath -eq $aU.directory)
+                }
+                if ($hasCachedSize) {
+                    $profileSize = $cached.profileSize
+                    Write-Host "[status] Reusing cached profileSize ($profileSize GB) for $($aU.uuid)."
+                } else {
+                    Write-Host "[status] Computing profileSize for $($aU.uuid) at $($aU.directory)..."
+                    try {
+                        if (Test-Path -LiteralPath $aU.directory -PathType Container) {
+                            $sum = (Get-ChildItem -LiteralPath $aU.directory -Recurse -Force -File -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum
+                            $profileSize = if ($null -eq $sum) { 0.0 } else { [Math]::Round($sum / 1GB, 2) }
+                        }
+                    } catch {
+                        Write-Host "[status] profileSize computation failed for $($aU.directory): $_"
+                    }
+                }
+
+                if ($isMigrated) {
+                    Write-Host "user previously migrated, skipping user: $($aU.uuid)"
+                    $uObj = [PSCustomObject]@{
+                        st             = 'Complete'
+                        msg            = 'User previously migrated'
+                        sid            = $aU.uuid
+                        localPath      = $aU.directory
+                        un             = $null
+                        uid            = $null
+                        lastLogin      = $lastLogin
+                        lastWrite      = $lastWrite
+                        lastLoginValid = $lastLoginValid
+                        profileSize    = $profileSize
+                    }
+                } else {
+                    Write-Host "user not yet migrated, marking as '$resolvedDefault': $($aU.uuid)"
+                    $uObj = [PSCustomObject]@{
+                        st             = $resolvedDefault
+                        msg            = $resolvedMsg
+                        sid            = $aU.uuid
+                        localPath      = $aU.directory
+                        un             = $null
+                        uid            = $null
+                        lastLogin      = $lastLogin
+                        lastWrite      = $lastWrite
+                        lastLoginValid = $lastLoginValid
+                        profileSize    = $profileSize
+                    }
+                }
+                $admuUsers.add($uObj) | Out-Null
             } catch {
                 Write-Host "[status] Error processing user $($aU.uuid): $_"
                 continue
@@ -322,6 +435,10 @@ function Set-SystemDesc {
         [Parameter(Mandatory = $false)]
         [string]$JCApiKey
     )
+
+    # Normalize to Object[]: callers may pass a lone PSCustomObject; description JSON
+    # round-trip can deserialize as a single object. $merged += requires an array LHS.
+    $ADMUUsers = @($ADMUUsers)
 
     try {
         $sDescRaw = $null
@@ -353,12 +470,9 @@ function Set-SystemDesc {
                 # Try to parse as JSON
                 $eData = $sDescRaw | ConvertFrom-Json
 
-                # Normalize to array
-                $eUsers = if ($eData -is [array]) {
-                    $eData
-                } else {
-                    @($eData)
-                }
+                # Always Object[]: single JSON object or single-element JSON array deserializes
+                # as PSCustomObject; ForEach-Object enumerates one or many rows reliably.
+                $eUsers = @($eData | ForEach-Object { $_ })
 
                 # Validate that objects have ADMU properties (st, msg, sid, localPath, un, uid)
                 $isValidADMU = $true
@@ -377,7 +491,7 @@ function Set-SystemDesc {
                 if ($isValidADMU) {
                     # Valid ADMU objects - merge with new users
                     Write-Host "[status] Merging with existing users..."
-                    $merged = $eUsers
+                    $merged = @($eUsers | ForEach-Object { $_ })
                     $newUsers = @()
                     foreach ($aU in $ADMUUsers) {
                         if (-not($eUsers | Where-Object { $_.sid -eq $aU.sid })) {
@@ -385,20 +499,38 @@ function Set-SystemDesc {
                             $needsUpdate = $true
                         }
                     }
-                    $merged += $newUsers
+                    $merged = @($merged + @($newUsers))
 
-                    # Check for status updates on existing users (e.g., Complete status from re-running on previously migrated users)
+                    # Discovery-observed fields refresh every run. Admin-curated
+                    # state (st/msg/un/uid) is preserved except for the
+                    # Complete-from-previous-migration transition.
+                    $discoveryFields = @('localPath', 'lastLogin', 'lastWrite', 'lastLoginValid', 'profileSize')
                     foreach ($aU in $ADMUUsers) {
                         $existingUser = $merged | Where-Object { $_.sid -eq $aU.sid }
-                        if (($existingUser -and $existingUser.st -ne $aU.st) -or ($existingUser -and $aU.st -eq 'Complete' -and $aU.msg -eq 'User previously migrated')) {
-                            Write-Host "[status] Updating status for user $($aU.sid) from '$($existingUser.st)' to '$($aU.st)'..."
+                        if (-not $existingUser) { continue }
+
+                        # Refresh discovery fields; Add-Member backfills older entries
+                        # written before these fields existed.
+                        foreach ($f in $discoveryFields) {
+                            if ($aU.PSObject.Properties.Match($f).Count -eq 0) { continue }
+                            $newVal = $aU.$f
+                            if ($existingUser.PSObject.Properties.Match($f).Count -eq 0) {
+                                Add-Member -InputObject $existingUser -MemberType NoteProperty -Name $f -Value $newVal -Force
+                                $needsUpdate = $true
+                            } elseif ($existingUser.$f -ne $newVal) {
+                                $existingUser.$f = $newVal
+                                $needsUpdate = $true
+                            }
+                        }
+
+                        # Only Complete-from-previous-migration may overwrite admin state.
+                        if ($aU.st -eq 'Complete' -and $aU.msg -eq 'User previously migrated' -and $existingUser.st -ne 'Complete') {
+                            Write-Host "[status] Updating user $($aU.sid) state '$($existingUser.st)' -> 'Complete' (previously migrated)..."
                             $existingUser.st = $aU.st
                             $existingUser.msg = $aU.msg
                             $needsUpdate = $true
                         }
                     }
-
-                    $merged = $merged | Where-Object { $_.st -ne 'Skip' }
                 } else {
                     # Valid JSON but not ADMU objects - replace
                     Write-Host "[status] Description contains non-ADMU objects, replacing..."
@@ -406,8 +538,8 @@ function Set-SystemDesc {
                     $needsUpdate = $true
                 }
             } catch {
-                # Invalid JSON - replace
-                Write-Host "[status] Invalid JSON, replacing..."
+                # JSON parse or merge failure — replace with incoming payload (do not assume invalid JSON)
+                Write-Host "[status] Description merge failed, replacing with ADMUUsers: $($_.Exception.Message)"
                 $merged = @($ADMUUsers)
                 $needsUpdate = $true
             }
@@ -429,11 +561,16 @@ function Set-SystemDesc {
         # Check for unknown/custom states (anything that's not Error, Pending, Complete, or Skip)
         $inProgress = @($merged | Where-Object { $_.st -notin @('Error', 'Pending', 'Complete', 'Skip') })
 
+        # A device with only Skip users (and no Complete) is awaiting admin action,
+        # not finished. Roll that up as 'Pending' so the device-level admu attribute
+        # honestly reflects "no migration has happened yet". A device with at least
+        # one Complete user plus Skip users is genuinely Complete - the Skip users
+        # are intentionally excluded.
         $amuStatus = if ($errors.Count -gt 0) {
             'Error'
         } elseif ($inProgress.Count -gt 0) {
             'InProgress'
-        } elseif ($pending.Count -gt 0) {
+        } elseif ($pending.Count -gt 0 -or ($skipped.Count -gt 0 -and $complete.Count -eq 0)) {
             'Pending'
         } else {
             'Complete'
@@ -461,8 +598,15 @@ function Set-SystemDesc {
 
 #region mainScript
 if (-not(Confirm-ExecutionPolicy)) { throw "ExecutionPolicy failed"; exit 1 }
-# retrieve JumpCloud installation path
-$admuUsers = Get-ADMUUser
+# Pre-fetch existing description so Get-ADMUUser can reuse cached profileSize.
+$existingEntries = $null
+try {
+    $sysSnap = Get-System -systemContextBinding $true
+    if ($sysSnap -and -not [string]::IsNullOrWhiteSpace($sysSnap.description)) {
+        try { $existingEntries = @($sysSnap.description | ConvertFrom-Json) } catch { $existingEntries = $null }
+    }
+} catch { Write-Host "[status] Pre-fetch failed (profileSize will be recomputed): $_" }
+$admuUsers = Get-ADMUUser -DefaultUserState $DefaultUserState -ExistingEntries $existingEntries
 $descResult = Set-SystemDesc -ADMUUsers $admuUsers -JCApiKey $JCApiKey
 if ($descResult.Error) {
     Write-Host "[ERROR] $($descResult.Error)"
