@@ -796,6 +796,32 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
         }
     }
 
+    Context "AutoBind and LeaveDomain validation" {
+        BeforeEach {
+            $tempPassword = "Temp123!Temp123!"
+            $userToMigrateFrom = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $userToMigrateTo = "ADMU_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            Initialize-TestUser -username $userToMigrateFrom -password $tempPassword
+            Mock Get-DomainStatus { return 'YES', 'NO' }
+            Mock Test-JumpCloudUsername { return $true, '123456789012345678901234', $userToMigrateTo }
+            Mock Get-MtpOrganization { return $true, 'org123' }
+            Mock Write-ToLog
+        }
+
+        It "Throws when AutoBind is requested with explicit LeaveDomain false on a domain-joined device" {
+            {
+                Start-Migration `
+                    -JumpCloudUserName $userToMigrateTo `
+                    -SelectedUserName $userToMigrateFrom `
+                    -TempPassword $tempPassword `
+                    -AutoBindJCUser $true `
+                    -LeaveDomain $false `
+                    -JumpCloudAPIKey 'test-api-key-123456789012345678901234' `
+                    -JumpCloudOrgID 'org123'
+            } | Should -Throw -ExpectedMessage "AutoBind requires leaving the domain"
+        }
+    }
+
     # Add more acceptance tests as needed
     # Creates FTA/PTA CSV files and changes file/protocol associations - base test (these files exist on the new user profile image path (fta / pta files))
     # $userBefore user to migrate - set their FTA/ PTA

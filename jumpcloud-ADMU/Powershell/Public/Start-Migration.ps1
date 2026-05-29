@@ -177,7 +177,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.13.0"
+        $admuVersion = "2.14.0"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -346,16 +346,16 @@ function Start-Migration {
                 pass     = $false
                 fail     = $false
             }
-            autoBind                      = @{
-                step     = "JumpCloud User Binding"
-                desc     = "Binding the local user to the JumpCloud User."
+            leaveDomain                   = @{
+                step     = "Setting Domain Status"
+                desc     = "Setting the domain status/ leaving the domain if specified."
                 required = $false
                 pass     = $false
                 fail     = $false
             }
-            leaveDomain                   = @{
-                step     = "Setting Domain Status"
-                desc     = "Setting the domain status/ leaving the domain if specified."
+            autoBind                      = @{
+                step     = "JumpCloud User Binding"
+                desc     = "Binding the local user to the JumpCloud User."
                 required = $false
                 pass     = $false
                 fail     = $false
@@ -620,6 +620,26 @@ function Start-Migration {
         }
         # Get domain status
         $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
+
+        $deviceDomainJoined = ($AzureADStatus -match 'YES') -or ($LocalDomainStatus -match 'YES')
+        $shouldBindUser = ($AutoBindJCUser -eq $true) -or ($systemContextBinding -eq $true)
+        if ($shouldBindUser -and $deviceDomainJoined) {
+            $leaveDomainExplicit = $PSBoundParameters.ContainsKey('LeaveDomain')
+            if ($isForm) {
+                $leaveDomainExplicit = $true
+            }
+            if ($leaveDomainExplicit -and $LeaveDomain -eq $false) {
+                throw [System.Management.Automation.ValidationMetadataException] "AutoBind requires leaving the domain on domain-joined devices. Set LeaveDomain to true or disable AutoBind."
+            }
+            if ($LeaveDomain -eq $false) {
+                Write-ToLog -Message 'Auto-enabling LeaveDomain because AutoBind was requested on a domain-joined device.'
+                $LeaveDomain = $true
+            }
+            if ($AzureADStatus -match 'YES' -and -not $PSBoundParameters.ContainsKey('removeMDM') -and -not $isForm) {
+                Write-ToLog -Message 'Auto-enabling removeMDM because AutoBind was requested on an Azure or hybrid-joined device.'
+                $removeMDM = $true
+            }
+        }
     }
     process {
         # Start Of Console Output
@@ -1506,188 +1526,137 @@ function Start-Migration {
             #endregion Add To Local Users Group
             # TODO: test and return non-terminating error here
 
+            #region leaveDomain
+            write-tolog -Message $admuTracker.leaveDomain.step -MigrationStep
+            Write-ToProgress -ProgressBar $ProgressBar -Status "leaveDomain" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+
+            $shouldBindUser = ($AutoBindJCUser -eq $true) -or ($systemContextBinding -eq $true)
+            $domainReady = $true
+            $leaveDomainResult = $null
+
+            if ($LeaveDomain -eq $true) {
+                $leaveDomainResult = Invoke-LeaveDeviceDomain -RemoveMDM:$removeMDM
+                $AzureADStatus = $leaveDomainResult.AzureADStatus
+                $LocalDomainStatus = $leaveDomainResult.LocalDomainStatus
+                if ($leaveDomainResult.Success) {
+                    $admuTracker.leaveDomain.pass = $true
+                }
+
+                if ($shouldBindUser -and $leaveDomainResult.JoinType) {
+                    $unjoinConfirmed = $false
+                    for ($pollAttempt = 0; $pollAttempt -lt 20; $pollAttempt++) {
+                        if ($pollAttempt -gt 0) {
+                            Start-Sleep -Seconds 30
+                        }
+                        $system = if ($systemContextBinding) {
+                            Invoke-SystemContextAPI -method GET -endpoint systems
+                        } else {
+                            Invoke-SystemAPI -method GET -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemId $script:validatedSystemID
+                        }
+                        Write-ToLog -Message "Cloud domain status (poll $($pollAttempt + 1)/20): azureAdJoined=$($system.azureAdJoined), partOfDomain=$($system.domainInfo.partOfDomain)"
+                        $cloudJoined = ($system.azureAdJoined -eq $true) -or ($system.domainInfo.partOfDomain -eq $true)
+                        if (-not $cloudJoined) {
+                            $cloudPropertiesPresent = ($null -ne $system) -and (
+                                ($system.PSObject.Properties.Name -contains 'azureAdJoined') -or
+                                ($null -ne $system.domainInfo -and $system.domainInfo.PSObject.Properties.Name -contains 'partOfDomain')
+                            )
+                            if ($cloudPropertiesPresent) {
+                                $unjoinConfirmed = $true
+                                break
+                            }
+                            $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
+                            if (($AzureADStatus -match 'NO') -and ($LocalDomainStatus -match 'NO')) {
+                                $unjoinConfirmed = $true
+                                break
+                            }
+                        }
+                        Write-ToLog -Message 'Device still reports domain/Azure join in JumpCloud. Retrying leave domain and MDM removal.' -Level Warning
+                        $leaveDomainResult = Invoke-LeaveDeviceDomain -RemoveMDM:$removeMDM
+                        $AzureADStatus = $leaveDomainResult.AzureADStatus
+                        $LocalDomainStatus = $leaveDomainResult.LocalDomainStatus
+                        if ($leaveDomainResult.Success) {
+                            $admuTracker.leaveDomain.pass = $true
+                        }
+                    }
+                    if (-not $unjoinConfirmed) {
+                        $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
+                        $domainReady = ($AzureADStatus -match 'NO') -and ($LocalDomainStatus -match 'NO')
+                        if (-not $domainReady) {
+                            Write-ToLog -Message 'Device still reports domain/Azure join after leave-domain retries. AutoBind will be skipped.' -Level Warning
+                        } else {
+                            $domainReady = $true
+                        }
+                    } else {
+                        $domainReady = $true
+                    }
+                }
+            } elseif ($shouldBindUser) {
+                $system = if ($systemContextBinding) {
+                    Invoke-SystemContextAPI -method GET -endpoint systems
+                } elseif ($AutoBindJCUser) {
+                    Invoke-SystemAPI -method GET -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemId $script:validatedSystemID
+                }
+                if ($system) {
+                    $cloudJoined = ($system.azureAdJoined -eq $true) -or ($system.domainInfo.partOfDomain -eq $true)
+                    if ($cloudJoined) {
+                        $domainReady = $false
+                        Write-ToLog -Message "Skipping AutoBind: device reports cloud domain join (azureAdJoined=$($system.azureAdJoined), partOfDomain=$($system.domainInfo.partOfDomain))" -Level Warning
+                    }
+                } else {
+                    $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
+                    $domainReady = -not (($AzureADStatus -match 'YES') -or ($LocalDomainStatus -match 'YES'))
+                    if (-not $domainReady) {
+                        Write-ToLog -Message 'Skipping AutoBind: device is still domain joined locally.' -Level Warning
+                    }
+                }
+            }
+            #endRegion Leave Domain or AzureAD
+
             #region AutoBindUserToJCSystem
-            if ($AutoBindJCUser -eq $true) {
-                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $script:JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
-                Write-ToProgress -ProgressBar $ProgressBar -Status "autoBind" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
-                if ($bindResult) {
-                    Write-ToLog -Message:('JumpCloud automatic bind step succeeded for user ' + $JumpCloudUserName)
+            if ($shouldBindUser -and $domainReady) {
+                if ($AutoBindJCUser -eq $true) {
+                    $bindResult = Set-JCUserToSystemAssociation -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $script:JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
+                    Write-ToProgress -ProgressBar $ProgressBar -Status "autoBind" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+                    if ($bindResult) {
+                        Write-ToLog -Message:('JumpCloud automatic bind step succeeded for user ' + $JumpCloudUserName)
+                        $admuTracker.autoBind.pass = $true
+
+                        if ($PrimaryUser -eq $true) {
+                            Write-ToLog -Message:("Attempting to set primary system user to userID: $script:JumpCloudUserID")
+                            $primaryUserBody = @{
+                                "primarySystemUser.id" = $script:JumpCloudUserId
+                            }
+                            Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemID $script:validatedSystemID -Body $primaryUserBody
+                        }
+                    } else {
+                        Write-ToLog -Message:('JumpCloud automatic bind step failed, Api Key or JumpCloud username is incorrect.') -Level Warning
+                    }
+                }
+                if ($systemContextBinding -eq $true) {
+                    Write-ToLog -Message:("Attempting to associate system to userID: $script:JumpCloudUserID with SystemContext API")
+                    Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $script:JumpCloudUserID -admin $BindAsAdmin
+                    Write-ToProgress -ProgressBar $ProgressBar -Status "autoBind" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
                     $admuTracker.autoBind.pass = $true
 
-                    # if user was bound successfully, set as primary user if specified
                     if ($PrimaryUser -eq $true) {
                         Write-ToLog -Message:("Attempting to set primary system user to userID: $script:JumpCloudUserID")
                         $primaryUserBody = @{
                             "primarySystemUser.id" = $script:JumpCloudUserId
                         }
-                        Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemID $script:validatedSystemID -Body $primaryUserBody
-                    }
-                } else {
-                    Write-ToLog -Message:('JumpCloud automatic bind step failed, Api Key or JumpCloud username is incorrect.') -Level Warning
-                    # $admuTracker.autoBind.fail = $true
-                }
-            }
-            if ($systemContextBinding -eq $true) {
-                Write-ToLog -Message:("Attempting to associate system to userID: $script:JumpCloudUserID with SystemContext API")
-                Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $script:JumpCloudUserID -admin $BindAsAdmin
+                        $primarySystemUserResults = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body $primaryUserBody
 
-                #TODO: Invoke SystemContext API to set primary user if specified
-                #TODO: If primarySystemUser.id exists - record success - otherwise record failure
-                if ($PrimaryUser -eq $true) {
-                    Write-ToLog -Message:("Attempting to set primary system user to userID: $script:JumpCloudUserID")
-                    $primaryUserBody = @{
-                        "primarySystemUser.id" = $script:JumpCloudUserId
-                    }
-                    $primarySystemUserResults = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body $primaryUserBody
-
-                    if ($primarySystemUserResults.primarySystemUser.id -eq $script:JumpCloudUserID) {
-                        Write-ToLog -Message:("Successfully set primary system user to userID: $script:JumpCloudUserID")
-                    } else {
-                        Write-ToLog -Message:("Failed to set primary system user to userID: $script:JumpCloudUserID") -Level Warning
+                        if ($primarySystemUserResults.primarySystemUser.id -eq $script:JumpCloudUserID) {
+                            Write-ToLog -Message:("Successfully set primary system user to userID: $script:JumpCloudUserID")
+                        } else {
+                            Write-ToLog -Message:("Failed to set primary system user to userID: $script:JumpCloudUserID") -Level Warning
+                        }
                     }
                 }
+            } elseif ($shouldBindUser -and -not $domainReady) {
+                Write-ToProgress -ProgressBar $ProgressBar -Status "autoBind" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+                Write-ToLog -Message 'Skipping AutoBind: device still reports domain/Azure join.' -Level Warning
             }
             #endregion AutoBindUserToJCSystem
-
-
-            #region leaveDomain
-            write-tolog -Message $admuTracker.leaveDomain.step -MigrationStep
-            Write-ToProgress -ProgressBar $ProgressBar -Status "leaveDomain" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
-
-            $WmiComputerSystem = Get-CimInstance -ClassName:('Win32_ComputerSystem')
-
-            if ($LeaveDomain -eq $true) {
-                if ($AzureADStatus -match 'YES' -and $LocalDomainStatus -match 'YES') {
-                    Write-ToLog -Message:('Device is HYBRID joined')
-                    $ADJoined = "Hybrid"
-                } elseif ($AzureADStatus -match 'NO' -and $LocalDomainStatus -match 'Yes') {
-                    Write-ToLog -Message:('Device is Local Domain joined')
-                    $ADJoined = "LocalJoined"
-                } elseif ($AzureADStatus -match 'YES' -and $LocalDomainStatus -match 'NO') {
-                    Write-ToLog -Message:('Device is Azure AD joined')
-                    $ADJoined = "AzureADJoined"
-                }
-                if ($ADJoined) {
-                    switch ($ADJoined) {
-                        "Hybrid" {
-                            # get the domain status
-                            $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
-                            Write-ToLog -Message ("Before attempting to leave the hybrid domain the system is joined to the following domains:")
-                            Write-ToLog -Message ("AzureADStatus Join: $AzureADStatus")
-                            Write-ToLog -Message ("LocalDomainStatus Join: $LocalDomainStatus")
-                            # Leave the domain for AD and LocalAD
-
-                            # for the Azure AD un-join
-                            try {
-                                DSRegCmd.exe /leave # Leave Azure AD
-                                $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
-                                Write-ToLog -Message ("After running DSRegCmd /leave, the system is joined to the following domains:")
-                                Write-ToLog -Message ("AzureADStatus Join: $AzureADStatus")
-                                Write-ToLog -Message ("LocalDomainStatus Join: $LocalDomainStatus")
-                            } catch {
-                                $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
-                                Write-ToLog -Message ("After attempted to run DSRegCmd /leave, the system is joined to the following domains:")
-                                Write-ToLog -Message ("AzureADStatus: $AzureADStatus")
-                            }
-
-                            # for the local domain un-join
-                            try {
-                                $null = Invoke-CimMethod -InputObject $WmiComputerSystem -MethodName 'UnjoinDomainOrWorkgroup' -Arguments @{
-                                    Password       = $null
-                                    UserName       = $null
-                                    FUnjoinOptions = 0
-                                }
-                                $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
-                                Write-ToLog -Message:("After running UnJoinDomainOrWorkGroup, the domain status is as follows:") -Level:('Info')
-                                Write-ToLog -Message:("AzureADStatus: $AzureADStatus") -Level:('Info')
-                                Write-ToLog -Message:("LocalDomainStatus: $LocalDomainStatus") -Level:('Info')
-                            } catch {
-                                $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
-                                Write-ToLog -Message:("After attempting to run UnJoinDomainOrWorkGroup, the system is joined to the following domains:") -Level:('Info')
-                                Write-ToLog -Message:("LocalDomainStatus: $LocalDomainStatus") -Level:('Info')
-                            }
-
-                            # finally print the status of the domains
-                            $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
-                            if ($AzureADStatus -match 'NO' -and $LocalDomainStatus -match 'NO') {
-                                Write-ToLog -Message:('The hybrid joined device has unjoined from the domain successfully') -Level:('Info')
-                                $admuTracker.leaveDomain.pass = $true
-                            } else {
-                                Write-ToLog -Message:('Unable to leave Hybrid Domain') -Level Warning
-                                # here we would typically fail migration but doing so would remove the system account
-                            }
-                        }
-                        "LocalJoined" {
-                            $null = Invoke-CimMethod -InputObject $WmiComputerSystem -MethodName 'UnjoinDomainOrWorkgroup' -Arguments @{
-                                Password       = $null
-                                UserName       = $null
-                                FUnjoinOptions = 0
-                            }
-                            $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
-                            if ($AzureADStatus -match 'NO' -and $LocalDomainStatus -match 'NO') {
-                                Write-ToLog -Message:('Left local domain successfully') -Level:('Info')
-                                $admuTracker.leaveDomain.pass = $true
-                            } else {
-                                Write-ToLog -Message:('Unable to leave local domain') -Level Warning
-                                # here we would typically fail migration but doing so would remove the system account
-                            }
-                        }
-                        "AzureADJoined" {
-                            DSRegCmd.exe /leave # Leave Azure AD
-                            # Get Azure AD Status after running DSRegCmd.exe /leave
-                            $AzureADStatus = Get-DomainStatus
-                            # Check Azure AD status after running DSRegCmd.exe /leave as NTAUTHORITY\SYSTEM
-                            if ($AzureADStatus -match 'NO') {
-                                Write-ToLog -message "Left Azure AD domain successfully. Device Domain State, AzureADJoined : $AzureADStatus"
-                                $admuTracker.leaveDomain.pass = $true
-                            } else {
-                                Write-ToLog -Message:('Unable to leave Azure Domain. Re-running DSRegCmd.exe /leave') -Level Warning
-                                DSRegCmd.exe /leave # Leave Azure AD
-
-                                $AzureADStatus = Get-DomainStatus
-                                if ($AzureADStatus -match 'NO') {
-                                    Write-ToLog -Message:('Left Azure AD domain successfully') -Level:('Info')
-                                    $admuTracker.leaveDomain.pass = $true
-                                } else {
-                                    Write-ToLog -Message:('Unable to leave Azure AD domain') -Level Warning
-                                    # here we would typically fail migration but doing so would remove the system account
-                                }
-
-                            }
-                        }
-                    }
-                } else {
-                    Write-ToLog -Message:('Device is not joined to a domain, skipping leave domain step')
-                }
-                if ($removeMDM) {
-                    Write-ToLog -Message:('Attempting to remove MDM Enrollment(s)')
-                    # get the MDM Enrollments
-                    $mdmEnrollments = Get-WindowsMDMProvider
-                    $taskSchedulerGuids = Get-MdmEnrollmentGuidFromTaskScheduler
-                    if ($taskSchedulerGuids.Count -gt 0) {
-                        foreach ($guid in $taskSchedulerGuids) {
-                            if ($mdmEnrollments.EnrollmentGUID -contains $guid) {
-                                # Get the enrollment details
-                                if (($mdmEnrollments | Where-Object { $_.EnrollmentGUID -eq $guid }).ProviderID -like '*JumpCloud*') {
-                                    #Do not remove the JumpCloud enrollment; continue to the next GUID
-                                    continue
-                                } else {
-                                    # Remove the MDM Enrollment
-                                    Write-ToLog -Message:("Removing MDM Enrollment: $guid")
-                                    Remove-WindowsMDMProvider -EnrollmentGUID $guid
-                                }
-                            } else {
-                                # GUID was not discovered by Get-WindowsMDMProvider; could be an orphan - remove it
-                                Remove-WindowsMDMProvider -EnrollmentGUID $guid
-                            }
-                        }
-                    } else {
-                        # No MDM Enrollments found
-                        Write-ToLog -Message:('No MDM Enrollments found')
-                    }
-                }
-            }
-            #endRegion Leave Domain or AzureAD
 
             # re-enable scheduled tasks if they were disabled
             if ($ScheduledTasks) {

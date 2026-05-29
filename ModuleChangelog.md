@@ -1,3 +1,25 @@
+## 2.14.0
+
+Release Date: May 29, 2026
+
+#### RELEASE NOTES
+
+```
+{{Fill in the Release Notes}}
+```
+
+#### FEATURES:
+
+{{Fill in the Features}}
+
+#### IMPROVEMENTS:
+
+{{Fill in the Improvements}}
+
+#### BUG FIXES:
+
+{{Fill in the Bug Fixes}}
+
 ## 2.13.0
 
 Release Date: May 21, 2026
@@ -29,11 +51,18 @@ Release Date: May 21, 2026
 - Implemented PSScriptAnalyzer for code analysis on the repository
   - Fixed any subsequent errors for a healthier codebase following best practices
 - Updated Bulk ADMU with device migration using the device description
+- Domain leave and MDM removal now run **before** JumpCloud user AutoBind so binding succeeds on devices that were Azure AD, hybrid, or local AD joined
+- AutoBind on domain-joined devices auto-enables `LeaveDomain`; Azure/hybrid AutoBind also auto-enables `removeMDM` when not explicitly set
+- Cloud join watcher polls JumpCloud system `azureAdJoined` and `domainInfo.partOfDomain` via `Invoke-SystemAPI` / `Invoke-SystemContextAPI` GET before binding, with retry of leave domain and MDM removal when properties remain true
 
 
 #### BUG FIXES:
 
 - This update restores the visibility of the currently logged-in user in the form GUI, reversing the change introduced in the previous version.
+- Fixed Azure-only leave domain mis-reading `Get-DomainStatus` when assigned to a single variable
+- Fixed hybrid Azure AD leave to retry `DSRegCmd /leave` and wait before re-checking status
+- Fixed MDM removal skipping registry-only enrollments and removing orphan GUIDs without JumpCloud ProviderID check
+- GUI auto-checks Leave Domain (and Remove MDM for Azure/hybrid) when AutoBind is enabled on a joined device
 
 
 ## 2.12.2

@@ -33,7 +33,7 @@ function Show-SelectionForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.13.0"
+        Title="JumpCloud ADMU 2.14.0"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -709,6 +709,16 @@ function Show-SelectionForm {
     $cb_autobindJCUser.Add_Checked( { $img_apiKeyValid.Visibility = 'Visible' })
     $cb_autobindJCUser.Add_Checked( { $cb_bindAsAdmin.IsEnabled = $true })
     $cb_autobindJCUser.Add_Checked( { $cb_primaryUser.IsEnabled = $true })
+    $cb_autobindJCUser.Add_Checked( {
+            if (($AzureADStatus -eq 'Yes') -or ($AzureDomainStatus -eq 'Yes')) {
+                $cb_leaveDomain.IsChecked = $true
+                $cb_leaveDomain.IsEnabled = $false
+                if ($AzureADStatus -match 'Yes') {
+                    $cb_removeMDM.IsChecked = $true
+                    $cb_removeMDM.IsEnabled = $false
+                }
+            }
+        })
     # $cb_bindAsAdmin.Add_Checked( { $BindAsAdmin = $true })
     $cb_autobindJCUser.Add_Checked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
@@ -733,6 +743,14 @@ function Show-SelectionForm {
     $cb_autobindJCUser.Add_Unchecked( { $cb_bindAsAdmin.IsChecked = $false })
     $cb_autobindJCUser.Add_Unchecked( { $cb_primaryUser.IsEnabled = $false })
     $cb_autobindJCUser.Add_Unchecked( { $cb_primaryUser.IsChecked = $false })
+    $cb_autobindJCUser.Add_Unchecked( {
+            if (($AzureADStatus -eq 'Yes') -or ($AzureDomainStatus -eq 'Yes')) {
+                $cb_leaveDomain.IsEnabled = $true
+            }
+            if ($AzureADStatus -match 'Yes') {
+                $cb_removeMDM.IsEnabled = $cb_leaveDomain.IsChecked
+            }
+        })
     # $cb_bindAsAdmin.Add_Unchecked( { $BindAsAdmin = $false })
     $cb_autobindJCUser.Add_Unchecked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
