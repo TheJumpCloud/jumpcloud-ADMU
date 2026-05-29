@@ -30,6 +30,7 @@ Describe "ConvertTo-ArgumentList Tests" -Tag "Acceptance" {
                 UpdateHomePath        = $true
                 InstallJCAgent        = $true
                 AutoBindJCUser        = $true
+                removeMDM             = $true
                 # Intentionally set some parameters to null or empty to ensure they are skipped
                 JumpCloudConnectKey   = $null
                 JumpCloudAPIKey       = ""
@@ -44,7 +45,7 @@ Describe "ConvertTo-ArgumentList Tests" -Tag "Acceptance" {
 
             $result = $result -join ' '
 
-            $expectedArguments = "-JumpCloudOrgID:123456789012345678901234 -SetDefaultWindowsUser:`$true -systemContextBinding:`$true -UpdateHomePath:`$true -JumpCloudUserName:some.user -AutoBindJCUser:`$true -ForceReboot:`$true -TempPassword:Temp123! -SelectedUserName:mycorpsoft/reid.sullivan -ReportStatus:`$true -InstallJCAgent:`$true -LeaveDomain:`$true"
+            $expectedArguments = "-JumpCloudOrgID:123456789012345678901234 -SetDefaultWindowsUser:`$true -systemContextBinding:`$true -UpdateHomePath:`$true -JumpCloudUserName:some.user -AutoBindJCUser:`$true -removeMDM:`$true -ForceReboot:`$true -TempPassword:Temp123! -SelectedUserName:mycorpsoft/reid.sullivan -ReportStatus:`$true -InstallJCAgent:`$true -LeaveDomain:`$true"
 
             $escapedExpectedArguments = [System.Text.RegularExpressions.Regex]::Escape($expectedArguments)
             $result | Should -Match $escapedExpectedArguments

@@ -14,6 +14,8 @@ $dataSource = 'CSV'
 $csvName = 'jcdiscovery.csv'
 
 # ADMU variables
+# AutoBind on domain-joined devices requires LeaveDomain before binding.
+# Azure/hybrid devices should also set removeMDM to remove Intune MDM enrollment.
 $TempPassword = 'Temp123!Temp123!'
 $LeaveDomain = $true
 $ForceReboot = $true
@@ -30,8 +32,8 @@ $ReportStatus = $false # Report status back to JumpCloud Description
 # The 'shutdown' behavior performs a shutdown of the system in a much faster manner than 'restart' which can take 5 mins form the time the command is issued
 $postMigrationBehavior = 'Restart' # Restart or Shutdown
 
-# Option to remove the existing MDM
-$removeMDM = $false # Remove the existing MDM
+# Option to remove the existing MDM (recommended $true for Azure/hybrid when AutoBind is enabled)
+$removeMDM = $true # Remove the existing MDM
 
 # option to bind using the systemContext API
 $systemContextBinding = $false # Bind using the systemContext API
@@ -90,6 +92,12 @@ function Confirm-MigrationParameter {
         if ([string]::IsNullOrWhiteSpace($JumpCloudAPIKey) -or $JumpCloudAPIKey -eq 'YOURAPIKEY') {
             throw "JumpCloudAPIKey required when systemContextBinding is false."
         }
+    }
+    if ($AutoBindJCUser -and -not $LeaveDomain) {
+        Write-Warning "AutoBind on domain-joined devices requires LeaveDomain. LeaveDomain will be auto-enabled by Start-Migration unless explicitly set to `$false."
+    }
+    if ($removeMDM -and -not $LeaveDomain) {
+        throw "removeMDM requires LeaveDomain to be enabled."
     }
     return $true
 }
@@ -495,11 +503,28 @@ function Invoke-UserMigrationBatch {
         Duration             = $null
     }
     $lastUser = $UsersToMigrate | Select-Object -Last 1
+    if (-not (Get-Variable -Name domainLeaveCompleted -Scope Script -ErrorAction SilentlyContinue)) {
+        $script:domainLeaveCompleted = $false
+    }
     foreach ($user in $UsersToMigrate) {
         $userStartTime = Get-Date
         $isLastUser = ($user -eq $lastUser)
-        $leaveDomainParam = if ($isLastUser -and $MigrationConfig.LeaveDomainAfterMigration) { $true } else { $false }
-        $removeMDMParam = if ($isLastUser -and $MigrationConfig.RemoveMDM) { $true } else { $false }
+        $needsBind = $MigrationConfig.AutoBindJCUser -or $MigrationConfig.systemContextBinding
+        $leaveDomainParam = $false
+        $removeMDMParam = $false
+
+        if ($MigrationConfig.LeaveDomainAfterMigration -and -not $script:domainLeaveCompleted) {
+            if ($needsBind) {
+                $leaveDomainParam = $true
+            } elseif ($isLastUser) {
+                $leaveDomainParam = $true
+            }
+        }
+
+        if ($leaveDomainParam -and $MigrationConfig.removeMDM) {
+            $removeMDMParam = $true
+        }
+
         $migrationParams = @{
             JumpCloudUserName     = $user.JumpCloudUserName
             SelectedUserName      = $user.selectedUsername
@@ -511,7 +536,7 @@ function Invoke-UserMigrationBatch {
             BindAsAdmin           = $MigrationConfig.BindAsAdmin
             SetDefaultWindowsUser = $MigrationConfig.SetDefaultWindowsUser
             LeaveDomain           = $leaveDomainParam
-            RemoveMDM             = $removeMDMParam
+            removeMDM             = $removeMDMParam
             adminDebug            = $true
             ReportStatus          = $MigrationConfig.ReportStatus
         }
@@ -549,6 +574,9 @@ function Invoke-UserMigrationBatch {
             $results.SuccessfulMigrations++
             $results.SuccessfulUsers += $userResult
             Write-Host "[status] Migration successful: $($user.JumpCloudUserName)"
+            if ($leaveDomainParam) {
+                $script:domainLeaveCompleted = $true
+            }
         } else {
             $results.FailedMigrations++
             $results.FailedUsers += $userResult
@@ -698,9 +726,15 @@ foreach ($user in $UsersList) {
     }
 }
 #endregion logoffUsers
+$LeaveDomainAfterMigration = $false
+$ForceRebootAfterMigration = $false
 if ($LeaveDomain) {
     $LeaveDomain = $false
-    Write-Host "[status] Domain will be un-joined for last user migrated"
+    if ($AutoBindJCUser -or $systemContextBinding) {
+        Write-Host "[status] Domain will be un-joined before the first user AutoBind migration"
+    } else {
+        Write-Host "[status] Domain will be un-joined for the last user migrated"
+    }
     $LeaveDomainAfterMigration = $true
 }
 if ($ForceReboot) {

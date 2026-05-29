@@ -70,6 +70,7 @@ param (
 
         [Parameter(ParameterSetName = 'Migrate')]
         [bool]
+        # Required when AutoBind is enabled on domain-joined devices; leave domain runs before bind.
         $LeaveDomain,
 
         [Parameter(ParameterSetName = 'Migrate')]
@@ -138,6 +139,7 @@ param (
 
         [Parameter(ParameterSetName = 'Migrate')]
         [bool]
+        # Recommended for Azure/hybrid devices when AutoBind and LeaveDomain are enabled.
         $removeMDM,
 
         [Parameter(ParameterSetName = 'Migrate')]
