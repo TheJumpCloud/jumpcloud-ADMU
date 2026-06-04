@@ -172,6 +172,16 @@ function Invoke-SystemContextAPI {
                 }
             }
 
+            static byte[] PadLeading(byte[] data, int length)
+            {
+                if (data.Length >= length) {
+                    return data;
+                }
+                byte[] padded = new byte[length];
+                Buffer.BlockCopy(data, 0, padded, length - data.Length, data.Length);
+                return padded;
+            }
+
             public static RSACryptoServiceProvider DecodeRSAPrivateKey(byte[] privkey)
             {
                 byte[] MODULUS, E, D, P, Q, DP, DQ, IQ;
@@ -222,6 +232,15 @@ function Invoke-SystemContextAPI {
 
                     elems = GetIntegerSize(binr);
                     IQ = binr.ReadBytes(elems);
+
+                    int modLen = MODULUS.Length;
+                    int halfLen = modLen / 2;
+                    D = PadLeading(D, modLen);
+                    P = PadLeading(P, halfLen);
+                    Q = PadLeading(Q, halfLen);
+                    DP = PadLeading(DP, halfLen);
+                    DQ = PadLeading(DQ, halfLen);
+                    IQ = PadLeading(IQ, halfLen);
 
                     // ------- create RSACryptoServiceProvider instance and initialize with public key -----
                     RSACryptoServiceProvider RSA = new RSACryptoServiceProvider();
