@@ -33,7 +33,7 @@ function Show-SelectionForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.13.0"
+        Title="JumpCloud ADMU 2.13.1"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -579,7 +579,7 @@ function Show-SelectionForm {
 
     # Get Win32 Profiles to merge data with valid SIDs
     $win32UserProfiles = Get-CimInstance -ClassName Win32_UserProfile -Property * |
-        Where-Object { $_.Special -eq $false }
+    Where-Object { $_.Special -eq $false }
 
     $nonSIDLocalUsers = Get-LocalUser
     $date_format = "yyyy-MM-dd HH:mm"
@@ -596,25 +596,20 @@ function Show-SelectionForm {
                 $lastUse = $win32user.LastUseTime
                 if ($null -eq $lastUse) {
                     $user.LastLogin = "N/A"
-                }
-                elseif ($lastUse -is [datetime]) {
+                } elseif ($lastUse -is [datetime]) {
                     if ($lastUse -eq [datetime]::MinValue) {
                         $user.LastLogin = "N/A"
-                    }
-                    else {
+                    } else {
                         $user.LastLogin = $lastUse.ToUniversalTime().ToString($date_format)
                     }
-                }
-                else {
+                } else {
                     $dmtf = [string]$lastUse
                     if ([string]::IsNullOrWhiteSpace($dmtf)) {
                         $user.LastLogin = "N/A"
-                    }
-                    else {
+                    } else {
                         try {
                             $user.LastLogin = [System.Management.ManagementDateTimeConverter]::ToDateTime($dmtf).ToUniversalTime().ToString($date_format)
-                        }
-                        catch {
+                        } catch {
                             $user.LastLogin = "N/A"
                         }
                     }
