@@ -1,24 +1,20 @@
-## 2.14.0
+## 2.13.1
 
-Release Date: May 29, 2026
+Release Date: June 4, 2026
 
 #### RELEASE NOTES
 
 ```
-{{Fill in the Release Notes}}
+
+Patch release to address system context API signing failures on some devices when using
+systemContextBinding (client.key RSA private key import returned null, causing signature errors).
 ```
-
-#### FEATURES:
-
-{{Fill in the Features}}
-
-#### IMPROVEMENTS:
-
-{{Fill in the Improvements}}
 
 #### BUG FIXES:
 
-{{Fill in the Bug Fixes}}
+- Fixed system context API signing on devices where JumpCloud agent `client.key` uses a newer PKCS#1 RSA encoding. On affected systems, the private exponent (`D`) is stored as a 256-byte ASN.1 integer with leading `0x00` padding; the embedded RSA PEM parser stripped that byte and produced a 255-byte `D` while the modulus remained 256 bytes. .NET `RSACryptoServiceProvider.ImportParameters` then failed silently and `GetRSAProviderFromPemFile` returned `$null`, which surfaced as "cannot call a method on a null-valued expression" when calling `SignHash`. RSA key components are now left-padded to the expected lengths before import. This commonly appears on newly enrolled devices and does not require regenerating `client.key`.
+  - Updated in `windowsSystemContext.ps1`, `DeviceQuery.ps1`, `3_ADMU_Invoke.ps1`, and `Invoke-SystemContextAPI.ps1`.
+  - Added `Test-JCClientKeyRsaEncoding.ps1` to audit `client.key` encoding and report whether a device is affected (`NeedsPaddingFix`) before rollout.
 
 ## 2.13.0
 
