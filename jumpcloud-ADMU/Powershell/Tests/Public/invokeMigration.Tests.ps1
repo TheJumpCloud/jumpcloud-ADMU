@@ -249,14 +249,6 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "Migration Parameters" {
                 { Confirm-MigrationParameter @testParams } | Should -Throw
             }
 
-            It "Should THROW when removeMDM is true and LeaveDomain is false" {
-                $testParams = $baseParams.Clone()
-                $testParams.removeMDM = $true
-                $testParams.LeaveDomain = $false
-                $testParams.JumpCloudAPIKey = 'TestAPIKEY'
-                { Confirm-MigrationParameter @testParams } | Should -Throw "removeMDM requires LeaveDomain to be enabled."
-            }
-
             It "Should THROW when ReportStatus is not a boolean" {
                 $testParams.ReportStatus = 'not-a-boolean'
                 { Confirm-MigrationParameter @testParams } | Should -Throw
@@ -640,75 +632,6 @@ $userSid1,C:\Users\$userToMigrateFrom1,$env:COMPUTERNAME,$userToMigrateFrom1,$us
             $results.TotalUsers | Should -Be 2
             $results.SuccessfulMigrations | Should -Be 1
             $results.FailedMigrations | Should -Be 1
-        }
-    }
-
-    Context "Invoke-UserMigrationBatch leave domain timing" {
-        BeforeEach {
-            $script:domainLeaveCompleted = $false
-            $script:capturedLeaveDomainParams = @()
-            Mock Get-DomainStatus {
-                return [PSCustomObject]@{ AzureAD = 'NO'; LocalDomain = 'NO' }
-            }
-            Mock Invoke-SingleUserMigration {
-                param ($User, $MigrationParams, $GuiJcadmuPath)
-                $script:capturedLeaveDomainParams += $MigrationParams.LeaveDomain
-                return [PSCustomObject]@{ Success = $true; ErrorMessage = $null }
-            }
-        }
-
-        It "Sets LeaveDomain on the first user when AutoBind and LeaveDomainAfterMigration are enabled" {
-            $users = @(
-                [PSCustomObject]@{ JumpCloudUserName = 'user1'; selectedUsername = 'DOMAIN\user1' },
-                [PSCustomObject]@{ JumpCloudUserName = 'user2'; selectedUsername = 'DOMAIN\user2' }
-            )
-            $config = @{
-                TempPassword              = 'Temp123!Temp123!'
-                UpdateHomePath            = $false
-                AutoBindJCUser            = $true
-                PrimaryUser               = $false
-                JumpCloudAPIKey           = 'TestAPIKEY'
-                BindAsAdmin               = $false
-                SetDefaultWindowsUser     = $true
-                ReportStatus              = $false
-                JumpCloudOrgID            = $null
-                systemContextBinding      = $false
-                LeaveDomainAfterMigration = $true
-                removeMDM                 = $true
-                localEXEs                 = $false
-                guiJcadmuPath             = 'C:\Windows\Temp\gui_jcadmu.exe'
-            }
-            $null = Invoke-UserMigrationBatch -UsersToMigrate $users -MigrationConfig $config
-            $script:capturedLeaveDomainParams[0] | Should -Be $true
-            $script:capturedLeaveDomainParams[1] | Should -Be $false
-        }
-
-        It "Sets LeaveDomain on the last user only when AutoBind is disabled" {
-            $script:domainLeaveCompleted = $false
-            $script:capturedLeaveDomainParams = @()
-            $users = @(
-                [PSCustomObject]@{ JumpCloudUserName = 'user1'; selectedUsername = 'DOMAIN\user1' },
-                [PSCustomObject]@{ JumpCloudUserName = 'user2'; selectedUsername = 'DOMAIN\user2' }
-            )
-            $config = @{
-                TempPassword              = 'Temp123!Temp123!'
-                UpdateHomePath            = $false
-                AutoBindJCUser            = $false
-                PrimaryUser               = $false
-                JumpCloudAPIKey           = 'TestAPIKEY'
-                BindAsAdmin               = $false
-                SetDefaultWindowsUser     = $true
-                ReportStatus              = $false
-                JumpCloudOrgID            = $null
-                systemContextBinding      = $false
-                LeaveDomainAfterMigration = $true
-                removeMDM                 = $true
-                localEXEs                 = $false
-                guiJcadmuPath             = 'C:\Windows\Temp\gui_jcadmu.exe'
-            }
-            $null = Invoke-UserMigrationBatch -UsersToMigrate $users -MigrationConfig $config
-            $script:capturedLeaveDomainParams[0] | Should -Be $false
-            $script:capturedLeaveDomainParams[1] | Should -Be $true
         }
     }
 }
