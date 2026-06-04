@@ -23,6 +23,10 @@ function New-ProgressForm {
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     Name="Window" Title="JumpCloud ADMU 2.13.1"
+    WindowStyle="SingleBorderWindow"
+    ResizeMode="NoResize"
+    Background="White" Width="720" Height="550  ">
+    <Window.Resources>
         <Style x:Key="NoHeaderGroupBoxStyle" TargetType="{x:Type GroupBox}">
             <Setter Property="Template">
                 <Setter.Value>
@@ -355,10 +359,6 @@ function Update-LogTextBlock {
         [Parameter(Mandatory = $true)]
         $ProgressBar,
         [string]$LogText
-    )
-    # Update the progress bar and add XAML linebreaks
-    $ProgressBar.LogText += $LogText
-}
     )
     # Update the progress bar and add XAML linebreaks
     $ProgressBar.LogText += $LogText
