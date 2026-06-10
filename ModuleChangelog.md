@@ -5,10 +5,17 @@ Release Date: June 4, 2026
 #### RELEASE NOTES
 
 ```
-
 Patch release to address system context API signing failures on some devices when using
 systemContextBinding (client.key RSA private key import returned null, causing signature errors).
+
+Fixes an issue where UsrClass.dat hive file permissions could be incorrect after migration,
+causing the user to receive a temporary profile on first login.
 ```
+
+#### Improvements
+
+- Fixed UsrClass.dat (and NTUSER.DAT) hive ACL validation being warn-only during migration. ADMU now proactively repairs hive file permissions before first login via `Set-DATFilePermission`.
+- Fixed `$datPath` not being set consistently during home path rename, which could cause hive permission validation to target the wrong profile path.
 
 #### BUG FIXES:
 

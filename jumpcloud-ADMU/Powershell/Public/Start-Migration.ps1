@@ -984,20 +984,24 @@ function Start-Migration {
                 }
             }
 
-            # Validate file permissions on registry item
+            # Validate and repair file permissions on loaded registry hives
             Set-HKEYUserMount
-            $validateRegistryPermission, $validateRegistryPermissionResult = Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_admu" -username $jumpcloudUsername -type 'registry'
-            $validateRegistryPermissionClasses, $validateRegistryPermissionClassesResult = Test-DATFilePermission -path "HKEY_USERS:\$($NewUserSID)_Classes_admu" -username $jumpcloudUsername -type 'registry'
-
-            if ($validateRegistryPermission) {
-                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are correct")
-            } else {
-                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and source user have have Full Control `n$($validateRegistryPermissionResult | Out-String)") -Level Warning
-            }
-            if ($validateRegistryPermissionClasses) {
-                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are correct ")
-            } else {
-                Write-ToLog -Message:("The registry permissions for $($NewUserSID)_Classes_admu are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and source user have have Full Control `n$($validateRegistryPermissionClassesResult | Out-String)") -Level Warning
+            $loadedRegistryHives = @(
+                @{ Path = "HKEY_USERS:\$($NewUserSID)_admu"; Name = "$($NewUserSID)_admu" }
+                @{ Path = "HKEY_USERS:\$($NewUserSID)_Classes_admu"; Name = "$($NewUserSID)_Classes_admu" }
+            )
+            foreach ($loadedHive in $loadedRegistryHives) {
+                $validateRegistryPermission, $validateRegistryPermissionResult = Test-DATFilePermission -path $loadedHive.Path -username $jumpcloudUsername -type 'registry'
+                if (-not $validateRegistryPermission) {
+                    Write-ToLog -Message:("The registry permissions for $($loadedHive.Name) are incorrect. Attempting to repair permissions.") -Level Warning
+                    Set-DATFilePermission -Path $loadedHive.Path -Username $jumpcloudUsername -Type 'registry' | Out-Null
+                    $validateRegistryPermission, $validateRegistryPermissionResult = Test-DATFilePermission -path $loadedHive.Path -username $jumpcloudUsername -type 'registry'
+                }
+                if ($validateRegistryPermission) {
+                    Write-ToLog -Message:("The registry permissions for $($loadedHive.Name) are correct")
+                } else {
+                    Write-ToLog -Message:("The registry permissions for $($loadedHive.Name) are incorrect. Please check permissions SID: $($NewUserSID) ensure Administrators, System, and source user have Full Control `n$($validateRegistryPermissionResult | Out-String)") -Level Warning
+                }
             }
 
             $admuTracker.copyRegistry.pass = $true
@@ -1330,7 +1334,7 @@ function Start-Migration {
                         # Rename the Source User profile path to the new name
                         # -ErrorAction Stop; Rename-Item doesn't throw terminating errors
                         Rename-Item -Path $oldUserProfileImagePath -NewName $JumpCloudUserName -ErrorAction Stop
-                        $datPath = "$($windowsDrive)\Users\$JumpCloudUserName"
+                        $newUserProfileImagePath = "$($windowsDrive)\Users\$JumpCloudUserName"
                     } catch {
                         Write-ToLog -Message:("Unable to rename user profile path to new name - $JumpCloudUserName.")
                         $admuTracker.renameHomeDirectory.fail = $true
@@ -1342,7 +1346,6 @@ function Start-Migration {
             } else {
                 Write-ToLog -Message:("Parameter to Update Home Path was not set.")
                 Write-ToLog -Message:("The $JumpCloudUserName account will point to $oldUserProfileImagePath profile path")
-                $datPath = $oldUserProfileImagePath
 
                 try {
                     Write-ToLog -Message:("Attempting to remove newly created $newUserProfileImagePath")
@@ -1369,6 +1372,7 @@ function Start-Migration {
                 # $admuTracker.renameHomeDirectory.pass = $true
             }
             #endregion renameHomeDirectory
+            $datPath = $newUserProfileImagePath
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath + '.' + "ADMU")
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
             $trackAccountMerge = $true
@@ -1398,21 +1402,23 @@ function Start-Migration {
             #endRegion NTFS Permissions
 
             #region Validate Hive Permissions
-            # Validate if .DAT has correct permissions
-            $validateNTUserDatPermissions, $validateNTUserDatPermissionsResults = Test-DATFilePermission -path "$datPath\NTUSER.DAT" -username $JumpCloudUserName -type 'ntfs'
-
-            $validateUsrClassDatPermissions, $validateUsrClassDatPermissionsResults = Test-DATFilePermission -path "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat" -username $JumpCloudUserName -type 'ntfs'
             Write-ToProgress -ProgressBar $ProgressBar -Status "validateDatPermissions" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
-
-            if ($validateNTUserDatPermissions ) {
-                Write-ToLog -Message:("NTUSER.DAT Permissions are correct $($datPath)")
-            } else {
-                Write-ToLog -Message:("NTUSER.DAT Permissions are incorrect. Please check permissions on $($datPath)\NTUSER.DAT to ensure Administrators, System, and source user have have Full Control `n$($validateNTUserDatPermissionsResults | Out-String)") -Level Warning
-            }
-            if ($validateUsrClassDatPermissions) {
-                Write-ToLog -Message:("UsrClass.dat Permissions are correct $($datPath)")
-            } else {
-                Write-ToLog -Message:("UsrClass.dat Permissions are incorrect. Please check permissions on $($datPath)\AppData\Local\Microsoft\Windows\UsrClass.dat to ensure Administrators, System, and source user have have Full Control `n$($validateUsrClassDatPermissionsResults | Out-String)") -Level Warning
+            $hiveFiles = @(
+                @{ Path = "$datPath\NTUSER.DAT"; Name = "NTUSER.DAT" }
+                @{ Path = "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat"; Name = "UsrClass.dat" }
+            )
+            foreach ($hive in $hiveFiles) {
+                $validateHivePermissions, $validateHivePermissionsResults = Test-DATFilePermission -path $hive.Path -username $JumpCloudUserName -type 'ntfs'
+                if (-not $validateHivePermissions) {
+                    Write-ToLog -Message:("$($hive.Name) Permissions are incorrect. Attempting to repair permissions on $($hive.Path)") -Level Warning
+                    Set-DATFilePermission -Path $hive.Path -Username $JumpCloudUserName -Type 'ntfs' | Out-Null
+                    $validateHivePermissions, $validateHivePermissionsResults = Test-DATFilePermission -path $hive.Path -username $JumpCloudUserName -type 'ntfs'
+                }
+                if ($validateHivePermissions) {
+                    Write-ToLog -Message:("$($hive.Name) Permissions are correct $($datPath)")
+                } else {
+                    Write-ToLog -Message:("$($hive.Name) Permissions are incorrect. Please check permissions on $($hive.Path) to ensure Administrators, System, and source user have Full Control `n$($validateHivePermissionsResults | Out-String)") -Level Warning
+                }
             }
             #endRegion Validate Hive Permissions
             ### Active Setup Registry Entry ###
