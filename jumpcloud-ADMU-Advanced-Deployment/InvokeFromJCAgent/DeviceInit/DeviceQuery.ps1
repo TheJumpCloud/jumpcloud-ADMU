@@ -106,7 +106,8 @@ using System;using System.Collections.Generic;using System.IO;using System.Net;u
                 $rsa = [System.Security.Cryptography.RSA]::Create()
                 $rsa.ImportFromPem($pem)
             }
-            $now = (Get-Date -Date ((Get-Date).ToUniversalTime())-UFormat '+%a, %d %h %Y %H:%M:%S GMT')
+            # RFC1123 / HTTP Date header; must not use Get-Date -Date on UFormat output (locale-dependent parse).
+            $now = [DateTime]::UtcNow.ToString('r')
             $signstr = "GET /api/systems/$key HTTP/1.1`ndate: $now"
             $enc = [system.Text.Encoding]::UTF8
             $data = $enc.GetBytes($signstr)
@@ -161,7 +162,7 @@ function Set-System {
                 "in" { $url = "https://console.in.jumpcloud.com" }
                 default { $url = "https://console.jumpcloud.com" }
             }
-            $now = (Get-Date -Date ((Get-Date).ToUniversalTime())-UFormat '+%a, %d %h %Y %H:%M:%S GMT')
+            $now = [DateTime]::UtcNow.ToString('r')
             $key = [regex]::Match($cfg, 'systemKey["]?:["]?(\w+)').Groups[1].Value
 
             if ([string]::IsNullOrWhiteSpace($key)) { throw "No systemKey" }
@@ -431,6 +432,7 @@ function Set-SystemDesc {
     [OutputType([PSCustomObject])]
     param(
         [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
         [PSCustomObject[]]$ADMUUsers,
         [Parameter(Mandatory = $false)]
         [string]$JCApiKey
@@ -607,10 +609,15 @@ try {
     }
 } catch { Write-Host "[status] Pre-fetch failed (profileSize will be recomputed): $_" }
 $admuUsers = Get-ADMUUser -DefaultUserState $DefaultUserState -ExistingEntries $existingEntries
-$descResult = Set-SystemDesc -ADMUUsers $admuUsers -JCApiKey $JCApiKey
-if ($descResult.Error) {
-    Write-Host "[ERROR] $($descResult.Error)"
-} else {
+if (@($admuUsers).Count -eq 0) {
+    Write-Host "[status] No ADMU users discovered; skipping system description update."
     Write-Host "[status] Device initialization complete."
+} else {
+    $descResult = Set-SystemDesc -ADMUUsers $admuUsers -JCApiKey $JCApiKey
+    if ($descResult.Error) {
+        Write-Host "[ERROR] $($descResult.Error)"
+    } else {
+        Write-Host "[status] Device initialization complete."
+    }
 }
 #endregion mainScript

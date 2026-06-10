@@ -409,7 +409,7 @@ function Invoke-SystemContextAPI {
                 $PrivateKeyFilePath = 'C:\Program Files\JumpCloud\Plugins\Contrib\client.key'
 
                 $getMethod = "GET"
-                $now = (Get-Date -Date ((Get-Date).ToUniversalTime()) -UFormat "+%a, %d %h %Y %H:%M:%S GMT")
+                $now = [DateTime]::UtcNow.ToString('r')
                 $signstr = "$getMethod $requestURL HTTP/1.1`ndate: $now"
                 $enc = [system.Text.Encoding]::UTF8
                 $data = $enc.GetBytes($signstr)
@@ -580,7 +580,7 @@ function Invoke-SystemContextAPI {
     }
     process {
         # Format and create the signature request
-        $now = (Get-Date -Date ((Get-Date).ToUniversalTime()) -UFormat "+%a, %d %h %Y %H:%M:%S GMT")
+        $now = [DateTime]::UtcNow.ToString('r')
         # create the string to sign from the request-line and the date
         $signstr = "$method $requestURL HTTP/1.1`ndate: $now"
         $enc = [system.Text.Encoding]::UTF8
