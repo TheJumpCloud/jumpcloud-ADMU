@@ -302,6 +302,11 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 Test-Path "$UserHome\AppData\Local\Microsoft\Windows\UsrClass.dat" | Should -Be $true
                 Test-Path "$UserHome\AppData\Local\Microsoft\Windows\UsrClass_original_$dateMatch.DAT" | Should -Be $true
 
+                $ntUserValid, $null = Test-DATFilePermission -Path "$UserHome\NTUSER.DAT" -Username $userToMigrateTo -Type ntfs
+                $usrClassValid, $null = Test-DATFilePermission -Path "$UserHome\AppData\Local\Microsoft\Windows\UsrClass.dat" -Username $userToMigrateTo -Type ntfs
+                $ntUserValid | Should -Be $true
+                $usrClassValid | Should -Be $true
+
                 # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
                 $FTAPath = "$($UserHome)\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv"
                 $PTAPath = "$($UserHome)\AppData\Local\JumpCloudADMU\protocolTypeAssociations.csv"

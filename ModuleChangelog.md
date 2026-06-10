@@ -1,3 +1,33 @@
+## 2.13.1
+
+Release Date: June 10, 2026
+
+#### RELEASE NOTES
+
+```
+Patch release to address system context API signing failures on some devices when using
+systemContextBinding (client.key RSA private key import returned null, causing signature errors).
+
+Fixes an issue where UsrClass.dat hive file permissions could be incorrect after migration,
+causing the user to receive a temporary profile on first login.
+
+Fixes system context API authentication failures on Windows systems using non-English
+regional date/time formats.
+```
+
+#### Improvements
+
+- Fixed UsrClass.dat (and NTUSER.DAT) hive ACL validation being warn-only during migration. ADMU now proactively repairs hive file permissions before first login via `Set-DATFilePermission`.
+- Fixed `$datPath` not being set consistently during home path rename, which could cause hive permission validation to target the wrong profile path.
+
+#### BUG FIXES:
+
+- Fixed system context API signing on devices where JumpCloud agent `client.key` uses a newer PKCS#1 RSA encoding. On affected systems, the private exponent (`D`) is stored as a 256-byte ASN.1 integer with leading `0x00` padding; the embedded RSA PEM parser stripped that byte and produced a 255-byte `D` while the modulus remained 256 bytes. .NET `RSACryptoServiceProvider.ImportParameters` then failed silently and `GetRSAProviderFromPemFile` returned `$null`, which surfaced as "cannot call a method on a null-valued expression" when calling `SignHash`. RSA key components are now left-padded to the expected lengths before import. This commonly appears on newly enrolled devices and does not require regenerating `client.key`.
+  - Updated in `windowsSystemContext.ps1`, `DeviceQuery.ps1`, `3_ADMU_Invoke.ps1`, and `Invoke-SystemContextAPI.ps1`.
+  - Added `Test-JCClientKeyRsaEncoding.ps1` to audit `client.key` encoding and report whether a device is affected (`NeedsPaddingFix`) before rollout.
+- Fixed system context API date header generation on non-English locale Windows systems. The HTTP `Date` header was built by re-parsing a `-UFormat` string with `Get-Date -Date`, which fails when the system culture does not recognize English day/month names (for example, Spanish Windows). ADMU now uses culture-invariant RFC1123 formatting (`[DateTime]::UtcNow.ToString('r')`) for request signing.
+  - Updated in `DeviceQuery.ps1` and `Invoke-SystemContextAPI.ps1`.
+
 ## 2.13.0
 
 Release Date: May 21, 2026
