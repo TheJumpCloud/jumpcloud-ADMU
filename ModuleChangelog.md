@@ -26,7 +26,7 @@ regional date/time formats.
   - Updated in `windowsSystemContext.ps1`, `DeviceQuery.ps1`, `3_ADMU_Invoke.ps1`, and `Invoke-SystemContextAPI.ps1`.
   - Added `Test-JCClientKeyRsaEncoding.ps1` to audit `client.key` encoding and report whether a device is affected (`NeedsPaddingFix`) before rollout.
 - Fixed system context API date header generation on non-English locale Windows systems. The HTTP `Date` header was built by re-parsing a `-UFormat` string with `Get-Date -Date`, which fails when the system culture does not recognize English day/month names (for example, Spanish Windows). ADMU now uses culture-invariant RFC1123 formatting (`[DateTime]::UtcNow.ToString('r')`) for request signing.
-  - Updated in `DeviceQuery.ps1` and `Invoke-SystemContextAPI.ps1`.
+  - Updated in `DeviceQuery.ps1`, `3_ADMU_Invoke.ps1`, and `Invoke-SystemContextAPI.ps1`.
 
 ## 2.13.0
 

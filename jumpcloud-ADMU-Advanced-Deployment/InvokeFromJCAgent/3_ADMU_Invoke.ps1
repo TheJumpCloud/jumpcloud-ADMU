@@ -633,7 +633,7 @@ using System;using System.Collections.Generic;using System.IO;using System.Net;u
                 $rsa = [System.Security.Cryptography.RSA]::Create()
                 $rsa.ImportFromPem($pem)
             }
-            $now = (Get-Date -Date ((Get-Date).ToUniversalTime())-UFormat '+%a, %d %h %Y %H:%M:%S GMT')
+            $now = [DateTime]::UtcNow.ToString('r')
             $signstr = "GET /api/systems/$key HTTP/1.1`ndate: $now"
             $enc = [system.Text.Encoding]::UTF8
             $data = $enc.GetBytes($signstr)
