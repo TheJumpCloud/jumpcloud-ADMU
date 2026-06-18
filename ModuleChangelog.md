@@ -1,3 +1,26 @@
+## 2.14.0
+
+Release Date: June 18, 2026
+
+#### RELEASE NOTES
+
+```
+This release includes security and customization enhancements:
+- Added account login blocking during the migration process to prevent users from accidentally
+  compromising the migration by logging in while it is in progress.
+- Enhanced the splash screen UWP to support enterprise branding, allowing organizations to
+  customize the logo displayed on the splash screen during first login post-migration.
+```
+
+#### FEATURES:
+
+- **Block Account Login During Migration**: Prevents customers from logging in during the migration process, which could otherwise break the migration. ADMU now blocks account login until migration is complete.
+- **Customize Splash Screen UWP**: Added support for enterprise branding on the splash screen displayed to users on first login post-migration. Organizations can provide a custom logo (JPEG, JPG, or PNG format) placed at `C:\windows\enterprise_branding.*` which will be used instead of the default JumpCloud logo on the splash screen.
+
+#### IMPROVEMENTS:
+
+#### BUG FIXES:
+
 ## 2.13.1
 
 Release Date: June 10, 2026
