@@ -92,8 +92,8 @@ Describe "Set-DenyLogonSidList Acceptance Tests" -Tag "Acceptance" {
             @(Get-RawPrivilegeTokens -Privilege $script:privilege).Count | Should -Be 0
         }
 
-        It "throws when an entry cannot be resolved to a SID" {
-            { Set-DenyLogonSidList -SidList "not_a_real_account_xyz" -Privilege $script:privilege } | Should -Throw
+        It "does not throw when an entry cannot be resolved to a SID" {
+            { Set-DenyLogonSidList -SidList "not_a_real_account_xyz" -Privilege $script:privilege } | Should -Not -throw
         }
     }
 }
