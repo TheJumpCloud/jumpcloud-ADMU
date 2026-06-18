@@ -131,6 +131,12 @@ function Start-Migration {
         [bool]
         $PrimaryUser = $false,
         [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU will block the migrating account from logging in at the Windows login screen for the duration of the migration by adding the user's SID to the 'SeDenyInteractiveLogonRight' user-rights assignment. This prevents the user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.")]
+        [bool]
+        $BlockAccountLogin = $true,
+        [Parameter(
             ParameterSetName = "form")]
         [Object]
         $inputObject
@@ -182,6 +188,12 @@ function Start-Migration {
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
         $trackAccountMerge = $false
+
+        # Tracks whether the migrating account's interactive logon was blocked, so it is reverted
+        # on both success and failure
+        $accountLoginBlocked = $false
+        $blockLoginMessageTitle = "Account migration in progress"
+        $blockLoginMessage = "This account is being migrated by the JumpCloud ADMU. Please do not log in until the migration completes."
 
         # Track migration steps
         $admuTracker = [Ordered]@{
@@ -595,6 +607,21 @@ function Start-Migration {
 
         }
         #endregion validation
+
+        #region blockAccountLogin
+        # Block the migrating account from logging in at the Windows login screen for the duration
+        # of the migration. Reverted on success and on failure (end{}).
+        if ($BlockAccountLogin) {
+            Write-ToLog -Message:("Blocking interactive logon for '$SelectedUserName' (SID: $SelectedUserSID) during migration.")
+            $blockResult = Set-AccountLoginPolicy -SID $SelectedUserSID -Action Disable -Message $blockLoginMessage -MessageTitle $blockLoginMessageTitle
+            if ($blockResult.Success) {
+                $accountLoginBlocked = $true
+            } else {
+                Write-ToLog -Message:("Could not block interactive logon for '$SelectedUserName'. Continuing migration without the login block.") -Level Warning
+            }
+        }
+        #endregion blockAccountLogin
+
         # print system info
         Write-ToLog -Message ('System Information: ')
         Write-ToLog -Message ("OSName: $($systemVersion.OSName)")
@@ -1725,6 +1752,13 @@ function Start-Migration {
                 Set-ItemProperty -Path $registryPath -Name $NewUserSID -Value "{60B78E88-EAD8-445C-9CFD-0B87F74EA6CD}"
             }
 
+            # Restore the migrating account's interactive logon before any reboot.
+            if ($accountLoginBlocked) {
+                Write-ToLog -Message:("Restoring interactive logon for '$SelectedUserName' (SID: $SelectedUserSID) post-migration.")
+                $null = Set-AccountLoginPolicy -SID $SelectedUserSID -Action Enable
+                $accountLoginBlocked = $false
+            }
+
             if ($ForceReboot -eq $true) {
                 Write-ToLog -Message:('Forcing reboot of the PC now')
                 Restart-Computer -ComputerName $env:COMPUTERNAME -Force
@@ -1736,6 +1770,14 @@ function Start-Migration {
     }
     end {
         $FixedErrors = @();
+        # Always restore the migrating account's interactive logon if it is still blocked. end{}
+        # runs on every break/throw, so this covers all failed-gate paths; Enable is idempotent and
+        # the flag prevents a double-revert when the success path above already restored it.
+        if ($accountLoginBlocked) {
+            Write-ToLog -Message:("Restoring interactive logon for '$SelectedUserName' (SID: $SelectedUserSID) after migration ended.")
+            $null = Set-AccountLoginPolicy -SID $SelectedUserSID -Action Enable
+            $accountLoginBlocked = $false
+        }
         # if we caught any errors and need to revert based on admuTracker status, do so here:
         if ($admuTracker | ForEach-Object { $_.values.fail -eq $true }) {
             foreach ($trackedStep in $admuTracker.Keys) {

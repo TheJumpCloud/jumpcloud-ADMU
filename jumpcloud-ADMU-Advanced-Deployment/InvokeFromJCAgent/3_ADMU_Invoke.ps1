@@ -25,6 +25,7 @@ $JumpCloudAPIKey = 'YOURAPIKEY' # Required if the device is not eligible to use 
 $JumpCloudOrgID = '' # Required if you use a MTP API Key
 $SetDefaultWindowsUser = $true
 $ReportStatus = $false # Report status back to JumpCloud Description
+$BlockAccountLogin = $true # Block the migrating account from logging in during migration (reverted automatically on completion/failure)
 
 # Option to shutdown or restart
 # The 'shutdown' behavior performs a shutdown of the system in a much faster manner than 'restart' which can take 5 mins form the time the command is issued
@@ -80,7 +81,8 @@ function Confirm-MigrationParameter {
         [string]$JumpCloudOrgID = '',
         [bool]$ReportStatus = $false,
         [ValidateSet('Restart', 'Shutdown')][string]$postMigrationBehavior = 'Restart',
-        [bool]$localEXEs = $false
+        [bool]$localEXEs = $false,
+        [bool]$BlockAccountLogin = $true
     )
     if ($dataSource -eq 'CSV' -and [string]::IsNullOrWhiteSpace($csvName)) {
         throw "csvName required when dataSource is 'CSV'."
@@ -514,6 +516,7 @@ function Invoke-UserMigrationBatch {
             RemoveMDM             = $removeMDMParam
             adminDebug            = $true
             ReportStatus          = $MigrationConfig.ReportStatus
+            BlockAccountLogin     = $MigrationConfig.BlockAccountLogin
         }
         if ($MigrationConfig.localEXEs -eq $true) {
             $migrationParams.Add('localEXEs', $true)
@@ -657,7 +660,7 @@ using System;using System.Collections.Generic;using System.IO;using System.Net;u
 }
 #endregion functionDefinitions
 #region validation
-$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus -localEXEs $localEXEs
+$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus -localEXEs $localEXEs -BlockAccountLogin $BlockAccountLogin
 if ($confirmMigrationParameters) { Write-Host "[STATUS] Migration parameters validated successfully." }
 
 try {
@@ -725,6 +728,7 @@ $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -M
     LeaveDomainAfterMigration = $LeaveDomainAfterMigration
     removeMDM                 = $removeMDM
     localEXEs                 = $localEXEs
+    BlockAccountLogin         = $BlockAccountLogin
     guiJcadmuPath             = $guiJcadmuPath
 }
 Write-Host "`nResults - Total: $($migrationResults.TotalUsers), Success: $($migrationResults.SuccessfulMigrations), Failed: $($migrationResults.FailedMigrations)"
