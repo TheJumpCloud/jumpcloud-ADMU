@@ -127,6 +127,12 @@ function Start-Migration {
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
+            HelpMessage = "TESTING ONLY. When set to true together with localEXEs, the staged local uwp_jcadmu.exe is used as-is, without GitHub SHA validation or download. Use this to validate a custom build (such as a branded UWP splash) before it is part of an official release. Leave false for production, where the local exe is validated against the latest release. Default: false.")]
+        [bool]
+        $bypassExeValidation = $false,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
             HelpMessage = "When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will attempt to set the specified user as the PrimarySystemUser for this device in JumpCloud. This is set to false by default.")]
         [bool]
         $PrimaryUser = $false,
@@ -1521,7 +1527,7 @@ function Start-Migration {
 
             try {
                 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-                $resolvedUwpExePath = Get-UwpJcadmuExe -WindowsDrive $windowsDrive -localEXEs $localEXEs
+                $resolvedUwpExePath = Get-UwpJcadmuExe -WindowsDrive $windowsDrive -localEXEs $localEXEs -BypassValidation $bypassExeValidation
                 if ($null -eq $resolvedUwpExePath) {
                     Write-ToLog -Message 'UWP app restoration will be skipped: uwp_jcadmu.exe could not be prepared.' -Level Warning
                 } else {

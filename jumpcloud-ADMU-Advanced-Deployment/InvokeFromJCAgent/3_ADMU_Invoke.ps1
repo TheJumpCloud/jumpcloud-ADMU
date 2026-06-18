@@ -43,6 +43,11 @@ $systemContextBinding = $false # Bind using the systemContext API
 # Option to require locally uploaded exe files
 $localEXEs = $false # When true, require gui_jcadmu.exe in C:\Windows\Temp and uwp_jcadmu.exe in C:\Windows
 
+# TESTING ONLY: when $true (together with $localEXEs), the staged gui_jcadmu.exe and uwp_jcadmu.exe
+# are used as-is, with no GitHub SHA validation or download. Use this to validate a custom build
+# (such as a branded UWP splash) before it is part of an official release. Leave $false for production.
+$bypassExeValidation = $false
+
 # If localEXEs is enabled, ensure uwp_jcadmu.exe is copied from Temp to Windows if needed
 if ($localEXEs) {
     $uwpTempPath = 'C:\Windows\Temp\uwp_jcadmu.exe'
@@ -248,7 +253,8 @@ function Get-LatestADMUGUIExe {
         [Parameter(Mandatory = $false)][string]$GitHubToken,
         [Parameter(Mandatory = $false)][int]$MaxRetries = 3,
         [Parameter(Mandatory = $false)][int]$RetryDelaySeconds = 20,
-        [Parameter(Mandatory = $false)][bool]$useLocalEXEs = $false
+        [Parameter(Mandatory = $false)][bool]$useLocalEXEs = $false,
+        [Parameter(Mandatory = $false)][bool]$BypassValidation = $false
     )
     begin {
         $owner = "TheJumpCloud"
@@ -265,6 +271,14 @@ function Get-LatestADMUGUIExe {
         $fullPath = Join-Path -Path $destinationPath -ChildPath $fileName
 
         if ($useLocalEXEs) {
+            if ($BypassValidation) {
+                # Testing only: trust the staged gui_jcadmu.exe as-is, with no GitHub validation or download.
+                if (-not (Test-Path -Path $fullPath -PathType Leaf)) {
+                    throw "localEXEs is enabled, but required file 'gui_jcadmu.exe' was not found at '$fullPath'."
+                }
+                Write-Host "[TEST] BypassValidation enabled: using local GUI executable at '$fullPath' as-is without GitHub validation or download." -ForegroundColor Yellow
+                return $fullPath
+            }
             Write-Host "[status] localEXEs is enabled. Validating local GUI executable at '$fullPath'."
             $localValidationResult = Test-ExeSHA -filePath $fullPath -GitHubToken $GitHubToken -MaxRetries $MaxRetries -RetryDelaySeconds $RetryDelaySeconds -AllowUnvalidatedOnApiFailure $true
             if ($localValidationResult.IsValid) {
@@ -521,6 +535,9 @@ function Invoke-UserMigrationBatch {
         if ($MigrationConfig.localEXEs -eq $true) {
             $migrationParams.Add('localEXEs', $true)
         }
+        if ($MigrationConfig.bypassExeValidation -eq $true) {
+            $migrationParams.Add('bypassExeValidation', $true)
+        }
         if (-not [string]::IsNullOrEmpty($MigrationConfig.JumpCloudOrgID)) {
             $migrationParams.Add('JumpCloudOrgID', $MigrationConfig.JumpCloudOrgID)
         }
@@ -713,7 +730,7 @@ if ($ForceReboot) {
 }
 #endregion logoffUsers (implied)
 #region migration
-$guiJcadmuPath = Get-LatestADMUGUIExe -useLocalEXEs $localEXEs
+$guiJcadmuPath = Get-LatestADMUGUIExe -useLocalEXEs $localEXEs -BypassValidation $bypassExeValidation
 $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig @{
     TempPassword              = $TempPassword
     UpdateHomePath            = $UpdateHomePath
@@ -728,6 +745,7 @@ $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -M
     LeaveDomainAfterMigration = $LeaveDomainAfterMigration
     removeMDM                 = $removeMDM
     localEXEs                 = $localEXEs
+    bypassExeValidation       = $bypassExeValidation
     BlockAccountLogin         = $BlockAccountLogin
     guiJcadmuPath             = $guiJcadmuPath
 }

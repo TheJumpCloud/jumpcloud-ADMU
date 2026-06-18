@@ -146,6 +146,10 @@ param (
 
         [Parameter(ParameterSetName = 'Migrate')]
         [bool]
+        $bypassExeValidation,
+
+        [Parameter(ParameterSetName = 'Migrate')]
+        [bool]
         $BlockAccountLogin
     )
 '@
