@@ -156,7 +156,7 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
                     TargetProfileImagePath = "C:\Users\$userToMigrateFrom"
                 }
 
-                { Start-Reversion @reversionInput } | Should -Throw "UserSID provided could not be translated"
+                { Start-Reversion @reversionInput } | Should -Throw "*UserSID provided could not be translated*"
             }
             It "Tests that the Reversion fails with an Valid SID and an invalid profilePath" {
 
