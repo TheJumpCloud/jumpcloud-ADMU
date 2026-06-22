@@ -177,7 +177,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.13.1"
+        $admuVersion = "2.13.2"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -983,7 +983,6 @@ function Start-Migration {
                     }
                 }
             }
-
             # Validate and repair file permissions on loaded registry hives
             Set-HKEYUserMount
             $loadedRegistryHives = @(
@@ -1400,6 +1399,38 @@ function Start-Migration {
                 Write-ToLog -Message "Scheduled task creation failed. Permissions may not be fully applied on first login." -Level Warning
             }
             #endRegion NTFS Permissions
+
+            #region Validate UsrClass.dat Directory Chain
+            Write-ToLog -Message "Validating directory chain permissions up to UsrClass.dat to prevent UPS 1508 error"
+
+            # Path chain up to UsrClass.dat
+            $usrClassChain = @(
+                "$newUserProfileImagePath",
+                "$newUserProfileImagePath\AppData",
+                "$newUserProfileImagePath\AppData\Local",
+                "$newUserProfileImagePath\AppData\Local\Microsoft",
+                "$newUserProfileImagePath\AppData\Local\Microsoft\Windows"
+            )
+
+            $chainValid = $true
+            foreach ($dir in $usrClassChain) {
+                if (Test-Path $dir) {
+                    $dirCheck = Test-DATParentPermission -DirectoryPath $dir -UserSID $NewUserSID
+                    if ($dirCheck) {
+                        Write-ToLog -Message "Validated required permissions (System, Admin, $($NewUserSID)) on: $dir"
+                    } else {
+                        Write-ToLog -Message "Permission validation failed on: $dir. Missing required access." -Level Warning
+                        $chainValid = $false
+                    }
+                } else {
+                    Write-ToLog -Message "Directory not found during validation: $dir" -Level Warning
+                }
+            }
+
+            if (-not $chainValid) {
+                Write-ToLog -Message "CRITICAL WARNING: One or more directories in the UsrClass.dat chain are missing required permissions. This will likely trigger a User Profile Service 1508 error on login." -Level Warning
+            }
+            #endregion Validate UsrClass.dat Directory Chain
 
             #region Validate Hive Permissions
             Write-ToProgress -ProgressBar $ProgressBar -Status "validateDatPermissions" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
