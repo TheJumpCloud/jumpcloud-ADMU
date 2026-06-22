@@ -1,3 +1,24 @@
+## 2.13.2
+
+Release Date: June 22, 2026
+
+#### RELEASE NOTES
+
+```
+Patch release to address insufficient logging for USRClass.DAT parent permissions
+
+Fix Reverse Migration GUI hang caused by unhandled early validation exceptions
+
+```
+
+#### Improvements
+
+- Added USRClass.dat parent permission validation and logging
+
+#### BUG FIXES:
+
+- Fixed Reverse Migration GUI freezing due to unhandled error/throw
+
 ## 2.13.1
 
 Release Date: June 10, 2026

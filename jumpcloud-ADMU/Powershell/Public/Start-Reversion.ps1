@@ -78,18 +78,9 @@ function Start-Reversion {
             WhatIfMode          = $DryRun.IsPresent
             RegistryUpdated     = $false
         }
-        $account = New-Object System.Security.Principal.SecurityIdentifier($UserSID)
-        try {
-            $domainUser = ($account.Translate([System.Security.Principal.NTAccount])).Value
-
-        } catch {
-            throw "UserSID provided could not be translated"
-        }
 
         # Regex pattern to identify .ADMU profile paths
         $admuPathPattern = '\.ADMU$'
-
-        Write-ToLog -Message "Validating user SID: $UserSID" -Level Verbose -Step "Revert-Migration"
 
         # Status message map for reversion steps
         $revertMessageMap = [Ordered]@{
@@ -141,16 +132,28 @@ function Start-Reversion {
         if ((-not $script:ProgressBar) -and ($form)) {
             $script:ProgressBar = New-ProgressForm
         }
-        # VALIDATION: Check if user profile is currently loaded
-        if (Test-UserProfileLoaded -UserSID $UserSID) {
-            $errorMessage = "Cannot revert user profile for SID: $UserSID. The user's profile is currently loaded in memory. Please ensure the user is logged out before attempting reversion."
-            Write-ToLog -Message $errorMessage -Level Error
-            throw $errorMessage
-        }
+
+        $ProgressBar = $script:ProgressBar
     }
 
     process {
         try {
+            $account = New-Object System.Security.Principal.SecurityIdentifier($UserSID)
+            try {
+                $domainUser = ($account.Translate([System.Security.Principal.NTAccount])).Value
+            } catch {
+                throw "UserSID provided could not be translated"
+            }
+
+            Write-ToLog -Message "Validating user SID: $UserSID" -Level Verbose -Step "Revert-Migration"
+
+            # VALIDATION: Check if user profile is currently loaded
+            if (Test-UserProfileLoaded -UserSID $UserSID) {
+                $errorMessage = "Cannot revert user profile for SID: $UserSID. The user's profile is currently loaded in memory. Please ensure the user is logged out before attempting reversion."
+                Write-ToLog -Message $errorMessage -Level Error
+                throw $errorMessage
+            }
+
             #region Validate Registry and Determine Profile Path
             Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
 
