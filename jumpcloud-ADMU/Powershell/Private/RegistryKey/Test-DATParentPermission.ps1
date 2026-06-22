@@ -1,5 +1,6 @@
 function Test-DATParentPermission {
     [CmdletBinding()]
+    [OutputType([System.Boolean])]
     param (
         [Parameter(Mandatory = $true)]
         [string]$DirectoryPath,
