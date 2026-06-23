@@ -78,18 +78,9 @@ function Start-Reversion {
             WhatIfMode          = $DryRun.IsPresent
             RegistryUpdated     = $false
         }
-        $account = New-Object System.Security.Principal.SecurityIdentifier($UserSID)
-        try {
-            $domainUser = ($account.Translate([System.Security.Principal.NTAccount])).Value
-
-        } catch {
-            throw "UserSID provided could not be translated"
-        }
 
         # Regex pattern to identify .ADMU profile paths
         $admuPathPattern = '\.ADMU$'
-
-        Write-ToLog -Message "Validating user SID: $UserSID" -Level Verbose -Step "Revert-Migration"
 
         # Status message map for reversion steps
         $revertMessageMap = [Ordered]@{
@@ -141,16 +132,33 @@ function Start-Reversion {
         if ((-not $script:ProgressBar) -and ($form)) {
             $script:ProgressBar = New-ProgressForm
         }
-        # VALIDATION: Check if user profile is currently loaded
-        if (Test-UserProfileLoaded -UserSID $UserSID) {
-            $errorMessage = "Cannot revert user profile for SID: $UserSID. The user's profile is currently loaded in memory. Please ensure the user is logged out before attempting reversion."
-            Write-ToLog -Message $errorMessage -Level Error
-            throw $errorMessage
-        }
+
+        $ProgressBar = $script:ProgressBar
     }
 
     process {
         try {
+            $account = New-Object System.Security.Principal.SecurityIdentifier($UserSID)
+            $userAccountTranslated = $false
+            try {
+                $domainUser = ($account.Translate([System.Security.Principal.NTAccount])).Value
+                $userAccountTranslated = $true
+            } catch {
+                Write-ToLog -Message "Warning: Could not translate UserSID $UserSID to NTAccount. Using SID string instead." -Level Verbose -Step "Revert-Migration"
+                $domainUser = $UserSID
+            }
+
+            $domainUserIcacls = if ($userAccountTranslated) { $domainUser } else { "*$UserSID" }
+
+            Write-ToLog -Message "Validating user SID: $UserSID" -Level Verbose -Step "Revert-Migration"
+
+            # VALIDATION: Check if user profile is currently loaded
+            if (Test-UserProfileLoaded -UserSID $UserSID) {
+                $errorMessage = "Cannot revert user profile for SID: $UserSID. The user's profile is currently loaded in memory. Please ensure the user is logged out before attempting reversion."
+                Write-ToLog -Message $errorMessage -Level Error
+                throw $errorMessage
+            }
+
             #region Validate Registry and Determine Profile Path
             Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
 
@@ -492,7 +500,7 @@ function Start-Reversion {
 
                 $ACLRestoreLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu_Revert_SetOwner.log"
                 $logPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
-                $icaclsOwnerResult = icacls "$($profileImagePath)" /setowner $domainUser /T /C /Q 2>&1
+                $icaclsOwnerResult = icacls "$($profileImagePath)" /setowner $domainUserIcacls /T /C /Q 2>&1
                 $icaclsOwnerResult | Out-File -FilePath $logPath -Append -Encoding utf8
 
                 Write-ToLog -Message "End of Set Owner Log" -Level Info -Step "Revert-Migration"
@@ -501,7 +509,7 @@ function Start-Reversion {
                 if ($LASTEXITCODE -ne 0) {
                     Write-ToLog -Message "Failed to set ownership of profile directory. Check log at $ACLRestoreLogPath" -Level Warning -Step "Revert-Migration"
                 } else {
-                    Write-ToLog -Message "Successfully set ownership of profile directory to $domainUser" -Level Info -Step "Revert-Migration"
+                    Write-ToLog -Message "Successfully set ownership of profile directory to $domainUserIcacls" -Level Info -Step "Revert-Migration"
                 }
             } else {
                 Write-ToLog -Message "WHAT IF: Would take ownership of profile directory: $profileImagePath" -Level Verbose -Step "Revert-Migration"

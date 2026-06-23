@@ -1027,14 +1027,18 @@ function Start-Migration {
                         }
                     }
                 }
-
-                # Validate and repair file permissions on loaded registry hives
-                Set-HKEYUserMount
-                $loadedRegistryHives = @(
-                    @{ Path = "HKEY_USERS:\$($NewUserSID)_admu"; Name = "$($NewUserSID)_admu" }
-                    @{ Path = "HKEY_USERS:\$($NewUserSID)_Classes_admu"; Name = "$($NewUserSID)_Classes_admu" }
-                )
-                foreach ($loadedHive in $loadedRegistryHives) {
+            }
+            # Validate and repair file permissions on loaded registry hives
+            Set-HKEYUserMount
+            $loadedRegistryHives = @(
+                @{ Path = "HKEY_USERS:\$($NewUserSID)_admu"; Name = "$($NewUserSID)_admu" }
+                @{ Path = "HKEY_USERS:\$($NewUserSID)_Classes_admu"; Name = "$($NewUserSID)_Classes_admu" }
+            )
+            foreach ($loadedHive in $loadedRegistryHives) {
+                $validateRegistryPermission, $validateRegistryPermissionResult = Test-DATFilePermission -path $loadedHive.Path -username $jumpcloudUsername -type 'registry'
+                if (-not $validateRegistryPermission) {
+                    Write-ToLog -Message:("The registry permissions for $($loadedHive.Name) are incorrect. Attempting to repair permissions.") -Level Warning
+                    Set-DATFilePermission -Path $loadedHive.Path -Username $jumpcloudUsername -Type 'registry' | Out-Null
                     $validateRegistryPermission, $validateRegistryPermissionResult = Test-DATFilePermission -path $loadedHive.Path -username $jumpcloudUsername -type 'registry'
                     if (-not $validateRegistryPermission) {
                         Write-ToLog -Message:("The registry permissions for $($loadedHive.Name) are incorrect. Attempting to repair permissions.") -Level Warning
@@ -1443,15 +1447,85 @@ function Start-Migration {
                 if (-not $taskCreated) {
                     Write-ToLog -Message "Scheduled task creation failed. Permissions may not be fully applied on first login." -Level Warning
                 }
-                #endRegion NTFS Permissions
 
-                #region Validate Hive Permissions
-                Write-ToProgress -ProgressBar $ProgressBar -Status "validateDatPermissions" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
-                $hiveFiles = @(
-                    @{ Path = "$datPath\NTUSER.DAT"; Name = "NTUSER.DAT" }
-                    @{ Path = "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat"; Name = "UsrClass.dat" }
-                )
-                foreach ($hive in $hiveFiles) {
+                # Set the target user Profile Image Path to Source user Profile Path (they are the same)
+                $newUserProfileImagePath = $oldUserProfileImagePath
+                # TODO: Validate this should be here:
+                # $admuTracker.renameHomeDirectory.pass = $true
+            }
+            #endregion renameHomeDirectory
+            $datPath = $newUserProfileImagePath
+            Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath + '.' + "ADMU")
+            Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
+            $trackAccountMerge = $true
+            # logging
+            Write-ToLog -Message:('Target User Profile Path: ' + $newUserProfileImagePath)
+            Write-ToLog -Message:('Target User SID: ' + $NewUserSID)
+            Write-ToLog -Message:('Source User Profile Path: ' + $oldUserProfileImagePath)
+            Write-ToLog -Message:('Source User SID: ' + $SelectedUserSID)
+            #endRegion Process Home Path Permission
+
+            #region NTFS Permissions
+            Write-ToLog -Message:("Attempting to set owner to NTFS Permissions from: ($NewUserSID) to: $SelectedUserSID for path: $newUserProfileImagePath")
+            Write-ToProgress -ProgressBar $ProgressBar -Status "ntfsAccess" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+            $regPermStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+
+            # Set immediate/root level permissions only (non-recursive)
+            Write-ToLog -Message:("Setting immediate-level permissions. Recursive permissions will be set on first user login.")
+            Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath -ErrorAction SilentlyContinue
+            $regPermStopwatch.Stop()
+            Write-ToLog "Set-RegPermission (immediate level) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
+
+            # Create scheduled task to set recursive permissions on user logon
+            $taskCreated = New-RegPermissionTask -ProfilePath $newUserProfileImagePath -TargetSID $NewUserSID -SourceSID $SelectedUserSID -TaskUser $JumpCloudUsername
+            if (-not $taskCreated) {
+                Write-ToLog -Message "Scheduled task creation failed. Permissions may not be fully applied on first login." -Level Warning
+            }
+            #endRegion NTFS Permissions
+
+            #region Validate UsrClass.dat Directory Chain
+            Write-ToLog -Message "Validating directory chain permissions up to UsrClass.dat to prevent UPS 1508 error"
+
+            # Path chain up to UsrClass.dat
+            $usrClassChain = @(
+                "$newUserProfileImagePath",
+                "$newUserProfileImagePath\AppData",
+                "$newUserProfileImagePath\AppData\Local",
+                "$newUserProfileImagePath\AppData\Local\Microsoft",
+                "$newUserProfileImagePath\AppData\Local\Microsoft\Windows"
+            )
+
+            $chainValid = $true
+            foreach ($dir in $usrClassChain) {
+                if (Test-Path $dir) {
+                    $dirCheck = Test-DATParentPermission -DirectoryPath $dir -UserSID $NewUserSID
+                    if ($dirCheck) {
+                        Write-ToLog -Message "Validated required permissions (System, Admin, $($NewUserSID)) on: $dir"
+                    } else {
+                        Write-ToLog -Message "Permission validation failed on: $dir. Missing required access." -Level Warning
+                        $chainValid = $false
+                    }
+                } else {
+                    Write-ToLog -Message "Directory not found during validation: $dir" -Level Warning
+                }
+            }
+
+            if (-not $chainValid) {
+                Write-ToLog -Message "CRITICAL WARNING: One or more directories in the UsrClass.dat chain are missing required permissions. This will likely trigger a User Profile Service 1508 error on login." -Level Warning
+            }
+            #endregion Validate UsrClass.dat Directory Chain
+
+            #region Validate Hive Permissions
+            Write-ToProgress -ProgressBar $ProgressBar -Status "validateDatPermissions" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+            $hiveFiles = @(
+                @{ Path = "$datPath\NTUSER.DAT"; Name = "NTUSER.DAT" }
+                @{ Path = "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat"; Name = "UsrClass.dat" }
+            )
+            foreach ($hive in $hiveFiles) {
+                $validateHivePermissions, $validateHivePermissionsResults = Test-DATFilePermission -path $hive.Path -username $JumpCloudUserName -type 'ntfs'
+                if (-not $validateHivePermissions) {
+                    Write-ToLog -Message:("$($hive.Name) Permissions are incorrect. Attempting to repair permissions on $($hive.Path)") -Level Warning
+                    Set-DATFilePermission -Path $hive.Path -Username $JumpCloudUserName -Type 'ntfs' | Out-Null
                     $validateHivePermissions, $validateHivePermissionsResults = Test-DATFilePermission -path $hive.Path -username $JumpCloudUserName -type 'ntfs'
                     if (-not $validateHivePermissions) {
                         Write-ToLog -Message:("$($hive.Name) Permissions are incorrect. Attempting to repair permissions on $($hive.Path)") -Level Warning
