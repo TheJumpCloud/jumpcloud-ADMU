@@ -26,7 +26,7 @@ function Test-DATParentPermission {
         }
     }
 
-    function local:Test-DirectoryTraverseRights {
+    function local:Test-DirectoryTraverseRight {
         param([System.Security.AccessControl.FileSystemRights]$Rights)
 
         $rightsValue = [int]$Rights
@@ -51,7 +51,7 @@ function Test-DATParentPermission {
         param([System.Security.AccessControl.FileSystemRights]$Rights)
 
         $missing = [System.Collections.Generic.List[string]]::new()
-        if (-not (Test-DirectoryTraverseRights -Rights $Rights)) {
+        if (-not (Test-DirectoryTraverseRight -Rights $Rights)) {
             $requiredRights = @(
                 [System.Security.AccessControl.FileSystemRights]::Traverse,
                 [System.Security.AccessControl.FileSystemRights]::ListDirectory,
@@ -99,7 +99,7 @@ function Test-DATParentPermission {
 
         $hasSufficientRights = $false
         foreach ($rule in $allowRules) {
-            if (Test-DirectoryTraverseRights -Rights $rule.FileSystemRights) {
+            if (Test-DirectoryTraverseRight -Rights $rule.FileSystemRights) {
                 $hasSufficientRights = $true
                 break
             }
