@@ -20,7 +20,7 @@ Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPass
  [-AutoBindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-SetDefaultWindowsUser <Boolean>]
  [-AdminDebug <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>]
  [-ValidateUserShellFolder <Boolean>] [-ReportStatus <Boolean>] [-removeMDM <Boolean>] [-localEXEs <Boolean>]
- [-PrimaryUser <Boolean>] [<CommonParameters>]
+ [-SetFullPermission <Boolean>] [-PrimaryUser <Boolean>] [<CommonParameters>]
 ```
 
 ### form
@@ -392,6 +392,21 @@ Accept wildcard characters: False
 
 ### -localEXEs
 When set to true, the ADMU requires a local uwp_jcadmu.exe in C:\\Windows and will validate it against the latest GitHub release when possible. If GitHub is rate limited, the local file will still be used with a warning. If the local file is missing, the ADMU will throw and exit.
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -SetFullPermission
+When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.
 
 ```yaml
 Type: System.Boolean
