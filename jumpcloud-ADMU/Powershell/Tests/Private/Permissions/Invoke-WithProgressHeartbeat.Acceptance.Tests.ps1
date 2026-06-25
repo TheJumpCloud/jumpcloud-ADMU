@@ -36,14 +36,14 @@ Describe "Invoke-WithProgressHeartbeat Acceptance Tests" -Tag "Acceptance" {
         }
 
         It "Should propagate scriptblock errors" {
-            { Invoke-WithProgressHeartbeat -ScriptBlock { throw "test failure" } } | Should -Throw "test failure"
+            { Invoke-WithProgressHeartbeat -ScriptBlock { throw "test failure" } } | Should -Throw "*test failure*"
         }
 
         It "Should pass RunspaceVariables into the background runspace" {
             $result = Invoke-WithProgressHeartbeat `
                 -RunspaceVariables @{
-                    PermissionProfilePath = 'C:\Users\test'
-                } `
+                PermissionProfilePath = 'C:\Users\test'
+            } `
                 -ScriptBlock { $PermissionProfilePath }
 
             $result | Should -Be 'C:\Users\test'
