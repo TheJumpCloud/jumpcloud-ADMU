@@ -18,6 +18,7 @@ Feature release adding optional full recursive NTFS permission migration and imp
 - Moved NTFS progress heartbeat into `Set-RegPermission` using `Start-Process` wait polling on the main thread (works in compiled EXE and module without a child runspace)
 - Fixed `Write-ToProgress` `-StatusMessage` override being ignored when reporting to JumpCloud device description (PowerShell treated `$StatusMessage` and `$statusMessage` as the same variable)
 - NTFS heartbeat messages now include elapsed seconds for runs under one minute
+- Fixed `Test-DATParentPermission` to ignore `InheritOnly` ACEs and honor explicit Deny ACEs when determining effective directory traversal rights
 
 ## 2.13.2
 

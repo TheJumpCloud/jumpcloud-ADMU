@@ -122,3 +122,26 @@ function Test-DATParentPermission {
         InsufficientRights = @($insufficientRights)
     }
 }
+
+        if ($applicableAllowRules.Count -eq 0) {
+            $missingIdentities.Add($identityName)
+            continue
+        }
+
+        $effectiveRights = Get-EffectiveFileSystemRights -AllowRules $applicableAllowRules -DenyRules $applicableDenyRules
+        if (-not (Test-DirectoryTraverseRight -Rights $effectiveRights)) {
+            $missingRights = Get-MissingTraverseRight -Rights $effectiveRights
+            $insufficientRights.Add([PSCustomObject]@{
+                    Identity      = $identityName
+                    SID           = $sid
+                    MissingRights = @($missingRights)
+                })
+        }
+    }
+
+    return [PSCustomObject]@{
+        IsValid            = ($missingIdentities.Count -eq 0 -and $insufficientRights.Count -eq 0)
+        MissingIdentities  = @($missingIdentities)
+        InsufficientRights = @($insufficientRights)
+    }
+}
