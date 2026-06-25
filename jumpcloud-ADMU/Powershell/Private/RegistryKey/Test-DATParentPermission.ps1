@@ -67,6 +67,30 @@ function Test-DATParentPermission {
         return $missing
     }
 
+    function local:Test-IsApplicableAce {
+        param($Rule)
+
+        return $Rule.PropagationFlags -ne [System.Security.AccessControl.PropagationFlags]::InheritOnly
+    }
+
+    function local:Get-EffectiveFileSystemRights {
+        param(
+            [array]$AllowRules,
+            [array]$DenyRules
+        )
+
+        $allowMask = 0
+        $denyMask = 0
+        foreach ($rule in $AllowRules) {
+            $allowMask = $allowMask -bor [int]$rule.FileSystemRights
+        }
+        foreach ($rule in $DenyRules) {
+            $denyMask = $denyMask -bor [int]$rule.FileSystemRights
+        }
+
+        return [System.Security.AccessControl.FileSystemRights]($allowMask -band (-bnot $denyMask))
+    }
+
     $acl = Get-Acl -Path $DirectoryPath -ErrorAction SilentlyContinue
     if (-not $acl) {
         return [PSCustomObject]@{
@@ -78,7 +102,8 @@ function Test-DATParentPermission {
 
     foreach ($sid in $requiredSIDs) {
         $identityName = Get-IdentityName -Sid $sid
-        $allowRules = @()
+        $applicableAllowRules = @()
+        $applicableDenyRules = @()
 
         foreach ($rule in $acl.Access) {
             try {
@@ -87,41 +112,16 @@ function Test-DATParentPermission {
                 $ruleSid = $rule.IdentityReference.Value
             }
 
-            if ($ruleSid -eq $sid -and $rule.AccessControlType -eq 'Allow') {
-                $allowRules += $rule
+            if ($ruleSid -ne $sid -or -not (Test-IsApplicableAce -Rule $rule)) {
+                continue
+            }
+
+            if ($rule.AccessControlType -eq 'Allow') {
+                $applicableAllowRules += $rule
+            } elseif ($rule.AccessControlType -eq 'Deny') {
+                $applicableDenyRules += $rule
             }
         }
-
-        if ($allowRules.Count -eq 0) {
-            $missingIdentities.Add($identityName)
-            continue
-        }
-
-        $hasSufficientRights = $false
-        foreach ($rule in $allowRules) {
-            if (Test-DirectoryTraverseRight -Rights $rule.FileSystemRights) {
-                $hasSufficientRights = $true
-                break
-            }
-        }
-
-        if (-not $hasSufficientRights) {
-            $bestRule = $allowRules | Sort-Object { [int]$_.FileSystemRights } -Descending | Select-Object -First 1
-            $missingRights = Get-MissingTraverseRight -Rights $bestRule.FileSystemRights
-            $insufficientRights.Add([PSCustomObject]@{
-                    Identity      = $identityName
-                    SID           = $sid
-                    MissingRights = @($missingRights)
-                })
-        }
-    }
-
-    return [PSCustomObject]@{
-        IsValid            = ($missingIdentities.Count -eq 0 -and $insufficientRights.Count -eq 0)
-        MissingIdentities  = @($missingIdentities)
-        InsufficientRights = @($insufficientRights)
-    }
-}
 
         if ($applicableAllowRules.Count -eq 0) {
             $missingIdentities.Add($identityName)
