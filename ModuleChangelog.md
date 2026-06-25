@@ -13,6 +13,7 @@ Feature release adding optional full recursive NTFS permission migration and imp
 - Added `SetFullPermission` parameter to `Start-Migration` to recursively set NTFS permissions on the full profile during migration instead of deferring to first login
 - Added `-Recursive` switch to `Set-RegPermission` for upfront recursive ACL and ownership updates
 - Enhanced `Test-DATParentPermission` to report missing identities and insufficient filesystem rights for directory traversal
+- Added 2-minute progress heartbeat during recursive `SetFullPermission` when `ReportStatus` or GUI progress is enabled, so long NTFS operations remain visible in JumpCloud device description
 
 ## 2.13.2
 

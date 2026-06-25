@@ -18,6 +18,8 @@ function Write-ToProgress {
         $LocalPath,
         [Parameter(Mandatory = $false)]
         $SystemDescription,
+        [Parameter(Mandatory = $false)]
+        [string]$StatusMessage,
         # Accepts the ordered list from Start-Migration
         [Parameter(Mandatory = $false)]
         [System.Collections.Specialized.OrderedDictionary]
@@ -43,6 +45,10 @@ function Write-ToProgress {
     } else {
         # Fallback if the status key is not found in the map
         $statusMessage = $status
+    }
+
+    if ($PSBoundParameters.ContainsKey('StatusMessage') -and -not [string]::IsNullOrEmpty($StatusMessage)) {
+        $statusMessage = $StatusMessage
     }
 
     # Calculate Progress Percentage

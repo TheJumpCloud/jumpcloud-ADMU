@@ -1396,7 +1396,20 @@ function Start-Migration {
             # Set NTFS permissions on profile
             if ($SetFullPermission) {
                 Write-ToLog -Message:("Setting recursive permissions on profile during migration (SetFullPermission).")
-                Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath -Recursive -ErrorAction SilentlyContinue
+                $useNtfsHeartbeat = $isForm -or ($systemDescription -and $systemDescription.reportStatus)
+                if ($useNtfsHeartbeat) {
+                    $onNtfsHeartbeat = {
+                        $elapsedMin = [math]::Floor($regPermStopwatch.Elapsed.TotalMinutes)
+                        $heartbeatMsg = "Setting NTFS permissions (recursive, $elapsedMin min elapsed)"
+                        Write-ToProgress -ProgressBar $ProgressBar -Status "ntfsAccess" -StatusMessage $heartbeatMsg -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+                    }
+                    Invoke-WithProgressHeartbeat -PrepareNtfsRunspace -ScriptBlock {
+                        param($SourceSID, $TargetSID, $ProfilePath)
+                        Set-RegPermission -SourceSID $SourceSID -TargetSID $TargetSID -FilePath $ProfilePath -Recursive -ErrorAction SilentlyContinue
+                    } -ArgumentList @($SelectedUserSID, $NewUserSID, $newUserProfileImagePath) -OnHeartbeat $onNtfsHeartbeat -HeartbeatIntervalSeconds 120 | Out-Null
+                } else {
+                    Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath -Recursive -ErrorAction SilentlyContinue
+                }
                 $regPermStopwatch.Stop()
                 Write-ToLog "Set-RegPermission (recursive) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
             } else {

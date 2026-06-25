@@ -264,6 +264,17 @@ Describe "Write-ToProgress Acceptance Tests" -Tag "Acceptance" {
             $($npf.PercentComplete) | Should -Be $expectedPercent
         }
 
+        It "Should use StatusMessage override when provided" {
+            $key = "ntfsAccess"
+            $customMessage = "Setting NTFS permissions (recursive, 4 min elapsed)"
+            $null = Write-ToProgress -progressBar $npf -Status $key -StatusMessage $customMessage -form $true -StatusMap $admuTracker
+
+            $expectedPercent = [int](($trackerKeys.IndexOf($key) / ($totalSteps - 1)) * 100)
+
+            $($npf.StatusInput) | Should -Be $customMessage
+            $($npf.PercentComplete) | Should -Be $expectedPercent
+        }
+
         It "Should update status and percent for 'validateDatPermissions'" {
             $key = "validateDatPermissions"
             $null = Write-ToProgress -progressBar $npf -Status $key -form $true -StatusMap $admuTracker
