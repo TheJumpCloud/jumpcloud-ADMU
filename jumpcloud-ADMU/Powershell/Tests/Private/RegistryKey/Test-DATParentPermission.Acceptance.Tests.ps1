@@ -106,7 +106,9 @@ Describe "Test-DATParentPermission Acceptance Tests" -Tag "Acceptance" {
 
             $dirACL = Get-Acl $dirPath
             $dirACL.SetAccessRuleProtection($true, $false)
-            $dirACL.Access | ForEach-Object { $dirACL.RemoveAccessRule($_) | Out-Null }
+            foreach ($rule in @($dirACL.Access)) {
+                $dirACL.RemoveAccessRule($rule) | Out-Null
+            }
 
             $systemSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')
             $adminSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')
@@ -150,7 +152,9 @@ Describe "Test-DATParentPermission Acceptance Tests" -Tag "Acceptance" {
 
             $dirACL = Get-Acl $dirPath
             $dirACL.SetAccessRuleProtection($true, $false)
-            $dirACL.Access | ForEach-Object { $dirACL.RemoveAccessRule($_) | Out-Null }
+            foreach ($rule in @($dirACL.Access)) {
+                $dirACL.RemoveAccessRule($rule) | Out-Null
+            }
 
             $systemSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')
             $adminSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')
@@ -192,7 +196,9 @@ Describe "Test-DATParentPermission Acceptance Tests" -Tag "Acceptance" {
 
             $dirACL = Get-Acl $dirPath
             $dirACL.SetAccessRuleProtection($true, $false)
-            $dirACL.Access | ForEach-Object { $dirACL.RemoveAccessRule($_) | Out-Null }
+            foreach ($rule in @($dirACL.Access)) {
+                $dirACL.RemoveAccessRule($rule) | Out-Null
+            }
 
             $systemSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')
             $adminSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')
