@@ -20,8 +20,7 @@ Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPass
  [-AutoBindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-SetDefaultWindowsUser <Boolean>]
  [-AdminDebug <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>]
  [-ValidateUserShellFolder <Boolean>] [-ReportStatus <Boolean>] [-removeMDM <Boolean>] [-localEXEs <Boolean>]
- [-SetFullPermission <Boolean>] [-PrimaryUser <Boolean>]
- [<CommonParameters>]
+ [-SetFullPermission <Boolean>] [-PrimaryUser <Boolean>] [<CommonParameters>]
 ```
 
 ### form
