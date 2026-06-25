@@ -73,7 +73,7 @@ function Test-DATParentPermission {
         return $Rule.PropagationFlags -ne [System.Security.AccessControl.PropagationFlags]::InheritOnly
     }
 
-    function local:Get-EffectiveFileSystemRights {
+    function local:Get-EffectiveFileSystemRight {
         param(
             [array]$AllowRules,
             [array]$DenyRules
@@ -128,7 +128,7 @@ function Test-DATParentPermission {
             continue
         }
 
-        $effectiveRights = Get-EffectiveFileSystemRights -AllowRules $applicableAllowRules -DenyRules $applicableDenyRules
+        $effectiveRights = Get-EffectiveFileSystemRight -AllowRules $applicableAllowRules -DenyRules $applicableDenyRules
         if (-not (Test-DirectoryTraverseRight -Rights $effectiveRights)) {
             $missingRights = Get-MissingTraverseRight -Rights $effectiveRights
             $insufficientRights.Add([PSCustomObject]@{
