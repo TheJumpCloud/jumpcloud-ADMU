@@ -238,6 +238,30 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $acl.Access | Where-Object { $_.IdentityReference -eq $targetAccount } | Should -Not -BeNullOrEmpty
         }
 
+        It "Should apply ownership recursively to child items when -Recursive is specified" {
+            $items = Get-ChildItem -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
+            $SourceSIDObj = New-Object System.Security.Principal.SecurityIdentifier($sourceSID)
+            $TargetSIDObj = New-Object System.Security.Principal.SecurityIdentifier($targetSID)
+            $SourceAccount = $SourceSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+            $TargetAccount = $TargetSIDObj.Translate([System.Security.Principal.NTAccount]).Value
+
+            foreach ($item in $items) {
+                $acl = Get-Acl -Path $item.FullName
+                if ($acl.Owner -ne $SourceAccount) {
+                    $acl.SetOwner($SourceSIDObj)
+                    Set-Acl -Path $item.FullName -AclObject $acl
+                }
+            }
+
+            Set-RegPermission -SourceSID $sourceSID -TargetSID $targetSID -FilePath $testDir -Recursive -ErrorAction SilentlyContinue
+
+            $items = Get-ChildItem -Path $testDir -Recurse -Force
+            foreach ($item in $items) {
+                $acl = Get-Acl $item.FullName
+                $acl.Owner | Should -Be $TargetAccount
+            }
+        }
+
     }
     It "Should change the permission set for hidden files and folders" {
         # init a user profile for testing:

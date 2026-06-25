@@ -1,3 +1,19 @@
+## 2.13.3
+
+Release Date: June 25, 2026
+
+#### RELEASE NOTES
+
+```
+Feature release adding optional full recursive NTFS permission migration and improved UsrClass.dat parent permission diagnostics
+```
+
+#### Improvements
+
+- Added `SetFullPermission` parameter to `Start-Migration` to recursively set NTFS permissions on the full profile during migration instead of deferring to first login
+- Added `-Recursive` switch to `Set-RegPermission` for upfront recursive ACL and ownership updates
+- Enhanced `Test-DATParentPermission` to report missing identities and insufficient filesystem rights for directory traversal
+
 ## 2.13.2
 
 Release Date: June 22, 2026

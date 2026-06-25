@@ -42,6 +42,9 @@ $systemContextBinding = $false # Bind using the systemContext API
 # Option to require locally uploaded exe files
 $localEXEs = $false # When true, require gui_jcadmu.exe in C:\Windows\Temp and uwp_jcadmu.exe in C:\Windows
 
+# Option to set full recursive NTFS permissions during migration instead of deferring to first login
+$SetFullPermission = $false # When true, recursively set profile permissions during migration (slower on large profiles)
+
 # If localEXEs is enabled, ensure uwp_jcadmu.exe is copied from Temp to Windows if needed
 if ($localEXEs) {
     $uwpTempPath = 'C:\Windows\Temp\uwp_jcadmu.exe'
@@ -80,7 +83,8 @@ function Confirm-MigrationParameter {
         [string]$JumpCloudOrgID = '',
         [bool]$ReportStatus = $false,
         [ValidateSet('Restart', 'Shutdown')][string]$postMigrationBehavior = 'Restart',
-        [bool]$localEXEs = $false
+        [bool]$localEXEs = $false,
+        [bool]$SetFullPermission = $false
     )
     if ($dataSource -eq 'CSV' -and [string]::IsNullOrWhiteSpace($csvName)) {
         throw "csvName required when dataSource is 'CSV'."
@@ -518,6 +522,9 @@ function Invoke-UserMigrationBatch {
         if ($MigrationConfig.localEXEs -eq $true) {
             $migrationParams.Add('localEXEs', $true)
         }
+        if ($MigrationConfig.SetFullPermission -eq $true) {
+            $migrationParams.Add('SetFullPermission', $true)
+        }
         if (-not [string]::IsNullOrEmpty($MigrationConfig.JumpCloudOrgID)) {
             $migrationParams.Add('JumpCloudOrgID', $MigrationConfig.JumpCloudOrgID)
         }
@@ -657,7 +664,7 @@ using System;using System.Collections.Generic;using System.IO;using System.Net;u
 }
 #endregion functionDefinitions
 #region validation
-$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus -localEXEs $localEXEs
+$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus -localEXEs $localEXEs -SetFullPermission $SetFullPermission
 if ($confirmMigrationParameters) { Write-Host "[STATUS] Migration parameters validated successfully." }
 
 try {
@@ -725,6 +732,7 @@ $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -M
     LeaveDomainAfterMigration = $LeaveDomainAfterMigration
     removeMDM                 = $removeMDM
     localEXEs                 = $localEXEs
+    SetFullPermission         = $SetFullPermission
     guiJcadmuPath             = $guiJcadmuPath
 }
 Write-Host "`nResults - Total: $($migrationResults.TotalUsers), Success: $($migrationResults.SuccessfulMigrations), Failed: $($migrationResults.FailedMigrations)"

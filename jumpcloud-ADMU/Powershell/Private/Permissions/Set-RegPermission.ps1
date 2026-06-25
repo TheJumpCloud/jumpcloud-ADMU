@@ -5,8 +5,21 @@ function Set-RegPermission {
         [Parameter(Mandatory)]
         [string]$TargetSID,
         [Parameter(Mandatory)]
-        [string]$FilePath
+        [string]$FilePath,
+        [switch]$Recursive
     )
+
+    function local:Invoke-IcaclsSafe {
+        param(
+            [Parameter(Mandatory = $true)]
+            [string]$Path,
+            [Parameter(Mandatory = $true)]
+            [string[]]$Arguments
+        )
+
+        $local:ErrorActionPreference = 'Continue'
+        & icacls.exe $Path $Arguments 2>&1 | ForEach-Object { "$_" }
+    }
 
     # Create SecurityIdentifier objects
     $SourceSIDObj = New-Object System.Security.Principal.SecurityIdentifier($SourceSID)
@@ -32,8 +45,9 @@ function Set-RegPermission {
     }
 
     $ntfsPermissionLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
+    $scopeLabel = if ($Recursive) { 'recursive' } else { 'immediate level only' }
     try {
-        Write-ToLog -Message "Starting permission migration from $SourceAccount to $TargetAccount on path: $FilePath" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        Write-ToLog -Message "Starting permission migration from $SourceAccount to $TargetAccount on path: $FilePath ($scopeLabel)" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
         Write-ToLog -Message "Log messages below are streamed from standard output of the icacls command, output may be ignored if it contains errors about pointers *" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
     } catch {
         Write-ToLog -Message "Failed to initialize NTFS permission log at $ntfsPermissionLogPath $($_.Exception.Message)" -Level Warning -Step "Set-RegPermission"
@@ -57,9 +71,24 @@ function Set-RegPermission {
     # Use icacls for bulk operations - much faster than PowerShell ACL cmdlets
     Write-ToLog "Starting permission migration using icacls for path: $FilePath" -Level Verbose -Step "Set-RegPermission"
 
-    # Step 1: Grant target user full control inheritance on root folder (no /T flag = non-recursive, immediate level only)
-    Write-ToLog "Granting permissions to: $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
-    $icaclsGrantResult = icacls $FilePath /grant "${TargetAccountIcacls}:(OI)(CI)F" /C /Q 2>&1
+    $grantArguments = if ($Recursive) {
+        @('/grant', "${TargetAccountIcacls}:(OI)(CI)F", '/T', '/C', '/Q')
+    } else {
+        @('/grant', "${TargetAccountIcacls}:(OI)(CI)F", '/C', '/Q')
+    }
+    $ownerArguments = if ($Recursive) {
+        @('/setowner', "$TargetAccountIcacls", '/T', '/C', '/Q')
+    } else {
+        @('/setowner', "$TargetAccountIcacls", '/C', '/Q')
+    }
+
+    # Step 1: Grant target user full control inheritance on folder
+    Write-ToLog "Granting permissions to: $TargetAccountIcacls ($scopeLabel)" -Level Verbose -Step "Set-RegPermission"
+    $icaclsGrantResult = if ($Recursive) {
+        Invoke-IcaclsSafe -Path $FilePath -Arguments $grantArguments
+    } else {
+        & icacls.exe $FilePath $grantArguments 2>&1 | ForEach-Object { "$_" }
+    }
 
     # Log icacls output for debugging
     if ($icaclsGrantResult) {
@@ -73,22 +102,16 @@ function Set-RegPermission {
     if ($LASTEXITCODE -ne 0) {
         Write-ToLog "Warning: icacls grant operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
     } else {
-        Write-ToLog "Successfully granted permissions to $TargetAccountIcacls (immediate level only)" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        Write-ToLog "Successfully granted permissions to $TargetAccountIcacls ($scopeLabel)" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
     }
 
-    # Step 2: Replace source user with target user in all ACLs (preserves existing permissions)
-    # Write-ToLog "Substituting $SourceAccountIcacls with $TargetAccountIcacls"
-    # $icaclsSubstResult = & icacls.exe $FilePath /substitute "$SourceAccountIcacls" "$TargetAccountIcacls" /T /C /Q 2>&1
-    # if ($LASTEXITCODE -ne 0) {
-    #     Write-ToLog "Warning: icacls substitute operation had issues. Exit code: $LASTEXITCODE"
-    #     Write-ToLog "icacls substitute output: $($icaclsSubstResult -join ' ')"
-    # } else {
-    #     Write-ToLog "Successfully substituted $SourceAccountIcacls with $TargetAccountIcacls"
-    # }
-
-    # Step 3: Change ownership from source to target user (no /T flag = non-recursive, immediate level only)
-    Write-ToLog "Setting owner to $TargetAccountIcacls" -Level Verbose -Step "Set-RegPermission"
-    $icaclsOwnerResult = icacls $FilePath /setowner "$TargetAccountIcacls" /C /Q 2>&1
+    # Step 2: Change ownership from source to target user
+    Write-ToLog "Setting owner to $TargetAccountIcacls ($scopeLabel)" -Level Verbose -Step "Set-RegPermission"
+    $icaclsOwnerResult = if ($Recursive) {
+        Invoke-IcaclsSafe -Path $FilePath -Arguments $ownerArguments
+    } else {
+        & icacls.exe $FilePath $ownerArguments 2>&1 | ForEach-Object { "$_" }
+    }
 
     # Log icacls output for debugging
     if ($icaclsOwnerResult) {
@@ -102,6 +125,7 @@ function Set-RegPermission {
     if ($LASTEXITCODE -ne 0) {
         Write-ToLog "Warning: icacls setowner operation had issues. Exit code: $LASTEXITCODE" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
     } else {
-        Write-ToLog "Successfully set owner to $TargetAccountIcacls (immediate level only)" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
-    }    Write-ToLog "Permission migration completed for path: $FilePath" -Level Verbose -Step "Set-RegPermission"
+        Write-ToLog "Successfully set owner to $TargetAccountIcacls ($scopeLabel)" -Level Verbose -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+    }
+    Write-ToLog "Permission migration completed for path: $FilePath" -Level Verbose -Step "Set-RegPermission"
 }

@@ -127,6 +127,12 @@ function Start-Migration {
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.")]
+        [bool]
+        $SetFullPermission = $false,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
             HelpMessage = "When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will attempt to set the specified user as the PrimarySystemUser for this device in JumpCloud. This is set to false by default.")]
         [bool]
         $PrimaryUser = $false,
@@ -177,7 +183,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.13.2"
+        $admuVersion = "2.13.3"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -1387,16 +1393,24 @@ function Start-Migration {
             Write-ToProgress -ProgressBar $ProgressBar -Status "ntfsAccess" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
             $regPermStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-            # Set immediate/root level permissions only (non-recursive)
-            Write-ToLog -Message:("Setting immediate-level permissions. Recursive permissions will be set on first user login.")
-            Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath -ErrorAction SilentlyContinue
-            $regPermStopwatch.Stop()
-            Write-ToLog "Set-RegPermission (immediate level) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
+            # Set NTFS permissions on profile
+            if ($SetFullPermission) {
+                Write-ToLog -Message:("Setting recursive permissions on profile during migration (SetFullPermission).")
+                Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath -Recursive -ErrorAction SilentlyContinue
+                $regPermStopwatch.Stop()
+                Write-ToLog "Set-RegPermission (recursive) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
+            } else {
+                # Set immediate/root level permissions only (non-recursive)
+                Write-ToLog -Message:("Setting immediate-level permissions. Recursive permissions will be set on first user login.")
+                Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath -ErrorAction SilentlyContinue
+                $regPermStopwatch.Stop()
+                Write-ToLog "Set-RegPermission (immediate level) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
 
-            # Create scheduled task to set recursive permissions on user logon
-            $taskCreated = New-RegPermissionTask -ProfilePath $newUserProfileImagePath -TargetSID $NewUserSID -SourceSID $SelectedUserSID -TaskUser $JumpCloudUsername
-            if (-not $taskCreated) {
-                Write-ToLog -Message "Scheduled task creation failed. Permissions may not be fully applied on first login." -Level Warning
+                # Create scheduled task to set recursive permissions on user logon
+                $taskCreated = New-RegPermissionTask -ProfilePath $newUserProfileImagePath -TargetSID $NewUserSID -SourceSID $SelectedUserSID -TaskUser $JumpCloudUsername
+                if (-not $taskCreated) {
+                    Write-ToLog -Message "Scheduled task creation failed. Permissions may not be fully applied on first login." -Level Warning
+                }
             }
             #endRegion NTFS Permissions
 
@@ -1416,10 +1430,17 @@ function Start-Migration {
             foreach ($dir in $usrClassChain) {
                 if (Test-Path $dir) {
                     $dirCheck = Test-DATParentPermission -DirectoryPath $dir -UserSID $NewUserSID
-                    if ($dirCheck) {
-                        Write-ToLog -Message "Validated required permissions (System, Admin, $($NewUserSID)) on: $dir"
+                    if ($dirCheck.IsValid) {
+                        Write-ToLog -Message "Validated required permissions on: $dir"
                     } else {
-                        Write-ToLog -Message "Permission validation failed on: $dir. Missing required access." -Level Warning
+                        $details = @()
+                        if ($dirCheck.MissingIdentities) {
+                            $details += "Missing identities: $($dirCheck.MissingIdentities -join ', ')"
+                        }
+                        foreach ($item in $dirCheck.InsufficientRights) {
+                            $details += "$($item.Identity) missing rights: $($item.MissingRights -join ', ')"
+                        }
+                        Write-ToLog -Message "Permission validation failed on: $dir. $($details -join '; ')" -Level Warning
                         $chainValid = $false
                     }
                 } else {
