@@ -47,7 +47,7 @@ function Test-DATParentPermission {
         return $false
     }
 
-    function local:Get-MissingTraverseRights {
+    function local:Get-MissingTraverseRight {
         param([System.Security.AccessControl.FileSystemRights]$Rights)
 
         $missing = [System.Collections.Generic.List[string]]::new()
@@ -107,7 +107,7 @@ function Test-DATParentPermission {
 
         if (-not $hasSufficientRights) {
             $bestRule = $allowRules | Sort-Object { [int]$_.FileSystemRights } -Descending | Select-Object -First 1
-            $missingRights = Get-MissingTraverseRights -Rights $bestRule.FileSystemRights
+            $missingRights = Get-MissingTraverseRight -Rights $bestRule.FileSystemRights
             $insufficientRights.Add([PSCustomObject]@{
                     Identity      = $identityName
                     SID           = $sid
