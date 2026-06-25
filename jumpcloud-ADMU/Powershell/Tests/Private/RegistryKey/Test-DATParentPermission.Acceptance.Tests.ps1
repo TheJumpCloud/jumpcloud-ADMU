@@ -62,7 +62,8 @@ Describe "Test-DATParentPermission Acceptance Tests" -Tag "Acceptance" {
 
             $result = Test-DATParentPermission -DirectoryPath $dirPath -UserSID $userSID
             $result.IsValid | Should -Be $false
-            $result.MissingIdentities | Should -Contain $datUser
+            $expectedIdentity = (New-Object System.Security.Principal.SecurityIdentifier($userSID)).Translate([System.Security.Principal.NTAccount]).Value
+            $result.MissingIdentities | Should -Contain $expectedIdentity
         }
 
         It 'Should report NT AUTHORITY\SYSTEM in MissingIdentities when SYSTEM Allow access is missing' {
@@ -113,28 +114,29 @@ Describe "Test-DATParentPermission Acceptance Tests" -Tag "Acceptance" {
 
             foreach ($sid in @($systemSid, $adminSid)) {
                 $dirACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule(
-                        $sid,
-                        [System.Security.AccessControl.FileSystemRights]::FullControl,
-                        [System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit,
-                        [System.Security.AccessControl.PropagationFlags]::None,
-                        [System.Security.AccessControl.AccessControlType]::Allow
-                    )))
+                            $sid,
+                            [System.Security.AccessControl.FileSystemRights]::FullControl,
+                            ([System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit),
+                            [System.Security.AccessControl.PropagationFlags]::None,
+                            [System.Security.AccessControl.AccessControlType]::Allow
+                        )))
             }
 
             # Grant the user Write only (insufficient for directory traversal)
             $dirACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule(
-                    $userSidObj,
-                    [System.Security.AccessControl.FileSystemRights]::Write,
-                    [System.Security.AccessControl.InheritanceFlags]::None,
-                    [System.Security.AccessControl.PropagationFlags]::None,
-                    [System.Security.AccessControl.AccessControlType]::Allow
-                )))
+                        $userSidObj,
+                        [System.Security.AccessControl.FileSystemRights]::Write,
+                        [System.Security.AccessControl.InheritanceFlags]::None,
+                        [System.Security.AccessControl.PropagationFlags]::None,
+                        [System.Security.AccessControl.AccessControlType]::Allow
+                    )))
             Set-Acl $dirPath -AclObject $dirACL
 
             $result = Test-DATParentPermission -DirectoryPath $dirPath -UserSID $userSID
             $result.IsValid | Should -Be $false
-            ($result.InsufficientRights | Where-Object { $_.Identity -eq $datUser }) | Should -Not -BeNullOrEmpty
-            ($result.InsufficientRights | Where-Object { $_.Identity -eq $datUser }).MissingRights | Should -Not -BeNullOrEmpty
+            $expectedIdentity = (New-Object System.Security.Principal.SecurityIdentifier($userSID)).Translate([System.Security.Principal.NTAccount]).Value
+            ($result.InsufficientRights | Where-Object { $_.Identity -eq $expectedIdentity }) | Should -Not -BeNullOrEmpty
+            ($result.InsufficientRights | Where-Object { $_.Identity -eq $expectedIdentity }).MissingRights | Should -Not -BeNullOrEmpty
         }
 
         It 'Should return IsValid $false if the directory does not exist' {
