@@ -14,6 +14,10 @@ Feature release adding optional full recursive NTFS permission migration and imp
 - Added `-Recursive` switch to `Set-RegPermission` for upfront recursive ACL and ownership updates
 - Enhanced `Test-DATParentPermission` to report missing identities and insufficient filesystem rights for directory traversal
 - Added 2-minute progress heartbeat during recursive `SetFullPermission` when `ReportStatus` or GUI progress is enabled, so long NTFS operations remain visible in JumpCloud device description
+- Fixed recursive NTFS permissions failing in the heartbeat runspace because scriptblocks from Start-Migration resolved variables in the parent runspace instead of the child
+- Moved NTFS progress heartbeat into `Set-RegPermission` using `Start-Process` wait polling on the main thread (works in compiled EXE and module without a child runspace)
+- Fixed `Write-ToProgress` `-StatusMessage` override being ignored when reporting to JumpCloud device description (PowerShell treated `$StatusMessage` and `$statusMessage` as the same variable)
+- NTFS heartbeat messages now include elapsed seconds for runs under one minute
 
 ## 2.13.2
 

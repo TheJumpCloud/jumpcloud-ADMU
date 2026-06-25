@@ -1395,20 +1395,36 @@ function Start-Migration {
 
             # Set NTFS permissions on profile
             if ($SetFullPermission) {
-                Write-ToLog -Message:("Setting recursive permissions on profile during migration (SetFullPermission).")
+                Write-ToLog -Message:("Setting recursive permissions on profile during migration (SetFullPermission). Target profile path: '$newUserProfileImagePath'")
+                if ([string]::IsNullOrWhiteSpace($newUserProfileImagePath)) {
+                    throw [System.Management.Automation.ValidationMetadataException] "Cannot set recursive NTFS permissions because the target profile path is empty."
+                }
                 $useNtfsHeartbeat = $isForm -or ($systemDescription -and $systemDescription.reportStatus)
+                $regPermissionParams = @{
+                    SourceSID   = $SelectedUserSID
+                    TargetSID   = $NewUserSID
+                    FilePath    = $newUserProfileImagePath
+                    Recursive   = $true
+                    ErrorAction = 'Stop'
+                }
                 if ($useNtfsHeartbeat) {
-                    $onNtfsHeartbeat = {
-                        $elapsedMin = [math]::Floor($regPermStopwatch.Elapsed.TotalMinutes)
-                        $heartbeatMsg = "Setting NTFS permissions (recursive, $elapsedMin min elapsed)"
+                    $regPermissionParams.ProgressHeartbeatIntervalSeconds = 120
+                    $regPermissionParams.OnProgressHeartbeat = {
+                        $elapsed = $regPermStopwatch.Elapsed
+                        $elapsedMin = [math]::Floor($elapsed.TotalMinutes)
+                        if ($elapsedMin -gt 0) {
+                            $heartbeatMsg = "Setting NTFS File Permissions (recursive, $elapsedMin min elapsed)"
+                        } else {
+                            $elapsedSec = [math]::Floor($elapsed.TotalSeconds)
+                            $heartbeatMsg = "Setting NTFS File Permissions (recursive, $elapsedSec sec elapsed)"
+                        }
                         Write-ToProgress -ProgressBar $ProgressBar -Status "ntfsAccess" -StatusMessage $heartbeatMsg -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
                     }
-                    Invoke-WithProgressHeartbeat -PrepareNtfsRunspace -ScriptBlock {
-                        param($SourceSID, $TargetSID, $ProfilePath)
-                        Set-RegPermission -SourceSID $SourceSID -TargetSID $TargetSID -FilePath $ProfilePath -Recursive -ErrorAction SilentlyContinue
-                    } -ArgumentList @($SelectedUserSID, $NewUserSID, $newUserProfileImagePath) -OnHeartbeat $onNtfsHeartbeat -HeartbeatIntervalSeconds 120 | Out-Null
-                } else {
-                    Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath -Recursive -ErrorAction SilentlyContinue
+                }
+                try {
+                    Set-RegPermission @regPermissionParams
+                } catch {
+                    Write-ToLog -Message "Set-RegPermission (recursive) failed: $_" -Level Warning
                 }
                 $regPermStopwatch.Stop()
                 Write-ToLog "Set-RegPermission (recursive) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."

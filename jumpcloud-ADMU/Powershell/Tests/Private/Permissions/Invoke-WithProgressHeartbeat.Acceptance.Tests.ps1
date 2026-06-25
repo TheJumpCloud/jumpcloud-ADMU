@@ -38,5 +38,34 @@ Describe "Invoke-WithProgressHeartbeat Acceptance Tests" -Tag "Acceptance" {
         It "Should propagate scriptblock errors" {
             { Invoke-WithProgressHeartbeat -ScriptBlock { throw "test failure" } } | Should -Throw "test failure"
         }
+
+        It "Should pass RunspaceVariables into the background runspace" {
+            $result = Invoke-WithProgressHeartbeat `
+                -RunspaceVariables @{
+                    PermissionProfilePath = 'C:\Users\test'
+                } `
+                -ScriptBlock { $PermissionProfilePath }
+
+            $result | Should -Be 'C:\Users\test'
+        }
+
+        It "Should run Set-RegPermission in NTFS runspace using SessionStateProxy variables" -Skip:(-not $IsWindows) {
+            $testDir = Join-Path $env:TEMP "InvokeNtfsHeartbeat_$(Get-Random)"
+            New-Item -ItemType Directory -Path $testDir -Force | Out-Null
+            try {
+                $sourceSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+                $targetSid = $sourceSid
+
+                { Invoke-WithProgressHeartbeat -PrepareNtfsRunspace -RunspaceVariables @{
+                        PermissionSourceSID   = $sourceSid
+                        PermissionTargetSID   = $targetSid
+                        PermissionProfilePath = $testDir
+                    } -HeartbeatIntervalSeconds 1 } | Should -Not -Throw
+            } finally {
+                if (Test-Path $testDir) {
+                    Remove-Item -Path $testDir -Recurse -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
     }
 }

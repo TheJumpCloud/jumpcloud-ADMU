@@ -266,13 +266,32 @@ Describe "Write-ToProgress Acceptance Tests" -Tag "Acceptance" {
 
         It "Should use StatusMessage override when provided" {
             $key = "ntfsAccess"
-            $customMessage = "Setting NTFS permissions (recursive, 4 min elapsed)"
+            $customMessage = "Setting NTFS File Permissions (recursive, 4 min elapsed)"
             $null = Write-ToProgress -progressBar $npf -Status $key -StatusMessage $customMessage -form $true -StatusMap $admuTracker
 
             $expectedPercent = [int](($trackerKeys.IndexOf($key) / ($totalSteps - 1)) * 100)
 
             $($npf.StatusInput) | Should -Be $customMessage
             $($npf.PercentComplete) | Should -Be $expectedPercent
+        }
+
+        It "Should use StatusMessage override when reporting status without form" {
+            $key = "ntfsAccess"
+            $customMessage = "Setting NTFS File Permissions (recursive, 15 sec elapsed)"
+            $systemDescription = [PSCustomObject]@{
+                UserSID                   = "S-1-5-21-1234567890-123456789-123456789-1001"
+                MigrationUsername         = "testuser"
+                reportStatus              = $true
+                ValidatedSystemContextAPI = $false
+                ValidatedApiKey           = $false
+            }
+
+            Mock Build-MigrationDescription { return @(@{ sid = "S-1-5-21-1234567890-123456789-123456789-1001"; msg = $StatusMessage }) }
+            Mock Write-ToLog {}
+
+            $null = Write-ToProgress -Status $key -StatusMessage $customMessage -form $false -SystemDescription $systemDescription -StatusMap $admuTracker
+
+            Should -Invoke Build-MigrationDescription -ParameterFilter { $StatusMessage -eq $customMessage }
         }
 
         It "Should update status and percent for 'validateDatPermissions'" {
