@@ -142,7 +142,11 @@ param (
 
         [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        $localExes
+        $localExes,
+
+        [Parameter(ParameterSetName = 'Migrate')]
+        [bool]
+        $SetFullPermission
     )
 '@
 

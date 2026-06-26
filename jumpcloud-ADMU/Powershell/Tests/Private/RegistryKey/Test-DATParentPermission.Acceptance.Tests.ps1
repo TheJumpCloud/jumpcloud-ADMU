@@ -17,7 +17,7 @@ Describe "Test-DATParentPermission Acceptance Tests" -Tag "Acceptance" {
 
     Context 'Evaluates directory permissions for required SIDs' {
 
-        It 'Should return $true when SYSTEM, Administrators, and the target User have Allow access' {
+        It 'Should return IsValid $true when SYSTEM, Administrators, and the target User have Allow access' {
             # Setup User
             $datUser = "ADMU_tstprnt_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $password = '$T#st1234'
@@ -30,11 +30,13 @@ Describe "Test-DATParentPermission Acceptance Tests" -Tag "Acceptance" {
             # Target the newly created user profile directory
             $dirPath = "C:\Users\$datUser"
 
-            $isValid = Test-DATParentPermission -DirectoryPath $dirPath -UserSID $userSID
-            $isValid | Should -Be $true
+            $result = Test-DATParentPermission -DirectoryPath $dirPath -UserSID $userSID
+            $result.IsValid | Should -Be $true
+            $result.MissingIdentities | Should -BeNullOrEmpty
+            $result.InsufficientRights | Should -BeNullOrEmpty
         }
 
-        It 'Should return $false when the target User is missing Allow access' {
+        It 'Should report the target User in MissingIdentities when Allow access is missing' {
             $datUser = "ADMU_tstprnt_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $password = '$T#st1234'
             Initialize-TestUser -UserName $datUser -Password $Password
@@ -58,11 +60,13 @@ Describe "Test-DATParentPermission Acceptance Tests" -Tag "Acceptance" {
                 Set-Acl $dirPath -AclObject $dirACL
             }
 
-            $isValid = Test-DATParentPermission -DirectoryPath $dirPath -UserSID $userSID
-            $isValid | Should -Be $false
+            $result = Test-DATParentPermission -DirectoryPath $dirPath -UserSID $userSID
+            $result.IsValid | Should -Be $false
+            $expectedIdentity = (New-Object System.Security.Principal.SecurityIdentifier($userSID)).Translate([System.Security.Principal.NTAccount]).Value
+            $result.MissingIdentities | Should -Contain $expectedIdentity
         }
 
-        It 'Should return $false when SYSTEM or Administrators are missing Allow access' {
+        It 'Should report NT AUTHORITY\SYSTEM in MissingIdentities when SYSTEM Allow access is missing' {
             $datUser = "ADMU_tstprnt_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
             $password = '$T#st1234'
             Initialize-TestUser -UserName $datUser -Password $Password
@@ -86,17 +90,160 @@ Describe "Test-DATParentPermission Acceptance Tests" -Tag "Acceptance" {
                 Set-Acl $dirPath -AclObject $dirACL
             }
 
-            $isValid = Test-DATParentPermission -DirectoryPath $dirPath -UserSID $userSID
-            $isValid | Should -Be $false
+            $result = Test-DATParentPermission -DirectoryPath $dirPath -UserSID $userSID
+            $result.IsValid | Should -Be $false
+            $result.MissingIdentities | Should -Contain 'NT AUTHORITY\SYSTEM'
         }
 
-        It 'Should return $false if the directory does not exist' {
+        It 'Should report insufficient filesystem rights when Allow ACE lacks directory traversal rights' {
+            $datUser = "ADMU_tstprnt_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $password = '$T#st1234'
+            Initialize-TestUser -UserName $datUser -Password $Password
+
+            $ntAccount = New-Object System.Security.Principal.NTAccount($datUser)
+            $userSID = $ntAccount.Translate([System.Security.Principal.SecurityIdentifier]).Value
+            $dirPath = "C:\Users\$datUser"
+
+            $dirACL = Get-Acl $dirPath
+            $dirACL.SetAccessRuleProtection($true, $false)
+            foreach ($rule in @($dirACL.Access)) {
+                $dirACL.RemoveAccessRule($rule) | Out-Null
+            }
+
+            $systemSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')
+            $adminSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')
+            $userSidObj = New-Object System.Security.Principal.SecurityIdentifier($userSID)
+
+            foreach ($sid in @($systemSid, $adminSid)) {
+                $dirACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule(
+                            $sid,
+                            [System.Security.AccessControl.FileSystemRights]::FullControl,
+                            ([System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit),
+                            [System.Security.AccessControl.PropagationFlags]::None,
+                            [System.Security.AccessControl.AccessControlType]::Allow
+                        )))
+            }
+
+            # Grant the user Write only (insufficient for directory traversal)
+            $dirACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule(
+                        $userSidObj,
+                        [System.Security.AccessControl.FileSystemRights]::Write,
+                        [System.Security.AccessControl.InheritanceFlags]::None,
+                        [System.Security.AccessControl.PropagationFlags]::None,
+                        [System.Security.AccessControl.AccessControlType]::Allow
+                    )))
+            Set-Acl $dirPath -AclObject $dirACL
+
+            $result = Test-DATParentPermission -DirectoryPath $dirPath -UserSID $userSID
+            $result.IsValid | Should -Be $false
+            $expectedIdentity = (New-Object System.Security.Principal.SecurityIdentifier($userSID)).Translate([System.Security.Principal.NTAccount]).Value
+            ($result.InsufficientRights | Where-Object { $_.Identity -eq $expectedIdentity }) | Should -Not -BeNullOrEmpty
+            ($result.InsufficientRights | Where-Object { $_.Identity -eq $expectedIdentity }).MissingRights | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should report the target User in MissingIdentities when only InheritOnly Allow access exists' {
+            $datUser = "ADMU_tstprnt_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $password = '$T#st1234'
+            Initialize-TestUser -UserName $datUser -Password $Password
+
+            $ntAccount = New-Object System.Security.Principal.NTAccount($datUser)
+            $userSID = $ntAccount.Translate([System.Security.Principal.SecurityIdentifier]).Value
+            $dirPath = "C:\Users\$datUser"
+
+            $dirACL = Get-Acl $dirPath
+            $dirACL.SetAccessRuleProtection($true, $false)
+            foreach ($rule in @($dirACL.Access)) {
+                $dirACL.RemoveAccessRule($rule) | Out-Null
+            }
+
+            $systemSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')
+            $adminSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')
+            $userSidObj = New-Object System.Security.Principal.SecurityIdentifier($userSID)
+
+            foreach ($sid in @($systemSid, $adminSid)) {
+                $dirACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule(
+                            $sid,
+                            [System.Security.AccessControl.FileSystemRights]::FullControl,
+                            ([System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit),
+                            [System.Security.AccessControl.PropagationFlags]::None,
+                            [System.Security.AccessControl.AccessControlType]::Allow
+                        )))
+            }
+
+            $dirACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule(
+                        $userSidObj,
+                        [System.Security.AccessControl.FileSystemRights]::FullControl,
+                        ([System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit),
+                        [System.Security.AccessControl.PropagationFlags]::InheritOnly,
+                        [System.Security.AccessControl.AccessControlType]::Allow
+                    )))
+            Set-Acl $dirPath -AclObject $dirACL
+
+            $result = Test-DATParentPermission -DirectoryPath $dirPath -UserSID $userSID
+            $result.IsValid | Should -Be $false
+            $expectedIdentity = (New-Object System.Security.Principal.SecurityIdentifier($userSID)).Translate([System.Security.Principal.NTAccount]).Value
+            $result.MissingIdentities | Should -Contain $expectedIdentity
+        }
+
+        It 'Should report insufficient rights when explicit Deny blocks applicable Allow access' {
+            $datUser = "ADMU_tstprnt_" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $password = '$T#st1234'
+            Initialize-TestUser -UserName $datUser -Password $Password
+
+            $ntAccount = New-Object System.Security.Principal.NTAccount($datUser)
+            $userSID = $ntAccount.Translate([System.Security.Principal.SecurityIdentifier]).Value
+            $dirPath = "C:\Users\$datUser"
+
+            $dirACL = Get-Acl $dirPath
+            $dirACL.SetAccessRuleProtection($true, $false)
+            foreach ($rule in @($dirACL.Access)) {
+                $dirACL.RemoveAccessRule($rule) | Out-Null
+            }
+
+            $systemSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-18')
+            $adminSid = New-Object System.Security.Principal.SecurityIdentifier('S-1-5-32-544')
+            $userSidObj = New-Object System.Security.Principal.SecurityIdentifier($userSID)
+
+            foreach ($sid in @($systemSid, $adminSid)) {
+                $dirACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule(
+                            $sid,
+                            [System.Security.AccessControl.FileSystemRights]::FullControl,
+                            ([System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit),
+                            [System.Security.AccessControl.PropagationFlags]::None,
+                            [System.Security.AccessControl.AccessControlType]::Allow
+                        )))
+            }
+
+            $dirACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule(
+                        $userSidObj,
+                        [System.Security.AccessControl.FileSystemRights]::FullControl,
+                        [System.Security.AccessControl.InheritanceFlags]::None,
+                        [System.Security.AccessControl.PropagationFlags]::None,
+                        [System.Security.AccessControl.AccessControlType]::Allow
+                    )))
+            $dirACL.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule(
+                        $userSidObj,
+                        [System.Security.AccessControl.FileSystemRights]::FullControl,
+                        [System.Security.AccessControl.InheritanceFlags]::None,
+                        [System.Security.AccessControl.PropagationFlags]::None,
+                        [System.Security.AccessControl.AccessControlType]::Deny
+                    )))
+            Set-Acl $dirPath -AclObject $dirACL
+
+            $result = Test-DATParentPermission -DirectoryPath $dirPath -UserSID $userSID
+            $result.IsValid | Should -Be $false
+            $expectedIdentity = (New-Object System.Security.Principal.SecurityIdentifier($userSID)).Translate([System.Security.Principal.NTAccount]).Value
+            ($result.InsufficientRights | Where-Object { $_.Identity -eq $expectedIdentity }) | Should -Not -BeNullOrEmpty
+            ($result.InsufficientRights | Where-Object { $_.Identity -eq $expectedIdentity }).MissingRights | Should -Not -BeNullOrEmpty
+        }
+
+        It 'Should return IsValid $false if the directory does not exist' {
             $fakeUserSID = "S-1-5-21-1234567890-1234567890-1234567890-1001"
             $fakeDirPath = "C:\Fake\Path\That\Definitely\Does\Not\Exist"
 
-            # The function uses SilentlyContinue, so it should return false rather than throwing
-            $isValid = Test-DATParentPermission -DirectoryPath $fakeDirPath -UserSID $fakeUserSID
-            $isValid | Should -Be $false
+            $result = Test-DATParentPermission -DirectoryPath $fakeDirPath -UserSID $fakeUserSID
+            $result.IsValid | Should -Be $false
+            $result.MissingIdentities | Should -Contain 'Directory not accessible or does not exist'
         }
     }
 }
