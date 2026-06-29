@@ -1,6 +1,8 @@
 function Backup-SecPol {
     [CmdletBinding()]
     [OutputType([System.String])]
+    param()
+
     process {
         $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
         $tempDir = Join-Path "$(Get-WindowsDrive)\Windows\Temp" "JCADMU"
