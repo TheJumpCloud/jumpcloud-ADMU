@@ -624,6 +624,7 @@ function Start-Migration {
         # Block the migrating account from logging in at the Windows login screen for the duration
         # of the migration. Reverted in catch block if an error occurs, or in end block on success.
         if ($BlockAccountLogin) {
+            $backupPath = Backup-SecPol
             Write-ToLog -Message:("Blocking interactive logon for '$SelectedUserName' (SID: $SelectedUserSID) during migration.")
             $blockResult = Set-AccountLoginPolicy -SID $SelectedUserSID -Action Disable -Message $blockLoginMessage -MessageTitle $blockLoginMessageTitle
             if ($blockResult.Success) {
