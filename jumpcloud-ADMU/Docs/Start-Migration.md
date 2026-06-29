@@ -407,7 +407,7 @@ Accept wildcard characters: False
 ```
 
 ### -BlockAccountLogin
-When set to true, the ADMU will suspend interactive logon at the Windows login screen for the duration of the migration by excluding installed credential providers via the `ExcludedCredentialProviders` registry value (`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System`). This prevents the migrating user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.
+When set to true, the ADMU will suspend interactive logon at the Windows login screen for the duration of the migration by excluding and disabling installed credential providers in the registry (`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System` and `HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\Credential Providers`). This prevents the migrating user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.
 
 ```yaml
 Type: System.Boolean

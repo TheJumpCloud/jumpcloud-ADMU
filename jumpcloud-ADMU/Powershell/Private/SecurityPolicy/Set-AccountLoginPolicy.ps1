@@ -1,45 +1,3 @@
-function Restore-AccountLoginPolicyFromBackup {
-    [CmdletBinding()]
-    param (
-        [Parameter(Mandatory = $true)]
-        [System.String]
-        $RegPath,
-
-        [Parameter(Mandatory = $true)]
-        [System.String]
-        $BackupKey
-    )
-
-    if (-not (Test-Path $BackupKey)) {
-        return
-    }
-
-    $backup = Get-ItemProperty -Path $BackupKey -ErrorAction SilentlyContinue
-
-    if ($backup.excludedProvidersExisted -eq 1) {
-        Set-ItemProperty -Path $RegPath -Name 'ExcludedCredentialProviders' -Value $backup.ExcludedCredentialProviders -Type String
-    } else {
-        Remove-ItemProperty -Path $RegPath -Name 'ExcludedCredentialProviders' -ErrorAction SilentlyContinue
-    }
-
-    if ($backup.PSObject.Properties.Name -contains 'captionExisted') {
-        if ($backup.captionExisted -eq 1) {
-            Set-ItemProperty -Path $RegPath -Name 'legalnoticecaption' -Value $backup.legalnoticecaption -Type String
-        } else {
-            Remove-ItemProperty -Path $RegPath -Name 'legalnoticecaption' -ErrorAction SilentlyContinue
-        }
-    }
-    if ($backup.PSObject.Properties.Name -contains 'textExisted') {
-        if ($backup.textExisted -eq 1) {
-            Set-ItemProperty -Path $RegPath -Name 'legalnoticetext' -Value $backup.legalnoticetext -Type String
-        } else {
-            Remove-ItemProperty -Path $RegPath -Name 'legalnoticetext' -ErrorAction SilentlyContinue
-        }
-    }
-
-    Remove-Item -Path $BackupKey -Recurse -Force -ErrorAction SilentlyContinue
-}
-
 function Set-AccountLoginPolicy {
 
     [CmdletBinding()]
@@ -66,6 +24,7 @@ function Set-AccountLoginPolicy {
         $regPath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System'
         $providersPath = 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\Credential Providers'
         $backupKey = 'HKLM:\SOFTWARE\JCADMU\LoginPolicyBackup'
+        $providerBackupKey = Join-Path $backupKey 'CredentialProviders'
 
         # Status object returned to the caller so a policy hiccup does not have to fail the migration
         $result = [PSCustomObject]@{
@@ -77,7 +36,6 @@ function Set-AccountLoginPolicy {
 
     process {
         try {
-            $loginBlockApplied = $false
             switch ($Action) {
                 'Disable' {
                     # --- Suspend interactive logon via registry ---
@@ -99,6 +57,24 @@ function Set-AccountLoginPolicy {
                         } else {
                             Set-ItemProperty -Path $backupKey -Name 'excludedProvidersExisted' -Value 0 -Type DWord
                         }
+
+                        if (-not (Test-Path $providerBackupKey)) {
+                            New-Item -Path $providerBackupKey -Force | Out-Null
+                        }
+                        foreach ($clsid in $installedProviders) {
+                            $providerKey = Join-Path $providersPath $clsid
+                            $backupProviderKey = Join-Path $providerBackupKey ($clsid.Trim('{}'))
+                            if (-not (Test-Path $backupProviderKey)) {
+                                New-Item -Path $backupProviderKey -Force | Out-Null
+                            }
+                            $disabledValue = (Get-ItemProperty -Path $providerKey -Name 'Disabled' -ErrorAction SilentlyContinue).Disabled
+                            if ($null -ne $disabledValue) {
+                                Set-ItemProperty -Path $backupProviderKey -Name 'Disabled' -Value $disabledValue -Type DWord
+                                Set-ItemProperty -Path $backupProviderKey -Name 'disabledExisted' -Value 1 -Type DWord
+                            } else {
+                                Set-ItemProperty -Path $backupProviderKey -Name 'disabledExisted' -Value 0 -Type DWord
+                            }
+                        }
                     } else {
                         $blockedSid = (Get-ItemProperty -Path $backupKey -Name 'BlockedSid' -ErrorAction SilentlyContinue).BlockedSid
                         if ($blockedSid -and ($blockedSid -ne $SID)) {
@@ -109,8 +85,17 @@ function Set-AccountLoginPolicy {
                     }
 
                     Set-ExcludedCredentialProviders -Clsids $installedProviders -RegPath $regPath
-                    $loginBlockApplied = $true
-                    Write-ToLog -Message "Suspended interactive logon for SID '$SID' by excluding $($installedProviders.Count) credential provider(s)." -Step "Set-AccountLoginPolicy"
+                    foreach ($clsid in $installedProviders) {
+                        $providerKey = Join-Path $providersPath $clsid
+                        if (-not (Test-Path $providerKey)) {
+                            New-Item -Path $providerKey -Force | Out-Null
+                        }
+                        $currentDisabled = (Get-ItemProperty -Path $providerKey -Name 'Disabled' -ErrorAction SilentlyContinue).Disabled
+                        if ($currentDisabled -ne 1) {
+                            Set-ItemProperty -Path $providerKey -Name 'Disabled' -Value 1 -Type DWord
+                        }
+                    }
+                    Write-ToLog -Message "Suspended interactive logon for SID '$SID' by excluding and disabling $($installedProviders.Count) credential provider(s)." -Step "Set-AccountLoginPolicy"
 
                     # --- Optional interactive-logon message ---
                     if ($PSBoundParameters.ContainsKey('Message') -or $PSBoundParameters.ContainsKey('MessageTitle')) {
@@ -150,22 +135,53 @@ function Set-AccountLoginPolicy {
                     if (-not (Test-Path $backupKey)) {
                         Write-ToLog -Message "No ADMU login-policy backup found. Interactive logon is already unrestricted." -Level Verbose -Step "Set-AccountLoginPolicy"
                     } else {
-                        Restore-AccountLoginPolicyFromBackup -RegPath $regPath -BackupKey $backupKey
-                        Write-ToLog -Message "Restored interactive logon for SID '$SID' (removed migration credential-provider exclusion)." -Step "Set-AccountLoginPolicy"
+                        $backup = Get-ItemProperty -Path $backupKey -ErrorAction SilentlyContinue
+
+                        if ($backup.excludedProvidersExisted -eq 1) {
+                            Set-ItemProperty -Path $regPath -Name 'ExcludedCredentialProviders' -Value $backup.ExcludedCredentialProviders -Type String
+                        } else {
+                            Remove-ItemProperty -Path $regPath -Name 'ExcludedCredentialProviders' -ErrorAction SilentlyContinue
+                        }
+
+                        if (Test-Path $providerBackupKey) {
+                            foreach ($providerBackup in Get-ChildItem -Path $providerBackupKey -ErrorAction SilentlyContinue) {
+                                $clsid = '{' + $providerBackup.PSChildName + '}'
+                                $providerKey = Join-Path $providersPath $clsid
+                                if (-not (Test-Path $providerKey)) {
+                                    continue
+                                }
+                                $providerState = Get-ItemProperty -Path $providerBackup.PSPath -ErrorAction SilentlyContinue
+                                if ($providerState.disabledExisted -eq 1) {
+                                    Set-ItemProperty -Path $providerKey -Name 'Disabled' -Value $providerState.Disabled -Type DWord
+                                } else {
+                                    Remove-ItemProperty -Path $providerKey -Name 'Disabled' -ErrorAction SilentlyContinue
+                                }
+                            }
+                        }
+
+                        if ($backup.PSObject.Properties.Name -contains 'captionExisted') {
+                            if ($backup.captionExisted -eq 1) {
+                                Set-ItemProperty -Path $regPath -Name 'legalnoticecaption' -Value $backup.legalnoticecaption -Type String
+                            } else {
+                                Remove-ItemProperty -Path $regPath -Name 'legalnoticecaption' -ErrorAction SilentlyContinue
+                            }
+                        }
+                        if ($backup.PSObject.Properties.Name -contains 'textExisted') {
+                            if ($backup.textExisted -eq 1) {
+                                Set-ItemProperty -Path $regPath -Name 'legalnoticetext' -Value $backup.legalnoticetext -Type String
+                            } else {
+                                Remove-ItemProperty -Path $regPath -Name 'legalnoticetext' -ErrorAction SilentlyContinue
+                            }
+                        }
+
+                        Remove-Item -Path $backupKey -Recurse -Force -ErrorAction SilentlyContinue
+                        Write-ToLog -Message "Restored interactive logon for SID '$SID' (re-enabled credential providers and removed migration login block)." -Step "Set-AccountLoginPolicy"
                     }
                 }
             }
             $result.Success = $true
         } catch {
             Write-ToLog -Message "Set-AccountLoginPolicy failed for SID '$SID' (Action: $Action): $($_.Exception.Message)" -Level Warning -Step "Set-AccountLoginPolicy"
-            if ($Action -eq 'Disable' -and $loginBlockApplied) {
-                try {
-                    Restore-AccountLoginPolicyFromBackup -RegPath $regPath -BackupKey $backupKey
-                    Write-ToLog -Message "Rolled back partial login-policy changes after Disable failure for SID '$SID'." -Step "Set-AccountLoginPolicy"
-                } catch {
-                    Write-ToLog -Message "Failed to roll back partial login-policy changes for SID '$SID': $($_.Exception.Message)" -Level Warning -Step "Set-AccountLoginPolicy"
-                }
-            }
             $result.Success = $false
         }
     }
