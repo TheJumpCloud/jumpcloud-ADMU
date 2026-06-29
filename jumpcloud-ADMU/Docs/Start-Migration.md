@@ -20,9 +20,8 @@ Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPass
  [-AutoBindJCUser <Boolean>] [-BindAsAdmin <Boolean>] [-SetDefaultWindowsUser <Boolean>]
  [-AdminDebug <Boolean>] [-JumpCloudConnectKey <String>] [-JumpCloudAPIKey <String>] [-JumpCloudOrgID <String>]
  [-ValidateUserShellFolder <Boolean>] [-ReportStatus <Boolean>] [-removeMDM <Boolean>] [-localEXEs <Boolean>]
- [-bypassExeValidation <Boolean>] [-PrimaryUser <Boolean>] [-BlockAccountLogin <Boolean>]
- [<CommonParameters>]
- [-SetFullPermission <Boolean>] [-PrimaryUser <Boolean>] [<CommonParameters>]
+ [-bypassExeValidation <Boolean>] [-SetFullPermission <Boolean>] [-PrimaryUser <Boolean>]
+ [-BlockAccountLogin <Boolean>] [<CommonParameters>]
 ```
 
 ### form
@@ -63,6 +62,72 @@ This would allow the administrator to run the converted account in parallel for 
 
 ## PARAMETERS
 
+### -AdminDebug
+
+Option to display detailed messages during migration.
+This parameter is optional, but if set to $true, the CLI will show verbose output during the migration process
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -AutoBindJCUser
+
+This parameter will bind the username specified in the \`JumpCloudUserName\` field to the current system after Migration.
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -BindAsAdmin
+
+Option to bind user as sudo administrator or not.
+This parameter is not required and will default to $false (User will not be bound as admin).
+Set to $true if you'd like to bind the JumpCloudUserName as administrator during migration.
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -BlockAccountLogin
+When set to true, the ADMU will block the migrating account from logging in at the Windows login screen for the duration of the migration by adding the user's SID to the 'SeDenyInteractiveLogonRight' user-rights assignment. This prevents the user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.
+
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -ForceReboot
 
 A boolean $true/$false value to force the system to reboot at the end of the migration process.
@@ -98,11 +163,45 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
+### -JumpCloudAPIKey
+
+The Read/Write API key of a JumpCloud Administrator.
+This parameter is required if the AutoBind JC User parameter is specified.
+
+```yaml
+Type: System.String
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
 ### -JumpCloudConnectKey
 
 A string value that is required if \`-InstallJCAgent\` is $true.
 This connect key can be found in the JumpCloud console under add systems.
 It must be 24 chars and is different than an JumpCloud API key.
+
+```yaml
+Type: System.String
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -JumpCloudOrgID
+
+The ID of the JumpCloud Organization you wish to connect to.
+This field is only required if an MTP Api Key is used in the JumpCloudApiKey Parameter
 
 ```yaml
 Type: System.String
@@ -152,32 +251,28 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -TempPassword
-
-A string value that is used to set the new local accounts password.
-When duplicating the user account a password must be set when created and this value is passed.
-Once the system is online in JumpCloud the password will be overwritten and synced with JumpCloud if the user is taken over.
+### -PrimaryUser
+When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will attempt to set the specified user as the PrimarySystemUser for this device in JumpCloud. This is set to false by default.
 
 ```yaml
-Type: System.String
+Type: System.Boolean
 Parameter Sets: cmd
 Aliases:
 
-Required: True
+Required: False
 Position: Named
 Default value: None
 Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -inputObject
+### -ReportStatus
 
-An PSObject can be passed to the function with the required values for the migration process.
-This is used when the GUI version of the tool is used and inputs to the XAML form are passed to this function.
+When set to true, the ADMU will report the migration status to the system description. This is set to false by default.
 
 ```yaml
-Type: System.Object
-Parameter Sets: form
+Type: System.Boolean
+Parameter Sets: cmd
 Aliases:
 
 Required: False
@@ -206,76 +301,6 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -UpdateHomePath
-
-If set to $true, the ADMU will attempt to rename the selected username's homepath to the jumpcloud username.
-Note, this could break any applications that rely on a hard coded homepath.
-By default this is not set and will not rename the homepath.
-
-```yaml
-Type: System.Boolean
-Parameter Sets: cmd
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -JumpCloudAPIKey
-
-The Read/Write API key of a JumpCloud Administrator.
-This parameter is required if the AutoBind JC User parameter is specified.
-
-```yaml
-Type: System.String
-Parameter Sets: cmd
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -JumpCloudOrgID
-
-The ID of the JumpCloud Organization you wish to connect to.
-This field is only required if an MTP Api Key is used in the JumpCloudApiKey Parameter
-
-```yaml
-Type: System.String
-Parameter Sets: cmd
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -BindAsAdmin
-
-Option to bind user as sudo administrator or not.
-This parameter is not required and will default to $false (User will not be bound as admin).
-Set to $true if you'd like to bind the JumpCloudUserName as administrator during migration.
-
-```yaml
-Type: System.Boolean
-Parameter Sets: cmd
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
 ### -SetDefaultWindowsUser
 
 Option to set the windows default login user to the migrated user post-migration.
@@ -294,10 +319,44 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -AdminDebug
+### -SetFullPermission
+When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.
 
-Option to display detailed messages during migration.
-This parameter is optional, but if set to $true, the CLI will show verbose output during the migration process
+```yaml
+Type: System.Boolean
+Parameter Sets: cmd
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -TempPassword
+
+A string value that is used to set the new local accounts password.
+When duplicating the user account a password must be set when created and this value is passed.
+Once the system is online in JumpCloud the password will be overwritten and synced with JumpCloud if the user is taken over.
+
+```yaml
+Type: System.String
+Parameter Sets: cmd
+Aliases:
+
+Required: True
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -UpdateHomePath
+
+If set to $true, the ADMU will attempt to rename the selected username's homepath to the jumpcloud username.
+Note, this could break any applications that rely on a hard coded homepath.
+By default this is not set and will not rename the homepath.
 
 ```yaml
 Type: System.Boolean
@@ -330,9 +389,8 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -AutoBindJCUser
-
-This parameter will bind the username specified in the \`JumpCloudUserName\` field to the current system after Migration.
+### -bypassExeValidation
+TESTING ONLY. When set to true together with localEXEs, the staged local uwp_jcadmu.exe is used as-is, without GitHub SHA validation or download. Use this to validate a custom build (such as a branded UWP splash) before it is part of an official release. Leave false for production, where the local exe is validated against the latest release. Default: false.
 
 ```yaml
 Type: System.Boolean
@@ -346,9 +404,25 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -ReportStatus
+### -inputObject
 
-When set to true, the ADMU will report the migration status to the system description. This is set to false by default.
+An PSObject can be passed to the function with the required values for the migration process.
+This is used when the GUI version of the tool is used and inputs to the XAML form are passed to this function.
+
+```yaml
+Type: System.Object
+Parameter Sets: form
+Aliases:
+
+Required: False
+Position: Named
+Default value: None
+Accept pipeline input: False
+Accept wildcard characters: False
+```
+
+### -localEXEs
+When set to true, the ADMU requires a local uwp_jcadmu.exe in C:\\Windows and will validate it against the latest GitHub release when possible. If GitHub is rate limited, the local file will still be used with a warning. If the local file is missing, the ADMU will throw and exit.
 
 ```yaml
 Type: System.Boolean
@@ -377,74 +451,13 @@ Accept pipeline input: False
 Accept wildcard characters: False
 ```
 
-### -PrimaryUser
-When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will attempt to set the specified user as the PrimarySystemUser for this device in JumpCloud. This is set to false by default.
-
-```yaml
-Type: System.Boolean
-Parameter Sets: cmd
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -localEXEs
-When set to true, the ADMU requires a local uwp_jcadmu.exe in C:\\Windows and will validate it against the latest GitHub release when possible. If GitHub is rate limited, the local file will still be used with a warning. If the local file is missing, the ADMU will throw and exit.
-
-```yaml
-Type: System.Boolean
-Parameter Sets: cmd
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -BlockAccountLogin
-When set to true, the ADMU will block the migrating account from logging in at the Windows login screen for the duration of the migration by adding the user's SID to the 'SeDenyInteractiveLogonRight' user-rights assignment. This prevents the user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.
-
-```yaml
-Type: System.Boolean
-Parameter Sets: cmd
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
-### -bypassExeValidation
-TESTING ONLY. When set to true together with localEXEs, the staged local uwp_jcadmu.exe is used as-is, without GitHub SHA validation or download. Use this to validate a custom build (such as a branded UWP splash) before it is part of an official release. Leave false for production, where the local exe is validated against the latest release. Default: false.
-### -SetFullPermission
-When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.
-
-```yaml
-Type: System.Boolean
-Parameter Sets: cmd
-Aliases:
-
-Required: False
-Position: Named
-Default value: None
-Accept pipeline input: False
-Accept wildcard characters: False
-```
-
 ### CommonParameters
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### None
+
 ## OUTPUTS
 
 ### System.Object
