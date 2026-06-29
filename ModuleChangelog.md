@@ -1,6 +1,6 @@
 ## 2.14.0
 
-Release Date: June 23, 2026
+Release Date: June 29, 2026
 
 #### RELEASE NOTES
 
@@ -24,7 +24,9 @@ This release includes security and customization enhancements:
 ## 2.13.2
 
 Release Date: June 22, 2026
+
 #### RELEASE NOTES
+
 ```
 Patch release to address insufficient logging for USRClass.DAT parent permissions
 
