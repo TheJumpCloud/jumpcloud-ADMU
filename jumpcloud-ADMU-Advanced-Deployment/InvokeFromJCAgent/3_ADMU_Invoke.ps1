@@ -43,6 +43,9 @@ $systemContextBinding = $false # Bind using the systemContext API
 # Option to require locally uploaded exe files
 $localEXEs = $false # When true, require gui_jcadmu.exe in C:\Windows\Temp and uwp_jcadmu.exe in C:\Windows
 
+# Option to set full recursive NTFS permissions during migration instead of deferring to first login
+$SetFullPermission = $false # When true, recursively set profile permissions during migration (slower on large profiles)
+
 # TESTING ONLY: when $true (together with $localEXEs), the staged gui_jcadmu.exe and uwp_jcadmu.exe
 # are used as-is, with no GitHub SHA validation or download. Use this to validate a custom build
 # (such as a branded UWP splash) before it is part of an official release. Leave $false for production.
@@ -87,7 +90,9 @@ function Confirm-MigrationParameter {
         [bool]$ReportStatus = $false,
         [ValidateSet('Restart', 'Shutdown')][string]$postMigrationBehavior = 'Restart',
         [bool]$localEXEs = $false,
-        [bool]$BlockAccountLogin = $true
+        [bool]$SetFullPermission = $false,
+        [bool]$BlockAccountLogin = $true,
+        [bool]$bypassExeValidation = $false
     )
     if ($dataSource -eq 'CSV' -and [string]::IsNullOrWhiteSpace($csvName)) {
         throw "csvName required when dataSource is 'CSV'."
@@ -535,6 +540,9 @@ function Invoke-UserMigrationBatch {
         if ($MigrationConfig.localEXEs -eq $true) {
             $migrationParams.Add('localEXEs', $true)
         }
+        if ($MigrationConfig.SetFullPermission -eq $true) {
+            $migrationParams.Add('SetFullPermission', $true)
+        }
         if ($MigrationConfig.bypassExeValidation -eq $true) {
             $migrationParams.Add('bypassExeValidation', $true)
         }
@@ -677,7 +685,7 @@ using System;using System.Collections.Generic;using System.IO;using System.Net;u
 }
 #endregion functionDefinitions
 #region validation
-$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus -localEXEs $localEXEs -BlockAccountLogin $BlockAccountLogin
+$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus -localEXEs $localEXEs -SetFullPermission $SetFullPermission -BlockAccountLogin $BlockAccountLogin -bypassExeValidation $bypassExeValidation
 if ($confirmMigrationParameters) { Write-Host "[STATUS] Migration parameters validated successfully." }
 
 try {
@@ -745,6 +753,7 @@ $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -M
     LeaveDomainAfterMigration = $LeaveDomainAfterMigration
     removeMDM                 = $removeMDM
     localEXEs                 = $localEXEs
+    SetFullPermission         = $SetFullPermission
     bypassExeValidation       = $bypassExeValidation
     BlockAccountLogin         = $BlockAccountLogin
     guiJcadmuPath             = $guiJcadmuPath

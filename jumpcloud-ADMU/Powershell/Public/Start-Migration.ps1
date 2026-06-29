@@ -127,9 +127,15 @@ function Start-Migration {
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
+<<<<<<< CUT-5194-ADMU-Enterprise-Deployment-Controls
             HelpMessage = "TESTING ONLY. When set to true together with localEXEs, the staged local uwp_jcadmu.exe is used as-is, without GitHub SHA validation or download. Use this to validate a custom build (such as a branded UWP splash) before it is part of an official release. Leave false for production, where the local exe is validated against the latest release. Default: false.")]
         [bool]
         $bypassExeValidation = $false,
+=======
+            HelpMessage = "When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.")]
+        [bool]
+        $SetFullPermission = $false,
+>>>>>>> v2.15.0
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
@@ -1443,32 +1449,107 @@ function Start-Migration {
                 if (-not $taskCreated) {
                     Write-ToLog -Message "Scheduled task creation failed. Permissions may not be fully applied on first login." -Level Warning
                 }
-                #endRegion NTFS Permissions
 
-                #region Validate UsrClass.dat Directory Chain
-                Write-ToLog -Message "Validating directory chain permissions up to UsrClass.dat to prevent UPS 1508 error"
+                # Set the target user Profile Image Path to Source user Profile Path (they are the same)
+                $newUserProfileImagePath = $oldUserProfileImagePath
+                # TODO: Validate this should be here:
+                # $admuTracker.renameHomeDirectory.pass = $true
+            }
+            #endregion renameHomeDirectory
+            $datPath = $newUserProfileImagePath
+            Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath + '.' + "ADMU")
+            Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
+            $trackAccountMerge = $true
+            # logging
+            Write-ToLog -Message:('Target User Profile Path: ' + $newUserProfileImagePath)
+            Write-ToLog -Message:('Target User SID: ' + $NewUserSID)
+            Write-ToLog -Message:('Source User Profile Path: ' + $oldUserProfileImagePath)
+            Write-ToLog -Message:('Source User SID: ' + $SelectedUserSID)
+            #endRegion Process Home Path Permission
 
-                # Path chain up to UsrClass.dat
-                $usrClassChain = @(
-                    "$newUserProfileImagePath",
-                    "$newUserProfileImagePath\AppData",
-                    "$newUserProfileImagePath\AppData\Local",
-                    "$newUserProfileImagePath\AppData\Local\Microsoft",
-                    "$newUserProfileImagePath\AppData\Local\Microsoft\Windows"
-                )
+            #region NTFS Permissions
+            Write-ToLog -Message:("Attempting to set owner to NTFS Permissions from: ($NewUserSID) to: $SelectedUserSID for path: $newUserProfileImagePath")
+            Write-ToProgress -ProgressBar $ProgressBar -Status "ntfsAccess" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+            $regPermStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-                $chainValid = $true
-                foreach ($dir in $usrClassChain) {
-                    if (Test-Path $dir) {
-                        $dirCheck = Test-DATParentPermission -DirectoryPath $dir -UserSID $NewUserSID
-                        if ($dirCheck) {
-                            Write-ToLog -Message "Validated required permissions (System, Admin, $($NewUserSID)) on: $dir"
+            # Set NTFS permissions on profile
+            if ($SetFullPermission) {
+                Write-ToLog -Message:("Setting recursive permissions on profile during migration (SetFullPermission). Target profile path: '$newUserProfileImagePath'")
+                if ([string]::IsNullOrWhiteSpace($newUserProfileImagePath)) {
+                    throw [System.Management.Automation.ValidationMetadataException] "Cannot set recursive NTFS permissions because the target profile path is empty."
+                }
+                $useNtfsHeartbeat = $isForm -or ($systemDescription -and $systemDescription.reportStatus)
+                $regPermissionParams = @{
+                    SourceSID   = $SelectedUserSID
+                    TargetSID   = $NewUserSID
+                    FilePath    = $newUserProfileImagePath
+                    Recursive   = $true
+                    ErrorAction = 'Stop'
+                }
+                if ($useNtfsHeartbeat) {
+                    $regPermissionParams.ProgressHeartbeatIntervalSeconds = 120
+                    $regPermissionParams.OnProgressHeartbeat = {
+                        $elapsed = $regPermStopwatch.Elapsed
+                        $elapsedMin = [math]::Floor($elapsed.TotalMinutes)
+                        if ($elapsedMin -gt 0) {
+                            $heartbeatMsg = "Setting NTFS File Permissions (recursive, $elapsedMin min elapsed)"
                         } else {
-                            Write-ToLog -Message "Permission validation failed on: $dir. Missing required access." -Level Warning
-                            $chainValid = $false
+                            $elapsedSec = [math]::Floor($elapsed.TotalSeconds)
+                            $heartbeatMsg = "Setting NTFS File Permissions (recursive, $elapsedSec sec elapsed)"
                         }
+                        Write-ToProgress -ProgressBar $ProgressBar -Status "ntfsAccess" -StatusMessage $heartbeatMsg -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+                    }
+                }
+                try {
+                    Set-RegPermission @regPermissionParams
+                } catch {
+                    Write-ToLog -Message "Set-RegPermission (recursive) failed: $_" -Level Warning
+                }
+                $regPermStopwatch.Stop()
+                Write-ToLog "Set-RegPermission (recursive) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
+            } else {
+                # Set immediate/root level permissions only (non-recursive)
+                Write-ToLog -Message:("Setting immediate-level permissions. Recursive permissions will be set on first user login.")
+                Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath -ErrorAction SilentlyContinue
+                $regPermStopwatch.Stop()
+                Write-ToLog "Set-RegPermission (immediate level) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
+
+                # Create scheduled task to set recursive permissions on user logon
+                $taskCreated = New-RegPermissionTask -ProfilePath $newUserProfileImagePath -TargetSID $NewUserSID -SourceSID $SelectedUserSID -TaskUser $JumpCloudUsername
+                if (-not $taskCreated) {
+                    Write-ToLog -Message "Scheduled task creation failed. Permissions may not be fully applied on first login." -Level Warning
+                }
+            }
+            #endRegion NTFS Permissions
+
+            #region Validate UsrClass.dat Directory Chain
+            Write-ToLog -Message "Validating directory chain permissions up to UsrClass.dat to prevent UPS 1508 error"
+
+            # Path chain up to UsrClass.dat
+            $usrClassChain = @(
+                "$newUserProfileImagePath",
+                "$newUserProfileImagePath\AppData",
+                "$newUserProfileImagePath\AppData\Local",
+                "$newUserProfileImagePath\AppData\Local\Microsoft",
+                "$newUserProfileImagePath\AppData\Local\Microsoft\Windows"
+            )
+
+            $chainValid = $true
+            foreach ($dir in $usrClassChain) {
+                if (Test-Path $dir) {
+                    $dirCheck = Test-DATParentPermission -DirectoryPath $dir -UserSID $NewUserSID
+                    if ($dirCheck.IsValid) {
+                        Write-ToLog -Message "Validated required permissions on: $dir"
                     } else {
-                        Write-ToLog -Message "Directory not found during validation: $dir" -Level Warning
+                        $details = @()
+                        if ($dirCheck.MissingIdentities) {
+                            $details += "Missing identities: $($dirCheck.MissingIdentities -join ', ')"
+                        }
+                        foreach ($item in $dirCheck.InsufficientRights) {
+                            $details += "$($item.Identity) missing rights: $($item.MissingRights -join ', ')"
+                        }
+                        Write-ToLog -Message "Permission validation failed on: $dir. $($details -join '; ')" -Level Warning
+                        $chainValid = $false
                     }
                 }
 

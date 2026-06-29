@@ -22,6 +22,7 @@ Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPass
  [-ValidateUserShellFolder <Boolean>] [-ReportStatus <Boolean>] [-removeMDM <Boolean>] [-localEXEs <Boolean>]
  [-bypassExeValidation <Boolean>] [-PrimaryUser <Boolean>] [-BlockAccountLogin <Boolean>]
  [<CommonParameters>]
+ [-SetFullPermission <Boolean>] [-PrimaryUser <Boolean>] [<CommonParameters>]
 ```
 
 ### form
@@ -423,6 +424,8 @@ Accept wildcard characters: False
 
 ### -bypassExeValidation
 TESTING ONLY. When set to true together with localEXEs, the staged local uwp_jcadmu.exe is used as-is, without GitHub SHA validation or download. Use this to validate a custom build (such as a branded UWP splash) before it is part of an official release. Leave false for production, where the local exe is validated against the latest release. Default: false.
+### -SetFullPermission
+When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.
 
 ```yaml
 Type: System.Boolean
