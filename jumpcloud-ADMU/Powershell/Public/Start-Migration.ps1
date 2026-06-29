@@ -139,7 +139,7 @@ function Start-Migration {
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
-            HelpMessage = "When set to true, the ADMU will suspend interactive logon at the Windows login screen for the duration of the migration by excluding and disabling installed credential providers in the registry. This prevents the migrating user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.")]
+            HelpMessage = "When set to true, the ADMU will suspend interactive logon at the Windows login screen for the duration of the migration by excluding installed credential providers in the registry. This prevents the migrating user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.")]
         [bool]
         $BlockAccountLogin = $true,
         [Parameter(

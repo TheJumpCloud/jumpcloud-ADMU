@@ -20,17 +20,11 @@ Describe "Set-AccountLoginPolicy Acceptance Tests" -Tag "Acceptance" {
 
         $script:testSID = "S-1-5-21-1111111111-2222222222-3333333333-65500"
         $script:regPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System"
-        $script:providersPath = "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Authentication\Credential Providers"
         $script:backupKey = "HKLM:\SOFTWARE\JCADMU\LoginPolicyBackup"
 
         $script:originalExcluded = (Get-ItemProperty -Path $script:regPath -Name 'ExcludedCredentialProviders' -ErrorAction SilentlyContinue).ExcludedCredentialProviders
         $script:originalCaption = (Get-ItemProperty -Path $script:regPath -Name 'legalnoticecaption' -ErrorAction SilentlyContinue).legalnoticecaption
         $script:originalText = (Get-ItemProperty -Path $script:regPath -Name 'legalnoticetext' -ErrorAction SilentlyContinue).legalnoticetext
-        $script:originalProviderStates = @{}
-        foreach ($provider in Get-ChildItem -Path $script:providersPath -ErrorAction SilentlyContinue | Where-Object { $_.PSChildName -match '^\{[0-9a-fA-F-]+\}$' }) {
-            $disabled = (Get-ItemProperty -Path $provider.PSPath -Name 'Disabled' -ErrorAction SilentlyContinue).Disabled
-            $script:originalProviderStates[$provider.PSChildName] = $disabled
-        }
     }
 
     AfterEach {
@@ -56,19 +50,10 @@ Describe "Set-AccountLoginPolicy Acceptance Tests" -Tag "Acceptance" {
         } else {
             Remove-ItemProperty -Path $script:regPath -Name 'legalnoticetext' -ErrorAction SilentlyContinue
         }
-        foreach ($clsid in $script:originalProviderStates.Keys) {
-            $providerKey = Join-Path $script:providersPath $clsid
-            $disabled = $script:originalProviderStates[$clsid]
-            if ($null -ne $disabled) {
-                Set-ItemProperty -Path $providerKey -Name 'Disabled' -Value $disabled -Type DWord
-            } else {
-                Remove-ItemProperty -Path $providerKey -Name 'Disabled' -ErrorAction SilentlyContinue
-            }
-        }
     }
 
     Context "Blocking and restoring interactive logon (registry credential providers)" {
-        It "Disable excludes and disables all installed credential providers" {
+        It "Disable excludes all installed credential providers" {
             $installedProviders = @(Get-InstalledCredentialProviderClsids)
             $installedProviders.Count | Should -BeGreaterThan 0
 
@@ -78,13 +63,11 @@ Describe "Set-AccountLoginPolicy Acceptance Tests" -Tag "Acceptance" {
             $excluded = @(Get-ExcludedCredentialProviders)
             foreach ($clsid in $installedProviders) {
                 $excluded | Should -Contain $clsid
-                $providerKey = Join-Path $script:providersPath $clsid
-                (Get-ItemProperty -Path $providerKey -Name 'Disabled').Disabled | Should -Be 1
             }
             (Get-ItemProperty -Path $script:backupKey -Name 'BlockedSid').BlockedSid | Should -Be $script:testSID
         }
 
-        It "Enable restores the original credential-provider registry state" {
+        It "Enable restores the original ExcludedCredentialProviders registry state" {
             $installedProviders = @(Get-InstalledCredentialProviderClsids)
             $null = Set-AccountLoginPolicy -SID $script:testSID -Action Disable
 
@@ -96,11 +79,6 @@ Describe "Set-AccountLoginPolicy Acceptance Tests" -Tag "Acceptance" {
                 (Get-ItemProperty -Path $script:regPath -Name 'ExcludedCredentialProviders' -ErrorAction SilentlyContinue).ExcludedCredentialProviders | Should -BeNullOrEmpty
             } else {
                 (Get-ItemProperty -Path $script:regPath -Name 'ExcludedCredentialProviders').ExcludedCredentialProviders | Should -Be $script:originalExcluded
-            }
-            foreach ($clsid in $installedProviders) {
-                $providerKey = Join-Path $script:providersPath $clsid
-                $currentDisabled = (Get-ItemProperty -Path $providerKey -Name 'Disabled' -ErrorAction SilentlyContinue).Disabled
-                $currentDisabled | Should -Be $script:originalProviderStates[$clsid]
             }
         }
 
@@ -122,6 +100,28 @@ Describe "Set-AccountLoginPolicy Acceptance Tests" -Tag "Acceptance" {
             $result = Set-AccountLoginPolicy -SID $script:testSID -Action Enable
             $result.Success | Should -BeTrue
             Test-Path $script:backupKey | Should -BeFalse
+        }
+
+        It "Disable rolls back ExcludedCredentialProviders when a later step fails" {
+            $failureTitle = "Simulated failure title"
+
+            Mock Set-ItemProperty -MockWith {
+                param($Path, $Name, $Value, $Type)
+                if ($Name -eq 'legalnoticecaption' -and $Value -eq $using:failureTitle) {
+                    throw "Simulated failure setting legal notice"
+                }
+                Microsoft.PowerShell.Management\Set-ItemProperty -Path $Path -Name $Name -Value $Value -Type $Type
+            }
+
+            $result = Set-AccountLoginPolicy -SID $script:testSID -Action Disable -Message "body" -MessageTitle $failureTitle
+            $result.Success | Should -BeFalse
+            Test-Path $script:backupKey | Should -BeFalse
+
+            if ($null -eq $script:originalExcluded) {
+                (Get-ItemProperty -Path $script:regPath -Name 'ExcludedCredentialProviders' -ErrorAction SilentlyContinue).ExcludedCredentialProviders | Should -BeNullOrEmpty
+            } else {
+                (Get-ItemProperty -Path $script:regPath -Name 'ExcludedCredentialProviders').ExcludedCredentialProviders | Should -Be $script:originalExcluded
+            }
         }
     }
 

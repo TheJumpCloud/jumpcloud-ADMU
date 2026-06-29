@@ -246,7 +246,7 @@
         <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
           <maml:name>BlockAccountLogin</maml:name>
           <maml:description>
-            <maml:para>When set to true, the ADMU will suspend interactive logon at the Windows login screen for the duration of the migration by excluding and disabling installed credential providers in the registry. This prevents the migrating user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.</maml:para>
+            <maml:para>When set to true, the ADMU will suspend interactive logon at the Windows login screen for the duration of the migration by excluding installed credential providers in the registry. This prevents the migrating user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.</maml:para>
           </maml:description>
           <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
           <dev:type>
@@ -528,7 +528,7 @@
       <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
         <maml:name>BlockAccountLogin</maml:name>
         <maml:description>
-          <maml:para>When set to true, the ADMU will suspend interactive logon at the Windows login screen for the duration of the migration by excluding and disabling installed credential providers in the registry. This prevents the migrating user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.</maml:para>
+          <maml:para>When set to true, the ADMU will suspend interactive logon at the Windows login screen for the duration of the migration by excluding installed credential providers in the registry. This prevents the migrating user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.</maml:para>
         </maml:description>
         <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
         <dev:type>
