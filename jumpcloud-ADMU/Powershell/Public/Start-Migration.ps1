@@ -127,15 +127,15 @@ function Start-Migration {
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
-<<<<<<< CUT-5194-ADMU-Enterprise-Deployment-Controls
             HelpMessage = "TESTING ONLY. When set to true together with localEXEs, the staged local uwp_jcadmu.exe is used as-is, without GitHub SHA validation or download. Use this to validate a custom build (such as a branded UWP splash) before it is part of an official release. Leave false for production, where the local exe is validated against the latest release. Default: false.")]
         [bool]
         $bypassExeValidation = $false,
-=======
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
             HelpMessage = "When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.")]
         [bool]
         $SetFullPermission = $false,
->>>>>>> v2.15.0
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
@@ -195,7 +195,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.14.0"
+        $admuVersion = "2.15.0"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
