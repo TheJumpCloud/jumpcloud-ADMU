@@ -139,7 +139,7 @@ function Start-Migration {
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
-            HelpMessage = "When set to true, the ADMU will block the migrating account from logging in at the Windows login screen for the duration of the migration by adding the user's SID to the 'SeDenyInteractiveLogonRight' user-rights assignment. This prevents the user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.")]
+            HelpMessage = "When set to true, the ADMU will suspend interactive logon at the Windows login screen for the duration of the migration by excluding and disabling installed credential providers in the registry. This prevents the migrating user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.")]
         [bool]
         $BlockAccountLogin = $true,
         [Parameter(
@@ -615,15 +615,15 @@ function Start-Migration {
         #endregion validation
 
         #region blockAccountLogin
-        # Block the migrating account from logging in at the Windows login screen for the duration
-        # of the migration. Reverted in catch block if an error occurs, or in end block on success.
+        # Block interactive logon at the Windows login screen for the duration of the migration.
+        # Reverted in catch block if an error occurs, or in end block on success.
         if ($BlockAccountLogin) {
-            Write-ToLog -Message:("Blocking interactive logon for '$SelectedUserName' (SID: $SelectedUserSID) during migration.")
+            Write-ToLog -Message:("Suspending interactive logon for '$SelectedUserName' (SID: $SelectedUserSID) during migration.")
             $blockResult = Set-AccountLoginPolicy -SID $SelectedUserSID -Action Disable -Message $blockLoginMessage -MessageTitle $blockLoginMessageTitle
             if ($blockResult.Success) {
                 $accountLoginBlocked = $true
             } else {
-                Write-ToLog -Message:("Could not block interactive logon for '$SelectedUserName'. Continuing migration without the login block.") -Level Warning
+                Write-ToLog -Message:("Could not suspend interactive logon for '$SelectedUserName'. Continuing migration without the login block.") -Level Warning
             }
         }
         #endregion blockAccountLogin
