@@ -1505,10 +1505,17 @@ function Start-Migration {
             foreach ($dir in $usrClassChain) {
                 if (Test-Path $dir) {
                     $dirCheck = Test-DATParentPermission -DirectoryPath $dir -UserSID $NewUserSID
-                    if ($dirCheck) {
-                        Write-ToLog -Message "Validated required permissions (System, Admin, $($NewUserSID)) on: $dir"
+                    if ($dirCheck.IsValid) {
+                        Write-ToLog -Message "Validated required permissions on: $dir"
                     } else {
-                        Write-ToLog -Message "Permission validation failed on: $dir. Missing required access." -Level Warning
+                        $details = @()
+                        if ($dirCheck.MissingIdentities) {
+                            $details += "Missing identities: $($dirCheck.MissingIdentities -join ', ')"
+                        }
+                        foreach ($item in $dirCheck.InsufficientRights) {
+                            $details += "$($item.Identity) missing rights: $($item.MissingRights -join ', ')"
+                        }
+                        Write-ToLog -Message "Permission validation failed on: $dir. $($details -join '; ')" -Level Warning
                         $chainValid = $false
                     }
                 } else {
