@@ -718,6 +718,37 @@ function DecodeBase64Image {
     $ObjBitmapImage.Freeze() #Makes the current object unmodifiable and sets its IsFrozen property to true.
     $ObjBitmapImage
 }
+
+function Get-SplashLogoBase64 {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = $true)]
+        [String]$DefaultLogoBase64,
+        [Parameter(Mandatory = $false)]
+        [String]$BrandingDirectory = "$env:windir",
+        [Parameter(Mandatory = $false)]
+        [String]$BrandingFileName = "enterprise_branding"
+    )
+    # Enterprise branding override: if a customer logo is staged in the branding directory,
+    # convert it to base64 and use it instead of the JumpCloud logo on the first-login splash.
+    $candidateExtensions = @('.png', '.jpeg', '.jpg')
+    foreach ($ext in $candidateExtensions) {
+        $candidatePath = Join-Path -Path $BrandingDirectory -ChildPath "$BrandingFileName$ext"
+        if (Test-Path -Path $candidatePath -PathType Leaf) {
+            try {
+                $bytes = [System.IO.File]::ReadAllBytes($candidatePath)
+                $brandingBase64 = [System.Convert]::ToBase64String($bytes)
+                # Validate the bytes actually decode to a usable image before committing to it.
+                $null = DecodeBase64Image -ImageBase64 $brandingBase64
+                Write-ToLog -Message "Enterprise branding logo found at '$candidatePath'. Using custom splash logo."
+                return $brandingBase64
+            } catch {
+                Write-ToLog -Message "Failed to load enterprise branding logo at '$candidatePath': $($_.Exception.Message). Falling back to default JumpCloud logo." -Level Warning
+            }
+        }
+    }
+    return $DefaultLogoBase64
+}
 #endRegion Functions
 
 $types = @(
@@ -742,7 +773,8 @@ function New-UWPForm {
     $syncHash.Runspace = $newRunspace
     $synchash.Percent = '0'
     $synchash.Text = 'Completing Account Migration'
-    $syncHash.base64JCLogo = DecodeBase64Image -ImageBase64 $newJCLogoBase64
+    $splashLogoBase64 = Get-SplashLogoBase64 -DefaultLogoBase64 $newJCLogoBase64
+    $syncHash.base64JCLogo = DecodeBase64Image -ImageBase64 $splashLogoBase64
     $syncHash.EndUWP = $false
 
     # optionally run this app in windowed view by switching the variable below to: $false
@@ -782,7 +814,7 @@ function New-UWPForm {
         <Grid Grid.Row="0" Grid.Column="1" HorizontalAlignment="Center" VerticalAlignment="Center" >
 
         <StackPanel>
-        <Image Name="JCLogoImg" HorizontalAlignment="Center"/>
+        <Image Name="JCLogoImg" HorizontalAlignment="Center" Stretch="Uniform" MaxWidth="700" MaxHeight="250"/>
         <TextBlock Name="ProgressTextBlock"
             Text="Completing Account Migration"
             FontSize="25"

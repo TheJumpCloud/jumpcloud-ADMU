@@ -146,7 +146,15 @@ param (
 
         [Parameter(ParameterSetName = 'Migrate')]
         [bool]
-        $SetFullPermission
+        $SetFullPermission,
+
+        [Parameter(ParameterSetName = 'Migrate')]
+        [bool]
+        $bypassExeValidation,
+
+        [Parameter(ParameterSetName = 'Migrate')]
+        [bool]
+        $BlockAccountLogin
     )
 '@
 
