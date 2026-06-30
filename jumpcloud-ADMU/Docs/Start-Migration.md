@@ -14,6 +14,7 @@ Starts the JumpCloud Active Directory Migration process.
 ## SYNTAX
 
 ### cmd
+
 ```
 Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPassword <String>
  [-LeaveDomain <Boolean>] [-ForceReboot <Boolean>] [-UpdateHomePath <Boolean>] [-InstallJCAgent <Boolean>]
@@ -25,6 +26,7 @@ Start-Migration -JumpCloudUserName <String> -SelectedUserName <String> -TempPass
 ```
 
 ### form
+
 ```
 Start-Migration [-inputObject <Object>] [<CommonParameters>]
 ```
@@ -114,7 +116,8 @@ Accept wildcard characters: False
 ```
 
 ### -BlockAccountLogin
-When set to true, the ADMU will block the migrating account from logging in at the Windows login screen for the duration of the migration by adding the user's SID to the 'SeDenyInteractiveLogonRight' user-rights assignment. This prevents the user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to true by default.
+
+When set to true, the ADMU will block the migrating account from logging in at the Windows login screen for the duration of the migration by adding the user's SID to the 'SeDenyInteractiveLogonRight' user-rights assignment. This prevents the user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to false by default.
 
 ```yaml
 Type: System.Boolean
@@ -252,6 +255,7 @@ Accept wildcard characters: False
 ```
 
 ### -PrimaryUser
+
 When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will attempt to set the specified user as the PrimarySystemUser for this device in JumpCloud. This is set to false by default.
 
 ```yaml
@@ -320,6 +324,7 @@ Accept wildcard characters: False
 ```
 
 ### -SetFullPermission
+
 When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.
 
 ```yaml
@@ -390,6 +395,7 @@ Accept wildcard characters: False
 ```
 
 ### -bypassExeValidation
+
 TESTING ONLY. When set to true together with localEXEs, the staged local uwp_jcadmu.exe is used as-is, without GitHub SHA validation or download. Use this to validate a custom build (such as a branded UWP splash) before it is part of an official release. Leave false for production, where the local exe is validated against the latest release. Default: false.
 
 ```yaml
@@ -422,6 +428,7 @@ Accept wildcard characters: False
 ```
 
 ### -localEXEs
+
 When set to true, the ADMU requires a local uwp_jcadmu.exe in C:\\Windows and will validate it against the latest GitHub release when possible. If GitHub is rate limited, the local file will still be used with a warning. If the local file is missing, the ADMU will throw and exit.
 
 ```yaml
@@ -437,6 +444,7 @@ Accept wildcard characters: False
 ```
 
 ### -removeMDM
+
 When set to true, the ADMU will remove any existing MDM enrollment from the system. This parameter requires the leaveDomain parameter to also be set to true. This parameter will remove MDM enrollment profiles if they have non-null ProviderIDs, and UPNs associated with them. This parameter will not remove JumpCloud MDM enrollments.
 
 ```yaml
@@ -452,14 +460,17 @@ Accept wildcard characters: False
 ```
 
 ### CommonParameters
+
 This cmdlet supports the common parameters: -Debug, -ErrorAction, -ErrorVariable, -InformationAction, -InformationVariable, -OutVariable, -OutBuffer, -PipelineVariable, -Verbose, -WarningAction, and -WarningVariable. For more information, see [about_CommonParameters](http://go.microsoft.com/fwlink/?LinkID=113216).
 
 ## INPUTS
 
 ### None
+
 ## OUTPUTS
 
 ### System.Object
+
 ## NOTES
 
 ## RELATED LINKS
