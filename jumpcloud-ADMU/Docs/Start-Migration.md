@@ -438,6 +438,8 @@ Accept wildcard characters: False
 
 ### -removeMDM
 When set to true, the ADMU will remove any existing MDM enrollment from the system. This parameter requires the leaveDomain parameter to also be set to true. This parameter will remove MDM enrollment profiles if they have non-null ProviderIDs, and UPNs associated with them. This parameter will not remove JumpCloud MDM enrollments.
+### -SetFullPermission
+When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.
 
 ```yaml
 Type: System.Boolean
