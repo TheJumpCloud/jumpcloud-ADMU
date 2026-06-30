@@ -91,7 +91,7 @@ function Confirm-MigrationParameter {
         [ValidateSet('Restart', 'Shutdown')][string]$postMigrationBehavior = 'Restart',
         [bool]$localEXEs = $false,
         [bool]$SetFullPermission = $false,
-        [bool]$BlockAccountLogin = $true,
+        [bool]$BlockAccountLogin = $false,
         [bool]$bypassExeValidation = $false
     )
     if ($dataSource -eq 'CSV' -and [string]::IsNullOrWhiteSpace($csvName)) {
