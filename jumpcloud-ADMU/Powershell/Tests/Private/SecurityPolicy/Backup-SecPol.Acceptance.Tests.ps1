@@ -39,13 +39,14 @@ Describe "Backup-SecPol Acceptance Tests" -Tag "Acceptance" {
                 $ConfigPath
             )
 
+            $tempDir = "$(Get-WindowsDrive)\Windows\Temp"
             $guid = [guid]::NewGuid().ToString('N')
-            $seceditDb = Join-Path $script:tempDir "jcAdmu_secedit_restore_$guid.sdb"
-            $seceditLog = Join-Path $script:tempDir "jcAdmu_secedit_restore_$guid.log"
+            $seceditDb = Join-Path $tempDir "jcAdmu_secedit_restore_$guid.sdb"
+            $seceditLog = Join-Path $tempDir "jcAdmu_secedit_restore_$guid.log"
             try {
                 $seceditOutput = & secedit /configure /db "$seceditDb" /cfg "$ConfigPath" /areas USER_RIGHTS /log "$seceditLog" /quiet 2>&1
                 if ($LASTEXITCODE -ne 0) {
-                    $logText = if (Test-Path $seceditLog) { (Get-Content -Path $seceditLog -Raw -ErrorAction SilentlyContinue) } else { '' }
+                    $logText = if (Test-Path $seceditLog) { (Get-Content -Path $seceditLog -Raw -ErrorAction SilentlyContinue) } else { Write-Host "No log file found" -Level Error }
                     $detail = (@($seceditOutput; $logText) | Out-String).Trim()
                     throw "secedit /configure failed restoring USER_RIGHTS from '$ConfigPath' (exit code $LASTEXITCODE). $detail"
                 }
