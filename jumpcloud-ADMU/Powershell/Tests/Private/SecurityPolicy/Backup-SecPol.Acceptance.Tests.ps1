@@ -19,7 +19,7 @@ Describe "Backup-SecPol Acceptance Tests" -Tag "Acceptance" {
         . "$helpFunctionDir\$FileName"
 
         $script:privilege = 'SeDenyInteractiveLogonRight'
-        $script:tempDir = Join-Path "$(Get-WindowsDrive)\Windows\Temp" "JCADMU"
+        $script:tempDir = "$(Get-WindowsDrive)\Windows\Temp"
 
         # Throwaway local account: resolvable SID that is safe to block/unblock during the test.
         $script:tempUserName = "admu_backupsecpol_$(Get-Random -Maximum 100000)"
@@ -40,8 +40,8 @@ Describe "Backup-SecPol Acceptance Tests" -Tag "Acceptance" {
             )
 
             $guid = [guid]::NewGuid().ToString('N')
-            $seceditDb = Join-Path $script:tempDir "secedit_restore_$guid.sdb"
-            $seceditLog = Join-Path $script:tempDir "secedit_restore_$guid.log"
+            $seceditDb = Join-Path $script:tempDir "jcAdmu_secedit_restore_$guid.sdb"
+            $seceditLog = Join-Path $script:tempDir "jcAdmu_secedit_restore_$guid.log"
             try {
                 $seceditOutput = & secedit /configure /db "$seceditDb" /cfg "$ConfigPath" /areas USER_RIGHTS /log "$seceditLog" /quiet 2>&1
                 if ($LASTEXITCODE -ne 0) {
@@ -69,7 +69,7 @@ Describe "Backup-SecPol Acceptance Tests" -Tag "Acceptance" {
             $backupPath = Backup-SecPol
             $backupPath | Should -Not -BeNullOrEmpty
             Test-Path -Path $backupPath -PathType Leaf | Should -BeTrue
-            (Get-Item -Path $backupPath).Name | Should -Match '^secedit_export_.+\.inf$'
+            (Get-Item -Path $backupPath).Name | Should -Match '^jcAdmu_secedit_export_.+\.inf$'
         }
 
         It "blocks a user with Set-AccountLoginPolicy and restores deny-logon state from the SecPol backup" {
