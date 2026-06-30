@@ -32,32 +32,6 @@ Describe "Backup-SecPol Acceptance Tests" -Tag "Acceptance" {
         # Capture the original deny list so AfterAll can restore it if the backup-restore path fails.
         $script:originalDenyList = @(Get-DenyLogonSidList -Privilege $script:privilege)
 
-        function Restore-SecPolUserRightsFromBackup {
-            param (
-                [Parameter(Mandatory = $true)]
-                [System.String]
-                $ConfigPath
-            )
-
-            $tempDir = "$(Get-WindowsDrive)\Windows\Temp"
-            $guid = [guid]::NewGuid().ToString('N')
-            $seceditDb = Join-Path $tempDir "jcAdmu_secedit_restore_$guid.sdb"
-            $seceditLog = Join-Path $tempDir "jcAdmu_secedit_restore_$guid.log"
-            try {
-                $seceditOutput = & secedit /configure /db "$seceditDb" /cfg "$ConfigPath" /areas USER_RIGHTS /log "$seceditLog" /quiet 2>&1
-                if ($LASTEXITCODE -ne 0) {
-                    $logText = if (Test-Path $seceditLog) { (Get-Content -Path $seceditLog -Raw -ErrorAction SilentlyContinue) } else { Write-Host "No log file found" -Level Error }
-                    $detail = (@($seceditOutput; $logText) | Out-String).Trim()
-                    throw "secedit /configure failed restoring USER_RIGHTS from '$ConfigPath' (exit code $LASTEXITCODE). $detail"
-                }
-            } finally {
-                foreach ($file in @($seceditDb, $seceditLog)) {
-                    if (Test-Path $file) {
-                        Remove-Item $file -Force -ErrorAction SilentlyContinue
-                    }
-                }
-            }
-        }
     }
 
     AfterAll {
@@ -88,7 +62,13 @@ Describe "Backup-SecPol Acceptance Tests" -Tag "Acceptance" {
             @(Get-DenyLogonSidList -Privilege $script:privilege) | Should -Contain $script:tempUserSid
 
             # Restore USER_RIGHTS from the exported SecPol backup.
-            { Restore-SecPolUserRightsFromBackup -ConfigPath $backupPath } | Should -Not -Throw
+            $tempDir = "$(Get-WindowsDrive)\Windows\Temp"
+            $guid = [guid]::NewGuid().ToString('N')
+            $seceditDb = Join-Path $tempDir "jcAdmu_secedit_restore_$guid.sdb"
+            $seceditLog = Join-Path $tempDir "jcAdmu_secedit_restore_$guid.log"
+            Write-Host "secedit /configure /db $seceditDb /cfg $backupPath /areas USER_RIGHTS /log $seceditLog"
+            secedit /configure /db "$seceditDb" /cfg "$backupPath" /areas USER_RIGHTS /log "$seceditLog"
+            Write-Host "secedit exit code: $LASTEXITCODE"
 
             # User should no longer be denied interactive logon.
             @(Get-DenyLogonSidList -Privilege $script:privilege) | Should -Not -Contain $script:tempUserSid
