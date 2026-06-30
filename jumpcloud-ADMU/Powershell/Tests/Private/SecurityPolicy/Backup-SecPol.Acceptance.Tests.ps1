@@ -22,7 +22,7 @@ Describe "Backup-SecPol Acceptance Tests" -Tag "Acceptance" {
         $script:tempDir = "$(Get-WindowsDrive)\Windows\Temp"
 
         # Throwaway local account: resolvable SID that is safe to block/unblock during the test.
-        $script:tempUserName = "admu_backupsecpol_$(Get-Random -Maximum 100000)"
+        $script:tempUserName = "admu_secpol_$(Get-Random -Maximum 100000)"
         if (-not (Get-LocalUser -Name $script:tempUserName -ErrorAction SilentlyContinue)) {
             $tempPw = ConvertTo-SecureString "Temp123!Temp123!" -AsPlainText -Force
             New-LocalUser -Name $script:tempUserName -Password $tempPw -Description "ADMU Backup-SecPol test" | Out-Null
