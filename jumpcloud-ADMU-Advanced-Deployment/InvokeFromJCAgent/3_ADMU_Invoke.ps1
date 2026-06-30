@@ -25,7 +25,7 @@ $JumpCloudAPIKey = 'YOURAPIKEY' # Required if the device is not eligible to use 
 $JumpCloudOrgID = '' # Required if you use a MTP API Key
 $SetDefaultWindowsUser = $true
 $ReportStatus = $false # Report status back to JumpCloud Description
-$BlockAccountLogin = $true # Block the migrating account from logging in during migration (reverted automatically on completion/failure)
+$BlockAccountLogin = $false # Block the migrating account from logging in during migration (reverted automatically on completion/failure)
 
 # Option to shutdown or restart
 # The 'shutdown' behavior performs a shutdown of the system in a much faster manner than 'restart' which can take 5 mins form the time the command is issued
