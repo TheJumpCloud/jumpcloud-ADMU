@@ -688,14 +688,8 @@ using System;using System.Collections.Generic;using System.IO;using System.Net;u
 $confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus -localEXEs $localEXEs -SetFullPermission $SetFullPermission -BlockAccountLogin $BlockAccountLogin -bypassExeValidation $bypassExeValidation
 if ($confirmMigrationParameters) { Write-Host "[STATUS] Migration parameters validated successfully." }
 
-try {
-    $localExeValidation = Test-RequiredLocalExeFiles -localEXEs $localEXEs
-    if ($localExeValidation) { Write-Host "[STATUS] Local executable pre-check completed successfully." }
-} catch {
-    Write-Host "[ERROR] Local executable validation failed: $_"
-    exit 1
-}
 #endregion validation
+
 #region dataImport
 if ($dataSource -eq 'CSV') {
     Write-Host "[status] Using CSV source..."
@@ -709,8 +703,20 @@ try {
     Write-Host "[ERROR] Failed to retrieve migration users: $_"
     exit 1
 }
-#endregion dataImport
 if (-not $UsersToMigrate) { Write-Host "[status] No users to migrate, exiting..."; exit 1 }
+#endregion dataImport
+
+#region exeValidation
+try {
+    $localExeValidation = Test-RequiredLocalExeFiles -localEXEs $localEXEs
+    if ($localExeValidation) { Write-Host "[STATUS] Local executable pre-check completed successfully." }
+} catch {
+    Write-Host "[ERROR] Local executable validation failed: $_"
+    exit 1
+}
+$guiJcadmuPath = Get-LatestADMUGUIExe -useLocalEXEs $localEXEs -BypassValidation $bypassExeValidation
+#endregion exeValidation
+
 #region logoffUsers
 $loggedInUsers = (quser) -replace '^>', ' ' | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
 $processedUsers = @()
@@ -725,7 +731,6 @@ foreach ($user in $UsersList) {
         logoff.exe $($user.ID)
     }
 }
-#endregion logoffUsers
 if ($LeaveDomain) {
     $LeaveDomain = $false
     Write-Host "[status] Domain will be un-joined for last user migrated"
@@ -736,9 +741,9 @@ if ($ForceReboot) {
     Write-Host "[status] System will $postMigrationBehavior after last user is migrated"
     $ForceRebootAfterMigration = $true
 }
-#endregion logoffUsers (implied)
+#endregion logoffUsers
+
 #region migration
-$guiJcadmuPath = Get-LatestADMUGUIExe -useLocalEXEs $localEXEs -BypassValidation $bypassExeValidation
 $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig @{
     TempPassword              = $TempPassword
     UpdateHomePath            = $UpdateHomePath
