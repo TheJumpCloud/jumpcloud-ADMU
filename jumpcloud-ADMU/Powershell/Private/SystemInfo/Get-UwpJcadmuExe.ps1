@@ -3,6 +3,7 @@ function Get-UwpJcadmuExe {
     param(
         [Parameter(Mandatory = $true)][string]$WindowsDrive,
         [Parameter(Mandatory = $false)][bool]$localEXEs = $false,
+        [Parameter(Mandatory = $false)][bool]$BypassValidation = $false,
         [Parameter(Mandatory = $false)][int]$MaxRetries = 3,
         [Parameter(Mandatory = $false)][int]$RetryDelaySeconds = 30
     )
@@ -13,6 +14,14 @@ function Get-UwpJcadmuExe {
     if ($localEXEs) {
         if (-not (Test-Path -Path $destinationPath -PathType Leaf)) {
             throw "localEXEs is enabled, but required file 'uwp_jcadmu.exe' was not found at '$destinationPath'."
+        }
+
+        if ($BypassValidation) {
+            # Testing only: trust the staged uwp_jcadmu.exe as-is, with no GitHub validation or
+            # download. Intended for validating custom builds (such as a branded UWP splash) before
+            # they are part of an official release. Do not enable in production.
+            Write-ToLog -Message 'BypassValidation enabled: using the local uwp_jcadmu.exe as-is without GitHub validation or download.' -Level Warning
+            return $destinationPath
         }
 
         $localValidationResult = Test-UwpJcadmuExe -FilePath $destinationPath -MaxRetries $MaxRetries -RetryDelaySeconds $RetryDelaySeconds -AllowUnvalidatedOnApiFailure $true

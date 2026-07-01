@@ -304,4 +304,58 @@ Describe -Name "UWP Tests" -Tag "Acceptance" {
         }
 
     }
+
+    Context -Name "Enterprise branding splash logo" {
+        BeforeAll {
+            # Unique temp directory standing in for C:\Windows so we never touch the real one.
+            $brandingDir = Join-Path -Path $env:TEMP -ChildPath "admuBrandingTest_$([guid]::NewGuid().ToString('N'))"
+            New-Item -ItemType Directory -Path $brandingDir -Force | Out-Null
+
+            # Dot-source the UWP script to load its functions (Get-SplashLogoBase64, DecodeBase64Image,
+            # $newJCLogoBase64). Removing the JCADMU key first makes the script take its quick-exit
+            # path (no splash form is shown) while still defining all functions/variables.
+            Remove-Item -Path "HKCU:\SOFTWARE\JCADMU" -Recurse -Force -ErrorAction SilentlyContinue
+            . $uwpPath -fullscreen $false
+        }
+        AfterEach {
+            # Clear any staged branding files between tests.
+            Get-ChildItem -Path $brandingDir -Filter "enterprise_branding.*" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
+        }
+        AfterAll {
+            if (Test-Path $brandingDir) {
+                Remove-Item -Path $brandingDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+        It "Uses the customer logo when a valid branding image is present" {
+            $brandingPath = Join-Path $brandingDir "enterprise_branding.png"
+            # Round-trip the JumpCloud logo bytes to create a valid PNG on disk.
+            [System.IO.File]::WriteAllBytes($brandingPath, [System.Convert]::FromBase64String($newJCLogoBase64))
+            $expected = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($brandingPath))
+
+            $result = Get-SplashLogoBase64 -DefaultLogoBase64 'SENTINEL_DEFAULT' -BrandingDirectory $brandingDir
+            $result | Should -Not -Be 'SENTINEL_DEFAULT'
+            $result | Should -Be $expected
+        }
+        It "Falls back to the default logo when no branding image is present" {
+            $result = Get-SplashLogoBase64 -DefaultLogoBase64 'SENTINEL_DEFAULT' -BrandingDirectory $brandingDir
+            $result | Should -Be 'SENTINEL_DEFAULT'
+        }
+        It "Falls back to the default logo when the branding file is not a valid image" {
+            $brandingPath = Join-Path $brandingDir "enterprise_branding.png"
+            [System.IO.File]::WriteAllBytes($brandingPath, [byte[]](1, 2, 3, 4, 5))
+
+            $result = Get-SplashLogoBase64 -DefaultLogoBase64 'SENTINEL_DEFAULT' -BrandingDirectory $brandingDir
+            $result | Should -Be 'SENTINEL_DEFAULT'
+        }
+        It "Skips an invalid candidate and uses the next valid extension" {
+            # An invalid .png (checked first) should be skipped in favor of a valid image staged as .jpeg.
+            [System.IO.File]::WriteAllBytes((Join-Path $brandingDir "enterprise_branding.png"), [byte[]](1, 2, 3, 4, 5))
+            $jpegPath = Join-Path $brandingDir "enterprise_branding.jpeg"
+            [System.IO.File]::WriteAllBytes($jpegPath, [System.Convert]::FromBase64String($newJCLogoBase64))
+            $expected = [System.Convert]::ToBase64String([System.IO.File]::ReadAllBytes($jpegPath))
+
+            $result = Get-SplashLogoBase64 -DefaultLogoBase64 'SENTINEL_DEFAULT' -BrandingDirectory $brandingDir
+            $result | Should -Be $expected
+        }
+    }
 }

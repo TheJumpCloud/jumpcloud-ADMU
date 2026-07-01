@@ -2,6 +2,628 @@
 <helpItems schema="maml" xmlns="http://msh">
   <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
     <command:details>
+      <command:name>Start-Migration</command:name>
+      <command:verb>Start</command:verb>
+      <command:noun>Migration</command:noun>
+      <maml:description>
+        <maml:para>Starts the JumpCloud Active Directory Migration process.</maml:para>
+      </maml:description>
+    </command:details>
+    <maml:description>
+      <maml:para>The Start-Migration function allows the starting of the JumpCloud Active Directory Migration Process. This utility can be used to convert domain bound user accounts into locally managed accounts ready to be taken over by JumpCloud. There are various options to run the utility depending on the administrators requirements.</maml:para>
+    </maml:description>
+    <command:syntax>
+      <command:syntaxItem>
+        <maml:name>Start-Migration</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>AdminDebug</maml:name>
+          <maml:description>
+            <maml:para>Option to display detailed messages during migration. This parameter is optional, but if set to $true, the CLI will show verbose output during the migration process</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>AutoBindJCUser</maml:name>
+          <maml:description>
+            <maml:para>This parameter will bind the username specified in the `JumpCloudUserName` field to the current system after Migration.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>BindAsAdmin</maml:name>
+          <maml:description>
+            <maml:para>Option to bind user as sudo administrator or not. This parameter is not required and will default to $false (User will not be bound as admin). Set to $true if you'd like to bind the JumpCloudUserName as administrator during migration.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>BlockAccountLogin</maml:name>
+          <maml:description>
+            <maml:para>When set to true, the ADMU will block the migrating account from logging in at the Windows login screen for the duration of the migration by adding the user's SID to the 'SeDenyInteractiveLogonRight' user-rights assignment. This prevents the user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to false by default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ForceReboot</maml:name>
+          <maml:description>
+            <maml:para>A boolean $true/$false value to force the system to reboot at the end of the migration process. A reboot is required when unbinding from a domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>InstallJCAgent</maml:name>
+          <maml:description>
+            <maml:para>A boolean $true/$false value to install the JumpCloud agent on the system. If this value is $true you will be required to also pass a `JumpCloudConnectKey` value. If the system remains on the domain, the JumpCloud agent will be installed but not connected until it leaves the domain.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>JumpCloudAPIKey</maml:name>
+          <maml:description>
+            <maml:para>The Read/Write API key of a JumpCloud Administrator. This parameter is required if the AutoBind JC User parameter is specified.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>JumpCloudConnectKey</maml:name>
+          <maml:description>
+            <maml:para>A string value that is required if `-InstallJCAgent` is $true. This connect key can be found in the JumpCloud console under add systems. It must be 24 chars and is different than an JumpCloud API key.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>JumpCloudOrgID</maml:name>
+          <maml:description>
+            <maml:para>The ID of the JumpCloud Organization you wish to connect to. This field is only required if an MTP Api Key is used in the JumpCloudApiKey Parameter</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>JumpCloudUserName</maml:name>
+          <maml:description>
+            <maml:para>A string value that will be used for the new converted local account that can be bound to JumpCloud. This value must be unique on the system, if it is not unique an error will stop the migration. This value should match the JumpCloud Username value to allow takeover when a User is bound to a system within the JumpCloud console.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>LeaveDomain</maml:name>
+          <maml:description>
+            <maml:para>A boolean $true/$false value to force the system to leave currently bound domain, this is required for the JumpCloud Agent to operate. It can also be reversed by simply rejoining the system back to the domain. This will also work for AzureAD and will disconnect the AzureAD bind.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>PrimaryUser</maml:name>
+          <maml:description>
+            <maml:para>When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will attempt to set the specified user as the PrimarySystemUser for this device in JumpCloud. This is set to false by default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ReportStatus</maml:name>
+          <maml:description>
+            <maml:para>When set to true, the ADMU will report the migration status to the system description. This is set to false by default.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>SelectedUserName</maml:name>
+          <maml:description>
+            <maml:para>A string value for the DomainUserName that is used in the migration script. This value is verified to make sure the account exists on the system. If the Domain Account does not exist, the script will error and not continue. Either pass a username using the "Domain\username" syntax or a domain user SID.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>SetDefaultWindowsUser</maml:name>
+          <maml:description>
+            <maml:para>Option to set the windows default login user to the migrated user post-migration. This parameter is not required and will default to $true (the next login window user will be the migrated user). Set to $false if you'd like to disable this functionality during migration.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>SetFullPermission</maml:name>
+          <maml:description>
+            <maml:para>When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>TempPassword</maml:name>
+          <maml:description>
+            <maml:para>A string value that is used to set the new local accounts password. When duplicating the user account a password must be set when created and this value is passed. Once the system is online in JumpCloud the password will be overwritten and synced with JumpCloud if the user is taken over.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+          <dev:type>
+            <maml:name>System.String</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>UpdateHomePath</maml:name>
+          <maml:description>
+            <maml:para>If set to $true, the ADMU will attempt to rename the selected username's homepath to the jumpcloud username. Note, this could break any applications that rely on a hard coded homepath. By default this is not set and will not rename the homepath.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>ValidateUserShellFolder</maml:name>
+          <maml:description>
+            <maml:para>Option to bypass User Shell Folder validation. When set to `$false`, the migration will not verify whether folders (Desktop, Downloads, Documents, Videos, Pictures, Music, Favorites) are redirected to another location, such as a network shared folder (e.g., `\192.168.50.78\SharedFolder\USERNAME\Desktop`). Use this parameter with caution. After migration, the user may encounter a shared folder error and will need to provide account credentials to restore their shared folders</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>bypassExeValidation</maml:name>
+          <maml:description>
+            <maml:para>TESTING ONLY. When set to true together with localEXEs, the staged local uwp_jcadmu.exe is used as-is, without GitHub SHA validation or download. Use this to validate a custom build (such as a branded UWP splash) before it is part of an official release. Leave false for production, where the local exe is validated against the latest release. Default: false.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>localEXEs</maml:name>
+          <maml:description>
+            <maml:para>When set to true, the ADMU requires a local uwp_jcadmu.exe in C:\Windows and will validate it against the latest GitHub release when possible. If GitHub is rate limited, the local file will still be used with a warning. If the local file is missing, the ADMU will throw and exit.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>removeMDM</maml:name>
+          <maml:description>
+            <maml:para>When set to true, the ADMU will remove any existing MDM enrollment from the system. This parameter requires the leaveDomain parameter to also be set to true. This parameter will remove MDM enrollment profiles if they have non-null ProviderIDs, and UPNs associated with them. This parameter will not remove JumpCloud MDM enrollments.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Boolean</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+      <command:syntaxItem>
+        <maml:name>Start-Migration</maml:name>
+        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+          <maml:name>inputObject</maml:name>
+          <maml:description>
+            <maml:para>An PSObject can be passed to the function with the required values for the migration process. This is used when the GUI version of the tool is used and inputs to the XAML form are passed to this function.</maml:para>
+          </maml:description>
+          <command:parameterValue required="true" variableLength="false">System.Object</command:parameterValue>
+          <dev:type>
+            <maml:name>System.Object</maml:name>
+            <maml:uri />
+          </dev:type>
+          <dev:defaultValue>None</dev:defaultValue>
+        </command:parameter>
+      </command:syntaxItem>
+    </command:syntax>
+    <command:parameters>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>AdminDebug</maml:name>
+        <maml:description>
+          <maml:para>Option to display detailed messages during migration. This parameter is optional, but if set to $true, the CLI will show verbose output during the migration process</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>AutoBindJCUser</maml:name>
+        <maml:description>
+          <maml:para>This parameter will bind the username specified in the `JumpCloudUserName` field to the current system after Migration.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>BindAsAdmin</maml:name>
+        <maml:description>
+          <maml:para>Option to bind user as sudo administrator or not. This parameter is not required and will default to $false (User will not be bound as admin). Set to $true if you'd like to bind the JumpCloudUserName as administrator during migration.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>BlockAccountLogin</maml:name>
+        <maml:description>
+          <maml:para>When set to true, the ADMU will block the migrating account from logging in at the Windows login screen for the duration of the migration by adding the user's SID to the 'SeDenyInteractiveLogonRight' user-rights assignment. This prevents the user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to false by default.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ForceReboot</maml:name>
+        <maml:description>
+          <maml:para>A boolean $true/$false value to force the system to reboot at the end of the migration process. A reboot is required when unbinding from a domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>InstallJCAgent</maml:name>
+        <maml:description>
+          <maml:para>A boolean $true/$false value to install the JumpCloud agent on the system. If this value is $true you will be required to also pass a `JumpCloudConnectKey` value. If the system remains on the domain, the JumpCloud agent will be installed but not connected until it leaves the domain.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>JumpCloudAPIKey</maml:name>
+        <maml:description>
+          <maml:para>The Read/Write API key of a JumpCloud Administrator. This parameter is required if the AutoBind JC User parameter is specified.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>JumpCloudConnectKey</maml:name>
+        <maml:description>
+          <maml:para>A string value that is required if `-InstallJCAgent` is $true. This connect key can be found in the JumpCloud console under add systems. It must be 24 chars and is different than an JumpCloud API key.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>JumpCloudOrgID</maml:name>
+        <maml:description>
+          <maml:para>The ID of the JumpCloud Organization you wish to connect to. This field is only required if an MTP Api Key is used in the JumpCloudApiKey Parameter</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>JumpCloudUserName</maml:name>
+        <maml:description>
+          <maml:para>A string value that will be used for the new converted local account that can be bound to JumpCloud. This value must be unique on the system, if it is not unique an error will stop the migration. This value should match the JumpCloud Username value to allow takeover when a User is bound to a system within the JumpCloud console.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>LeaveDomain</maml:name>
+        <maml:description>
+          <maml:para>A boolean $true/$false value to force the system to leave currently bound domain, this is required for the JumpCloud Agent to operate. It can also be reversed by simply rejoining the system back to the domain. This will also work for AzureAD and will disconnect the AzureAD bind.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>PrimaryUser</maml:name>
+        <maml:description>
+          <maml:para>When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will attempt to set the specified user as the PrimarySystemUser for this device in JumpCloud. This is set to false by default.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ReportStatus</maml:name>
+        <maml:description>
+          <maml:para>When set to true, the ADMU will report the migration status to the system description. This is set to false by default.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>SelectedUserName</maml:name>
+        <maml:description>
+          <maml:para>A string value for the DomainUserName that is used in the migration script. This value is verified to make sure the account exists on the system. If the Domain Account does not exist, the script will error and not continue. Either pass a username using the "Domain\username" syntax or a domain user SID.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>SetDefaultWindowsUser</maml:name>
+        <maml:description>
+          <maml:para>Option to set the windows default login user to the migrated user post-migration. This parameter is not required and will default to $true (the next login window user will be the migrated user). Set to $false if you'd like to disable this functionality during migration.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>SetFullPermission</maml:name>
+        <maml:description>
+          <maml:para>When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>TempPassword</maml:name>
+        <maml:description>
+          <maml:para>A string value that is used to set the new local accounts password. When duplicating the user account a password must be set when created and this value is passed. Once the system is online in JumpCloud the password will be overwritten and synced with JumpCloud if the user is taken over.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
+        <dev:type>
+          <maml:name>System.String</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>UpdateHomePath</maml:name>
+        <maml:description>
+          <maml:para>If set to $true, the ADMU will attempt to rename the selected username's homepath to the jumpcloud username. Note, this could break any applications that rely on a hard coded homepath. By default this is not set and will not rename the homepath.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>ValidateUserShellFolder</maml:name>
+        <maml:description>
+          <maml:para>Option to bypass User Shell Folder validation. When set to `$false`, the migration will not verify whether folders (Desktop, Downloads, Documents, Videos, Pictures, Music, Favorites) are redirected to another location, such as a network shared folder (e.g., `\192.168.50.78\SharedFolder\USERNAME\Desktop`). Use this parameter with caution. After migration, the user may encounter a shared folder error and will need to provide account credentials to restore their shared folders</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>bypassExeValidation</maml:name>
+        <maml:description>
+          <maml:para>TESTING ONLY. When set to true together with localEXEs, the staged local uwp_jcadmu.exe is used as-is, without GitHub SHA validation or download. Use this to validate a custom build (such as a branded UWP splash) before it is part of an official release. Leave false for production, where the local exe is validated against the latest release. Default: false.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>inputObject</maml:name>
+        <maml:description>
+          <maml:para>An PSObject can be passed to the function with the required values for the migration process. This is used when the GUI version of the tool is used and inputs to the XAML form are passed to this function.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Object</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>localEXEs</maml:name>
+        <maml:description>
+          <maml:para>When set to true, the ADMU requires a local uwp_jcadmu.exe in C:\Windows and will validate it against the latest GitHub release when possible. If GitHub is rate limited, the local file will still be used with a warning. If the local file is missing, the ADMU will throw and exit.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
+        <maml:name>removeMDM</maml:name>
+        <maml:description>
+          <maml:para>When set to true, the ADMU will remove any existing MDM enrollment from the system. This parameter requires the leaveDomain parameter to also be set to true. This parameter will remove MDM enrollment profiles if they have non-null ProviderIDs, and UPNs associated with them. This parameter will not remove JumpCloud MDM enrollments.</maml:para>
+        </maml:description>
+        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
+        <dev:type>
+          <maml:name>System.Boolean</maml:name>
+          <maml:uri />
+        </dev:type>
+        <dev:defaultValue>None</dev:defaultValue>
+      </command:parameter>
+    </command:parameters>
+    <command:inputTypes>
+      <command:inputType>
+        <dev:type>
+          <maml:name>None</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:inputType>
+    </command:inputTypes>
+    <command:returnValues>
+      <command:returnValue>
+        <dev:type>
+          <maml:name>System.Object</maml:name>
+        </dev:type>
+        <maml:description>
+          <maml:para></maml:para>
+        </maml:description>
+      </command:returnValue>
+    </command:returnValues>
+    <maml:alertSet>
+      <maml:alert>
+        <maml:para></maml:para>
+      </maml:alert>
+    </maml:alertSet>
+    <command:examples>
+      <command:example>
+        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; Start-Migration -SelectedUserName 'DOMAIN\bobfay' -JumpCloudUserName 'bob.fay' -TempPassword 'Temp123!Temp123!' -LeaveDomain $true -ForceReboot $true -InstallJCAgent $true -JumpCloudConnectKey 'ConnectKEY' -AutobindJCUser $true -JumpCloudAPIKey 'APIKEY'</dev:code>
+        <dev:remarks>
+          <maml:para>This example would run the `Start-Migration` function on a domain user `DOMAIN\bobfay` and create a new local user account `COMPUTERNAME\bob.fay`. Using a temporary password `Temp123!Temp123!`. The JumpCloud Agent would be installed. After migration the JumpCloud user `bob.fay` would be bound to the system. Finally, the system would leave the bound domain and reboot.</maml:para>
+        </dev:remarks>
+      </command:example>
+      <command:example>
+        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
+        <dev:code>PS C:\&gt; Start-Migration -SelectedUserName 'DOMAIN\bobfay' -JumpCloudUserName 'bob.fay' -TempPassword 'Temp123!Temp123!' $false -ForceReboot $false -InstallJCAgent $false</dev:code>
+        <dev:remarks>
+          <maml:para>This example would run the `Start-Migration` function on a domain user `DOMAIN\jsmith` and create a new local user account `COMPUTERNAME\john.smith`. Using a temporary password `Temp123!Temp123!`, the system would remain bound to the current domain and not reboot. The JumpCloud Agent would not be installed. This would allow the administrator to run the converted account in parallel for testing.</maml:para>
+        </dev:remarks>
+      </command:example>
+    </command:examples>
+    <command:relatedLinks>
+      <maml:navigationLink>
+        <maml:linkText>https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration</maml:linkText>
+        <maml:uri>https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration</maml:uri>
+      </maml:navigationLink>
+    </command:relatedLinks>
+  </command:command>
+  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
+    <command:details>
       <command:name>Start-Reversion</command:name>
       <command:verb>Start</command:verb>
       <command:noun>Reversion</command:noun>
@@ -230,580 +852,6 @@ Shows what would be reverted without making actual changes.</dev:code>
       <maml:navigationLink>
         <maml:linkText>Online Version:</maml:linkText>
         <maml:uri>https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Reversion</maml:uri>
-      </maml:navigationLink>
-    </command:relatedLinks>
-  </command:command>
-  <command:command xmlns:maml="http://schemas.microsoft.com/maml/2004/10" xmlns:command="http://schemas.microsoft.com/maml/dev/command/2004/10" xmlns:dev="http://schemas.microsoft.com/maml/dev/2004/10" xmlns:MSHelp="http://msdn.microsoft.com/mshelp">
-    <command:details>
-      <command:name>Start-Migration</command:name>
-      <command:verb>Start</command:verb>
-      <command:noun>Migration</command:noun>
-      <maml:description>
-        <maml:para>Starts the JumpCloud Active Directory Migration process.</maml:para>
-      </maml:description>
-    </command:details>
-    <maml:description>
-      <maml:para>The Start-Migration function allows the starting of the JumpCloud Active Directory Migration Process. This utility can be used to convert domain bound user accounts into locally managed accounts ready to be taken over by JumpCloud. There are various options to run the utility depending on the administrators requirements.</maml:para>
-    </maml:description>
-    <command:syntax>
-      <command:syntaxItem>
-        <maml:name>Start-Migration</maml:name>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>ForceReboot</maml:name>
-          <maml:description>
-            <maml:para>A boolean $true/$false value to force the system to reboot at the end of the migration process. A reboot is required when unbinding from a domain.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>InstallJCAgent</maml:name>
-          <maml:description>
-            <maml:para>A boolean $true/$false value to install the JumpCloud agent on the system. If this value is $true you will be required to also pass a `JumpCloudConnectKey` value. If the system remains on the domain, the JumpCloud agent will be installed but not connected until it leaves the domain.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>JumpCloudConnectKey</maml:name>
-          <maml:description>
-            <maml:para>A string value that is required if `-InstallJCAgent` is $true. This connect key can be found in the JumpCloud console under add systems. It must be 24 chars and is different than an JumpCloud API key.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>JumpCloudUserName</maml:name>
-          <maml:description>
-            <maml:para>A string value that will be used for the new converted local account that can be bound to JumpCloud. This value must be unique on the system, if it is not unique an error will stop the migration. This value should match the JumpCloud Username value to allow takeover when a User is bound to a system within the JumpCloud console.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>LeaveDomain</maml:name>
-          <maml:description>
-            <maml:para>A boolean $true/$false value to force the system to leave currently bound domain, this is required for the JumpCloud Agent to operate. It can also be reversed by simply rejoining the system back to the domain. This will also work for AzureAD and will disconnect the AzureAD bind.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>TempPassword</maml:name>
-          <maml:description>
-            <maml:para>A string value that is used to set the new local accounts password. When duplicating the user account a password must be set when created and this value is passed. Once the system is online in JumpCloud the password will be overwritten and synced with JumpCloud if the user is taken over.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>SelectedUserName</maml:name>
-          <maml:description>
-            <maml:para>A string value for the DomainUserName that is used in the migration script. This value is verified to make sure the account exists on the system. If the Domain Account does not exist, the script will error and not continue. Either pass a username using the "Domain\username" syntax or a domain user SID.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>UpdateHomePath</maml:name>
-          <maml:description>
-            <maml:para>If set to $true, the ADMU will attempt to rename the selected username's homepath to the jumpcloud username. Note, this could break any applications that rely on a hard coded homepath. By default this is not set and will not rename the homepath.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>JumpCloudAPIKey</maml:name>
-          <maml:description>
-            <maml:para>The Read/Write API key of a JumpCloud Administrator. This parameter is required if the AutoBind JC User parameter is specified.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>JumpCloudOrgID</maml:name>
-          <maml:description>
-            <maml:para>The ID of the JumpCloud Organization you wish to connect to. This field is only required if an MTP Api Key is used in the JumpCloudApiKey Parameter</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-          <dev:type>
-            <maml:name>System.String</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>BindAsAdmin</maml:name>
-          <maml:description>
-            <maml:para>Option to bind user as sudo administrator or not. This parameter is not required and will default to $false (User will not be bound as admin). Set to $true if you'd like to bind the JumpCloudUserName as administrator during migration.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>SetDefaultWindowsUser</maml:name>
-          <maml:description>
-            <maml:para>Option to set the windows default login user to the migrated user post-migration. This parameter is not required and will default to $true (the next login window user will be the migrated user). Set to $false if you'd like to disable this functionality during migration.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>AdminDebug</maml:name>
-          <maml:description>
-            <maml:para>Option to display detailed messages during migration. This parameter is optional, but if set to $true, the CLI will show verbose output during the migration process</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>ValidateUserShellFolder</maml:name>
-          <maml:description>
-            <maml:para>Option to bypass User Shell Folder validation. When set to `$false`, the migration will not verify whether folders (Desktop, Downloads, Documents, Videos, Pictures, Music, Favorites) are redirected to another location, such as a network shared folder (e.g., `\192.168.50.78\SharedFolder\USERNAME\Desktop`). Use this parameter with caution. After migration, the user may encounter a shared folder error and will need to provide account credentials to restore their shared folders</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>AutoBindJCUser</maml:name>
-          <maml:description>
-            <maml:para>This parameter will bind the username specified in the `JumpCloudUserName` field to the current system after Migration.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>ReportStatus</maml:name>
-          <maml:description>
-            <maml:para>When set to true, the ADMU will report the migration status to the system description. This is set to false by default.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>removeMDM</maml:name>
-          <maml:description>
-            <maml:para>When set to true, the ADMU will remove any existing MDM enrollment from the system. This parameter requires the leaveDomain parameter to also be set to true. This parameter will remove MDM enrollment profiles if they have non-null ProviderIDs, and UPNs associated with them. This parameter will not remove JumpCloud MDM enrollments.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>PrimaryUser</maml:name>
-          <maml:description>
-            <maml:para>When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will attempt to set the specified user as the PrimarySystemUser for this device in JumpCloud. This is set to false by default.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>localEXEs</maml:name>
-          <maml:description>
-            <maml:para>When set to true, the ADMU requires a local uwp_jcadmu.exe in C:\Windows and will validate it against the latest GitHub release when possible. If GitHub is rate limited, the local file will still be used with a warning. If the local file is missing, the ADMU will throw and exit.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>SetFullPermission</maml:name>
-          <maml:description>
-            <maml:para>When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Boolean</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-      </command:syntaxItem>
-      <command:syntaxItem>
-        <maml:name>Start-Migration</maml:name>
-        <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-          <maml:name>inputObject</maml:name>
-          <maml:description>
-            <maml:para>An PSObject can be passed to the function with the required values for the migration process. This is used when the GUI version of the tool is used and inputs to the XAML form are passed to this function.</maml:para>
-          </maml:description>
-          <command:parameterValue required="true" variableLength="false">System.Object</command:parameterValue>
-          <dev:type>
-            <maml:name>System.Object</maml:name>
-            <maml:uri />
-          </dev:type>
-          <dev:defaultValue>None</dev:defaultValue>
-        </command:parameter>
-      </command:syntaxItem>
-    </command:syntax>
-    <command:parameters>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>ForceReboot</maml:name>
-        <maml:description>
-          <maml:para>A boolean $true/$false value to force the system to reboot at the end of the migration process. A reboot is required when unbinding from a domain.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>InstallJCAgent</maml:name>
-        <maml:description>
-          <maml:para>A boolean $true/$false value to install the JumpCloud agent on the system. If this value is $true you will be required to also pass a `JumpCloudConnectKey` value. If the system remains on the domain, the JumpCloud agent will be installed but not connected until it leaves the domain.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>JumpCloudConnectKey</maml:name>
-        <maml:description>
-          <maml:para>A string value that is required if `-InstallJCAgent` is $true. This connect key can be found in the JumpCloud console under add systems. It must be 24 chars and is different than an JumpCloud API key.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-        <dev:type>
-          <maml:name>System.String</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>JumpCloudUserName</maml:name>
-        <maml:description>
-          <maml:para>A string value that will be used for the new converted local account that can be bound to JumpCloud. This value must be unique on the system, if it is not unique an error will stop the migration. This value should match the JumpCloud Username value to allow takeover when a User is bound to a system within the JumpCloud console.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-        <dev:type>
-          <maml:name>System.String</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>LeaveDomain</maml:name>
-        <maml:description>
-          <maml:para>A boolean $true/$false value to force the system to leave currently bound domain, this is required for the JumpCloud Agent to operate. It can also be reversed by simply rejoining the system back to the domain. This will also work for AzureAD and will disconnect the AzureAD bind.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>TempPassword</maml:name>
-        <maml:description>
-          <maml:para>A string value that is used to set the new local accounts password. When duplicating the user account a password must be set when created and this value is passed. Once the system is online in JumpCloud the password will be overwritten and synced with JumpCloud if the user is taken over.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-        <dev:type>
-          <maml:name>System.String</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>inputObject</maml:name>
-        <maml:description>
-          <maml:para>An PSObject can be passed to the function with the required values for the migration process. This is used when the GUI version of the tool is used and inputs to the XAML form are passed to this function.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Object</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Object</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="true" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>SelectedUserName</maml:name>
-        <maml:description>
-          <maml:para>A string value for the DomainUserName that is used in the migration script. This value is verified to make sure the account exists on the system. If the Domain Account does not exist, the script will error and not continue. Either pass a username using the "Domain\username" syntax or a domain user SID.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-        <dev:type>
-          <maml:name>System.String</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>UpdateHomePath</maml:name>
-        <maml:description>
-          <maml:para>If set to $true, the ADMU will attempt to rename the selected username's homepath to the jumpcloud username. Note, this could break any applications that rely on a hard coded homepath. By default this is not set and will not rename the homepath.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>JumpCloudAPIKey</maml:name>
-        <maml:description>
-          <maml:para>The Read/Write API key of a JumpCloud Administrator. This parameter is required if the AutoBind JC User parameter is specified.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-        <dev:type>
-          <maml:name>System.String</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>JumpCloudOrgID</maml:name>
-        <maml:description>
-          <maml:para>The ID of the JumpCloud Organization you wish to connect to. This field is only required if an MTP Api Key is used in the JumpCloudApiKey Parameter</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.String</command:parameterValue>
-        <dev:type>
-          <maml:name>System.String</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>BindAsAdmin</maml:name>
-        <maml:description>
-          <maml:para>Option to bind user as sudo administrator or not. This parameter is not required and will default to $false (User will not be bound as admin). Set to $true if you'd like to bind the JumpCloudUserName as administrator during migration.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>SetDefaultWindowsUser</maml:name>
-        <maml:description>
-          <maml:para>Option to set the windows default login user to the migrated user post-migration. This parameter is not required and will default to $true (the next login window user will be the migrated user). Set to $false if you'd like to disable this functionality during migration.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>AdminDebug</maml:name>
-        <maml:description>
-          <maml:para>Option to display detailed messages during migration. This parameter is optional, but if set to $true, the CLI will show verbose output during the migration process</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>ValidateUserShellFolder</maml:name>
-        <maml:description>
-          <maml:para>Option to bypass User Shell Folder validation. When set to `$false`, the migration will not verify whether folders (Desktop, Downloads, Documents, Videos, Pictures, Music, Favorites) are redirected to another location, such as a network shared folder (e.g., `\192.168.50.78\SharedFolder\USERNAME\Desktop`). Use this parameter with caution. After migration, the user may encounter a shared folder error and will need to provide account credentials to restore their shared folders</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>AutoBindJCUser</maml:name>
-        <maml:description>
-          <maml:para>This parameter will bind the username specified in the `JumpCloudUserName` field to the current system after Migration.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>ReportStatus</maml:name>
-        <maml:description>
-          <maml:para>When set to true, the ADMU will report the migration status to the system description. This is set to false by default.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>removeMDM</maml:name>
-        <maml:description>
-          <maml:para>When set to true, the ADMU will remove any existing MDM enrollment from the system. This parameter requires the leaveDomain parameter to also be set to true. This parameter will remove MDM enrollment profiles if they have non-null ProviderIDs, and UPNs associated with them. This parameter will not remove JumpCloud MDM enrollments.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>PrimaryUser</maml:name>
-        <maml:description>
-          <maml:para>When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will attempt to set the specified user as the PrimarySystemUser for this device in JumpCloud. This is set to false by default.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>localEXEs</maml:name>
-        <maml:description>
-          <maml:para>When set to true, the ADMU requires a local uwp_jcadmu.exe in C:\Windows and will validate it against the latest GitHub release when possible. If GitHub is rate limited, the local file will still be used with a warning. If the local file is missing, the ADMU will throw and exit.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-      <command:parameter required="false" variableLength="true" globbing="false" pipelineInput="False" position="named" aliases="none">
-        <maml:name>SetFullPermission</maml:name>
-        <maml:description>
-          <maml:para>When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.</maml:para>
-        </maml:description>
-        <command:parameterValue required="true" variableLength="false">System.Boolean</command:parameterValue>
-        <dev:type>
-          <maml:name>System.Boolean</maml:name>
-          <maml:uri />
-        </dev:type>
-        <dev:defaultValue>None</dev:defaultValue>
-      </command:parameter>
-    </command:parameters>
-    <command:inputTypes>
-      <command:inputType>
-        <dev:type>
-          <maml:name>None</maml:name>
-        </dev:type>
-        <maml:description>
-          <maml:para></maml:para>
-        </maml:description>
-      </command:inputType>
-    </command:inputTypes>
-    <command:returnValues>
-      <command:returnValue>
-        <dev:type>
-          <maml:name>System.Object</maml:name>
-        </dev:type>
-        <maml:description>
-          <maml:para></maml:para>
-        </maml:description>
-      </command:returnValue>
-    </command:returnValues>
-    <maml:alertSet>
-      <maml:alert>
-        <maml:para></maml:para>
-      </maml:alert>
-    </maml:alertSet>
-    <command:examples>
-      <command:example>
-        <maml:title>-------------------------- Example 1 --------------------------</maml:title>
-        <dev:code>PS C:\&gt; Start-Migration -SelectedUserName 'DOMAIN\bobfay' -JumpCloudUserName 'bob.fay' -TempPassword 'Temp123!Temp123!' -LeaveDomain $true -ForceReboot $true -InstallJCAgent $true -JumpCloudConnectKey 'ConnectKEY' -AutobindJCUser $true -JumpCloudAPIKey 'APIKEY'</dev:code>
-        <dev:remarks>
-          <maml:para>This example would run the `Start-Migration` function on a domain user `DOMAIN\bobfay` and create a new local user account `COMPUTERNAME\bob.fay`. Using a temporary password `Temp123!Temp123!`. The JumpCloud Agent would be installed. After migration the JumpCloud user `bob.fay` would be bound to the system. Finally, the system would leave the bound domain and reboot.</maml:para>
-        </dev:remarks>
-      </command:example>
-      <command:example>
-        <maml:title>-------------------------- Example 2 --------------------------</maml:title>
-        <dev:code>PS C:\&gt; Start-Migration -SelectedUserName 'DOMAIN\bobfay' -JumpCloudUserName 'bob.fay' -TempPassword 'Temp123!Temp123!' $false -ForceReboot $false -InstallJCAgent $false</dev:code>
-        <dev:remarks>
-          <maml:para>This example would run the `Start-Migration` function on a domain user `DOMAIN\jsmith` and create a new local user account `COMPUTERNAME\john.smith`. Using a temporary password `Temp123!Temp123!`, the system would remain bound to the current domain and not reboot. The JumpCloud Agent would not be installed. This would allow the administrator to run the converted account in parallel for testing.</maml:para>
-        </dev:remarks>
-      </command:example>
-    </command:examples>
-    <command:relatedLinks>
-      <maml:navigationLink>
-        <maml:linkText>https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration</maml:linkText>
-        <maml:uri>https://github.com/TheJumpCloud/jumpcloud-ADMU/wiki/Start-Migration</maml:uri>
       </maml:navigationLink>
     </command:relatedLinks>
   </command:command>

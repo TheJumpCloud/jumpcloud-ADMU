@@ -25,6 +25,7 @@ $JumpCloudAPIKey = 'YOURAPIKEY' # Required if the device is not eligible to use 
 $JumpCloudOrgID = '' # Required if you use a MTP API Key
 $SetDefaultWindowsUser = $true
 $ReportStatus = $false # Report status back to JumpCloud Description
+$BlockAccountLogin = $false # Block the migrating account from logging in during migration (reverted automatically on completion/failure)
 
 # Option to shutdown or restart
 # The 'shutdown' behavior performs a shutdown of the system in a much faster manner than 'restart' which can take 5 mins form the time the command is issued
@@ -44,6 +45,11 @@ $localEXEs = $false # When true, require gui_jcadmu.exe in C:\Windows\Temp and u
 
 # Option to set full recursive NTFS permissions during migration instead of deferring to first login
 $SetFullPermission = $false # When true, recursively set profile permissions during migration (slower on large profiles)
+
+# TESTING ONLY: when $true (together with $localEXEs), the staged gui_jcadmu.exe and uwp_jcadmu.exe
+# are used as-is, with no GitHub SHA validation or download. Use this to validate a custom build
+# (such as a branded UWP splash) before it is part of an official release. Leave $false for production.
+$bypassExeValidation = $false
 
 # If localEXEs is enabled, ensure uwp_jcadmu.exe is copied from Temp to Windows if needed
 if ($localEXEs) {
@@ -84,7 +90,9 @@ function Confirm-MigrationParameter {
         [bool]$ReportStatus = $false,
         [ValidateSet('Restart', 'Shutdown')][string]$postMigrationBehavior = 'Restart',
         [bool]$localEXEs = $false,
-        [bool]$SetFullPermission = $false
+        [bool]$SetFullPermission = $false,
+        [bool]$BlockAccountLogin = $false,
+        [bool]$bypassExeValidation = $false
     )
     if ($dataSource -eq 'CSV' -and [string]::IsNullOrWhiteSpace($csvName)) {
         throw "csvName required when dataSource is 'CSV'."
@@ -250,7 +258,8 @@ function Get-LatestADMUGUIExe {
         [Parameter(Mandatory = $false)][string]$GitHubToken,
         [Parameter(Mandatory = $false)][int]$MaxRetries = 3,
         [Parameter(Mandatory = $false)][int]$RetryDelaySeconds = 20,
-        [Parameter(Mandatory = $false)][bool]$useLocalEXEs = $false
+        [Parameter(Mandatory = $false)][bool]$useLocalEXEs = $false,
+        [Parameter(Mandatory = $false)][bool]$BypassValidation = $false
     )
     begin {
         $owner = "TheJumpCloud"
@@ -267,6 +276,14 @@ function Get-LatestADMUGUIExe {
         $fullPath = Join-Path -Path $destinationPath -ChildPath $fileName
 
         if ($useLocalEXEs) {
+            if ($BypassValidation) {
+                # Testing only: trust the staged gui_jcadmu.exe as-is, with no GitHub validation or download.
+                if (-not (Test-Path -Path $fullPath -PathType Leaf)) {
+                    throw "localEXEs is enabled, but required file 'gui_jcadmu.exe' was not found at '$fullPath'."
+                }
+                Write-Host "[TEST] BypassValidation enabled: using local GUI executable at '$fullPath' as-is without GitHub validation or download." -ForegroundColor Yellow
+                return $fullPath
+            }
             Write-Host "[status] localEXEs is enabled. Validating local GUI executable at '$fullPath'."
             $localValidationResult = Test-ExeSHA -filePath $fullPath -GitHubToken $GitHubToken -MaxRetries $MaxRetries -RetryDelaySeconds $RetryDelaySeconds -AllowUnvalidatedOnApiFailure $true
             if ($localValidationResult.IsValid) {
@@ -518,12 +535,16 @@ function Invoke-UserMigrationBatch {
             RemoveMDM             = $removeMDMParam
             adminDebug            = $true
             ReportStatus          = $MigrationConfig.ReportStatus
+            BlockAccountLogin     = $MigrationConfig.BlockAccountLogin
         }
         if ($MigrationConfig.localEXEs -eq $true) {
             $migrationParams.Add('localEXEs', $true)
         }
         if ($MigrationConfig.SetFullPermission -eq $true) {
             $migrationParams.Add('SetFullPermission', $true)
+        }
+        if ($MigrationConfig.bypassExeValidation -eq $true) {
+            $migrationParams.Add('bypassExeValidation', $true)
         }
         if (-not [string]::IsNullOrEmpty($MigrationConfig.JumpCloudOrgID)) {
             $migrationParams.Add('JumpCloudOrgID', $MigrationConfig.JumpCloudOrgID)
@@ -664,7 +685,7 @@ using System;using System.Collections.Generic;using System.IO;using System.Net;u
 }
 #endregion functionDefinitions
 #region validation
-$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus -localEXEs $localEXEs -SetFullPermission $SetFullPermission
+$confirmMigrationParameters = Confirm-MigrationParameter -dataSource $dataSource -csvName $csvName -TempPassword $TempPassword -LeaveDomain $LeaveDomain -ForceReboot $ForceReboot -UpdateHomePath $UpdateHomePath -AutoBindJCUser $AutoBindJCUser -PrimaryUser $PrimaryUser -BindAsAdmin $BindAsAdmin -SetDefaultWindowsUser $SetDefaultWindowsUser -systemContextBinding $systemContextBinding -JumpCloudAPIKey $JumpCloudAPIKey -JumpCloudOrgID $JumpCloudOrgID -postMigrationBehavior $postMigrationBehavior -removeMDM $removeMDM -ReportStatus $ReportStatus -localEXEs $localEXEs -SetFullPermission $SetFullPermission -BlockAccountLogin $BlockAccountLogin -bypassExeValidation $bypassExeValidation
 if ($confirmMigrationParameters) { Write-Host "[STATUS] Migration parameters validated successfully." }
 
 try {
@@ -717,7 +738,7 @@ if ($ForceReboot) {
 }
 #endregion logoffUsers (implied)
 #region migration
-$guiJcadmuPath = Get-LatestADMUGUIExe -useLocalEXEs $localEXEs
+$guiJcadmuPath = Get-LatestADMUGUIExe -useLocalEXEs $localEXEs -BypassValidation $bypassExeValidation
 $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -MigrationConfig @{
     TempPassword              = $TempPassword
     UpdateHomePath            = $UpdateHomePath
@@ -733,6 +754,8 @@ $migrationResults = Invoke-UserMigrationBatch -UsersToMigrate $UsersToMigrate -M
     removeMDM                 = $removeMDM
     localEXEs                 = $localEXEs
     SetFullPermission         = $SetFullPermission
+    bypassExeValidation       = $bypassExeValidation
+    BlockAccountLogin         = $BlockAccountLogin
     guiJcadmuPath             = $guiJcadmuPath
 }
 Write-Host "`nResults - Total: $($migrationResults.TotalUsers), Success: $($migrationResults.SuccessfulMigrations), Failed: $($migrationResults.FailedMigrations)"

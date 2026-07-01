@@ -127,6 +127,12 @@ function Start-Migration {
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
+            HelpMessage = "TESTING ONLY. When set to true together with localEXEs, the staged local uwp_jcadmu.exe is used as-is, without GitHub SHA validation or download. Use this to validate a custom build (such as a branded UWP splash) before it is part of an official release. Leave false for production, where the local exe is validated against the latest release. Default: false.")]
+        [bool]
+        $bypassExeValidation = $false,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
             HelpMessage = "When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.")]
         [bool]
         $SetFullPermission = $false,
@@ -136,6 +142,12 @@ function Start-Migration {
             HelpMessage = "When set and used in conjunction with the 'AutoBindJCUser' parameter, the ADMU will attempt to set the specified user as the PrimarySystemUser for this device in JumpCloud. This is set to false by default.")]
         [bool]
         $PrimaryUser = $false,
+        [Parameter(
+            ParameterSetName = 'cmd',
+            Mandatory = $false,
+            HelpMessage = "When set to true, the ADMU will block the migrating account from logging in at the Windows login screen for the duration of the migration by adding the user's SID to the 'SeDenyInteractiveLogonRight' user-rights assignment. This prevents the user from corrupting the migration by logging in mid-process. The block is automatically reverted when the migration completes or fails. This is set to false by default.")]
+        [bool]
+        $BlockAccountLogin = $false,
         [Parameter(
             ParameterSetName = "form")]
         [Object]
@@ -183,11 +195,17 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.14.0"
+        $admuVersion = "2.15.0"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
         $trackAccountMerge = $false
+
+        # Tracks whether the migrating account's interactive logon was blocked, so it is reverted
+        # on both success and failure
+        $accountLoginBlocked = $false
+        $blockLoginMessageTitle = "Account migration in progress"
+        $blockLoginMessage = "This account is being migrated by the JumpCloud ADMU. Please do not log in until the migration completes."
 
         # Track migration steps
         $admuTracker = [Ordered]@{
@@ -601,33 +619,60 @@ function Start-Migration {
 
         }
         #endregion validation
-        # print system info
-        Write-ToLog -Message ('System Information: ')
-        Write-ToLog -Message ("OSName: $($systemVersion.OSName)")
-        Write-ToLog -Message ("OSVersion: $($systemVersion.OSVersion)")
-        Write-ToLog -Message ("OSBuildNumber: $($systemVersion.OsBuildNumber)")
-        Write-ToLog -Message ("OSEdition: $($systemVersion.WindowsEditionId)")
 
-        Write-ToLog -Message ('Creating JCADMU Temporary Path in ' + $jcAdmuTempPath)
-        if (!(Test-Path $jcAdmuTempPath)) {
-            New-Item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
+        #region blockAccountLogin
+        # Block the migrating account from logging in at the Windows login screen for the duration
+        # of the migration. Reverted in catch block if an error occurs, or in end block on success.
+        if ($BlockAccountLogin) {
+            $backupPath = Backup-SecPol
+            Write-ToLog -Message:("Blocking interactive logon for '$SelectedUserName' (SID: $SelectedUserSID) during migration.")
+            $blockResult = Set-AccountLoginPolicy -SID $SelectedUserSID -Action Disable -Message $blockLoginMessage -MessageTitle $blockLoginMessageTitle
+            if ($blockResult.Success) {
+                $accountLoginBlocked = $true
+            } else {
+                Write-ToLog -Message:("Could not block interactive logon for '$SelectedUserName'. Continuing migration without the login block.") -Level Warning
+            }
         }
-        Write-ToLog -Message ($localComputerName + ' is currently Domain joined to ' + $WmiComputerSystem.Domain + ' NetBiosName is ' + $netBiosName)
+        #endregion blockAccountLogin
 
-        # Get all schedule tasks that have State of "Ready" and not disabled and "Running"
-        $ScheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -ne "Disabled" -and $_.state -ne "Running" }
-        # Disable tasks before migration
-        Write-ToLog -Message ("Disabling Scheduled Tasks...")
-        # Check if $ScheduledTasks is not null
-        if ($ScheduledTasks) {
-            Set-ADMUScheduledTask -op "disable" -scheduledTasks $ScheduledTasks
-        } else {
-            Write-ToLog -Message ("No Scheduled Tasks to disable")
+        try {
+            # print system info
+            Write-ToLog -Message ('System Information: ')
+            Write-ToLog -Message ("OSName: $($systemVersion.OSName)")
+            Write-ToLog -Message ("OSVersion: $($systemVersion.OSVersion)")
+            Write-ToLog -Message ("OSBuildNumber: $($systemVersion.OsBuildNumber)")
+            Write-ToLog -Message ("OSEdition: $($systemVersion.WindowsEditionId)")
+
+            Write-ToLog -Message ('Creating JCADMU Temporary Path in ' + $jcAdmuTempPath)
+            if (!(Test-Path $jcAdmuTempPath)) {
+                New-Item -ItemType Directory -Force -Path $jcAdmuTempPath 2>&1 | Write-Verbose
+            }
+            Write-ToLog -Message ($localComputerName + ' is currently Domain joined to ' + $WmiComputerSystem.Domain + ' NetBiosName is ' + $netBiosName)
+
+            # Get all schedule tasks that have State of "Ready" and not disabled and "Running"
+            $ScheduledTasks = Get-ScheduledTask | Where-Object { $_.TaskPath -notlike "*\Microsoft\Windows*" -and $_.State -ne "Disabled" -and $_.state -ne "Running" }
+            # Disable tasks before migration
+            Write-ToLog -Message ("Disabling Scheduled Tasks...")
+            # Check if $ScheduledTasks is not null
+            if ($ScheduledTasks) {
+                Set-ADMUScheduledTask -op "disable" -scheduledTasks $ScheduledTasks
+            } else {
+                Write-ToLog -Message ("No Scheduled Tasks to disable")
+            }
+            # Get domain status
+            $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
+        } catch {
+            # If an error occurs in begin block after login is blocked, restore it immediately to prevent
+            # the account from being locked out if the end block fails to run
+            if ($accountLoginBlocked) {
+                Write-ToLog -Message:("Restoring interactive logon for '$SelectedUserName' (SID: $SelectedUserSID) due to error in begin block.")
+                $null = Set-AccountLoginPolicy -SID $SelectedUserSID -Action Enable
+                $accountLoginBlocked = $false
+            }
         }
-        # Get domain status
-        $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
     }
     process {
+
         # Start Of Console Output
         Write-ToLog -Message "Migration Details" -MigrationStep
         Write-ToLog "Source Account To Migrate From: $SelectedUserName"
@@ -989,6 +1034,7 @@ function Start-Migration {
                     }
                 }
             }
+
             # Validate and repair file permissions on loaded registry hives
             Set-HKEYUserMount
             $loadedRegistryHives = @(
@@ -1575,7 +1621,7 @@ function Start-Migration {
 
             try {
                 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-                $resolvedUwpExePath = Get-UwpJcadmuExe -WindowsDrive $windowsDrive -localEXEs $localEXEs
+                $resolvedUwpExePath = Get-UwpJcadmuExe -WindowsDrive $windowsDrive -localEXEs $localEXEs -BypassValidation $bypassExeValidation
                 if ($null -eq $resolvedUwpExePath) {
                     Write-ToLog -Message 'UWP app restoration will be skipped: uwp_jcadmu.exe could not be prepared.' -Level Warning
                 } else {
@@ -1806,6 +1852,13 @@ function Start-Migration {
                 Set-ItemProperty -Path $registryPath -Name $NewUserSID -Value "{60B78E88-EAD8-445C-9CFD-0B87F74EA6CD}"
             }
 
+            # Restore the migrating account's interactive logon before any reboot.
+            if ($accountLoginBlocked) {
+                Write-ToLog -Message:("Restoring interactive logon for '$SelectedUserName' (SID: $SelectedUserSID) post-migration.")
+                $null = Set-AccountLoginPolicy -SID $SelectedUserSID -Action Enable
+                $accountLoginBlocked = $false
+            }
+
             if ($ForceReboot -eq $true) {
                 Write-ToLog -Message:('Forcing reboot of the PC now')
                 Restart-Computer -ComputerName $env:COMPUTERNAME -Force
@@ -1814,9 +1867,18 @@ function Start-Migration {
             break
         }
         #endregion leaveDomain
+
     }
     end {
         $FixedErrors = @();
+        # Always restore the migrating account's interactive logon if it is still blocked. end{}
+        # runs on every break/throw, so this covers all failed-gate paths; Enable is idempotent and
+        # the flag prevents a double-revert when the success path above already restored it.
+        if ($accountLoginBlocked) {
+            Write-ToLog -Message:("Restoring interactive logon for '$SelectedUserName' (SID: $SelectedUserSID) after migration ended.")
+            $null = Set-AccountLoginPolicy -SID $SelectedUserSID -Action Enable
+            $accountLoginBlocked = $false
+        }
         # if we caught any errors and need to revert based on admuTracker status, do so here:
         if ($admuTracker | ForEach-Object { $_.values.fail -eq $true }) {
             foreach ($trackedStep in $admuTracker.Keys) {
