@@ -121,7 +121,7 @@ function Start-Migration {
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
-            HelpMessage = "When set to true, the ADMU requires a local uwp_jcadmu.exe in C:\\Windows and will validate it against the latest GitHub release when possible. If GitHub is rate limited, the local file will still be used with a warning. If the local file is missing, the ADMU will throw and exit.")]
+            HelpMessage = "When set to true, the ADMU requires a local uwp_jcadmu.exe in C:\Windows and will validate it against the latest GitHub release when possible. If GitHub is rate limited, the local file will still be used with a warning. If the local file is missing, the ADMU will throw and exit.")]
         [bool]
         $localEXEs = $false,
         [Parameter(
@@ -434,6 +434,7 @@ function Start-Migration {
             $PrimaryUser = $InputObject.PrimaryUser
             $ForceReboot = $InputObject.ForceReboot
             $UpdateHomePath = $inputObject.UpdateHomePath
+            $SetFullPermission = $inputObject.SetFullPermission
         } else {
             $userAgent = "JumpCloud_ADMU.Powershell/$($admuVersion)"
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
@@ -1034,7 +1035,6 @@ function Start-Migration {
                     }
                 }
             }
-
             # Validate and repair file permissions on loaded registry hives
             Set-HKEYUserMount
             $loadedRegistryHives = @(
@@ -1435,49 +1435,55 @@ function Start-Migration {
             #endRegion Process Home Path Permission
 
             #region NTFS Permissions
-            Write-ToLog -Message:("Attempting to set owner to NTFS Permissions from: ($NewUserSID) to: $SelectedUserSID for path: $newUserProfileImagePath")
+            Write-ToLog -Message:("Attempting to set NTFS Permissions for TargetSID: $NewUserSID on path: $newUserProfileImagePath")
             Write-ToProgress -ProgressBar $ProgressBar -Status "ntfsAccess" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
             $regPermStopwatch = [System.Diagnostics.Stopwatch]::StartNew()
 
-            # Set NTFS permissions on profile
+            if ([string]::IsNullOrWhiteSpace($newUserProfileImagePath)) {
+                throw [System.Management.Automation.ValidationMetadataException] "Cannot set recursive NTFS permissions because the target profile path is empty."
+            }
+
+            $useNtfsHeartbeat = $isForm -or ($systemDescription -and $systemDescription.reportStatus)
+            $regPermissionParams = @{
+                SourceSID         = $SelectedUserSID
+                TargetSID         = $NewUserSID
+                FilePath          = $newUserProfileImagePath
+                SetFullPermission = $SetFullPermission
+            }
+
+            if ($useNtfsHeartbeat) {
+                $regPermissionParams.ProgressHeartbeatIntervalSeconds = 120
+                $regPermissionParams.OnProgressHeartbeat = {
+                    $elapsed = $regPermStopwatch.Elapsed
+                    $elapsedMin = [math]::Floor($elapsed.TotalMinutes)
+                    $typeLabel = if ($SetFullPermission) { "recursive" } else { "immediate" }
+                    if ($elapsedMin -gt 0) {
+                        $heartbeatMsg = "Setting NTFS File Permissions ($typeLabel, $elapsedMin min elapsed)"
+                    } else {
+                        $elapsedSec = [math]::Floor($elapsed.TotalSeconds)
+                        $heartbeatMsg = "Setting NTFS File Permissions ($typeLabel, $elapsedSec sec elapsed)"
+                    }
+                    Write-ToProgress -ProgressBar $ProgressBar -Status "ntfsAccess" -StatusMessage $heartbeatMsg -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+                }
+            }
+
             if ($SetFullPermission) {
                 Write-ToLog -Message:("Setting recursive permissions on profile during migration (SetFullPermission). Target profile path: '$newUserProfileImagePath'")
-                if ([string]::IsNullOrWhiteSpace($newUserProfileImagePath)) {
-                    throw [System.Management.Automation.ValidationMetadataException] "Cannot set recursive NTFS permissions because the target profile path is empty."
-                }
-                $useNtfsHeartbeat = $isForm -or ($systemDescription -and $systemDescription.reportStatus)
-                $regPermissionParams = @{
-                    SourceSID   = $SelectedUserSID
-                    TargetSID   = $NewUserSID
-                    FilePath    = $newUserProfileImagePath
-                    Recursive   = $true
-                    ErrorAction = 'Stop'
-                }
-                if ($useNtfsHeartbeat) {
-                    $regPermissionParams.ProgressHeartbeatIntervalSeconds = 120
-                    $regPermissionParams.OnProgressHeartbeat = {
-                        $elapsed = $regPermStopwatch.Elapsed
-                        $elapsedMin = [math]::Floor($elapsed.TotalMinutes)
-                        if ($elapsedMin -gt 0) {
-                            $heartbeatMsg = "Setting NTFS File Permissions (recursive, $elapsedMin min elapsed)"
-                        } else {
-                            $elapsedSec = [math]::Floor($elapsed.TotalSeconds)
-                            $heartbeatMsg = "Setting NTFS File Permissions (recursive, $elapsedSec sec elapsed)"
-                        }
-                        Write-ToProgress -ProgressBar $ProgressBar -Status "ntfsAccess" -StatusMessage $heartbeatMsg -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
-                    }
-                }
                 try {
                     Set-RegPermission @regPermissionParams
                 } catch {
                     Write-ToLog -Message "Set-RegPermission (recursive) failed: $_" -Level Warning
                 }
+
                 $regPermStopwatch.Stop()
-                Write-ToLog "Set-RegPermission (recursive) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
+                Write-ToLog "Set-RegPermission (native C# recursive) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
             } else {
-                # Set immediate/root level permissions only (non-recursive)
                 Write-ToLog -Message:("Setting immediate-level permissions. Recursive permissions will be set on first user login.")
-                Set-RegPermission -sourceSID $SelectedUserSID -targetSID $NewUserSID -filePath $newUserProfileImagePath -ErrorAction SilentlyContinue
+                try {
+                    Set-RegPermission @regPermissionParams
+                } catch {
+                    Write-ToLog -Message "Set-RegPermission (immediate) failed: $_" -Level Warning
+                }
                 $regPermStopwatch.Stop()
                 Write-ToLog "Set-RegPermission (immediate level) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
 
