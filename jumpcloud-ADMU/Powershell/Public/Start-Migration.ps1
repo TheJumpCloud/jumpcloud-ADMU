@@ -1517,10 +1517,17 @@ function Start-Migration {
 
             #region Validate Hive Permissions
             Write-ToProgress -ProgressBar $ProgressBar -Status "validateDatPermissions" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
-            $hiveFiles = @(
-                @{ Path = "$datPath\NTUSER.DAT"; Name = "NTUSER.DAT" }
-                @{ Path = "$datPath\AppData\Local\Microsoft\Windows\UsrClass.dat"; Name = "UsrClass.dat" }
+            $hiveSearchPaths = @(
+                @{ Directory = $datPath; Filter = 'NTUSER.dat*' }
+                @{ Directory = (Join-Path $datPath 'AppData\Local\Microsoft\Windows'); Filter = 'UsrClass.dat*' }
             )
+            $hiveFiles = foreach ($search in $hiveSearchPaths) {
+                if (Test-Path -LiteralPath $search.Directory) {
+                    Get-ChildItem -LiteralPath $search.Directory -Filter $search.Filter -Force -ErrorAction SilentlyContinue | ForEach-Object {
+                        @{ Path = $_.FullName; Name = $_.Name }
+                    }
+                }
+            }
             foreach ($hive in $hiveFiles) {
                 $validateHivePermissions, $validateHivePermissionsResults = Test-DATFilePermission -path $hive.Path -username $JumpCloudUserName -type 'ntfs'
                 if (-not $validateHivePermissions) {
