@@ -10,7 +10,6 @@ This release replaces the optional behavior for the `SetFullPermission` paramete
 #### FEATURES:
 
 - Introduced a custom, compiled C# class (NativeAcl) utilizing P/Invoke to handle recursive file and directory permission stamping (SetFullPermission). This drastically reduces migration times by bypassing traditional icacls.exe execution and slow PowerShell loops in favor of native Windows APIs (TreeSetNamedSecurityInfo)
-- Reparse Point Safeguards: Added robust validation to detect and reject reparse points (symlinks and directory junctions) prior to executing native recursive ACL modifications. This protects the system from unintended out-of-scope permission changes and prevents infinite loops
 
 ## 2.15.0
 Release Date: June 30, 2026
