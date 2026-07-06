@@ -7,7 +7,7 @@ function Set-RegPermission {
         [Parameter(Mandatory)]
         [string]$FilePath,
         [switch]$Recursive,
-        [int]$ProgressHeartbeatIntervalSeconds = 120,
+        [int]$ProgressHeartbeatIntervalSeconds = 0,
         [scriptblock]$OnProgressHeartbeat
     )
 
@@ -33,7 +33,6 @@ public static class NativeAcl
     public const uint TRUSTEE_IS_UNKNOWN                  = 0;
     public const uint SUB_CONTAINERS_AND_OBJECTS_INHERIT  = 0x3;
     public const uint TREE_SEC_INFO_SET                   = 0x00000001;
-    public const uint PROG_INVOKE_EVERY_OBJECT            = 2;
     public const uint PROG_INVOKE_ON_ERROR                = 3;
     public const uint TOKEN_ADJUST_PRIVILEGES             = 0x0020;
     public const uint TOKEN_QUERY                         = 0x0008;
@@ -147,35 +146,19 @@ public static class NativeAcl
     }
 
     public static List<string> FailedPaths = new List<string>();
-    public static Action PSHeartbeatAction;
-    public static int HeartbeatIntervalSec;
-    private static DateTime _lastHeartbeat;
     private static FN_PROGRESS _progressDelegate;
 
     private static void ProgressCallback(IntPtr pObjectName, uint status, IntPtr pInvokeSetting, IntPtr args, bool securitySet)
     {
-        // Log explicitly failed items
         if (status != 0) {
             string path = Marshal.PtrToStringUni(pObjectName) ?? "Unknown Path";
             FailedPaths.Add(path + " (Win32 Error: " + status + ")");
         }
-
-        // Handle Heartbeat execution to PowerShell runspace
-        if (HeartbeatIntervalSec > 0 && PSHeartbeatAction != null) {
-            if ((DateTime.Now - _lastHeartbeat).TotalSeconds >= HeartbeatIntervalSec) {
-                _lastHeartbeat = DateTime.Now;
-                PSHeartbeatAction(); // Fires the PS scriptblock
-            }
-        }
     }
 
-    public static string[] ApplyOwnerAndGrantTree(string root, byte[] userSidBytes, byte[] systemSidBytes, byte[] adminsSidBytes, int interval, Action psAction)
+    public static string[] ApplyOwnerAndGrantTree(string root, byte[] userSidBytes, byte[] systemSidBytes, byte[] adminsSidBytes)
     {
         FailedPaths.Clear();
-        HeartbeatIntervalSec = interval;
-        PSHeartbeatAction = psAction;
-        _lastHeartbeat = DateTime.Now;
-
         IntPtr userPtr   = SidToUnmanaged(userSidBytes);
         IntPtr systemPtr = SidToUnmanaged(systemSidBytes);
         IntPtr adminsPtr = SidToUnmanaged(adminsSidBytes);
@@ -203,10 +186,7 @@ public static class NativeAcl
 
             _progressDelegate = ProgressCallback;
 
-            // If heartbeat is requested, invoke on EVERY object. Otherwise, only invoke on ERROR to save resources.
-            uint invokeSetting = (interval > 0 && psAction != null) ? PROG_INVOKE_EVERY_OBJECT : PROG_INVOKE_ON_ERROR;
-
-            uint r1 = TreeSetNamedSecurityInfo(root, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION, userPtr, IntPtr.Zero, dacl, IntPtr.Zero, TREE_SEC_INFO_SET, _progressDelegate, invokeSetting, IntPtr.Zero);
+            uint r1 = TreeSetNamedSecurityInfo(root, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION, userPtr, IntPtr.Zero, dacl, IntPtr.Zero, TREE_SEC_INFO_SET, _progressDelegate, PROG_INVOKE_ON_ERROR, IntPtr.Zero);
 
             if (r1 != 0 && FailedPaths.Count == 0) throw new InvalidOperationException(string.Format("TreeSetNamedSecurityInfo \"{0}\": error {1}", root, r1));
 
@@ -224,7 +204,7 @@ public static class NativeAcl
     }
 
     # ---------------------------------------------------------------------------
-    # Local Helper Functions
+    # Local Helper Functions (Restored for icacls fallback)
     # ---------------------------------------------------------------------------
     function local:Get-IcaclsProcessExitCode {
         param([Parameter(Mandatory = $true)][System.Diagnostics.Process]$Process)
@@ -263,21 +243,6 @@ public static class NativeAcl
     if ([string]::IsNullOrWhiteSpace($FilePath)) { throw 'Set-RegPermission requires a non-empty FilePath.' }
     if (-not (Test-Path -LiteralPath $FilePath)) { throw "Set-RegPermission path does not exist: $FilePath" }
 
-    # Setup the default heartbeat tracker and output if not provided
-    $heartbeatStartTime = Get-Date
-    if (-not $PSBoundParameters.ContainsKey('OnProgressHeartbeat')) {
-        $OnProgressHeartbeat = {
-            $elapsed = (Get-Date) - $heartbeatStartTime
-
-            # Calculate total minutes (to account for runs > 60 mins), plus leftover seconds and milliseconds
-            $mins = [math]::Floor($elapsed.TotalMinutes)
-            $secs = $elapsed.Seconds
-            $ms = $elapsed.Milliseconds
-
-            Write-Host "[Heartbeats] Modifying ACLs: $mins minute(s), $secs second(s), $ms millisecond(s) elapsed..." -ForegroundColor Cyan
-        }.GetNewClosure()
-    }
-
     $FilePath = [System.IO.Path]::GetFullPath($FilePath)
     $script:IcaclsExitCode = 0
     $ntfsPermissionLogPath = Join-Path $(if (-not [string]::IsNullOrWhiteSpace($env:SystemDrive)) { $env:SystemDrive } else { 'C:' }) 'Windows\Temp\jcAdmu.log'
@@ -302,8 +267,6 @@ public static class NativeAcl
         $TargetAccount = $TargetSID
     }
 
-    $useProgressHeartbeat = $ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat
-
     if ($Recursive) {
         # =========================================================================
         # RECURSIVE: Use C# P/Invoke for maximum performance
@@ -311,12 +274,6 @@ public static class NativeAcl
         $attrs = [System.IO.File]::GetAttributes($FilePath)
         if ($attrs.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
             throw "root path is a reparse point (symlink or junction); refusing to follow natively."
-        }
-
-        # Convert PowerShell ScriptBlock to a .NET Action Delegate for C# execution
-        [System.Action]$psActionDelegate = $null
-        if ($useProgressHeartbeat) {
-            $psActionDelegate = [System.Action] { & $OnProgressHeartbeat }
         }
 
         try {
@@ -333,14 +290,7 @@ public static class NativeAcl
             $adminSidBytes = New-Object byte[] $adminSidObj.BinaryLength
             $adminSidObj.GetBinaryForm($adminSidBytes, 0)
 
-            $failedItems = [NativeAcl]::ApplyOwnerAndGrantTree(
-                $FilePath,
-                $targetSidBytes,
-                $systemSidBytes,
-                $adminSidBytes,
-                $ProgressHeartbeatIntervalSeconds,
-                $psActionDelegate
-            )
+            $failedItems = [NativeAcl]::ApplyOwnerAndGrantTree($FilePath, $targetSidBytes, $systemSidBytes, $adminSidBytes)
 
             if ($failedItems.Count -gt 0) {
                 Write-ToLog "Native tree operation completed with $($failedItems.Count) skipped locked files." -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
@@ -352,8 +302,9 @@ public static class NativeAcl
 
     } else {
         # =========================================================================
-        # NON-RECURSIVE: Fallback to existing icacls logic
+        # NON-RECURSIVE: Fallback to existing icacls logic for Root/Scheduled Task prep
         # =========================================================================
+        $useProgressHeartbeat = $ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat
 
         $SourceAccountIcacls = if ($SourceAccountTranslated) { $SourceAccount } else { "*$SourceAccount" }
         $TargetAccountIcacls = if ($TargetAccountTranslated) { $TargetAccount } else { "*$TargetAccount" }
