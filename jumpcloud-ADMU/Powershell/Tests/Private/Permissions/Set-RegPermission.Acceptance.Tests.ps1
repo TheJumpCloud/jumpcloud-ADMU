@@ -154,6 +154,73 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
         }
     }
 
+    Context "DAT and Log File Recovery Validation" {
+        BeforeEach {
+            $script:mockAppData = Join-Path $env:TEMP "MockAppData_DATTest_$([guid]::NewGuid())"
+            if (Test-Path $script:mockAppData) { Remove-Item $script:mockAppData -Recurse -Force }
+            New-Item -ItemType Directory -Path $script:mockAppData | Out-Null
+
+            $script:filesToTest = @(
+                "UsrClass.dat",
+                "UsrClass.dat.LOG1",
+                "UsrClass.dat.LOG2",
+                "NTUSER.DAT",
+                "NTUSER.DAT.LOG1",
+                "NTUSER.DAT.LOG2"
+            )
+
+            $targetAccount = (New-Object System.Security.Principal.SecurityIdentifier($script:userSid)).Translate([System.Security.Principal.NTAccount])
+
+            # Create the files and explicitly strip permissions for the target user to simulate the issue
+            foreach ($fileName in $script:filesToTest) {
+                $filePath = Join-Path $script:mockAppData $fileName
+                New-Item -ItemType File -Path $filePath | Out-Null
+
+                $acl = Get-Acl $filePath
+                $acl.SetAccessRuleProtection($true, $true) # Break inheritance, copy existing rules
+
+                # Identify and remove any existing rules for the target user
+                $rules = $acl.GetAccessRules($true, $true, [System.Security.Principal.NTAccount])
+                foreach ($rule in $rules) {
+                    if ($rule.IdentityReference -eq $targetAccount) {
+                        $acl.RemoveAccessRule($rule) | Out-Null
+                    }
+                }
+
+                # Apply broken ACL
+                Set-Acl -Path $filePath -AclObject $acl
+            }
+        }
+
+        AfterEach {
+            if (Test-Path $script:mockAppData) { Remove-Item $script:mockAppData -Recurse -Force }
+        }
+
+        It "Should successfully restore ownership and full permissions to DAT and LOG files" {
+            # Act - Execute the tool against the directory recursively to verify it fixes the files
+            Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $script:mockAppData -Recursive
+
+            # Assert
+            $targetAccount = (New-Object System.Security.Principal.SecurityIdentifier($script:userSid)).Translate([System.Security.Principal.NTAccount]).Value
+
+            foreach ($fileName in $script:filesToTest) {
+                $filePath = Join-Path $script:mockAppData $fileName
+                $acl = Get-Acl $filePath
+
+                # Verify target SID now owns the file
+                $acl.Owner | Should -Be $targetAccount
+
+                # Verify target SID now has explicit FullControl
+                $hasFullControl = $acl.Access | Where-Object {
+                    $_.IdentityReference -eq $targetAccount -and
+                    $_.FileSystemRights -match "FullControl"
+                }
+
+                $hasFullControl | Should -Not -BeNullOrEmpty
+            }
+        }
+    }
+
     Context "SID Translation Fallback Tests" {
         It "Falls back to SID string and throws if SID cannot be translated by System.Security.AccessControl" {
             $fakeSID = 'S-1-5-21-0000000000-0000000000-0000000000-1234'
