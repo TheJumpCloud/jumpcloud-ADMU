@@ -4,7 +4,7 @@ Release Date: July 6, 2026
 #### RELEASE NOTES
 
 ```
-This release focuses on significant performance and reliability improvements to the permission migration engine, replacing slow shell processes with highly optimized native API calls for recursive permission modifications.
+This release replaces the optional behavior for the `SetFullPermission` parameter to call the windows system API methods in lieu of icacls.exe. This change is more performant and resolves an issue if permissions for required user hive files are not set to inherit permissions from the parent directoreis.
 ```
 
 #### FEATURES:
