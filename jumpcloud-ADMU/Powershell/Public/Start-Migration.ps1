@@ -135,7 +135,7 @@ function Start-Migration {
             Mandatory = $false,
             HelpMessage = "When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.")]
         [bool]
-        $SetFullPermission = $true,
+        $SetFullPermission = $false,
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
@@ -1443,47 +1443,28 @@ function Start-Migration {
                 throw [System.Management.Automation.ValidationMetadataException] "Cannot set recursive NTFS permissions because the target profile path is empty."
             }
 
-            $useNtfsHeartbeat = $isForm -or ($systemDescription -and $systemDescription.reportStatus)
-            $regPermissionParams = @{
-                SourceSID         = $SelectedUserSID
-                TargetSID         = $NewUserSID
-                FilePath          = $newUserProfileImagePath
-                SetFullPermission = $SetFullPermission
-            }
-
-            if ($useNtfsHeartbeat) {
-                $regPermissionParams.ProgressHeartbeatIntervalSeconds = 120
-                $regPermissionParams.OnProgressHeartbeat = {
-                    $elapsed = $regPermStopwatch.Elapsed
-                    $elapsedMin = [math]::Floor($elapsed.TotalMinutes)
-                    $typeLabel = if ($SetFullPermission) { "recursive" } else { "immediate" }
-                    if ($elapsedMin -gt 0) {
-                        $heartbeatMsg = "Setting NTFS File Permissions ($typeLabel, $elapsedMin min elapsed)"
-                    } else {
-                        $elapsedSec = [math]::Floor($elapsed.TotalSeconds)
-                        $heartbeatMsg = "Setting NTFS File Permissions ($typeLabel, $elapsedSec sec elapsed)"
-                    }
-                    Write-ToProgress -ProgressBar $ProgressBar -Status "ntfsAccess" -StatusMessage $heartbeatMsg -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
-                }
-            }
-
             if ($SetFullPermission) {
-                Write-ToLog -Message:("Setting recursive permissions on profile during migration (SetFullPermission). Target profile path: '$newUserProfileImagePath'")
+                Write-ToLog -Message:("Setting recursive permissions on profile during migration via native C#. Target profile path: '$newUserProfileImagePath'")
+
                 try {
-                    Set-RegPermission @regPermissionParams
+                    # Triggers the fast C# native code
+                    Set-RegPermission -SourceSID $SelectedUserSID -TargetSID $NewUserSID -FilePath $newUserProfileImagePath -Recursive
                 } catch {
-                    Write-ToLog -Message "Set-RegPermission (recursive) failed: $_" -Level Warning
+                    Write-ToLog -Message "Set-RegPermission (recursive C#) failed: $_" -Level Warning
                 }
 
                 $regPermStopwatch.Stop()
                 Write-ToLog "Set-RegPermission (native C# recursive) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
             } else {
-                Write-ToLog -Message:("Setting immediate-level permissions. Recursive permissions will be set on first user login.")
+                Write-ToLog -Message:("Setting immediate-level permissions via icacls. Recursive permissions will be deferred to scheduled task.")
+
                 try {
-                    Set-RegPermission @regPermissionParams
+                    # Triggers the icacls root-level prep
+                    Set-RegPermission -SourceSID $SelectedUserSID -TargetSID $NewUserSID -FilePath $newUserProfileImagePath
                 } catch {
-                    Write-ToLog -Message "Set-RegPermission (immediate) failed: $_" -Level Warning
+                    Write-ToLog -Message "Set-RegPermission (immediate icacls) failed: $_" -Level Warning
                 }
+
                 $regPermStopwatch.Stop()
                 Write-ToLog "Set-RegPermission (immediate level) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
 

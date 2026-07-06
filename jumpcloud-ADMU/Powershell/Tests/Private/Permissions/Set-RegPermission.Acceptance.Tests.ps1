@@ -34,7 +34,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             { Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath "   " } | Should -Throw "Set-RegPermission requires a non-empty FilePath."
         }
 
-        It "Refuses to natively follow reparse points (Symlinks/Junctions) when SetFullPermission is true" {
+        It "Refuses to natively follow reparse points (Symlinks/Junctions) when -Recursive is specified" {
             $testDir = Join-Path $env:TEMP "RegPermReparseTest"
             $junctionDir = Join-Path $env:TEMP "RegPermJunctionTest"
             if (Test-Path $testDir) { Remove-Item $testDir -Recurse -Force }
@@ -44,7 +44,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             New-Item -ItemType Junction -Path $junctionDir -Target $testDir | Out-Null
 
             {
-                Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $junctionDir -SetFullPermission $true
+                Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $junctionDir -Recursive
             } | Should -Throw "root path is a reparse point (symlink or junction); refusing to follow natively."
 
             # Cleanup
@@ -53,7 +53,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
         }
     }
 
-    Context "Native C# Implementation (-SetFullPermission `$true)" {
+    Context "Native C# Implementation (-Recursive)" {
         BeforeEach {
             $script:testDir = Join-Path $env:TEMP "SetRegPermissionNativeTest"
             if (Test-Path $script:testDir) { Remove-Item $script:testDir -Recurse -Force }
@@ -76,7 +76,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
 
         It "Should successfully compile NativeAcl and apply ownership recursively" {
             # Act
-            Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $script:testDir -SetFullPermission $true
+            Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $script:testDir -Recursive
 
             # Assert - Root Folder
             $rootAcl = Get-Acl $script:testDir
@@ -102,7 +102,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
         }
     }
 
-    Context "icacls Fallback Implementation (-SetFullPermission `$false)" {
+    Context "icacls Fallback Implementation (Non-Recursive)" {
         BeforeEach {
             $script:testDir = Join-Path $env:TEMP "SetRegPermissionIcaclsTest"
             if (Test-Path $script:testDir) { Remove-Item $script:testDir -Recurse -Force }
@@ -115,8 +115,8 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
         }
 
         It "Should apply immediate-level ownership and permissions using icacls" {
-            # Act
-            Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $script:testDir -SetFullPermission $false
+            # Act - Note the omission of the -Recursive switch
+            Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $script:testDir
 
             # Assert
             $acl = Get-Acl $script:testDir
@@ -141,7 +141,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $error.Clear()
 
             # Act
-            Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $largeDir -SetFullPermission $false -ProgressHeartbeatIntervalSeconds 1 -OnProgressHeartbeat $onHeartbeat
+            Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $largeDir -ProgressHeartbeatIntervalSeconds 1 -OnProgressHeartbeat $onHeartbeat
 
             # Assert
             $error.Count | Should -Be 0
@@ -162,7 +162,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             New-Item -Path $testPath -ItemType File -Force | Out-Null
 
             # Act & Assert
-            # Since $SetFullPermission defaults to $false, it will attempt non-recursive AD ACL additions.
+            # Attempting non-recursive AD ACL additions without -Recursive
             {
                 Set-RegPermission -SourceSID $fakeSID -TargetSID $targetSID -FilePath $testPath -ErrorAction Stop
             } | Should -Throw 'Exception calling "AddAccessRule" with "1" argument(s): "Some or all identity references could not be translated."'

@@ -6,7 +6,7 @@ function Set-RegPermission {
         [string]$TargetSID,
         [Parameter(Mandatory)]
         [string]$FilePath,
-        [bool]$SetFullPermission,
+        [switch]$Recursive,
         [int]$ProgressHeartbeatIntervalSeconds = 0,
         [scriptblock]$OnProgressHeartbeat
     )
@@ -37,7 +37,6 @@ public static class NativeAcl
     public const uint TOKEN_ADJUST_PRIVILEGES             = 0x0020;
     public const uint TOKEN_QUERY                         = 0x0008;
     public const uint SE_PRIVILEGE_ENABLED                = 0x00000002;
-    public const int  ERROR_NOT_ALL_ASSIGNED              = 1300;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct LUID { public uint LowPart; public int HighPart; }
@@ -131,7 +130,6 @@ public static class NativeAcl
         int err = Marshal.GetLastWin32Error();
 
         if (!ok) throw new InvalidOperationException(string.Format("AdjustTokenPrivileges(\"{0}\"): error {1}", name, err));
-        if (err == ERROR_NOT_ALL_ASSIGNED) throw new InvalidOperationException(string.Format("Privilege \"{0}\" not held by this process token", name));
     }
 
     public static void EnablePrivileges()
@@ -206,7 +204,7 @@ public static class NativeAcl
     }
 
     # ---------------------------------------------------------------------------
-    # Local Helper Functions
+    # Local Helper Functions (Restored for icacls fallback)
     # ---------------------------------------------------------------------------
     function local:Get-IcaclsProcessExitCode {
         param([Parameter(Mandatory = $true)][System.Diagnostics.Process]$Process)
@@ -269,9 +267,7 @@ public static class NativeAcl
         $TargetAccount = $TargetSID
     }
 
-    $scopeLabel = if ($SetFullPermission) { 'recursive (Native P/Invoke)' } else { 'immediate level only (icacls)' }
-
-    if ($SetFullPermission) {
+    if ($Recursive) {
         # =========================================================================
         # RECURSIVE: Use C# P/Invoke for maximum performance
         # =========================================================================
@@ -297,7 +293,6 @@ public static class NativeAcl
             $failedItems = [NativeAcl]::ApplyOwnerAndGrantTree($FilePath, $targetSidBytes, $systemSidBytes, $adminSidBytes)
 
             if ($failedItems.Count -gt 0) {
-                # Just one summary log, skipping the slow foreach loop
                 Write-ToLog "Native tree operation completed with $($failedItems.Count) skipped locked files." -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
             }
         } catch {
@@ -307,7 +302,7 @@ public static class NativeAcl
 
     } else {
         # =========================================================================
-        # NON-RECURSIVE: Fallback to existing icacls logic
+        # NON-RECURSIVE: Fallback to existing icacls logic for Root/Scheduled Task prep
         # =========================================================================
         $useProgressHeartbeat = $ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat
 
