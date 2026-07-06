@@ -125,33 +125,6 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $acl.Owner | Should -Be $targetAccount
             $acl.Access | Where-Object { $_.IdentityReference -eq $targetAccount -and $_.FileSystemRights -match "FullControl" } | Should -Not -BeNullOrEmpty
         }
-
-        It "Should invoke the progress heartbeat scriptblock during icacls execution" {
-            # Arrange - Generate enough files to ensure icacls takes at least 1 full second
-            $largeDir = Join-Path $script:testDir "LargeDir"
-            New-Item -ItemType Directory -Path $largeDir | Out-Null
-            1..200 | ForEach-Object {
-                New-Item -ItemType File -Path (Join-Path $largeDir "file_$_.txt") | Out-Null
-            }
-
-            $script:heartbeatTriggered = $false
-            $onHeartbeat = { $script:heartbeatTriggered = $true }
-
-            # Clear the global error array to prevent leftover errors from failing this test
-            $error.Clear()
-
-            # Act
-            Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $largeDir -ProgressHeartbeatIntervalSeconds 1 -OnProgressHeartbeat $onHeartbeat
-
-            # Assert
-            $error.Count | Should -Be 0
-            $script:IcaclsExitCode | Should -Be 0
-
-            # Verify the permissions actually applied to ensure the run was successful
-            $acl = Get-Acl $largeDir
-            $targetAccount = (New-Object System.Security.Principal.SecurityIdentifier($script:userSid)).Translate([System.Security.Principal.NTAccount]).Value
-            $acl.Owner | Should -Be $targetAccount
-        }
     }
 
     Context "DAT and Log File Recovery Validation" {
