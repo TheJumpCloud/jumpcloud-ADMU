@@ -6,7 +6,7 @@ function Set-RegPermission {
         [string]$TargetSID,
         [Parameter(Mandatory)]
         [string]$FilePath,
-        [bool]$SetFullPermission = $false,
+        [bool]$SetFullPermission,
         [int]$ProgressHeartbeatIntervalSeconds = 0,
         [scriptblock]$OnProgressHeartbeat
     )

@@ -137,13 +137,20 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             $script:heartbeatTriggered = $false
             $onHeartbeat = { $script:heartbeatTriggered = $true }
 
+            # Clear the global error array to prevent leftover errors from failing this test
+            $error.Clear()
+
             # Act
             Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $largeDir -SetFullPermission $false -ProgressHeartbeatIntervalSeconds 1 -OnProgressHeartbeat $onHeartbeat
 
             # Assert
-            # Depending on machine speed, 200 files might process under 1 second.
-            # If it triggers, it passes. If it executes too fast to trigger, we verify no errors occurred.
             $error.Count | Should -Be 0
+            $script:IcaclsExitCode | Should -Be 0
+
+            # Verify the permissions actually applied to ensure the run was successful
+            $acl = Get-Acl $largeDir
+            $targetAccount = (New-Object System.Security.Principal.SecurityIdentifier($script:userSid)).Translate([System.Security.Principal.NTAccount]).Value
+            $acl.Owner | Should -Be $targetAccount
         }
     }
 

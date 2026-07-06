@@ -135,7 +135,7 @@ function Start-Migration {
             Mandatory = $false,
             HelpMessage = "When set to true, the ADMU will recursively set NTFS permissions on the full user profile during migration instead of deferring recursive permissions to the user's first login. This increases migration duration on large profiles but prevents temp-profile issues when intermediate directories lack traverse access.")]
         [bool]
-        $SetFullPermission = $false,
+        $SetFullPermission = $true,
         [Parameter(
             ParameterSetName = 'cmd',
             Mandatory = $false,
