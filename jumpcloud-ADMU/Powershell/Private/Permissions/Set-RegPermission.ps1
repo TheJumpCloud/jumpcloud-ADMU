@@ -273,7 +273,8 @@ public static class NativeAcl
         # =========================================================================
         $attrs = [System.IO.File]::GetAttributes($FilePath)
         if ($attrs.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
-            throw "root path is a reparse point (symlink or junction); refusing to follow natively."
+            Write-ToLog "Skipping '$FilePath': Root path is a reparse point (symlink or junction). Refusing to follow natively." -Level Warning
+            return
         }
 
         try {
