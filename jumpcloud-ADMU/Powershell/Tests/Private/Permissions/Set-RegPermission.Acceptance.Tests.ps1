@@ -34,7 +34,7 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             { Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath "   " } | Should -Throw "Set-RegPermission requires a non-empty FilePath."
         }
 
-        It "Refuses to natively follow reparse points (Symlinks/Junctions) when -Recursive is specified" {
+        It "Skips and logs a warning for reparse points (Symlinks/Junctions) when -Recursive is specified" {
             $testDir = Join-Path $env:TEMP "RegPermReparseTest"
             $junctionDir = Join-Path $env:TEMP "RegPermJunctionTest"
             if (Test-Path $testDir) { Remove-Item $testDir -Recurse -Force }
@@ -43,9 +43,18 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             New-Item -ItemType Directory -Path $testDir | Out-Null
             New-Item -ItemType Junction -Path $junctionDir -Target $testDir | Out-Null
 
+            # Mock Write-ToLog so we can verify the warning was sent
+            Mock Write-ToLog { }
+
+            # Verify it no longer throws an exception
             {
                 Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $junctionDir -Recursive
-            } | Should -Throw "root path is a reparse point (symlink or junction); refusing to follow natively."
+            } | Should -Not -Throw
+
+            # Verify the warning was properly logged
+            Assert-MockCalled Write-ToLog -Times 1 -ParameterFilter {
+                $Level -eq 'Warning' -and $Message -match "Root path is a reparse point"
+            }
 
             # Cleanup
             Remove-Item $junctionDir -Force
