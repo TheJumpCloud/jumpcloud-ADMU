@@ -33,7 +33,7 @@ function Show-SelectionForm {
 <Window
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="JumpCloud ADMU 2.16.0"
+        Title="JumpCloud ADMU 2.16.1"
         WindowStyle="SingleBorderWindow"
         ResizeMode="NoResize"
         Background="White" ScrollViewer.VerticalScrollBarVisibility="Visible" ScrollViewer.HorizontalScrollBarVisibility="Visible" Width="1020" Height="590">
@@ -120,7 +120,6 @@ function Show-SelectionForm {
             </Grid.RowDefinitions>
             <Image Name="JCLogoImg" Source="..." Height="23" VerticalAlignment="Top" Margin="0,10,258,0" Width="auto" HorizontalAlignment="Left"/>
 
-            <!-- System Information -->
             <GroupBox Header="" Style="{StaticResource NoHeaderGroupBoxStyle}" Height="186" Margin="0,47,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" Width="295" Grid.Row="0" Grid.Column="0">
                 <Grid HorizontalAlignment="Center" VerticalAlignment="Top" Width="270" MinWidth="245" Margin="0,0,0,0">
                     <Grid.RowDefinitions>
@@ -153,7 +152,6 @@ function Show-SelectionForm {
                 </Grid>
             </GroupBox>
 
-            <!-- Domain Accounts ListView -->
             <Border BorderBrush="#E3E8E9" BorderThickness="1.2" CornerRadius="4" Margin="303,47,10,0" Grid.Row="0" Grid.ColumnSpan="2" Width="680">
                 <Grid Margin="5,0,0,0">
                     <Grid.ColumnDefinitions>
@@ -239,7 +237,6 @@ function Show-SelectionForm {
                 </Grid>
             </Border>
 
-            <!-- Account Migration Information -->
             <GroupBox Header="" Name="gb_AccountMigrationInformation" Style="{StaticResource NoHeaderGroupBoxStyle}" Grid.Row="1" Grid.Column="2" Margin="10,10,10,0">
                 <Grid HorizontalAlignment="Left" VerticalAlignment="Top" Width="461">
                     <Grid.RowDefinitions>
@@ -261,7 +258,6 @@ function Show-SelectionForm {
                 </Grid>
             </GroupBox>
 
-            <!-- System Migration Information -->
             <GroupBox Header="" Name="gb_SystemMigrationInformation" Style="{StaticResource NoHeaderGroupBoxStyle}" MinHeight="145" Margin="0,10,0,0" Grid.Row="1" Grid.Column="0">
                 <Grid HorizontalAlignment="Left" Width="Auto" Height="Auto">
                     <Label FontWeight="SemiBold" Foreground="#202D38" Content="System Migration Options" Margin="5,0,328,211"/>
@@ -286,7 +282,6 @@ function Show-SelectionForm {
                 </Grid>
             </GroupBox>
 
-            <!-- Migrate Button -->
             <Button Name="btn_migrateProfile" HorizontalAlignment="Right" VerticalAlignment="Top" Width="146" Height="30" IsEnabled="False" FontWeight="SemiBold" Content="Migrate Profile" Grid.Row="2" Grid.Column="1" Margin="0,10,10,0">
                 <Button.Resources>
                     <Style TargetType="{x:Type Border}">
@@ -704,6 +699,14 @@ function Show-SelectionForm {
     $cb_autobindJCUser.Add_Checked( { $img_apiKeyValid.Visibility = 'Visible' })
     $cb_autobindJCUser.Add_Checked( { $cb_bindAsAdmin.IsEnabled = $true })
     $cb_autobindJCUser.Add_Checked( { $cb_primaryUser.IsEnabled = $true })
+
+    # -----------------------------------------------------------
+    # ACCEPTANCE CRITERIA: Auto-Select Leave Domain & Remove MDM
+    # -----------------------------------------------------------
+    $cb_autobindJCUser.Add_Checked( { $cb_leaveDomain.IsChecked = $true })
+    $cb_autobindJCUser.Add_Checked( { $cb_removeMDM.IsChecked = $true })
+    # -----------------------------------------------------------
+
     # $cb_bindAsAdmin.Add_Checked( { $BindAsAdmin = $true })
     $cb_autobindJCUser.Add_Checked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)
@@ -728,6 +731,14 @@ function Show-SelectionForm {
     $cb_autobindJCUser.Add_Unchecked( { $cb_bindAsAdmin.IsChecked = $false })
     $cb_autobindJCUser.Add_Unchecked( { $cb_primaryUser.IsEnabled = $false })
     $cb_autobindJCUser.Add_Unchecked( { $cb_primaryUser.IsChecked = $false })
+
+    # -----------------------------------------------------------
+    # Auto-Uncheck Leave Domain & Remove MDM when Autobind is unchecked
+    # -----------------------------------------------------------
+    $cb_autobindJCUser.Add_Unchecked( { $cb_leaveDomain.IsChecked = $false })
+    $cb_autobindJCUser.Add_Unchecked( { $cb_removeMDM.IsChecked = $false })
+    # -----------------------------------------------------------
+
     # $cb_bindAsAdmin.Add_Unchecked( { $BindAsAdmin = $false })
     $cb_autobindJCUser.Add_Unchecked( {
             Test-MigrationButton -tb_JumpCloudUserName:($tb_JumpCloudUserName) -tb_JumpCloudConnectKey:($tb_JumpCloudConnectKey) -tb_tempPassword:($tb_tempPassword) -lvProfileList:($lvProfileList) -tb_JumpCloudAPIKey:($tb_JumpCloudAPIKey) -cb_installJCAgent:($cb_installJCAgent) -cb_autobindJCUser:($cb_autobindJCUser)

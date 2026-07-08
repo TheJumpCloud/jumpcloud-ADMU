@@ -1,3 +1,18 @@
+## 2.16.1
+Release Date: July 8, 2026
+
+#### RELEASE NOTES
+
+```
+- Updated User Association Order the ADMU now forces the device to leave its current domain before associating a user to the device.
+- GUI Automation for AutoBind: When a user selects the "AutoBind JC user" option in the graphical interface, the "Leave Domain" and "Remove MDM" options are now automatically selected by default. These parameters are passed directly alongside the AutoBind command.
+```
+
+#### FEATURES:
+
+- Streamlined AutoBind Workflow: Administrators no longer need to manually check prerequisite options when setting up an AutoBind migration. Selecting "AutoBind JC user" now intuitively selects the required parameters, reducing manual clicks and preventing configuration misses.
+- By forcing a device to leave the existing Active Directory domain before associating the new Entra ID/JumpCloud user, the tool prevents profile mapping conflicts and ensures a clean handoff.
+
 ## 2.16.0
 Release Date: July 6, 2026
 
