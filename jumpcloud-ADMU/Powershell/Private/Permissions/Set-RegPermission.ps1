@@ -145,18 +145,24 @@ public static class NativeAcl
         }
     }
 
-    public static List<string> FailedPaths = new List<string>();
+    public struct FailedItem
+    {
+        public string Path;
+        public uint ErrorCode;
+    }
+
+    public static List<FailedItem> FailedPaths = new List<FailedItem>();
     private static FN_PROGRESS _progressDelegate;
 
     private static void ProgressCallback(IntPtr pObjectName, uint status, IntPtr pInvokeSetting, IntPtr args, bool securitySet)
     {
         if (status != 0) {
             string path = Marshal.PtrToStringUni(pObjectName) ?? "Unknown Path";
-            FailedPaths.Add(path + " (Win32 Error: " + status + ")");
+            FailedPaths.Add(new FailedItem { Path = path, ErrorCode = status });
         }
     }
 
-    public static string[] ApplyOwnerAndGrantTree(string root, byte[] userSidBytes, byte[] systemSidBytes, byte[] adminsSidBytes)
+    public static FailedItem[] ApplyOwnerAndGrantTree(string root, byte[] userSidBytes, byte[] systemSidBytes, byte[] adminsSidBytes)
     {
         FailedPaths.Clear();
         IntPtr userPtr   = SidToUnmanaged(userSidBytes);
@@ -294,7 +300,26 @@ public static class NativeAcl
             $failedItems = [NativeAcl]::ApplyOwnerAndGrantTree($FilePath, $targetSidBytes, $systemSidBytes, $adminSidBytes)
 
             if ($failedItems.Count -gt 0) {
-                Write-ToLog "Native tree operation completed with $($failedItems.Count) skipped locked files." -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+                $symlinkCount = 0
+                $errorCount = 0
+
+                foreach ($item in $failedItems) {
+                    try {
+                        $itemAttrs = [System.IO.File]::GetAttributes($item.Path)
+                        if ($itemAttrs.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
+                            $symlinkCount++
+                            Write-ToLog "Skipped '$($item.Path)': item is a symlink/reparse point, this is expected and not an error." -Level Info -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+                        } else {
+                            $errorCount++
+                            Write-ToLog "Failed to set permissions on '$($item.Path)': Win32 error $($item.ErrorCode)." -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+                        }
+                    } catch {
+                        $errorCount++
+                        Write-ToLog "Failed to set permissions on '$($item.Path)': Win32 error $($item.ErrorCode). Unable to determine reparse point status: $($_.Exception.Message)" -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+                    }
+                }
+
+                Write-ToLog "Native tree operation completed with $($failedItems.Count) skipped/failed items ($symlinkCount symlinks, $errorCount other errors)." -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
             }
         } catch {
             Write-ToLog "Error natively stamping tree ACL: $($_.Exception.Message)" -Level Error -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
