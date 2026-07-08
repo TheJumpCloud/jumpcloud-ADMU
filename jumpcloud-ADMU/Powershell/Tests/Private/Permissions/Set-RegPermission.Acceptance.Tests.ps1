@@ -109,6 +109,34 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
                 $hasFullControl | Should -Not -BeNullOrEmpty
             }
         }
+
+        It "Should log a Warning with the file path and Win32 error code when a file is locked" {
+            # Arrange - lock a nested file exclusively so the native tree operation cannot re-secure it
+            $lockedPath = Join-Path $script:testDir "subdir\subfile.txt"
+            $lockedHandle = [System.IO.File]::Open($lockedPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+
+            Mock Write-ToLog { }
+
+            try {
+                # Act - Verify it does not throw despite the locked file causing a per-item failure
+                {
+                    Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $script:testDir -Recursive
+                } | Should -Not -Throw
+            } finally {
+                $lockedHandle.Close()
+                $lockedHandle.Dispose()
+            }
+
+            # Assert - the specific locked file was logged individually with a Warning and a non-zero Win32 error
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Level -eq 'Warning' -and $Message -match [regex]::Escape($lockedPath) -and $Message -match 'Win32 error \d+'
+            }
+
+            # Assert - the summary line reflects at least one error
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Level -eq 'Warning' -and $Message -match 'Native tree operation completed with' -and $Message -match '[1-9]\d* other error'
+            }
+        }
     }
 
     Context "icacls Fallback Implementation (Non-Recursive)" {
