@@ -415,6 +415,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                 SystemContextBinding    = $false
                 ReportStatus            = $false
                 JumpCloudUserID         = $null
+                RemoveMDM               = $false
             }
             # remove the log
             $logPath = "C:\Windows\Temp\jcadmu.log"
@@ -801,6 +802,11 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
         }
         Context "LeaveDomain and RemoveMDM State-Aware Checks" {
             BeforeEach {
+                $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                $testCaseInput.SelectedUserName = $userToMigrateFrom
+                $tempPassword = "Temp123!Temp123!"
+                $testCaseInput.TempPassword = $tempPassword
+
                 $testCaseInput.LeaveDomain = $false
                 $testCaseInput.RemoveMDM = $false
 
