@@ -12,7 +12,9 @@ function Set-RegistryExe {
         # User Security Identifier
         [Parameter(Mandatory = $true)]
         [ValidatePattern("^S-\d-\d+-(\d+-){1,14}\d+$")]
-        [System.String]$UserSid
+        [System.String]$UserSid,
+        [Parameter()]
+        [switch]$ThrowOnFailure
     )
     begin {
         switch ($hive) {
@@ -38,6 +40,13 @@ function Set-RegistryExe {
             }
         }
         $status = Get-RegistryExeStatus $results
+
+        if (-not $status -and $ThrowOnFailure.IsPresent) {
+            $resultText = if ($results) { ($results | Out-String).Trim() } else { "No output" }
+            $errorMessage = "Set-RegistryExe $op $key failed. Details: $resultText"
+            Write-ToLog -Message $errorMessage -Level Warning -Step "Set-RegistryExe"
+            throw [System.InvalidOperationException]::new($errorMessage)
+        }
     }
     end {
         # Status here will be either true or false depending on whether or not the tool was able to perform the registry action requested
