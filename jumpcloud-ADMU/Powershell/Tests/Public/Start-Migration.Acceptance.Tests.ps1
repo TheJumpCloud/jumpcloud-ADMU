@@ -798,81 +798,81 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the user already exists. To resolve the issue, remove the local user from this device before attempting migration again."
                 }
             }
+        }
+        Context "LeaveDomain and RemoveMDM State-Aware Checks" {
+            BeforeEach {
+                $testCaseInput.LeaveDomain = $false
+                $testCaseInput.RemoveMDM = $false
 
-            Context "LeaveDomain and RemoveMDM State-Aware Checks" {
-                BeforeEach {
-                    $testCaseInput.LeaveDomain = $false
-                    $testCaseInput.RemoveMDM = $false
-
-                    # 1. Mock Get-CimInstance for AD Domain Checks
-                    # Simulates a device that is in a Workgroup by default
-                    Mock Get-CimInstance {
-                        if ($ClassName -eq 'Win32_ComputerSystem') {
-                            return [PSCustomObject]@{
-                                Name         = "TEST-PC"
-                                PartOfDomain = $script:MockPartOfDomain
-                            }
-                        }
-                        # Fallback to the real command for other classes if needed
-                        return Execute-Original @PSBoundParameters
-                    }
-
-                    # 2. Mock dsregcmd.exe for Azure AD / Intune status
-                    # Simulates a completely unmanaged state by default
-                    Mock dsregcmd.exe {
-                        if ($script:MockIsIntuneManaged) {
-                            return @(
-                                "TenantName : TestTenant",
-                                "AzureADJoined : Yes",
-                                "MdmUrl : https://enrollment.manage.microsoft.com/"
-                            )
-                        } else {
-                            return @(
-                                "TenantName : ",
-                                "AzureADJoined : No",
-                                "MdmUrl : "
-                            )
+                # 1. Mock Get-CimInstance for AD Domain Checks
+                # Simulates a device that is in a Workgroup by default
+                Mock Get-CimInstance {
+                    if ($ClassName -eq 'Win32_ComputerSystem') {
+                        return [PSCustomObject]@{
+                            Name         = "TEST-PC"
+                            PartOfDomain = $script:MockPartOfDomain
                         }
                     }
-
-                    # Default state variables (can be modified inside individual 'It' blocks)
-                    $script:MockPartOfDomain = $false
-                    $script:MockIsIntuneManaged = $false
+                    # Fallback to the real command for other classes if needed
+                    return Execute-Original @PSBoundParameters
                 }
 
-                It "Start-Migration should gracefully handle LeaveDomain being true on a Workgroup device" {
-                    # Arrange - Device is NOT in a domain
-                    $script:MockPartOfDomain = $false
-                    $testCaseInput.LeaveDomain = $true
-
-                    # Act & Assert - Should check status, see it's unjoined, and skip safely without throwing
-                    { Start-Migration @testCaseInput } | Should -Not -Throw
+                # 2. Mock dsregcmd.exe for Azure AD / Intune status
+                # Simulates a completely unmanaged state by default
+                Mock dsregcmd.exe {
+                    if ($script:MockIsIntuneManaged) {
+                        return @(
+                            "TenantName : TestTenant",
+                            "AzureADJoined : Yes",
+                            "MdmUrl : https://enrollment.manage.microsoft.com/"
+                        )
+                    } else {
+                        return @(
+                            "TenantName : ",
+                            "AzureADJoined : No",
+                            "MdmUrl : "
+                        )
+                    }
                 }
 
-                It "Start-Migration should gracefully handle RemoveMDM being true on an unmanaged device" {
-                    # Arrange - Device is NOT Intune managed
-                    $script:MockIsIntuneManaged = $false
-                    $testCaseInput.RemoveMDM = $true
+                # Default state variables (can be modified inside individual 'It' blocks)
+                $script:MockPartOfDomain = $false
+                $script:MockIsIntuneManaged = $false
+            }
 
-                    # Act & Assert - Should check status, see it's unmanaged, and skip safely without throwing
-                    { Start-Migration @testCaseInput } | Should -Not -Throw
-                }
+            It "Start-Migration should gracefully handle LeaveDomain being true on a Workgroup device" {
+                # Arrange - Device is NOT in a domain
+                $script:MockPartOfDomain = $false
+                $testCaseInput.LeaveDomain = $true
 
-                It "Start-Migration should execute LeaveDomain and RemoveMDM logic when device IS domain-joined and MDM-managed" {
-                    # Arrange - Turn on simulated AD and MDM environments
-                    $script:MockPartOfDomain = $true
-                    $script:MockIsIntuneManaged = $true
+                # Act & Assert - Should check status, see it's unjoined, and skip safely without throwing
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+            }
 
-                    $testCaseInput.LeaveDomain = $true
-                    $testCaseInput.RemoveMDM = $true
-                    $testCaseInput.AutoBindJCUser = $true
-                    $testCaseInput.JumpCloudUserName = $userToMigrateTo
+            It "Start-Migration should gracefully handle RemoveMDM being true on an unmanaged device" {
+                # Arrange - Device is NOT Intune managed
+                $script:MockIsIntuneManaged = $false
+                $testCaseInput.RemoveMDM = $true
 
-                    # Act & Assert - Executes the actual leave/remove blocks without throwing environment mismatch errors
-                    { Start-Migration @testCaseInput } | Should -Not -Throw
-                }
+                # Act & Assert - Should check status, see it's unmanaged, and skip safely without throwing
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+            }
+
+            It "Start-Migration should execute LeaveDomain and RemoveMDM logic when device IS domain-joined and MDM-managed" {
+                # Arrange - Turn on simulated AD and MDM environments
+                $script:MockPartOfDomain = $true
+                $script:MockIsIntuneManaged = $true
+
+                $testCaseInput.LeaveDomain = $true
+                $testCaseInput.RemoveMDM = $true
+                $testCaseInput.AutoBindJCUser = $true
+                $testCaseInput.JumpCloudUserName = $userToMigrateTo
+
+                # Act & Assert - Executes the actual leave/remove blocks without throwing environment mismatch errors
+                { Start-Migration @testCaseInput } | Should -Not -Throw
             }
         }
+
     }
 
     # Add more acceptance tests as needed
