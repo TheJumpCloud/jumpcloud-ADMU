@@ -1,3 +1,16 @@
+## 2.16.1
+Release Date: July 9, 2026
+
+#### RELEASE NOTES
+
+```
+Placeholder
+```
+
+#### FEATURES:
+
+- Placeholder
+
 ## 2.16.0
 Release Date: July 6, 2026
 
