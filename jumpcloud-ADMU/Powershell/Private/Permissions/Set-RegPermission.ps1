@@ -297,7 +297,7 @@ public static class NativeAcl
             $adminSidBytes = New-Object byte[] $adminSidObj.BinaryLength
             $adminSidObj.GetBinaryForm($adminSidBytes, 0)
 
-            $failedItems = [NativeAcl]::ApplyOwnerAndGrantTree($FilePath, $targetSidBytes, $systemSidBytes, $adminSidBytes)
+            $failedItems = Invoke-NativeTreeAcl -Root $FilePath -TargetSidBytes $targetSidBytes -SystemSidBytes $systemSidBytes -AdminSidBytes $adminSidBytes
 
             if ($failedItems.Count -gt 0) {
                 $symlinkCount = 0

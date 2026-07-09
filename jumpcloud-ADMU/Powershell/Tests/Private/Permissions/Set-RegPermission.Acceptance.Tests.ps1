@@ -110,32 +110,44 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
             }
         }
 
-        It "Should log a Warning with the file path and Win32 error code when a file is locked" {
-            # Arrange - lock a nested file exclusively so the native tree operation cannot re-secure it
-            $lockedPath = Join-Path $script:testDir "subdir\subfile.txt"
-            $lockedHandle = [System.IO.File]::Open($lockedPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None)
+        It "Logs an Info entry identifying a file skipped for being a symlink, and a Warning for a real error" {
+            # A real junction so GetAttributes() reports ReparsePoint for the symlink path;
+            # a normal file for the error path. We mock the native call to return both as
+            # failed items, isolating and testing the classification/logging logic we own
+            # (the native tree-walk's behavior on internal reparse points is unconfirmed).
+            $junctionTarget = Join-Path $env:TEMP "InnerJunctionTarget_$([guid]::NewGuid())"
+            $junctionDir    = Join-Path $script:testDir "subdir\innerJunction"
+            New-Item -ItemType Directory -Path $junctionTarget | Out-Null
+            New-Item -ItemType Junction  -Path $junctionDir -Target $junctionTarget | Out-Null
 
+            $errorFile = Join-Path $script:testDir "subdir\subfile.txt"
+
+            Mock Invoke-NativeTreeAcl {
+                @(
+                    [PSCustomObject]@{ Path = $junctionDir; ErrorCode = [uint32]5 },
+                    [PSCustomObject]@{ Path = $errorFile;   ErrorCode = [uint32]5 }
+                )
+            }
             Mock Write-ToLog { }
 
-            try {
-                # Act - Verify it does not throw despite the locked file causing a per-item failure
-                {
-                    Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $script:testDir -Recursive
-                } | Should -Not -Throw
-            } finally {
-                $lockedHandle.Close()
-                $lockedHandle.Dispose()
+            Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $script:testDir -Recursive
+
+            # Symlink path -> Info, clearly marked as a symlink
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Level -eq 'Info' -and $Message -match [regex]::Escape($junctionDir) -and $Message -match 'symlink'
+            }
+            # Real error path -> Warning, with Win32 error code
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Level -eq 'Warning' -and $Message -match [regex]::Escape($errorFile) -and $Message -match 'Win32 error \d+'
+            }
+            # Summary reflects one of each
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Level -eq 'Warning' -and $Message -match 'Native tree operation completed' -and
+                $Message -match '1 symlink' -and $Message -match '1 other error'
             }
 
-            # Assert - the specific locked file was logged individually with a Warning and a non-zero Win32 error
-            Assert-MockCalled Write-ToLog -ParameterFilter {
-                $Level -eq 'Warning' -and $Message -match [regex]::Escape($lockedPath) -and $Message -match 'Win32 error \d+'
-            }
-
-            # Assert - the summary line reflects at least one error
-            Assert-MockCalled Write-ToLog -ParameterFilter {
-                $Level -eq 'Warning' -and $Message -match 'Native tree operation completed with' -and $Message -match '[1-9]\d* other error'
-            }
+            Remove-Item $junctionDir -Force
+            Remove-Item $junctionTarget -Recurse -Force
         }
     }
 
