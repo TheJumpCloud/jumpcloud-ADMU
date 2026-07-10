@@ -701,10 +701,16 @@ function Show-SelectionForm {
     $cb_autobindJCUser.Add_Checked( { $cb_primaryUser.IsEnabled = $true })
 
     # -----------------------------------------------------------
-    # ACCEPTANCE CRITERIA: Auto-Select Leave Domain & Remove MDM
+    # ACCEPTANCE CRITERIA: Auto-Select & Disable Leave Domain & Remove MDM
     # -----------------------------------------------------------
-    $cb_autobindJCUser.Add_Checked( { $cb_leaveDomain.IsChecked = $true })
-    $cb_autobindJCUser.Add_Checked( { $cb_removeMDM.IsChecked = $true })
+    $cb_autobindJCUser.Add_Checked({
+            $cb_leaveDomain.IsChecked = $true
+            $cb_leaveDomain.IsEnabled = $false
+
+            $cb_removeMDM.IsChecked = $true
+            $cb_removeMDM.IsEnabled = $false
+        })
+    # -----------------------------------------------------------
     # -----------------------------------------------------------
 
     # $cb_bindAsAdmin.Add_Checked( { $BindAsAdmin = $true })
@@ -733,10 +739,19 @@ function Show-SelectionForm {
     $cb_autobindJCUser.Add_Unchecked( { $cb_primaryUser.IsChecked = $false })
 
     # -----------------------------------------------------------
-    # Auto-Uncheck Leave Domain & Remove MDM when Autobind is unchecked
+    # Auto-Uncheck & Re-enable Leave Domain & Remove MDM when Autobind is unchecked
     # -----------------------------------------------------------
-    $cb_autobindJCUser.Add_Unchecked( { $cb_leaveDomain.IsChecked = $false })
-    $cb_autobindJCUser.Add_Unchecked( { $cb_removeMDM.IsChecked = $false })
+    $cb_autobindJCUser.Add_Unchecked({
+            $cb_leaveDomain.IsChecked = $false
+
+            # Only re-enable Leave Domain if the device is actually Domain or AzureAD joined
+            if (($AzureADStatus -eq 'Yes') -or ($AzureDomainStatus -eq 'Yes')) {
+                $cb_leaveDomain.IsEnabled = $true
+            }
+
+            $cb_removeMDM.IsChecked = $false
+            $cb_removeMDM.IsEnabled = $false # Stays disabled until Leave Domain is manually checked again
+        })
     # -----------------------------------------------------------
 
     # $cb_bindAsAdmin.Add_Unchecked( { $BindAsAdmin = $false })
