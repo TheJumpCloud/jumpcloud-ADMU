@@ -308,7 +308,7 @@ public static class NativeAcl
                         $itemAttrs = [System.IO.File]::GetAttributes($item.Path)
                         if ($itemAttrs.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
                             $symlinkCount++
-                            Write-ToLog "Skipped '$($item.Path)': item is a symlink/reparse point, this is expected and not an error." -Level Info -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+                            Write-ToLog "Skipped '$($item.Path)': item is a symlink/reparse point, this is expected and can be ignored." -Level Info -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
                         } else {
                             $errorCount++
                             Write-ToLog "Failed to set permissions on '$($item.Path)': Win32 error $($item.ErrorCode)." -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
