@@ -4,12 +4,12 @@ Release Date: July 9, 2026
 #### RELEASE NOTES
 
 ```
-Placeholder
+Minor logic change to testing and setting DAT file permissions
 ```
 
-#### FEATURES:
+#### Improvements
 
-- Placeholder
+- Adjusted logic for determining System, Administrators and user when testing and setting NTFS permissions using the `Test-DATFilePermission` and `Set-DATFilePermission` functions by utilizing their respective SIDs
 
 ## 2.16.0
 Release Date: July 6, 2026
