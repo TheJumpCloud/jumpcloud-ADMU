@@ -678,11 +678,6 @@ function Start-Migration {
                 $null = Set-AccountLoginPolicy -SID $SelectedUserSID -Action Enable
                 $accountLoginBlocked = $false
             }
-            if ($caffeinateEnabled) {
-                Write-ToLog -Message:('Disabling Windows sleep prevention due to error in begin block.')
-                $null = Set-ThreadExecutionState -enable $false
-                $caffeinateEnabled = $false
-            }
         }
     }
     process {
