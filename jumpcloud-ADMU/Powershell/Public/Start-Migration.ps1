@@ -204,6 +204,8 @@ function Start-Migration {
         # Tracks whether the migrating account's interactive logon was blocked, so it is reverted
         # on both success and failure
         $accountLoginBlocked = $false
+        # Tracks whether Windows sleep prevention was enabled for this migration session
+        $caffeinateEnabled = $false
         $blockLoginMessageTitle = "Account migration in progress"
         $blockLoginMessage = "This account is being migrated by the JumpCloud ADMU. Please do not log in until the migration completes."
 
@@ -627,6 +629,12 @@ function Start-Migration {
 
         }
         #endregion validation
+
+        #region caffeinate
+        $caffeinateState = Set-ThreadExecutionState -enable $true
+        $caffeinateEnabled = ($caffeinateState -eq 'ENABLED')
+        Write-ToLog -Message ("Windows sleep prevention for this session is $caffeinateState")
+        #endregion caffeinate
 
         #region blockAccountLogin
         # Block the migrating account from logging in at the Windows login screen for the duration
@@ -1877,6 +1885,13 @@ function Start-Migration {
     }
     end {
         $FixedErrors = @();
+        # Always disable Windows sleep prevention if it is still active. end{} runs on every
+        # break/throw, so this covers success, failure, and early-exit paths.
+        if ($caffeinateEnabled) {
+            Write-ToLog -Message:('Disabling Windows sleep prevention after migration ended.')
+            $null = Set-ThreadExecutionState -enable $false
+            $caffeinateEnabled = $false
+        }
         # Always restore the migrating account's interactive logon if it is still blocked. end{}
         # runs on every break/throw, so this covers all failed-gate paths; Enable is idempotent and
         # the flag prevents a double-revert when the success path above already restored it.
