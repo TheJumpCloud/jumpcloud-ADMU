@@ -32,13 +32,11 @@ public static class PowerManagement {
                 if ($apiResult -eq 0) {
                     $resultState = 'FAILED'
                 } else {
-                    Write-Host 'Enabled Windows sleep prevention for this session.'
                     $resultState = 'ENABLED'
                 }
             }
             $false {
                 $null = [PowerManagement]::SetThreadExecutionState([PowerManagement]::ES_CONTINUOUS)
-                Write-Host 'Disabled Windows sleep prevention for this session.'
                 $resultState = 'DISABLED'
             }
         }
