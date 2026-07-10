@@ -372,16 +372,16 @@ function Start-Migration {
                 pass     = $false
                 fail     = $false
             }
-            autoBind                      = @{
-                step     = "JumpCloud User Binding"
-                desc     = "Binding the local user to the JumpCloud User."
+            leaveDomain                   = @{
+                step     = "Setting Domain Status"
+                desc     = "Setting the domain status/ leaving the domain if specified."
                 required = $false
                 pass     = $false
                 fail     = $false
             }
-            leaveDomain                   = @{
-                step     = "Setting Domain Status"
-                desc     = "Setting the domain status/ leaving the domain if specified."
+            autoBind                      = @{
+                step     = "JumpCloud User Binding"
+                desc     = "Binding the local user to the JumpCloud User."
                 required = $false
                 pass     = $false
                 fail     = $false
