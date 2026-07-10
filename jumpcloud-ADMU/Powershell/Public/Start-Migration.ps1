@@ -444,7 +444,7 @@ function Start-Migration {
         }
 
         # ACCEPTANCE CRITERIA: Force LeaveDomain and RemoveMDM if AutoBind is selected
-        if ($AutoBindJCUser) {
+        if ($AutoBindJCUser -OR $systemContextBinding) {
             Write-ToLog -Message "AutoBindJCUser is selected. Forcing LeaveDomain and removeMDM to true." -Level Info
             $LeaveDomain = $true
             $removeMDM = $true
