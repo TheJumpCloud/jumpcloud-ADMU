@@ -19,6 +19,32 @@ Added a function to set Windows sleep prevention for the current session the mig
 #### BUG FIXES:
 
 NA
+Minor logic change to testing and setting DAT file permissions
+```
+
+#### Improvements
+
+- Adjusted logic for determining System, Administrators and user when testing and setting NTFS permissions using the `Test-DATFilePermission` and `Set-DATFilePermission` functions by utilizing their respective SIDs
+Release Date: July 10, 2026
+
+#### RELEASE NOTES
+
+​```
+This release improves the diagnostic logging for recursive permission stamping (SetFullPermission). Previously, files that could not be updated were only reported as a total count in the jcAdmu.log file. Each affected file is now logged individually, clearly distinguishing files skipped because they are symlinks (expected and safe) from genuine permission errors, which are logged with their Win32 error code.
+​```
+
+#### IMPROVEMENTS:
+
+- Updated the NativeAcl recursive tree operation (SetFullPermission) to log each skipped or failed file individually in jcAdmu.log instead of only a total count. Symlink/reparse-point skips are logged as expected informational entries, while other failures are logged as warnings including the Win32 error code, surfacing errors that were previously hidden.
+```
+- Updated User Association Order the ADMU now forces the device to leave its current domain before associating a user to the device.
+- GUI Automation for AutoBind: When a user selects the "AutoBind JC user" option in the graphical interface, the "Leave Domain" and "Remove MDM" options are now automatically selected by default. These parameters are passed directly alongside the AutoBind command.
+```
+
+#### FEATURES:
+
+- Streamlined AutoBind Workflow: Administrators no longer need to manually check prerequisite options when setting up an AutoBind migration. Selecting "AutoBind JC user" now intuitively selects the required parameters, reducing manual clicks and preventing configuration misses.
+- By forcing a device to leave the existing Active Directory domain before associating the new Entra ID/JumpCloud user, the tool prevents profile mapping conflicts and ensures a clean handoff.
 
 ## 2.16.0
 
