@@ -3,6 +3,13 @@ Release Date: July 10, 2026
 
 #### RELEASE NOTES
 
+​```
+This release improves the diagnostic logging for recursive permission stamping (SetFullPermission). Previously, files that could not be updated were only reported as a total count in the jcAdmu.log file. Each affected file is now logged individually, clearly distinguishing files skipped because they are symlinks (expected and safe) from genuine permission errors, which are logged with their Win32 error code.
+​```
+
+#### IMPROVEMENTS:
+
+- Updated the NativeAcl recursive tree operation (SetFullPermission) to log each skipped or failed file individually in jcAdmu.log instead of only a total count. Symlink/reparse-point skips are logged as expected informational entries, while other failures are logged as warnings including the Win32 error code, surfacing errors that were previously hidden.
 ```
 - Updated User Association Order the ADMU now forces the device to leave its current domain before associating a user to the device.
 - GUI Automation for AutoBind: When a user selects the "AutoBind JC user" option in the graphical interface, the "Leave Domain" and "Remove MDM" options are now automatically selected by default. These parameters are passed directly alongside the AutoBind command.
