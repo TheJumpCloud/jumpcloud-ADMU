@@ -1,4 +1,15 @@
 ## 2.16.1
+Release Date: July 9, 2026
+
+#### RELEASE NOTES
+
+```
+Minor logic change to testing and setting DAT file permissions
+```
+
+#### Improvements
+
+- Adjusted logic for determining System, Administrators and user when testing and setting NTFS permissions using the `Test-DATFilePermission` and `Set-DATFilePermission` functions by utilizing their respective SIDs
 Release Date: July 10, 2026
 
 #### RELEASE NOTES
