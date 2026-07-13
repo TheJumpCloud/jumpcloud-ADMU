@@ -109,6 +109,46 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
                 $hasFullControl | Should -Not -BeNullOrEmpty
             }
         }
+
+        It "Logs an Info entry identifying a file skipped for being a symlink, and a Warning for a real error" {
+            # A real junction so GetAttributes() reports ReparsePoint for the symlink path;
+            # a normal file for the error path. We mock the native call to return both as
+            # failed items, isolating and testing the classification/logging logic we own
+            # (the native tree-walk's behavior on internal reparse points is unconfirmed).
+            $junctionTarget = Join-Path $env:TEMP "InnerJunctionTarget_$([guid]::NewGuid())"
+            $junctionDir    = Join-Path $script:testDir "subdir\innerJunction"
+            New-Item -ItemType Directory -Path $junctionTarget | Out-Null
+            New-Item -ItemType Junction  -Path $junctionDir -Target $junctionTarget | Out-Null
+
+            $errorFile = Join-Path $script:testDir "subdir\subfile.txt"
+
+            Mock Invoke-NativeTreeAcl {
+                @(
+                    [PSCustomObject]@{ Path = $junctionDir; ErrorCode = [uint32]5 },
+                    [PSCustomObject]@{ Path = $errorFile;   ErrorCode = [uint32]5 }
+                )
+            }
+            Mock Write-ToLog { }
+
+            Set-RegPermission -SourceSID $script:sourceSID -TargetSID $script:userSid -FilePath $script:testDir -Recursive
+
+            # Symlink path -> Info, clearly marked as a symlink
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Level -eq 'Info' -and $Message -match [regex]::Escape($junctionDir) -and $Message -match 'symlink'
+            }
+            # Real error path -> Warning, with Win32 error code
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Level -eq 'Warning' -and $Message -match [regex]::Escape($errorFile) -and $Message -match 'Win32 error \d+'
+            }
+            # Summary reflects one of each
+            Assert-MockCalled Write-ToLog -ParameterFilter {
+                $Level -eq 'Warning' -and $Message -match 'Native tree operation completed' -and
+                $Message -match '1 symlink' -and $Message -match '1 other error'
+            }
+
+            Remove-Item $junctionDir -Force
+            Remove-Item $junctionTarget -Recurse -Force
+        }
     }
 
     Context "icacls Fallback Implementation (Non-Recursive)" {

@@ -1,4 +1,29 @@
+## 2.16.1
+
+Release Date: July 13, 2026
+
+#### RELEASE NOTES
+
+```
+- Minor logic change to testing and setting DAT file permissions
+- This release improves the diagnostic logging for recursive permission stamping (SetFullPermission). Previously, files that could not be updated were only reported as a total count in the jcAdmu.log file. Each affected file is now logged individually, clearly distinguishing files skipped because they are symlinks (expected and safe) from genuine permission errors, which are logged with their Win32 error code.
+- Patch release to address a issue where the migration would sleep during the migration process.
+- Updated User Association Order the ADMU now forces the device to leave its current domain before associating a user to the device.
+- GUI Automation for AutoBind: When a user selects the "AutoBind JC user" option in the graphical interface, the "Leave Domain" and "Remove MDM" options are now automatically selected by default. These parameters are passed directly alongside the AutoBind command.
+```
+
+#### Improvements
+
+- Adjusted logic for determining System, Administrators and user when testing and setting NTFS permissions using the `Test-DATFilePermission` and `Set-DATFilePermission` functions by utilizing their respective SIDs
+- Added a function to set Windows sleep prevention for the current session the migration is running in.
+
+#### FEATURES:
+
+- Streamlined AutoBind Workflow: Administrators no longer need to manually check prerequisite options when setting up an AutoBind migration. Selecting "AutoBind JC user" now intuitively selects the required parameters, reducing manual clicks and preventing configuration misses.
+- By forcing a device to leave the existing Active Directory domain before associating the new Entra ID/JumpCloud user, the tool prevents profile mapping conflicts and ensures a clean handoff.
+
 ## 2.16.0
+
 Release Date: July 6, 2026
 
 #### RELEASE NOTES
@@ -12,6 +37,7 @@ This release replaces the optional behavior for the `SetFullPermission` paramete
 - Introduced a custom, compiled C# class (NativeAcl) utilizing P/Invoke to handle recursive file and directory permission stamping (SetFullPermission). This drastically reduces migration times by bypassing traditional icacls.exe execution and slow PowerShell loops in favor of native Windows APIs (TreeSetNamedSecurityInfo)
 
 ## 2.15.0
+
 Release Date: June 30, 2026
 
 #### RELEASE NOTES
@@ -30,6 +56,7 @@ This release includes security and customization enhancements:
 - **Customize Splash Screen UWP**: Added support for enterprise branding on the splash screen displayed to users on first login post-migration. Organizations can provide a custom logo (JPEG, JPG, or PNG format) placed at `C:\windows\enterprise_branding.*` which will be used instead of the default JumpCloud logo on the splash screen.
 
 ## 2.14.0
+
 Release Date: June 25, 2026
 
 #### RELEASE NOTES
