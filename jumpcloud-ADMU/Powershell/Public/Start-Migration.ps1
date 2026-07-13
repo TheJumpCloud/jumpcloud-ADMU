@@ -1801,7 +1801,7 @@ function Start-Migration {
                     if ($AutoBindJCUser) {
                         $domainSyncResult = Wait-JumpCloudDomainUnjoin -GetSystemResponse {
                             Invoke-SystemAPI -method "GET" -systemID $script:validatedSystemID `
-                                -jcApiKey $script:JumpCloudAPIKey -jcOrgId $script:JumpCloudOrgID
+                                -jcApiKey $script:JumpCloudAPIKey -jcOrgId $ValidatedJumpCloudOrgId
                         }
                     } else {
                         $domainSyncResult = Wait-JumpCloudDomainUnjoin -GetSystemResponse {
