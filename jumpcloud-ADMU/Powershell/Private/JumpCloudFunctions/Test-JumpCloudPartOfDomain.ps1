@@ -1,5 +1,6 @@
 function Test-JumpCloudPartOfDomain {
     [CmdletBinding()]
+    [OutputType([System.Boolean])]
     [OutputType([System.Nullable[System.Boolean]])]
     param (
         [Parameter(Mandatory = $false)]
