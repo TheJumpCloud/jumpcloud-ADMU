@@ -545,6 +545,15 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $association | Should -Not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $null
+                    # validate the user association password source
+                    $headers = @{
+                        'x-api-key' = $env:PESTER_APIKEY
+                        'x-org-id'  = $env:PESTER_ORGID
+                    }
+                    $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/v2/systems/$($systemKey)/users" -Method GET -Headers $headers
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) } | Should -Not -BeNullOrEmpty
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Be "JumpCloud"
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Not -Be "local"
 
                 }
                 It "Associates a JumpCloud user using 'AutoBindJCUser' and sets the user as PrimaryUser" {
@@ -568,6 +577,16 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # get the system primary user
                     $primarySystemUser = Get-JcSdkSystem -Id $systemKey | Select-Object PrimarySystemUserId
                     $primarySystemUser.PrimarySystemUserId | Should -Be $GeneratedUser.Id
+
+                    # validate the user association password source
+                    $headers = @{
+                        'x-api-key' = $env:PESTER_APIKEY
+                        'x-org-id'  = $env:PESTER_ORGID
+                    }
+                    $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/v2/systems/$($systemKey)/users" -Method GET -Headers $headers
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) } | Should -Not -BeNullOrEmpty
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Be "JumpCloud"
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Not -Be "local"
                 }
                 It "'AutoBindJCUser' set to false and 'PrimaryUser' set to true should throw an error" {
                     # set the $testCaseInput
@@ -659,6 +678,16 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # get the system primary user
                     $primarySystemUser = Get-JcSdkSystem -Id $systemKey | Select-Object PrimarySystemUserId
                     $primarySystemUser.PrimarySystemUserId | Should -Be $GeneratedUser.Id
+
+                    # validate the user association password source
+                    $headers = @{
+                        'x-api-key' = $env:PESTER_APIKEY
+                        'x-org-id'  = $env:PESTER_ORGID
+                    }
+                    $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/v2/systems/$($systemKey)/users" -Method GET -Headers $headers
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) } | Should -Not -BeNullOrEmpty
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Be "JumpCloud"
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Not -Be "local"
                 }
                 It "Associates a JumpCloud user as an 'admin' using 'systemContextBinding'" {
                     # set the $testCaseInput
@@ -683,6 +712,16 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $association | Should -Not -BeNullOrEmpty
                     # the association should NOT be sudo enabled
                     $association.Attributes.AdditionalProperties.sudo.enabled | Should -Be $true
+
+                    # validate the user association password source
+                    $headers = @{
+                        'x-api-key' = $env:PESTER_APIKEY
+                        'x-org-id'  = $env:PESTER_ORGID
+                    }
+                    $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/v2/systems/$($systemKey)/users" -Method GET -Headers $headers
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) } | Should -Not -BeNullOrEmpty
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Be "JumpCloud"
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Not -Be "local"
                 }
                 # remove the users
                 AfterEach {
