@@ -1,5 +1,6 @@
 ## 2.16.1
-Release Date: July 10, 2026
+
+Release Date: July 13, 2026
 
 #### RELEASE NOTES
 
@@ -22,6 +23,7 @@ Release Date: July 10, 2026
 - By forcing a device to leave the existing Active Directory domain before associating the new Entra ID/JumpCloud user, the tool prevents profile mapping conflicts and ensures a clean handoff.
 
 ## 2.16.0
+
 Release Date: July 6, 2026
 
 #### RELEASE NOTES
@@ -35,6 +37,7 @@ This release replaces the optional behavior for the `SetFullPermission` paramete
 - Introduced a custom, compiled C# class (NativeAcl) utilizing P/Invoke to handle recursive file and directory permission stamping (SetFullPermission). This drastically reduces migration times by bypassing traditional icacls.exe execution and slow PowerShell loops in favor of native Windows APIs (TreeSetNamedSecurityInfo)
 
 ## 2.15.0
+
 Release Date: June 30, 2026
 
 #### RELEASE NOTES
@@ -53,6 +56,7 @@ This release includes security and customization enhancements:
 - **Customize Splash Screen UWP**: Added support for enterprise branding on the splash screen displayed to users on first login post-migration. Organizations can provide a custom logo (JPEG, JPG, or PNG format) placed at `C:\windows\enterprise_branding.*` which will be used instead of the default JumpCloud logo on the splash screen.
 
 ## 2.14.0
+
 Release Date: June 25, 2026
 
 #### RELEASE NOTES

@@ -444,8 +444,8 @@ function Start-Migration {
         }
 
         # ACCEPTANCE CRITERIA: Force LeaveDomain and RemoveMDM if AutoBind is selected
-        if ($AutoBindJCUser -OR $systemContextBinding) {
-            Write-ToLog -Message "AutoBindJCUser is selected. Forcing LeaveDomain and removeMDM to true." -Level Info
+        if ($AutoBindJCUser -or $systemContextBinding) {
+            Write-ToLog -Message "AutoBindJCUser or SystemContextBinding is selected. Forcing LeaveDomain and removeMDM to true." -Level Info
             $LeaveDomain = $true
             $removeMDM = $true
         }
@@ -1790,6 +1790,29 @@ function Start-Migration {
                         # No MDM Enrollments found
                         Write-ToLog -Message:('No MDM Enrollments found')
                     }
+                }
+            }
+            # validate that the device is no longer joined to a domain in JumpCloud before binding
+            # only devices that have the JumpCloud Agent installed would need to perform this check
+            # (i.e. devices using the -AutoBindJCUser or -SystemContextBinding parameters)
+            if (($AutoBindJCUser -or $SystemContextBinding) -and $LeaveDomain -eq $true) {
+                $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
+                if ($AzureADStatus -match 'NO' -and $LocalDomainStatus -match 'NO') {
+                    if ($AutoBindJCUser) {
+                        $domainSyncResult = Wait-JumpCloudDomainUnjoin -GetSystemResponse {
+                            Invoke-SystemAPI -method "GET" -systemID $script:validatedSystemID `
+                                -jcApiKey $script:JumpCloudAPIKey -jcOrgId $script:JumpCloudOrgID
+                        }
+                    } else {
+                        $domainSyncResult = Wait-JumpCloudDomainUnjoin -GetSystemResponse {
+                            Invoke-SystemContextAPI -method "GET" -endpoint "systems"
+                        }
+                    }
+                    if ($domainSyncResult.Success) {
+                        Write-ToLog -Message "JumpCloud API reports PartOfDomain=false. Safe to bind with passwordSync=yes expected."
+                    }
+                } else {
+                    Write-ToLog -Message "Local domain status still shows joined (AzureAD=$AzureADStatus, Domain=$LocalDomainStatus). Skipping API domain sync wait; passwordSync may be no." -Level Warning
                 }
             }
             #endRegion Leave Domain or AzureAD
