@@ -552,8 +552,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     }
                     $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/v2/systems/$($systemKey)/users" -Method GET -Headers $headers
                     $response | Where-Object { $_.id -eq $($GeneratedUser.Id) } | Should -Not -BeNullOrEmpty
-                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Be "JumpCloud"
-                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Not -Be "local"
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttributes.passwordSource | Should -Be "JumpCloud"
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttributes.passwordSource | Should -Not -Be "local"
 
                 }
                 It "Associates a JumpCloud user using 'AutoBindJCUser' and sets the user as PrimaryUser" {
@@ -585,8 +585,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     }
                     $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/v2/systems/$($systemKey)/users" -Method GET -Headers $headers
                     $response | Where-Object { $_.id -eq $($GeneratedUser.Id) } | Should -Not -BeNullOrEmpty
-                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Be "JumpCloud"
-                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Not -Be "local"
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttributes.passwordSource | Should -Be "JumpCloud"
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttributes.passwordSource | Should -Not -Be "local"
                 }
                 It "'AutoBindJCUser' set to false and 'PrimaryUser' set to true should throw an error" {
                     # set the $testCaseInput
@@ -686,8 +686,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     }
                     $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/v2/systems/$($systemKey)/users" -Method GET -Headers $headers
                     $response | Where-Object { $_.id -eq $($GeneratedUser.Id) } | Should -Not -BeNullOrEmpty
-                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Be "JumpCloud"
-                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Not -Be "local"
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttributes.passwordSource | Should -Be "JumpCloud"
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttributes.passwordSource | Should -Not -Be "local"
                 }
                 It "Associates a JumpCloud user as an 'admin' using 'systemContextBinding'" {
                     # set the $testCaseInput
@@ -720,8 +720,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     }
                     $response = Invoke-RestMethod -Uri "https://console.jumpcloud.com/api/v2/systems/$($systemKey)/users" -Method GET -Headers $headers
                     $response | Where-Object { $_.id -eq $($GeneratedUser.Id) } | Should -Not -BeNullOrEmpty
-                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Be "JumpCloud"
-                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttribues.passwordSource | Should -Not -Be "local"
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttributes.passwordSource | Should -Be "JumpCloud"
+                    $response | Where-Object { $_.id -eq $($GeneratedUser.Id) }.compiledAttributes.passwordSource | Should -Not -Be "local"
                 }
                 # remove the users
                 AfterEach {
