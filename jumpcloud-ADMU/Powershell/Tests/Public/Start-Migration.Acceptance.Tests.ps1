@@ -278,6 +278,22 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 { Start-Migration @testCaseInput } | Should -Throw
                 $testFailureExpected = $true
             }
+
+            It "Succeeds when the JumpCloudUsername is exactly 20 characters long" {
+                # 20 character string
+                $testCaseInput.JumpCloudUserName = "TwentyCharUsername12"
+                # This should NOT throw a length error
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+                $testFailureExpected = $false
+            }
+
+            It "Fails when the JumpCloudUsername is greater than 20 characters long" {
+                # 21+ character string
+                $testCaseInput.JumpCloudUserName = "ThisUsernameIsWayTooLong123"
+                # This should throw
+                { Start-Migration @testCaseInput } | Should -Throw
+                $testFailureExpected = $true
+            }
         }
         # Test Cleanup
         AfterEach {
