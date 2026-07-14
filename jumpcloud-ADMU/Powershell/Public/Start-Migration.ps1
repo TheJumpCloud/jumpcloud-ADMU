@@ -195,7 +195,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.16.1"
+        $admuVersion = "2.16.2"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -826,16 +826,21 @@ function Start-Migration {
             # Create target user
             $newUserPassword = ConvertTo-SecureString -String $TempPassword -AsPlainText -Force
 
-            New-localUser -Name $JumpCloudUsername -password $newUserPassword -Description "Created By JumpCloud ADMU" -ErrorVariable userExitCode | Out-Null
+            try {
+                # Force any error to be a terminating error so it drops into the Catch block
+                New-LocalUser -Name $JumpCloudUsername -Password $newUserPassword -Description "Created By JumpCloud ADMU" -ErrorAction Stop | Out-Null
 
-            if ($userExitCode) {
-                Write-ToLog -Message ("$userExitCode") -Level Error
+                Write-ToLog -Message ("Successfully created local user: $JumpCloudUsername")
+                # If we make it here, it succeeded
+                $admuTracker.newUserCreate.pass = $true
+            } catch {
+                # $_ represents the error that was caught
+                Write-ToLog -Message ($_.Exception.Message) -Level Error
                 Write-ToLog -Message ("The user: $JumpCloudUsername could not be created, exiting") -Level Warning
                 Write-AdmuErrorMessage -ErrorName "user_create_error"
                 $admuTracker.newUserCreate.fail = $true
                 break
             }
-            $admuTracker.newUserCreate.pass = $true
             #endregion newUserCreate
 
             #region newUserInit

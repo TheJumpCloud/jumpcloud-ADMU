@@ -1,4 +1,21 @@
-## 2.16.1
+## 2.16.3
+
+Release Date: July 14, 2026
+
+#### RELEASE NOTES
+
+This release addresses an issue during the local user creation process where terminating errors would bypass the logging system. Specifically, attempts to create usernames exceeding the Windows local account limit (20 characters) will now be caught, properly logged, and gracefully halt the script.
+
+#### Improvements
+
+- **Proactive Username Validation:** Added a pre-check to verify username length before creation, generating a specific log error when a username is 20 characters or longer.
+- **Enhanced Error Logging:** Updated the user creation step with robust error handling to ensure all failures (such as character limits or password complexity requirements) are successfully captured in the migration logs.
+
+#### FEATURES:
+
+- *(No new features in this patch release)*
+
+## 2.16.2
 
 Release Date: July 13, 2026
 
