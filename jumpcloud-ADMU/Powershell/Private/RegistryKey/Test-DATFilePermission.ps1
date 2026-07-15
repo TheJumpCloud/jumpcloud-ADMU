@@ -14,7 +14,7 @@ function Test-DATFilePermission {
 
     )
     begin {
-        $aclUser = "$($Env:ComputerName)\$username"
+        $userSid = Convert-UserName -user "$($Env:ComputerName)\$username"
         # ACL naming differs on registry/ ntfs file system, set the correct type
         switch ($type) {
             'registry' {
@@ -26,15 +26,15 @@ function Test-DATFilePermission {
         }
         # define empty list
         $permissionsHash = @{}
-        # define required list to test
+        # define required list to test (SIDs are culture-independent)
         $requiredAccess = @{
-            "NT AUTHORITY\SYSTEM"    = @{
+            'S-1-5-18'     = @{
                 name = "System"
             };
-            "BUILTIN\Administrators" = @{
+            'S-1-5-32-544' = @{
                 name = "Administrators"
             };
-            "$($aclUser)"            = @{
+            $userSid        = @{
                 name = "$username"
             }
         }
@@ -46,7 +46,14 @@ function Test-DATFilePermission {
         foreach ($requiredRule in $requiredAccess.keys) {
             # foreach ($requiredRule in $systemRule, $administratorsRule, $specifiedUserRule) {
             # write-ToLog "Begin testing: $($requiredRule)"
-            $FileACLs = $acl.Access | Where-Object { $_.IdentityReference -eq "$($requiredRule)" }
+            $FileACLs = $acl.Access | Where-Object {
+                try {
+                    $ruleSid = $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+                } catch {
+                    $ruleSid = $_.IdentityReference.Value
+                }
+                $ruleSid -eq $requiredRule
+            }
             # write-ToLog "$($requiredRule) access count: $($FileACLs.Count)"
             foreach ($fileACL in $FileACLs) {
                 $rulePermissions = [PSCustomObject]@{

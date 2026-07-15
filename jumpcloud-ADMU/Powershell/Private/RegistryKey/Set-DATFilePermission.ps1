@@ -13,11 +13,11 @@ function Set-DATFilePermission {
     )
 
     begin {
-        $aclUser = "$($Env:ComputerName)\$Username"
+        $userSid = Convert-UserName -user "$($Env:ComputerName)\$Username"
         $requiredIdentities = @(
-            "NT AUTHORITY\SYSTEM",
-            "BUILTIN\Administrators",
-            "$aclUser"
+            'S-1-5-18',     # NT AUTHORITY\SYSTEM
+            'S-1-5-32-544', # BUILTIN\Administrators
+            $userSid
         )
     }
 
@@ -27,15 +27,22 @@ function Set-DATFilePermission {
             $isProtected = $acl.AreAccessRulesProtected
             $modified = $false
 
-            foreach ($identity in $requiredIdentities) {
-                $existingRules = @($acl.Access | Where-Object { $_.IdentityReference -eq $identity })
+            foreach ($identitySid in $requiredIdentities) {
+                $existingRules = @($acl.Access | Where-Object {
+                    try {
+                        $ruleSid = $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+                    } catch {
+                        $ruleSid = $_.IdentityReference.Value
+                    }
+                    $ruleSid -eq $identitySid
+                })
                 $hasValidAllow = $false
 
                 foreach ($rule in $existingRules) {
                     if ($rule.AccessControlType -eq 'Deny') {
                         $acl.RemoveAccessRule($rule) | Out-Null
                         $modified = $true
-                        Write-ToLog -Message "Set-DATFilePermission: Removed Deny rule for $identity on $Path" -Level Verbose
+                        Write-ToLog -Message "Set-DATFilePermission: Removed Deny rule for $identitySid on $Path" -Level Verbose
                         continue
                     }
 
@@ -50,23 +57,24 @@ function Set-DATFilePermission {
                     } else {
                         $acl.RemoveAccessRule($rule) | Out-Null
                         $modified = $true
-                        Write-ToLog -Message "Set-DATFilePermission: Removed insufficient Allow rule for $identity on $Path" -Level Verbose
+                        Write-ToLog -Message "Set-DATFilePermission: Removed insufficient Allow rule for $identitySid on $Path" -Level Verbose
                     }
                 }
 
                 if (-not $hasValidAllow) {
+                    $sidObj = New-Object System.Security.Principal.SecurityIdentifier($identitySid)
                     if ($Type -eq 'registry') {
                         $newRule = New-Object System.Security.AccessControl.RegistryAccessRule(
-                            $identity, 'FullControl', 'Allow'
+                            $sidObj, 'FullControl', 'Allow'
                         )
                     } else {
                         $newRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                            $identity, 'FullControl', 'Allow'
+                            $sidObj, 'FullControl', 'Allow'
                         )
                     }
                     $acl.SetAccessRule($newRule)
                     $modified = $true
-                    Write-ToLog -Message "Set-DATFilePermission: Added Allow FullControl for $identity on $Path" -Level Verbose
+                    Write-ToLog -Message "Set-DATFilePermission: Added Allow FullControl for $identitySid on $Path" -Level Verbose
                 }
             }
 

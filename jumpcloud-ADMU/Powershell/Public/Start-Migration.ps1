@@ -195,7 +195,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.16.0"
+        $admuVersion = "2.16.1"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -204,6 +204,8 @@ function Start-Migration {
         # Tracks whether the migrating account's interactive logon was blocked, so it is reverted
         # on both success and failure
         $accountLoginBlocked = $false
+        # Tracks whether Windows sleep prevention was enabled for this migration session
+        $caffeinateEnabled = $false
         $blockLoginMessageTitle = "Account migration in progress"
         $blockLoginMessage = "This account is being migrated by the JumpCloud ADMU. Please do not log in until the migration completes."
 
@@ -370,16 +372,16 @@ function Start-Migration {
                 pass     = $false
                 fail     = $false
             }
-            autoBind                      = @{
-                step     = "JumpCloud User Binding"
-                desc     = "Binding the local user to the JumpCloud User."
+            leaveDomain                   = @{
+                step     = "Setting Domain Status"
+                desc     = "Setting the domain status/ leaving the domain if specified."
                 required = $false
                 pass     = $false
                 fail     = $false
             }
-            leaveDomain                   = @{
-                step     = "Setting Domain Status"
-                desc     = "Setting the domain status/ leaving the domain if specified."
+            autoBind                      = @{
+                step     = "JumpCloud User Binding"
+                desc     = "Binding the local user to the JumpCloud User."
                 required = $false
                 pass     = $false
                 fail     = $false
@@ -392,6 +394,7 @@ function Start-Migration {
                 fail     = $false
             }
         }
+
         if ($isForm) {
             $userAgent = "JumpCloud_ADMU.Application/$($admuVersion)"
             $SelectedUserName = $inputObject.SelectedUserName
@@ -440,6 +443,12 @@ function Start-Migration {
             $SelectedUserSid = Test-UsernameOrSID $SelectedUserName
         }
 
+        # ACCEPTANCE CRITERIA: Force LeaveDomain and RemoveMDM if AutoBind is selected
+        if ($AutoBindJCUser -or $systemContextBinding) {
+            Write-ToLog -Message "AutoBindJCUser or SystemContextBinding is selected. Forcing LeaveDomain and removeMDM to true." -Level Info
+            $LeaveDomain = $true
+            $removeMDM = $true
+        }
 
         $oldUserProfileImagePath = Get-ItemPropertyValue -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath'
         Write-ToLog -Message "Migration Start" -MigrationStep
@@ -620,6 +629,12 @@ function Start-Migration {
 
         }
         #endregion validation
+
+        #region caffeinate
+        $caffeinateState = Set-ThreadExecutionState -enable $true
+        $caffeinateEnabled = ($caffeinateState -eq 'ENABLED')
+        Write-ToLog -Message ("Windows sleep prevention for this session is $caffeinateState")
+        #endregion caffeinate
 
         #region blockAccountLogin
         # Block the migrating account from logging in at the Windows login screen for the duration
@@ -1655,50 +1670,6 @@ function Start-Migration {
             #endregion Add To Local Users Group
             # TODO: test and return non-terminating error here
 
-            #region AutoBindUserToJCSystem
-            if ($AutoBindJCUser -eq $true) {
-                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $script:JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
-                Write-ToProgress -ProgressBar $ProgressBar -Status "autoBind" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
-                if ($bindResult) {
-                    Write-ToLog -Message:('JumpCloud automatic bind step succeeded for user ' + $JumpCloudUserName)
-                    $admuTracker.autoBind.pass = $true
-
-                    # if user was bound successfully, set as primary user if specified
-                    if ($PrimaryUser -eq $true) {
-                        Write-ToLog -Message:("Attempting to set primary system user to userID: $script:JumpCloudUserID")
-                        $primaryUserBody = @{
-                            "primarySystemUser.id" = $script:JumpCloudUserId
-                        }
-                        Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemID $script:validatedSystemID -Body $primaryUserBody
-                    }
-                } else {
-                    Write-ToLog -Message:('JumpCloud automatic bind step failed, Api Key or JumpCloud username is incorrect.') -Level Warning
-                    # $admuTracker.autoBind.fail = $true
-                }
-            }
-            if ($systemContextBinding -eq $true) {
-                Write-ToLog -Message:("Attempting to associate system to userID: $script:JumpCloudUserID with SystemContext API")
-                Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $script:JumpCloudUserID -admin $BindAsAdmin
-
-                #TODO: Invoke SystemContext API to set primary user if specified
-                #TODO: If primarySystemUser.id exists - record success - otherwise record failure
-                if ($PrimaryUser -eq $true) {
-                    Write-ToLog -Message:("Attempting to set primary system user to userID: $script:JumpCloudUserID")
-                    $primaryUserBody = @{
-                        "primarySystemUser.id" = $script:JumpCloudUserId
-                    }
-                    $primarySystemUserResults = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body $primaryUserBody
-
-                    if ($primarySystemUserResults.primarySystemUser.id -eq $script:JumpCloudUserID) {
-                        Write-ToLog -Message:("Successfully set primary system user to userID: $script:JumpCloudUserID")
-                    } else {
-                        Write-ToLog -Message:("Failed to set primary system user to userID: $script:JumpCloudUserID") -Level Warning
-                    }
-                }
-            }
-            #endregion AutoBindUserToJCSystem
-
-
             #region leaveDomain
             write-tolog -Message $admuTracker.leaveDomain.step -MigrationStep
             Write-ToProgress -ProgressBar $ProgressBar -Status "leaveDomain" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
@@ -1808,10 +1779,17 @@ function Start-Migration {
                 } else {
                     Write-ToLog -Message:('Device is not joined to a domain, skipping leave domain step')
                 }
+
+                # Check for MDM Enrollments specifically detecting Intune before attempting removal
                 if ($removeMDM) {
-                    Write-ToLog -Message:('Attempting to remove MDM Enrollment(s)')
-                    # get the MDM Enrollments
+                    Write-ToLog -Message:('Checking for existing MDM Enrollment(s) to remove.')
                     $mdmEnrollments = Get-WindowsMDMProvider
+
+                    # Detecting Non-JumpCloud MDMs (e.g., Intune)
+                    if ($mdmEnrollments | Where-Object { $_.ProviderID -notlike '*JumpCloud*' }) {
+                        Write-ToLog -Message "Device appears to be Intune/MDM Managed. RemoveMDM parameter needs to be applied and is proceeding." -Level Info
+                    }
+
                     $taskSchedulerGuids = Get-MdmEnrollmentGuidFromTaskScheduler
                     if ($taskSchedulerGuids.Count -gt 0) {
                         foreach ($guid in $taskSchedulerGuids) {
@@ -1836,7 +1814,74 @@ function Start-Migration {
                     }
                 }
             }
+            # validate that the device is no longer joined to a domain in JumpCloud before binding
+            # only devices that have the JumpCloud Agent installed would need to perform this check
+            # (i.e. devices using the -AutoBindJCUser or -SystemContextBinding parameters)
+            if (($AutoBindJCUser -or $SystemContextBinding) -and $LeaveDomain -eq $true) {
+                $AzureADStatus, $LocalDomainStatus = Get-DomainStatus
+                if ($AzureADStatus -match 'NO' -and $LocalDomainStatus -match 'NO') {
+                    if ($AutoBindJCUser) {
+                        $domainSyncResult = Wait-JumpCloudDomainUnjoin -GetSystemResponse {
+                            Invoke-SystemAPI -method "GET" -systemID $script:validatedSystemID `
+                                -jcApiKey $script:JumpCloudAPIKey -jcOrgId $ValidatedJumpCloudOrgId
+                        }
+                    } else {
+                        $domainSyncResult = Wait-JumpCloudDomainUnjoin -GetSystemResponse {
+                            Invoke-SystemContextAPI -method "GET" -endpoint "systems"
+                        }
+                    }
+                    if ($domainSyncResult.Success) {
+                        Write-ToLog -Message "JumpCloud API reports PartOfDomain=false. Safe to bind with passwordSync=yes expected."
+                    }
+                } else {
+                    Write-ToLog -Message "Local domain status still shows joined (AzureAD=$AzureADStatus, Domain=$LocalDomainStatus). Skipping API domain sync wait; passwordSync may be no." -Level Warning
+                }
+            }
             #endRegion Leave Domain or AzureAD
+
+            #region AutoBindUserToJCSystem
+            if ($AutoBindJCUser -eq $true) {
+                $bindResult = Set-JCUserToSystemAssociation -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -JcUserID $script:JumpCloudUserId -BindAsAdmin $BindAsAdmin -UserAgent $UserAgent
+                Write-ToProgress -ProgressBar $ProgressBar -Status "autoBind" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+                if ($bindResult) {
+                    Write-ToLog -Message:('JumpCloud automatic bind step succeeded for user ' + $JumpCloudUserName)
+                    $admuTracker.autoBind.pass = $true
+
+                    # if user was bound successfully, set as primary user if specified
+                    if ($PrimaryUser -eq $true) {
+                        Write-ToLog -Message:("Attempting to set primary system user to userID: $script:JumpCloudUserID")
+                        $primaryUserBody = @{
+                            "primarySystemUser.id" = $script:JumpCloudUserId
+                        }
+                        Invoke-SystemAPI -JcApiKey $script:JumpCloudAPIKey -JcOrgId $ValidatedJumpCloudOrgId -systemID $script:validatedSystemID -Body $primaryUserBody
+                    }
+                } else {
+                    Write-ToLog -Message:('JumpCloud automatic bind step failed, Api Key or JumpCloud username is incorrect.') -Level Warning
+                    # $admuTracker.autoBind.fail = $true
+                }
+            }
+            if ($systemContextBinding -eq $true) {
+                Write-ToLog -Message:("Attempting to associate system to userID: $script:JumpCloudUserID with SystemContext API")
+                Invoke-SystemContextAPI -method "POST" -endpoint "systems/associations" -op "add" -type "user" -id $script:JumpCloudUserID -admin $BindAsAdmin
+
+                #TODO: Invoke SystemContext API to set primary user if specified
+                #TODO: If primarySystemUser.id exists - record success - otherwise record failure
+                if ($PrimaryUser -eq $true) {
+                    Write-ToLog -Message:("Attempting to set primary system user to userID: $script:JumpCloudUserID")
+                    $primaryUserBody = @{
+                        "primarySystemUser.id" = $script:JumpCloudUserId
+                    }
+                    $primarySystemUserResults = Invoke-SystemContextAPI -method "PUT" -endpoint "systems" -body $primaryUserBody
+
+                    if ($primarySystemUserResults.primarySystemUser.id -eq $script:JumpCloudUserID) {
+                        Write-ToLog -Message:("Successfully set primary system user to userID: $script:JumpCloudUserID")
+                    } else {
+                        Write-ToLog -Message:("Failed to set primary system user to userID: $script:JumpCloudUserID") -Level Warning
+                    }
+                }
+            }
+            #endregion AutoBindUserToJCSystem
+
 
             # re-enable scheduled tasks if they were disabled
             if ($ScheduledTasks) {
@@ -1882,11 +1927,16 @@ function Start-Migration {
             # we are done here
             break
         }
-        #endregion leaveDomain
-
     }
     end {
         $FixedErrors = @();
+        # Always disable Windows sleep prevention if it is still active. end{} runs on every
+        # break/throw, so this covers success, failure, and early-exit paths.
+        if ($caffeinateEnabled) {
+            Write-ToLog -Message:('Disabling Windows sleep prevention after migration ended.')
+            $null = Set-ThreadExecutionState -enable $false
+            $caffeinateEnabled = $false
+        }
         # Always restore the migrating account's interactive logon if it is still blocked. end{}
         # runs on every break/throw, so this covers all failed-gate paths; Enable is idempotent and
         # the flag prevents a double-revert when the success path above already restored it.
