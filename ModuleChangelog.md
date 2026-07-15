@@ -1,3 +1,30 @@
+## 2.16.2
+
+Release Date: July 15, 2026
+
+#### RELEASE NOTES
+
+```
+- Faster profile migrations
+- Simplified reversion process
+```
+
+#### FEATURES:
+
+No new features were introduced in this release. The focus is on performance improvements, workflow simplification, and increased reliability of profile permission handling.
+
+#### IMPROVEMENTS:
+
+- Faster profile migrations
+  Removed the Backup-ProfileImageACL step from Start-Migration. Previously, this step used icacls to back up source profile ACLs before migration, which could significantly increase migration time (over 8 minutes for profiles around 225 GB). Since permissions are now applied natively using Set-RegPermission, the backup process is no longer required, resulting in improved migration performance.
+
+- Simplified reversion process
+  Updated Start-Reversion to re-apply the correct ownership and permissions directly using Set-RegPermission instead of restoring ACLs from a previously saved backup file. This aligns the reversion workflow with the migration process and reduces dependency on backup artifacts.
+
+#### BUG FIXES:
+
+Eliminated reliance on ACL backup files during profile reversion by consistently applying permissions through Set-RegPermission, improving the reliability and consistency of permission restoration.
+
 ## 2.16.1
 
 Release Date: July 13, 2026
