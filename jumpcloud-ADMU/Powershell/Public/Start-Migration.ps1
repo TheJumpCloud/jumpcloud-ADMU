@@ -1444,7 +1444,7 @@ function Start-Migration {
             }
 
             if ($SetFullPermission) {
-                Write-ToLog -Message:("Setting recursive permissions on profile during migration via native C#. Target profile path: '$newUserProfileImagePath'")
+                Write-ToLog -Message:("Setting recursive permissions on the full profile during migration. This may take several minutes on large profiles. Target path: '$newUserProfileImagePath'")
 
                 try {
                     # Triggers the fast C# native code
@@ -1456,17 +1456,39 @@ function Start-Migration {
                 $regPermStopwatch.Stop()
                 Write-ToLog "Set-RegPermission (native C# recursive) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
             } else {
-                Write-ToLog -Message:("Setting immediate-level permissions via icacls. Recursive permissions will be deferred to scheduled task.")
+                Write-ToLog -Message:("Setting root-level permissions via icacls. Full recursive permissions will be deferred to first login via scheduled task.")
+
+                $regPermissionParams = @{
+                    SourceSID   = $SelectedUserSID
+                    TargetSID   = $NewUserSID
+                    FilePath    = $newUserProfileImagePath
+                    ErrorAction = 'Stop'
+                }
+                $useNtfsHeartbeat = $isForm -or ($systemDescription -and $systemDescription.reportStatus)
+                if ($useNtfsHeartbeat) {
+                    $regPermissionParams.ProgressHeartbeatIntervalSeconds = 120
+                    $regPermissionParams.OnProgressHeartbeat = {
+                        $elapsed = $regPermStopwatch.Elapsed
+                        $elapsedMin = [math]::Floor($elapsed.TotalMinutes)
+                        if ($elapsedMin -gt 0) {
+                            $heartbeatMsg = "Setting NTFS File Permissions ($elapsedMin min elapsed)"
+                        } else {
+                            $elapsedSec = [math]::Floor($elapsed.TotalSeconds)
+                            $heartbeatMsg = "Setting NTFS File Permissions ($elapsedSec sec elapsed)"
+                        }
+                        Write-ToProgress -ProgressBar $ProgressBar -Status "ntfsAccess" -StatusMessage $heartbeatMsg -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+                    }
+                }
 
                 try {
                     # Triggers the icacls root-level prep
-                    Set-RegPermission -SourceSID $SelectedUserSID -TargetSID $NewUserSID -FilePath $newUserProfileImagePath
+                    Set-RegPermission @regPermissionParams
                 } catch {
                     Write-ToLog -Message "Set-RegPermission (immediate icacls) failed: $_" -Level Warning
                 }
 
                 $regPermStopwatch.Stop()
-                Write-ToLog "Set-RegPermission (immediate level) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds."
+                Write-ToLog "Set-RegPermission (immediate level) completed in $($regPermStopwatch.Elapsed.TotalSeconds) seconds. Root permissions set; full recursion scheduled for first login."
 
                 # Create scheduled task to set recursive permissions on user logon
                 $taskCreated = New-RegPermissionTask -ProfilePath $newUserProfileImagePath -TargetSID $NewUserSID -SourceSID $SelectedUserSID -TaskUser $JumpCloudUsername
