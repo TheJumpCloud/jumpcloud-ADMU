@@ -274,9 +274,9 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
         Context "General Failure Conditions" {
             It "Fails when the JumpCloudUsername and Selected username are the same" {
                 # set the $testCaseInput
-                $testCaseInput.JumpCloudUserName = "$userToMigrateFrom"
+                $testCaseInput.JumpCloudUserName = $testCaseInput.SelectedUserName
                 { Start-Migration @testCaseInput } | Should -Throw
-                $testFailureExpected = $true
+                $script:testFailureExpected = $true
             }
 
             It "Succeeds when the JumpCloudUsername is exactly 20 characters long" {
@@ -284,7 +284,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 $testCaseInput.JumpCloudUserName = "TwentyCharUsername12"
                 # This should NOT throw a length error
                 { Start-Migration @testCaseInput } | Should -Not -Throw
-                $testFailureExpected = $false
+                $script:testFailureExpected = $false
             }
 
             It "Fails when the JumpCloudUsername is greater than 20 characters long" {
@@ -292,25 +292,33 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 $testCaseInput.JumpCloudUserName = "ThisUsernameIsWayTooLong123"
                 # This should throw
                 { Start-Migration @testCaseInput } | Should -Throw
-                $testFailureExpected = $true
+                $script:testFailureExpected = $true
             }
         }
+
         # Test Cleanup
         AfterEach {
+            # Pull the actual usernames used in the test case dynamically
+            $targetUser = $testCaseInput.JumpCloudUserName
+            $sourceUser = $testCaseInput.SelectedUserName
+
             # Depending on the user in the UserTestingHash, the home path will differ
             if ($testCaseInput.UpdateHomePath) {
-                $UserHome = "C:\Users\$($userToMigrateTo)"
+                $UserHome = "C:\Users\$targetUser"
             } else {
-                $UserHome = "C:\Users\$($userToMigrateFrom)"
+                $UserHome = "C:\Users\$sourceUser"
             }
-            if (-not $testFailureExpected) {
+
+            if (-not $script:testFailureExpected) {
                 # Read the log and get date data
                 $regex = [regex]"ntuser_original_([0-9]+-[0-9]+-[0-9]+-[0-9]+[0-9]+[0-9]+)"
                 $match = Select-String -Path:($logPath) -Pattern:($regex)
                 # Get the date appended to the backup registry files:
                 $dateMatch = $match.Matches.Groups[1].Value
+
                 # User Home Directory Should Exist
                 Test-Path "$UserHome" | Should -Be $true
+
                 # Backup Registry & Registry Files Should Exist
                 # Timestamp from log should exist on registry backup files
                 Test-Path "$UserHome/NTUSER_original_$dateMatch.DAT" | Should -Be $true
@@ -318,19 +326,17 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 Test-Path "$UserHome\AppData\Local\Microsoft\Windows\UsrClass.dat" | Should -Be $true
                 Test-Path "$UserHome\AppData\Local\Microsoft\Windows\UsrClass_original_$dateMatch.DAT" | Should -Be $true
 
-                $ntUserValid, $null = Test-DATFilePermission -Path "$UserHome\NTUSER.DAT" -Username $userToMigrateTo -Type ntfs
-                $usrClassValid, $null = Test-DATFilePermission -Path "$UserHome\AppData\Local\Microsoft\Windows\UsrClass.dat" -Username $userToMigrateTo -Type ntfs
+                # VALIDATE PERMISSIONS AGAINST THE TARGET USER
+                $ntUserValid, $null = Test-DATFilePermission -Path "$UserHome\NTUSER.DAT" -Username $targetUser -Type ntfs
+                $usrClassValid, $null = Test-DATFilePermission -Path "$UserHome\AppData\Local\Microsoft\Windows\UsrClass.dat" -Username $targetUser -Type ntfs
+
                 $ntUserValid | Should -Be $true
                 $usrClassValid | Should -Be $true
 
                 # check that the FTA/PTA lists contain the $fileType and $protocol variable from the job
-                $FTAPath = "$($UserHome)\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv"
-                $PTAPath = "$($UserHome)\AppData\Local\JumpCloudADMU\protocolTypeAssociations.csv"
-                $appxPath = "$($UserHome)\AppData\Local\JumpCloudADMU\appx_manifest.csv"
-                # Check if data exists
-                $ftaCsv = Import-Csv $FTAPath
-                $ptaCsv = Import-Csv $PTAPath
-                $appxCsv = Import-Csv $appxPath
+                $FTAPath = "$UserHome\AppData\Local\JumpCloudADMU\fileTypeAssociations.csv"
+                $PTAPath = "$UserHome\AppData\Local\JumpCloudADMU\protocolTypeAssociations.csv"
+                $appxPath = "$UserHome\AppData\Local\JumpCloudADMU\appx_manifest.csv"
 
                 # Check if csv exists
                 Test-Path $FTAPath | Should -Be $true
@@ -339,9 +345,9 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
             }
 
             # remove the users:
-            Remove-LocalUserProfile -username $userToMigrateFrom
-            if (-not $testFailureExpected) {
-                Remove-LocalUserProfile -username $userToMigrateTo
+            Remove-LocalUserProfile -username $sourceUser
+            if (-not $script:testFailureExpected) {
+                Remove-LocalUserProfile -username $targetUser
             }
         }
     }

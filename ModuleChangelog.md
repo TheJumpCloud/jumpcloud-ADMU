@@ -1,4 +1,4 @@
-## 2.16.3
+## 2.16.2
 
 Release Date: July 14, 2026
 
@@ -15,7 +15,7 @@ This release addresses an issue during the local user creation process where ter
 
 - *(No new features in this patch release)*
 
-## 2.16.2
+## 2.16.1
 
 Release Date: July 13, 2026
 
