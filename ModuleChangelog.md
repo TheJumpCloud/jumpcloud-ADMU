@@ -1,6 +1,6 @@
 ## 2.16.2
 
-Release Date: July 14, 2026
+Release Date: July 15, 2026
 
 #### RELEASE NOTES
 
