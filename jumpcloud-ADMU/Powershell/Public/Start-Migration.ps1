@@ -1115,7 +1115,7 @@ function Start-Migration {
             if ($jcadmuKeyExists) {
                 # If the registry Key exists (it wont unless it's been previously migrated)
                 Write-ToLog "The Key Already Exists"
-                Clear-RegistryProviderHandles
+                Clear-RegistryProviderHandle
                 # Attempt to unload
                 try {
                     REG UNLOAD "HKU\$($newUserSID)_admu" 2>&1 | Out-Null
@@ -1153,7 +1153,7 @@ function Start-Migration {
             Write-ToLog -Message $admuTracker.unloadBeforeCopyRegistryFiles.step -MigrationStep
             Write-ToProgress -ProgressBar $ProgressBar -Status "unloadBeforeCopyRegistryFiles" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
             # Proactively release any PowerShell registry provider handles before REG UNLOAD
-            Clear-RegistryProviderHandles
+            Clear-RegistryProviderHandle
             try {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID -hive root
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID -hive classes

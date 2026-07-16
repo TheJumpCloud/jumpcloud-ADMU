@@ -1,4 +1,4 @@
-Describe "Clear-RegistryProviderHandles Acceptance Tests" -Tag "Acceptance" {
+Describe "Clear-RegistryProviderHandle Acceptance Tests" -Tag "Acceptance" {
     BeforeAll {
         $currentPath = $PSScriptRoot
         $TargetDirectory = "helperFunctions"
@@ -23,14 +23,14 @@ Describe "Clear-RegistryProviderHandles Acceptance Tests" -Tag "Acceptance" {
         Set-HKEYUserMount
         "HKEY_USERS" | Should -BeIn (Get-PSDrive | Select-Object -ExpandProperty Name)
 
-        Clear-RegistryProviderHandles
+        Clear-RegistryProviderHandle
 
         "HKEY_USERS" | Should -Not -BeIn (Get-PSDrive | Select-Object -ExpandProperty Name)
     }
 
     It "Should remount HKEY_USERS when -Remount is specified" {
         Set-HKEYUserMount
-        Clear-RegistryProviderHandles -Remount
+        Clear-RegistryProviderHandle -Remount
 
         "HKEY_USERS" | Should -BeIn (Get-PSDrive | Select-Object -ExpandProperty Name)
     }
@@ -39,7 +39,7 @@ Describe "Clear-RegistryProviderHandles Acceptance Tests" -Tag "Acceptance" {
         if ("HKEY_USERS" -in (Get-PSDrive | Select-Object -ExpandProperty Name)) {
             Remove-PSDrive -Name "HKEY_USERS" -Force -ErrorAction SilentlyContinue
         }
-        { Clear-RegistryProviderHandles } | Should -Not -Throw
+        { Clear-RegistryProviderHandle } | Should -Not -Throw
     }
 }
 

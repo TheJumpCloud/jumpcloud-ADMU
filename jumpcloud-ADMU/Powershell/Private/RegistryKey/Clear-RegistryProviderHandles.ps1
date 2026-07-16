@@ -1,4 +1,4 @@
-function Clear-RegistryProviderHandles {
+function Clear-RegistryProviderHandle {
     <#
     .SYNOPSIS
         Releases PowerShell registry provider handles that can block REG UNLOAD.
@@ -19,9 +19,9 @@ function Clear-RegistryProviderHandles {
     if ("HKEY_USERS" -in @(Get-PSDrive | Select-Object -ExpandProperty Name)) {
         try {
             Remove-PSDrive -Name "HKEY_USERS" -Force -ErrorAction Stop
-            Write-ToLog -Message "Removed HKEY_USERS PSDrive to release registry provider handles" -Level Verbose -Step "Clear-RegistryProviderHandles"
+            Write-ToLog -Message "Removed HKEY_USERS PSDrive to release registry provider handles" -Level Verbose -Step "Clear-RegistryProviderHandle"
         } catch {
-            Write-ToLog -Message "Could not remove HKEY_USERS PSDrive: $($_.Exception.Message)" -Level Verbose -Step "Clear-RegistryProviderHandles"
+            Write-ToLog -Message "Could not remove HKEY_USERS PSDrive: $($_.Exception.Message)" -Level Verbose -Step "Clear-RegistryProviderHandle"
         }
     }
 

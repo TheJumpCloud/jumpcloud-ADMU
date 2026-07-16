@@ -38,7 +38,7 @@ function Set-UserRegistryLoadState {
         $username = Convert-SecurityIdentifier $UserSid
         switch ($op) {
             "Load" {
-                Clear-RegistryProviderHandles
+                Clear-RegistryProviderHandle
                 $results = Set-RegistryExe -op Load -hive $hive -UserSid $UserSid -ProfilePath $ProfilePath
                 if ($results) {
                     Write-ToLog "Load Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
@@ -56,7 +56,7 @@ function Set-UserRegistryLoadState {
             "Unload" {
                 # Release PSDrive / provider handles held by this process before REG UNLOAD.
                 # User-owned processes are rarely the locker at this stage; ADMU itself is.
-                Clear-RegistryProviderHandles
+                Clear-RegistryProviderHandle
                 $results = Set-RegistryExe -op Unload -hive $hive -UserSid $UserSid -ProfilePath $ProfilePath
                 if ($results) {
                     Write-ToLog "Unload Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
