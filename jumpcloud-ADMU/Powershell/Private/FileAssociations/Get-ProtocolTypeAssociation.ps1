@@ -33,33 +33,49 @@ function Get-ProtocolTypeAssociation {
 
     )
     begin {
-        # define a list
         $manifestList = [System.Collections.ArrayList]::new()
-        # dynamically create the path to search
-        $basePath = "HKEY_USERS:\$($UserSid)"
-        $pathSuffix = "\Software\Microsoft\Windows\Shell\Associations\UrlAssociations\"
-
-        if ($UseAdmuPath) {
-            $fullPath = "$($basePath)_admu$($pathSuffix)"
+        $hiveRoot = if ($UseAdmuPath) {
+            "$($UserSid)_admu"
         } else {
-            $fullPath = "$($basePath)$($pathSuffix)"
+            $UserSid
         }
-        # Validate file permissions on registry item
-        Set-HKEYUserMount
+        $urlAssociationsPath = "$hiveRoot\Software\Microsoft\Windows\Shell\Associations\UrlAssociations"
     }
     process {
+        # Use disposable .NET RegistryKey handles — PowerShell provider access leaves
+        # open handles that block REG UNLOAD of manually loaded profile hives.
+        $urlKey = $null
+        try {
+            $urlKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($urlAssociationsPath, $false)
+            if ($null -eq $urlKey) {
+                return $manifestList
+            }
 
-        if (Test-Path $fullPath) {
-            Get-ChildItem $fullPath* |
-            ForEach-Object {
-                $progId = (Get-ItemProperty "$($_.PSParentPath)\$($_.PSChildName)\UserChoice" -ErrorAction SilentlyContinue).ProgId
-                $extension = $_.PSChildName
-                if ( ( -NOT [System.String]::IsNullOrEmpty($extension) ) -AND ( -NOT [System.String]::IsNullOrEmpty($progId) ) ) {
-                    $manifestList.Add([PSCustomObject]@{
-                            extension = $extension
-                            programId = $progId
-                        }) | Out-Null
+            foreach ($extension in $urlKey.GetSubKeyNames()) {
+                $userChoiceKey = $null
+                try {
+                    $userChoiceKey = $urlKey.OpenSubKey("$extension\UserChoice", $false)
+                    if ($null -eq $userChoiceKey) {
+                        continue
+                    }
+                    $progId = $userChoiceKey.GetValue("ProgId")
+                    if ( ( -NOT [System.String]::IsNullOrEmpty($extension) ) -AND ( -NOT [System.String]::IsNullOrEmpty($progId) ) ) {
+                        $manifestList.Add([PSCustomObject]@{
+                                extension = $extension
+                                programId = $progId
+                            }) | Out-Null
+                    }
+                } finally {
+                    if ($null -ne $userChoiceKey) {
+                        $userChoiceKey.Close()
+                        $userChoiceKey.Dispose()
+                    }
                 }
+            }
+        } finally {
+            if ($null -ne $urlKey) {
+                $urlKey.Close()
+                $urlKey.Dispose()
             }
         }
     }

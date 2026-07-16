@@ -1,3 +1,17 @@
+## 2.16.2
+
+Release Date: July 16, 2026
+
+#### RELEASE NOTES
+
+```
+This release addresses an potential issue where the tool could hold onto the registry keys. Handles are closed properly to avoid this issue.
+```
+
+#### BUG FIXES:
+
+- Resolved an potential issue where the tool could hold onto the registry keys. Handles are closed properly to avoid this issue.
+
 ## 2.16.1
 
 Release Date: July 13, 2026

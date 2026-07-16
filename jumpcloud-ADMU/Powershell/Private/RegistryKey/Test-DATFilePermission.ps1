@@ -38,8 +38,28 @@ function Test-DATFilePermission {
                 name = "$username"
             }
         }
-        # Get the path
-        $ACL = Get-Acl $path
+
+        $registryKey = $null
+        try {
+            if ($type -eq 'registry') {
+                # Prefer disposable .NET handles over Get-Acl on HKEY_USERS: which can
+                # leave provider handles that block REG UNLOAD.
+                $subKey = ConvertTo-UsersRegistrySubKey -Path $path
+                # Explicitly open read-only: this function only validates ACL state.
+                $registryKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($subKey, $false)
+                if ($null -eq $registryKey) {
+                    throw "Unable to open registry key: $subKey"
+                }
+                $ACL = $registryKey.GetAccessControl()
+            } else {
+                $ACL = Get-Acl $path
+            }
+        } finally {
+            if ($null -ne $registryKey) {
+                $registryKey.Close()
+                $registryKey.Dispose()
+            }
+        }
     }
     process {
         # Using AccessControlType to check if it's a deny rule instead of allow since, with NTFS permissions, even if a user/admin is denied, there will still be an allow rule for them and not null

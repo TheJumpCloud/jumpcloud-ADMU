@@ -27,14 +27,20 @@ function Test-PreviousSID {
         [string]$UserSid
     )
 
-    Set-HKEYUserMount
-
-    # Construct the path to the JCADMU registry key for the specified user.
-    $registryPath = "HKEY_USERS:\$($UserSid)_admu\Software\JCADMU"
-
-    # Attempt to retrieve the 'previousSid' value.
-    # We use -ErrorAction SilentlyContinue for Null or empty so it doesn't throw.
-    $previousSid = (Get-ItemProperty -Path $registryPath -Name "previousSid" -ErrorAction SilentlyContinue).previousSid
+    $subKeyPath = "$($UserSid)_admu\Software\JCADMU"
+    $jcadmuKey = $null
+    try {
+        $jcadmuKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($subKeyPath)
+        if ($null -eq $jcadmuKey) {
+            return $false
+        }
+        $previousSid = $jcadmuKey.GetValue("previousSid")
+    } finally {
+        if ($null -ne $jcadmuKey) {
+            $jcadmuKey.Close()
+            $jcadmuKey.Dispose()
+        }
+    }
 
     if ($previousSid) {
         # A previous SID was found. This indicates a prior migration.
