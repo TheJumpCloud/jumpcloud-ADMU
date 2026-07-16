@@ -45,7 +45,8 @@ function Test-DATFilePermission {
                 # Prefer disposable .NET handles over Get-Acl on HKEY_USERS: which can
                 # leave provider handles that block REG UNLOAD.
                 $subKey = ConvertTo-UsersRegistrySubKey -Path $path
-                $registryKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($subKey)
+                # Explicitly open read-only: this function only validates ACL state.
+                $registryKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($subKey, $false)
                 if ($null -eq $registryKey) {
                     throw "Unable to open registry key: $subKey"
                 }

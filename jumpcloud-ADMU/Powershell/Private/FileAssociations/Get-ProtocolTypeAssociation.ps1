@@ -46,7 +46,7 @@ function Get-ProtocolTypeAssociation {
         # open handles that block REG UNLOAD of manually loaded profile hives.
         $urlKey = $null
         try {
-            $urlKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($urlAssociationsPath)
+            $urlKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($urlAssociationsPath, $false)
             if ($null -eq $urlKey) {
                 return $manifestList
             }
@@ -54,7 +54,7 @@ function Get-ProtocolTypeAssociation {
             foreach ($extension in $urlKey.GetSubKeyNames()) {
                 $userChoiceKey = $null
                 try {
-                    $userChoiceKey = $urlKey.OpenSubKey("$extension\UserChoice")
+                    $userChoiceKey = $urlKey.OpenSubKey("$extension\UserChoice", $false)
                     if ($null -eq $userChoiceKey) {
                         continue
                     }

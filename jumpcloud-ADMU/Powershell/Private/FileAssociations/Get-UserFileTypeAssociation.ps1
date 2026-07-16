@@ -49,7 +49,7 @@ function Get-UserFileTypeAssociation {
         # open handles that block REG UNLOAD of manually loaded profile hives.
         $extsKey = $null
         try {
-            $extsKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($fileExtsPath)
+            $extsKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($fileExtsPath, $false)
             if ($null -eq $extsKey) {
                 return $manifestList
             }
@@ -57,7 +57,7 @@ function Get-UserFileTypeAssociation {
             foreach ($indivExtension in $extsKey.GetSubKeyNames()) {
                 $userChoiceKey = $null
                 try {
-                    $userChoiceKey = $extsKey.OpenSubKey("$indivExtension\UserChoice")
+                    $userChoiceKey = $extsKey.OpenSubKey("$indivExtension\UserChoice", $false)
                     if ($null -eq $userChoiceKey) {
                         continue
                     }
