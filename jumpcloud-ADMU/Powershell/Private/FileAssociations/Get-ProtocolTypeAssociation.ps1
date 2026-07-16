@@ -48,7 +48,8 @@ function Get-ProtocolTypeAssociation {
         try {
             $urlKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($urlAssociationsPath, $false)
             if ($null -eq $urlKey) {
-                return $manifestList
+                # Do not return $manifestList here — end still runs and would emit it twice.
+                return
             }
 
             foreach ($extension in $urlKey.GetSubKeyNames()) {

@@ -51,7 +51,8 @@ function Get-UserFileTypeAssociation {
         try {
             $extsKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($fileExtsPath, $false)
             if ($null -eq $extsKey) {
-                return $manifestList
+                # Do not return $manifestList here — end still runs and would emit it twice.
+                return
             }
 
             foreach ($indivExtension in $extsKey.GetSubKeyNames()) {
