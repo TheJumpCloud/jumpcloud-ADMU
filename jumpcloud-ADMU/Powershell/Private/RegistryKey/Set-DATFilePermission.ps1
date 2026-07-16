@@ -22,20 +22,37 @@ function Set-DATFilePermission {
     }
 
     process {
+        $registryKey = $null
         try {
-            $acl = Get-Acl -Path $Path
+            if ($Type -eq 'registry') {
+                # Prefer disposable .NET handles over Get-Acl/Set-Acl on HKEY_USERS:
+                # which can leave provider handles that block REG UNLOAD.
+                $subKey = ConvertTo-UsersRegistrySubKey -Path $Path
+                $regRights = [System.Security.AccessControl.RegistryRights]::ChangePermissions -bor `
+                    [System.Security.AccessControl.RegistryRights]::ReadKey -bor `
+                    [System.Security.AccessControl.RegistryRights]::WriteKey
+                $permCheck = [Microsoft.Win32.RegistryKeyPermissionCheck]::ReadWriteSubTree
+                $registryKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($subKey, $permCheck, $regRights)
+                if ($null -eq $registryKey) {
+                    throw "Unable to open registry key for permission update: $subKey"
+                }
+                $acl = $registryKey.GetAccessControl()
+            } else {
+                $acl = Get-Acl -Path $Path
+            }
+
             $isProtected = $acl.AreAccessRulesProtected
             $modified = $false
 
             foreach ($identitySid in $requiredIdentities) {
                 $existingRules = @($acl.Access | Where-Object {
-                    try {
-                        $ruleSid = $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
-                    } catch {
-                        $ruleSid = $_.IdentityReference.Value
-                    }
-                    $ruleSid -eq $identitySid
-                })
+                        try {
+                            $ruleSid = $_.IdentityReference.Translate([System.Security.Principal.SecurityIdentifier]).Value
+                        } catch {
+                            $ruleSid = $_.IdentityReference.Value
+                        }
+                        $ruleSid -eq $identitySid
+                    })
                 $hasValidAllow = $false
 
                 foreach ($rule in $existingRules) {
@@ -80,11 +97,20 @@ function Set-DATFilePermission {
 
             if ($modified) {
                 $acl.SetAccessRuleProtection($isProtected, $false)
-                Set-Acl -Path $Path -AclObject $acl
+                if ($Type -eq 'registry') {
+                    $registryKey.SetAccessControl($acl)
+                } else {
+                    Set-Acl -Path $Path -AclObject $acl
+                }
             }
         } catch {
             Write-ToLog -Message "Set-DATFilePermission: Failed to update permissions on $Path : $($_.Exception.Message)" -Level Warning
             return $false
+        } finally {
+            if ($null -ne $registryKey) {
+                $registryKey.Close()
+                $registryKey.Dispose()
+            }
         }
 
         $valid, $null = Test-DATFilePermission -Path $Path -Username $Username -Type $Type

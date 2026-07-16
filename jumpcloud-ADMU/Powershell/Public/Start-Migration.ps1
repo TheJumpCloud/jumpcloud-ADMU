@@ -195,7 +195,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.16.1"
+        $admuVersion = "2.16.2"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -1051,7 +1051,7 @@ function Start-Migration {
                 }
             }
             # Validate and repair file permissions on loaded registry hives
-            Set-HKEYUserMount
+            # Use .NET RegistryKey ACL APIs (via Test/Set-DATFilePermission) — avoid HKEY_USERS: provider.
             $loadedRegistryHives = @(
                 @{ Path = "HKEY_USERS:\$($NewUserSID)_admu"; Name = "$($NewUserSID)_admu" }
                 @{ Path = "HKEY_USERS:\$($NewUserSID)_Classes_admu"; Name = "$($NewUserSID)_Classes_admu" }
@@ -1079,21 +1079,43 @@ function Start-Migration {
             Write-ToLog -Message:('Copying merged profiles to destination profile path')
 
             # Set Registry Check Key for target user
-            # Check that the installed components key does not exist
-            $ADMU_PackageKey = "HKEY_USERS:\$($newUserSID)_admu\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
-            if (Get-Item $ADMU_PackageKey -ErrorAction SilentlyContinue) {
+            # Check that the installed components key does not exist (disposable .NET open — no PS provider)
+            $admuPackageSubKey = "$($newUserSID)_admu\SOFTWARE\Microsoft\Active Setup\Installed Components\ADMU-AppxPackage"
+            $existingPackageKey = $null
+            $packageKeyExists = $false
+            try {
+                $existingPackageKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($admuPackageSubKey)
+                $packageKeyExists = ($null -ne $existingPackageKey)
+            } finally {
+                if ($null -ne $existingPackageKey) {
+                    $existingPackageKey.Close()
+                    $existingPackageKey.Dispose()
+                    $existingPackageKey = $null
+                }
+            }
+            if ($packageKeyExists) {
                 # If the account to be converted already has this key, reset the version
-                $rootlessKey = $ADMU_PackageKey.Replace('HKEY_USERS:\', '')
-                Set-ValueToKey -registryRoot Users -KeyPath $rootlessKey -name Version -value "0, 0, 00, 0" -regValueKind String
+                Set-ValueToKey -registryRoot Users -KeyPath $admuPackageSubKey -name Version -value "0, 0, 00, 0" -regValueKind String
             }
             # $admuTracker.activeSetupHKU = $true
             # Set the trigger to reset Appx Packages on first login
-            $RegKeyADMU = "HKEY_USERS:\$($newUserSID)_admu\SOFTWARE\JCADMU"
-            if (Get-Item $RegKeyADMU -ErrorAction SilentlyContinue) {
+            $jcadmuSubKey = "$($newUserSID)_admu\SOFTWARE\JCADMU"
+            $existingJcadmuKey = $null
+            $jcadmuKeyExists = $false
+            try {
+                $existingJcadmuKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($jcadmuSubKey)
+                $jcadmuKeyExists = ($null -ne $existingJcadmuKey)
+            } finally {
+                if ($null -ne $existingJcadmuKey) {
+                    $existingJcadmuKey.Close()
+                    $existingJcadmuKey.Dispose()
+                    $existingJcadmuKey = $null
+                }
+            }
+            if ($jcadmuKeyExists) {
                 # If the registry Key exists (it wont unless it's been previously migrated)
                 Write-ToLog "The Key Already Exists"
-                # collect unused references in memory and clear
-                [gc]::collect()
+                Clear-RegistryProviderHandles
                 # Attempt to unload
                 try {
                     REG UNLOAD "HKU\$($newUserSID)_admu" 2>&1 | Out-Null
@@ -1112,24 +1134,26 @@ function Start-Migration {
                 New-Item -ItemType Directory -Force -Path $path | Out-Null
             }
 
-            # SelectedUserSid
-            # Validate file permissions on registry item
-            Set-HKEYUserMount
+            # SelectedUserSid — FTA/protocol helpers use disposable .NET keys (no HKEY_USERS: mount required)
             Write-ToProgress -ProgressBar $ProgressBar -Status "copyDefaultProtocols" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
             # Get the file type associations while the user registry is loaded
             $fileTypeAssociations = Get-UserFileTypeAssociation -UserSid $SelectedUserSid
             Write-ToLog -Message:('Found ' + $fileTypeAssociations.count + ' File Type Associations')
             $fileTypeAssociations | Export-Csv -Path "$path\fileTypeAssociations.csv" -NoTypeInformation -Force
+            # Drop references before unload so finalizers can release any residual handles
+            $fileTypeAssociations = $null
             # Get the protocol type associations while the user registry is loaded
             $protocolTypeAssociations = Get-ProtocolTypeAssociation -UserSid $SelectedUserSid
             Write-ToLog -Message:('Found ' + $protocolTypeAssociations.count + ' Protocol Type Associations')
             $protocolTypeAssociations | Export-Csv -Path "$path\protocolTypeAssociations.csv" -NoTypeInformation -Force
+            $protocolTypeAssociations = $null
 
-            $regQuery = REG QUERY HKU *>&1
             # Unload "Selected" and "NewUser"
             #region unloadBeforeCopyRegistryFiles
             Write-ToLog -Message $admuTracker.unloadBeforeCopyRegistryFiles.step -MigrationStep
             Write-ToProgress -ProgressBar $ProgressBar -Status "unloadBeforeCopyRegistryFiles" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+            # Proactively release any PowerShell registry provider handles before REG UNLOAD
+            Clear-RegistryProviderHandles
             try {
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID -hive root
                 Set-UserRegistryLoadState -op "Unload" -ProfilePath $newUserProfileImagePath -UserSid $NewUserSID -hive classes
