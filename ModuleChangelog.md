@@ -1,3 +1,17 @@
+## 2.16.2
+
+Release Date: July 16, 2026
+
+#### RELEASE NOTES
+```
+- Patch to write heartbeat Set-RegPermission.ps1 on file log/gui.
+
+```
+#### IMPROVEMENTS:
+- Progress step messages "Setting NTFS File Permissions (N min/sec elapsed)"
+- User-facing log lines for recursive vs deferred permission modes are clarified.
+
+
 ## 2.16.1
 
 Release Date: July 13, 2026

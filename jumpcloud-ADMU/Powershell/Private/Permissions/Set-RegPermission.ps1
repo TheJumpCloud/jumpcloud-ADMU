@@ -270,8 +270,15 @@ public static class NativeAcl
         $TargetAccount = $TargetSIDObj.Translate([System.Security.Principal.NTAccount]).Value
         $TargetAccountTranslated = $true
     } catch {
+        Write-ToLog "Could not translate TargetSID $TargetSID to NTAccount. Using SID string instead." -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
         $TargetAccount = $TargetSID
     }
+
+    if (-not $SourceAccountTranslated) {
+        Write-ToLog "Could not translate SourceSID $SourceSID to NTAccount. Using SID string instead." -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+    }
+
+    Write-ToLog "Starting permission update on '$FilePath' (Recursive=$Recursive) from $SourceAccount to $TargetAccount" -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
 
     if ($Recursive) {
         # =========================================================================
@@ -279,11 +286,12 @@ public static class NativeAcl
         # =========================================================================
         $attrs = [System.IO.File]::GetAttributes($FilePath)
         if ($attrs.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
-            Write-ToLog "Skipping '$FilePath': Root path is a reparse point (symlink or junction). Refusing to follow natively." -Level Warning
+            Write-ToLog "Skipping '$FilePath': Root path is a reparse point (symlink or junction). Refusing to follow natively." -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
             return
         }
 
         try {
+            Write-ToLog "Applying recursive NTFS ownership and ACL via native APIs on '$FilePath'. This may take several minutes on large profiles." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
             [NativeAcl]::EnablePrivileges()
 
             $targetSidBytes = New-Object byte[] $TargetSIDObj.BinaryLength
@@ -335,33 +343,52 @@ public static class NativeAcl
         $SourceAccountIcacls = if ($SourceAccountTranslated) { $SourceAccount } else { "*$SourceAccount" }
         $TargetAccountIcacls = if ($TargetAccountTranslated) { $TargetAccount } else { "*$TargetAccount" }
 
+        Write-ToLog "Preparing root-level ACL for '$FilePath' (target: $TargetAccountIcacls)." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+
         $acl = Get-Acl -LiteralPath $FilePath
         $targetMember = $acl.Access | Where-Object { $_.IdentityReference -eq $TargetAccount }
         if (-not $targetMember) {
+            Write-ToLog "Adding FullControl ACE for $TargetAccount on root path." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
             $newRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
                 $TargetAccount, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
             )
             $acl.AddAccessRule($newRule)
             Set-Acl -LiteralPath $FilePath -AclObject $acl
+        } else {
+            Write-ToLog "Target account $TargetAccount already has an ACE on root path." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
         }
 
         $grantArguments = @('/grant', "${TargetAccountIcacls}:(OI)(CI)F", '/C', '/Q')
         $ownerArguments = @('/setowner', "$TargetAccountIcacls", '/C', '/Q')
 
         # Step 1: Grant target user
+        Write-ToLog "Granting FullControl to $TargetAccountIcacls on '$FilePath'." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
         if ($useProgressHeartbeat) {
             Invoke-IcaclsWithHeartbeat -Path $FilePath -Arguments $grantArguments -HeartbeatIntervalSeconds $ProgressHeartbeatIntervalSeconds -OnHeartbeat $OnProgressHeartbeat | Out-Null
         } else {
             & icacls.exe $FilePath $grantArguments 2>&1 | Out-Null
             $script:IcaclsExitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
         }
+        if ($script:IcaclsExitCode -ne 0) {
+            Write-ToLog "icacls grant completed with exit code: $script:IcaclsExitCode" -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        } else {
+            Write-ToLog "Successfully granted FullControl to $TargetAccountIcacls." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        }
 
         # Step 2: Change ownership
+        Write-ToLog "Setting owner to $TargetAccountIcacls on '$FilePath'." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
         if ($useProgressHeartbeat) {
             Invoke-IcaclsWithHeartbeat -Path $FilePath -Arguments $ownerArguments -HeartbeatIntervalSeconds $ProgressHeartbeatIntervalSeconds -OnHeartbeat $OnProgressHeartbeat | Out-Null
         } else {
             & icacls.exe $FilePath $ownerArguments 2>&1 | Out-Null
             $script:IcaclsExitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
         }
+        if ($script:IcaclsExitCode -ne 0) {
+            Write-ToLog "icacls setowner completed with exit code: $script:IcaclsExitCode" -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        } else {
+            Write-ToLog "Successfully set owner to $TargetAccountIcacls." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        }
+
+        Write-ToLog "Root-level permission update completed for '$FilePath'." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
     }
 }
