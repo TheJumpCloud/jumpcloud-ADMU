@@ -172,12 +172,6 @@ function Start-Migration {
             }
         }
 
-        # validate JumpCloudUserName length does not exceed Windows SAM limit (20 characters)
-        if ($JumpCloudUserName.Length -gt 20) {
-            throw [System.Management.Automation.ValidationMetadataException] "The JumpCloudUserName ('$JumpCloudUserName') exceeds the 20-character limit for Windows local usernames."
-        }
-
-
         # Validate parameter combinations for $PrimaryUser, $AutoBindJCUser, and $systemContextBinding
         if ($PrimaryUser -eq $true) {
             # PrimaryUser can only be used with AutoBindJCUser=true OR systemContextBinding=true
@@ -633,6 +627,14 @@ function Start-Migration {
                 throw [System.Management.Automation.ValidationMetadataException] $msg
             }
 
+        }
+        # Validate JumpCloudUserName length does not exceed Windows SAM limit (20 characters)
+        if (-not [string]::IsNullOrEmpty($JumpCloudUserName) -and $JumpCloudUserName.Length -gt 20) {
+
+            $msg = "The JumpCloudUserName ('$JumpCloudUserName') exceeds the 20-character limit for Windows local usernames."
+
+            Write-ToLog -Message:("Validation failed: $msg")
+            throw [System.Management.Automation.ValidationMetadataException] $msg
         }
         #endregion validation
 
