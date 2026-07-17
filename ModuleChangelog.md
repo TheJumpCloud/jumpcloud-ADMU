@@ -1,6 +1,6 @@
 ## 2.16.2
 
-Release Date: July 15, 2026
+Release Date: July 16, 2026
 
 #### RELEASE NOTES
 
@@ -23,7 +23,12 @@ No new features were introduced in this release. The focus is on performance imp
 
 #### BUG FIXES:
 
-Eliminated reliance on ACL backup files during profile reversion by consistently applying permissions through Set-RegPermission, improving the reliability and consistency of permission restoration.
+- Eliminated reliance on ACL backup files during profile reversion by consistently applying permissions through Set-RegPermission, improving the reliability and consistency of permission restoration.
+- This release addresses an potential issue where the tool could hold onto the registry keys. Handles are closed properly to avoid this issue.
+```
+
+#### BUG FIXES:
+
 
 ## 2.16.1
 
