@@ -29,6 +29,7 @@ No new features were introduced in this release. The focus is on performance imp
 
 - Eliminated reliance on ACL backup files during profile reversion by consistently applying permissions through Set-RegPermission, improving the reliability and consistency of permission restoration.
 - This release addresses an potential issue where the tool could hold onto the registry keys. Handles are closed properly to avoid this issue.
+- Bumped the Appx install timeout to 600 seconds to avoid Appx not being fully installed which can cause device performance issues
 
 
 
