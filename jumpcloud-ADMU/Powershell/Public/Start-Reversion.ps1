@@ -92,10 +92,6 @@ function Start-Reversion {
                 step = "Validating Profile Registry Path"
                 desc = "Validating the profile path exists in the registry."
             }
-            revertValidateACLBackups    = @{
-                step = "Validating ACL Backups"
-                desc = "Verifying that valid ACL backups exist before proceeding."
-            }
             revertValidateRegistryFiles = @{
                 step = "Validating Registry Files"
                 desc = "Validating the integrity of the registry files to be reverted."
@@ -109,12 +105,8 @@ function Start-Reversion {
                 desc = "Restoring the ProfileImagePath value in the registry."
             }
             revertProfileACLs           = @{
-                step = "Restoring Profile ACLs"
-                desc = "Restoring the profile Access Control Lists (ACLs) from backup."
-            }
-            revertTakeOwnership         = @{
-                step = "Taking Ownership"
-                desc = "Taking ownership of the profile directory."
+                step = "Restoring Profile Permissions"
+                desc = "Restoring the profile owner and Access Control List (ACL) permissions via Set-RegPermission."
             }
             revertRemoveJCUserArtifacts = @{
                 step = "Removing JumpCloud Artifacts"
@@ -139,16 +131,12 @@ function Start-Reversion {
     process {
         try {
             $account = New-Object System.Security.Principal.SecurityIdentifier($UserSID)
-            $userAccountTranslated = $false
             try {
                 $domainUser = ($account.Translate([System.Security.Principal.NTAccount])).Value
-                $userAccountTranslated = $true
             } catch {
                 Write-ToLog -Message "Warning: Could not translate UserSID $UserSID to NTAccount. Using SID string instead." -Level Verbose -Step "Revert-Migration"
                 $domainUser = $UserSID
             }
-
-            $domainUserIcacls = if ($userAccountTranslated) { $domainUser } else { "*$UserSID" }
 
             Write-ToLog -Message "Validating user SID: $UserSID" -Level Verbose -Step "Revert-Migration"
 
@@ -274,26 +262,6 @@ function Start-Reversion {
             Write-ToLog -Message "Profile directory exists and is accessible" -Level Verbose -Step "Revert-Migration"
             Write-ToLog -Message "Profile path: $profileImagePath" -Level Verbose -Step "Revert-Migration"
             #endregion Validate Profile Directory
-
-            #region Validate ProfileImagePath ACL Backup in $profileImagePath\AppData\Local\JumpCloudADMU
-            # Casing fixed to 'revertValidateACLBackups', removed -StatusType, added -StatusMap
-            Write-ToProgress -form $form -Status "revertValidateACLBackups" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
-            # Regex pattern to identify ACL backup files: S-1-12-1-3466645622-1152519358-2404555438-459629385_permission_backup_20251117-1353
-            $aclBackupPattern = "^{0}_permission_backup_\d{{8}}-\d{{4}}$" -f [Regex]::Escape($UserSID)
-            $aclBackupDir = Join-Path -Path $profileImagePath -ChildPath "AppData\Local\JumpCloudADMU"
-            $aclBackupFiles = @()
-            if (Test-Path -Path $aclBackupDir -PathType Container) {
-                $aclBackupFiles = Get-ChildItem -Path $aclBackupDir -File | Where-Object { $_.Name -match $aclBackupPattern }
-            }
-            $latestAclBackupFile = $aclBackupFiles | Sort-Object LastWriteTime -Descending | Select-Object -First 1
-            # Get the most recent ACL backup file path
-
-            if ($aclBackupFiles.Count -eq 0) {
-                throw "No ACL backup files found in directory: $aclBackupDir for SID: $UserSID. Cannot proceed with revert."
-            } else {
-                Write-ToLog -Message "Found ACL backup files in $aclBackupDir" -Level Info -Step "Revert-Migration"
-            }
-            #endregion Validate ProfileImagePath ACL Backup
 
             #region Identify Registry Files to Revert
             $registryFiles = @()
@@ -469,52 +437,23 @@ function Start-Reversion {
             }
             #endregion Update Registry ProfileImagePath
 
-            #region Restore Profile ACLs
+            #region Set Profile Permissions and Ownership
             if (-not $DryRun) {
                 # Casing fixed to 'revertProfileACLs', removed -StatusType, added -StatusMap
                 Write-ToProgress -form $form -Status "revertProfileACLs" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
-                Write-ToLog -Message "Restoring profile ACLs from backup" -Level Info -Step "Revert-Migration"
+                Write-ToLog -Message "Setting profile ownership and permissions via Set-RegPermission for: $profileImagePath" -Level Info -Step "Revert-Migration"
                 try {
-                    if ($latestAclBackupFile) {
-                        $backupPath = Join-Path -Path $aclBackupDir -ChildPath $latestAclBackupFile.Name
-                        Restore-ProfileACL -BackupPath $backupPath
-                        Write-ToLog -Message "Successfully restored profile ACLs from: $($latestAclBackupFile.Name)" -Level Info -Step "Revert-Migration"
-                    } else {
-                        Write-ToLog -Message "No ACL backup file found to restore permissions." -Level Warning -Step "Revert-Migration"
-                    }
+                    Set-RegPermission -SourceSID $UserSID -TargetSID $UserSID -FilePath $profileImagePath -Recursive
+                    Write-ToLog -Message "Successfully set profile ownership and permissions for: $profileImagePath" -Level Info -Step "Revert-Migration"
                 } catch {
-                    $errorMsg = "Failed to restore profile ACLs: $($_.Exception.Message)"
+                    $errorMsg = "Failed to set profile permissions: $($_.Exception.Message)"
                     Write-ToLog -Message $errorMsg -Level Error -Step "Revert-Migration"
                     $revertResult.Errors += $errorMsg
                 }
             } else {
-                Write-ToLog -Message "WHAT IF: Would restore profile ACLs from backup file: $($latestAclBackupFile.Name)" -Level Verbose -Step "Revert-Migration"
+                Write-ToLog -Message "WHAT IF: Would set profile ownership and permissions on: $profileImagePath (Target SID: $UserSID)" -Level Verbose -Step "Revert-Migration"
             }
-            #endregion Restore Profile ACLs
-
-            #region Take Ownership of Profile Directory
-            if (-not $DryRun) {
-                # Casing fixed to 'revertTakeOwnership', removed -StatusType, added -StatusMap
-                Write-ToProgress -form $form -Status "revertTakeOwnership" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
-                Write-ToLog -Message "Setting ownership of profile directory: $profileImagePath" -Level Verbose -Step "Revert-Migration"
-
-                $ACLRestoreLogPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu_Revert_SetOwner.log"
-                $logPath = "$(Get-WindowsDrive)\Windows\Temp\jcAdmu.log"
-                $icaclsOwnerResult = icacls "$($profileImagePath)" /setowner $domainUserIcacls /T /C /Q 2>&1
-                $icaclsOwnerResult | Out-File -FilePath $logPath -Append -Encoding utf8
-
-                Write-ToLog -Message "End of Set Owner Log" -Level Info -Step "Revert-Migration"
-
-                # Check if any error occurred
-                if ($LASTEXITCODE -ne 0) {
-                    Write-ToLog -Message "Failed to set ownership of profile directory. Check log at $ACLRestoreLogPath" -Level Warning -Step "Revert-Migration"
-                } else {
-                    Write-ToLog -Message "Successfully set ownership of profile directory to $domainUserIcacls" -Level Info -Step "Revert-Migration"
-                }
-            } else {
-                Write-ToLog -Message "WHAT IF: Would take ownership of profile directory: $profileImagePath" -Level Verbose -Step "Revert-Migration"
-            }
-            #endregion Take Ownership of Profile Directory
+            #endregion Set Profile Permissions and Ownership
 
             #region Remove JumpCloud ADMU Created User
             $jcUsers = Get-LocalUser | Where-Object { $_.Description -eq 'Created by JumpCloud ADMU' }

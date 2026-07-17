@@ -791,9 +791,6 @@ function Start-Migration {
                 break
             }
 
-            # Backup UserProfile ACL Permissions
-            Backup-ProfileImageACL -ProfileImagePath $oldUserProfileImagePath -sourceSID $SelectedUserSID
-
             #### Begin check for Registry system attribute
             if (Test-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System") {
                 Set-FileAttribute -ProfilePath "$oldUserProfileImagePath\NTUSER.DAT" -Attribute "System" -Operation "Remove"
