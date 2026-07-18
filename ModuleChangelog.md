@@ -1,3 +1,38 @@
+## 2.16.2
+
+Release Date: July 17, 2026
+
+#### RELEASE NOTES
+
+```
+- Faster profile migrations
+- Simplified reversion process
+- This release addresses an issue during the local user creation process where terminating errors would bypass the logging system. Specifically, attempts to create usernames exceeding the Windows local account limit (20 characters) will now be caught, properly logged, and gracefully halt the script.
+
+```
+
+#### FEATURES:
+
+No new features were introduced in this release. The focus is on performance improvements, workflow simplification, and increased reliability of profile permission handling.
+
+#### IMPROVEMENTS:
+
+- Faster profile migrations
+  Removed the Backup-ProfileImageACL step from Start-Migration. Previously, this step used icacls to back up source profile ACLs before migration, which could significantly increase migration time (over 8 minutes for profiles around 225 GB). Since permissions are now applied natively using Set-RegPermission, the backup process is no longer required, resulting in improved migration performance.
+
+- Simplified reversion process
+  Updated Start-Reversion to re-apply the correct ownership and permissions directly using Set-RegPermission instead of restoring ACLs from a previously saved backup file. This aligns the reversion workflow with the migration process and reduces dependency on backup artifacts.
+- **Proactive Username Validation:** Added a pre-check to verify username length before creation, generating a specific log error when a username is 20 characters or longer.
+- **Enhanced Error Logging:** Updated the user creation step with robust error handling to ensure all failures (such as character limits or password complexity requirements) are successfully captured in the migration logs.
+
+#### BUG FIXES:
+
+- Eliminated reliance on ACL backup files during profile reversion by consistently applying permissions through Set-RegPermission, improving the reliability and consistency of permission restoration.
+- This release addresses an potential issue where the tool could hold onto the registry keys. Handles are closed properly to avoid this issue.
+- Bumped the Appx install timeout to 600 seconds to avoid Appx not being fully installed which can cause device performance issues
+
+
+
 ## 2.16.1
 
 Release Date: July 13, 2026
