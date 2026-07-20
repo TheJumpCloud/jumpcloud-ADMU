@@ -1,3 +1,24 @@
+## 2.16.3
+
+Release Date: July 20, 2026
+
+#### RELEASE NOTES
+
+```
+- Added reversal validation for original SID with TEMP profile
+
+```
+
+#### FEATURES:
+
+
+#### IMPROVEMENTS:
+- Enhanced SID Validation: Upgraded the profile validation logic to handle scenarios where a primary SID registry key points to a \TEMP profile while the valid .ADMU profile is stored in a .bak key. The process now safely isolates the conflicting TEMP key by automatically appending .old to prevent path collisions.
+
+#### BUG FIXES:
+- Profile Reversion Failure: Fixed an issue that caused the migration revert process to fail when it encountered a temporary profile tied to the user's original SID.
+
+
 ## 2.16.2
 
 Release Date: July 17, 2026
