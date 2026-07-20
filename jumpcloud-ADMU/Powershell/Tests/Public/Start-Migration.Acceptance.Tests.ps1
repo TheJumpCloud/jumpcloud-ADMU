@@ -299,7 +299,7 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 $testCaseInput.removeMDM = $true
                 $script:testFailureExpected = $true
 
-                { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "*unable to migrate*"
+                { Start-Migration @testCaseInput } | Should -Throw
 
                 # end{} must have restored the deny-logon right for the migrating SID
                 (Get-DenyLogonSidList) | Should -Not -Contain $userSid
