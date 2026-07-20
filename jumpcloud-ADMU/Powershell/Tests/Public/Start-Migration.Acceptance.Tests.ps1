@@ -271,6 +271,49 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 }
             }
         }
+        Context "BlockAccountLogin early exit restore" {
+            # Regression for CUT-5227: when Confirm-API / SystemContext validation fails after
+            # BlockAccountLogin has already denied interactive logon, end{} must still run and
+            # restore the deny-logon policy. A bare `break` outside the migration while-loop
+            # previously aborted the script without running end{}, locking the user out.
+            It "Restores interactive logon when SystemContext Confirm-API validation fails" {
+                $userSid = (Get-LocalUser -Name $userToMigrateFrom).SID.Value
+                $logPath = "C:\Windows\Temp\jcAdmu.log"
+
+                Mock Get-Service {
+                    return [PSCustomObject]@{ Name = 'jumpcloud-agent'; Status = 'Running' }
+                } -ParameterFilter { $Name -eq 'jumpcloud-agent' }
+
+                Mock Confirm-API {
+                    return [PSCustomObject]@{
+                        Type        = $null
+                        IsValid     = $false
+                        ValidatedID = $null
+                    }
+                }
+
+                $testCaseInput.SystemContextBinding = $true
+                $testCaseInput.JumpCloudUserID = '6918e7e6bec3977ca34c742f'
+                $testCaseInput.BlockAccountLogin = $true
+                $testCaseInput.LeaveDomain = $true
+                $testCaseInput.removeMDM = $true
+                $script:testFailureExpected = $true
+
+                { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "*unable to migrate*"
+
+                # end{} must have restored the deny-logon right for the migrating SID
+                (Get-DenyLogonSidList) | Should -Not -Contain $userSid
+
+                $logContent = Get-Content -Path $logPath -Raw -ErrorAction SilentlyContinue
+                $logContent | Should -Match "Could not validate API Key or SystemContext API"
+                $logContent | Should -Match "Restoring interactive logon"
+                $logContent | Should -Match "Migration Summary"
+
+                # Safety net: ensure we never leave the synthetic account denied
+                $null = Set-AccountLoginPolicy -SID $userSid -Action Enable
+            }
+        }
+
         Context "General Failure Conditions" {
             It "Fails when the JumpCloudUsername and Selected username are the same" {
                 # set the $testCaseInput
