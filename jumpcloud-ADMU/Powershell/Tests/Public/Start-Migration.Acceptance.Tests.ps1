@@ -272,19 +272,35 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
             }
         }
         Context "BlockAccountLogin early exit restore" {
-            # Regression for CUT-5227: when Confirm-API / SystemContext validation fails after
-            # BlockAccountLogin has already denied interactive logon, end{} must still run and
-            # restore the deny-logon policy. A bare `break` outside the migration while-loop
-            # previously aborted the script without running end{}, locking the user out.
-            It "Restores interactive logon when SystemContext Confirm-API validation fails" {
-                $userSid = (Get-LocalUser -Name $userToMigrateFrom).SID.Value
-                $logPath = "C:\Windows\Temp\jcAdmu.log"
+            # Regression for CUT-5227: Confirm-API failure after BlockAccountLogin must restore
+            # SeDenyInteractiveLogonRight via end{}.
+            #
+            # Pester Mock / global: function shadows do NOT intercept calls from Start-Migration when
+            # functions are dot-sourced into a parent scope. Re-import into THIS Context scope, then
+            # replace Confirm-API / Get-Service so Start-Migration resolves the stubs.
+            BeforeAll {
+                $currentPath = $PSScriptRoot
+                while ($null -ne $currentPath) {
+                    $candidate = Join-Path $currentPath "helperFunctions"
+                    if (Test-Path $candidate) {
+                        $script:blockLoginHelpDir = $candidate
+                        break
+                    }
+                    $currentPath = Split-Path $currentPath -Parent
+                }
+                . (Join-Path $script:blockLoginHelpDir "Import-AllFunctions.ps1")
 
-                Mock Get-Service {
-                    return [PSCustomObject]@{ Name = 'jumpcloud-agent'; Status = 'Running' }
-                } -ParameterFilter { $Name -eq 'jumpcloud-agent' }
-
-                Mock Confirm-API {
+                # Return an invalid response to Confirm-API to trigger the early exit restore logic.
+                function Confirm-API {
+                    [CmdletBinding()]
+                    param (
+                        [Parameter(Mandatory = $false)]
+                        [string]$JcApiKey,
+                        [Parameter(Mandatory = $false)]
+                        [string]$JcOrgId,
+                        [Parameter(Mandatory = $false)]
+                        [bool]$SystemContextBinding
+                    )
                     return [PSCustomObject]@{
                         Type        = $null
                         IsValid     = $false
@@ -292,8 +308,34 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                     }
                 }
 
+                # required to have CI pretend that the JumpCloud Agent is running
+                function Get-Service {
+                    [CmdletBinding()]
+                    param (
+                        [Parameter(ValueFromPipeline = $true)]
+                        [Alias('ServiceName')]
+                        [string[]]$Name
+                    )
+                    if ($Name -contains 'jumpcloud-agent') {
+                        return [PSCustomObject]@{ Name = 'jumpcloud-agent'; Status = 'Running' }
+                    }
+                    return & Microsoft.PowerShell.Management\Get-Service @PSBoundParameters
+                }
+            }
+
+            AfterAll {
+                Remove-Item -Path Function:Get-Service -ErrorAction SilentlyContinue
+                if ($script:blockLoginHelpDir) {
+                    . (Join-Path $script:blockLoginHelpDir "Import-AllFunctions.ps1")
+                }
+            }
+
+            It "Restores interactive logon when SystemContext Confirm-API validation fails" {
+                $userSid = (Get-LocalUser -Name $userToMigrateFrom).SID.Value
+                $logPath = "C:\Windows\Temp\jcAdmu.log"
+
                 $testCaseInput.SystemContextBinding = $true
-                $testCaseInput.JumpCloudUserID = '6918e7e6bec3977ca34c742f'
+                $testCaseInput.JumpCloudUserID = '6a19df5742b5f3b7c341ba10'
                 $testCaseInput.BlockAccountLogin = $true
                 $testCaseInput.LeaveDomain = $true
                 $testCaseInput.removeMDM = $true
@@ -301,15 +343,14 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
 
                 { Start-Migration @testCaseInput } | Should -Throw
 
-                # end{} must have restored the deny-logon right for the migrating SID
-                (Get-DenyLogonSidList) | Should -Not -Contain $userSid
-
                 $logContent = Get-Content -Path $logPath -Raw -ErrorAction SilentlyContinue
                 $logContent | Should -Match "Could not validate API Key or SystemContext API"
                 $logContent | Should -Match "Restoring interactive logon"
                 $logContent | Should -Match "Migration Summary"
+                $logContent | Should -Match "\[Set-AccountLoginPolicy\] Restored interactive logon"
 
-                # Safety net: ensure we never leave the synthetic account denied
+                @(Get-DenyLogonSidList) | Should -Not -Contain $userSid
+
                 $null = Set-AccountLoginPolicy -SID $userSid -Action Enable
             }
         }
