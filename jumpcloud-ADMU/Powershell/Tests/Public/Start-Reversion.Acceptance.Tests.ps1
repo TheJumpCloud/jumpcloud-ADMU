@@ -146,6 +146,66 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
                     }
                 }
             }
+
+            It "Allows reversion when a TEMP profile is tied to the original SID and the valid profile is in a .bak key" {
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                $profileListRoot = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList"
+                $originalKeyPath = Join-Path -Path $profileListRoot -ChildPath $userToMigrateFromSID
+                $bakKeyName = "$userToMigrateFromSID.bak"
+                $oldKeyName = "$userToMigrateFromSID.old"
+                $bakKeyPath = Join-Path -Path $profileListRoot -ChildPath $bakKeyName
+                $oldKeyPath = Join-Path -Path $profileListRoot -ChildPath $oldKeyName
+
+                if (-not (Test-Path -Path $originalKeyPath)) {
+                    throw "Test precondition failed: profile registry key not found for SID $userToMigrateFromSID"
+                }
+
+                # Ensure clear state for mock
+                if (Test-Path -Path $bakKeyPath) { Remove-Item -Path $bakKeyPath -Recurse -Force }
+                if (Test-Path -Path $oldKeyPath) { Remove-Item -Path $oldKeyPath -Recurse -Force }
+
+                try {
+                    # 1. Rename the valid .ADMU profile to .bak
+                    Rename-Item -Path $originalKeyPath -NewName $bakKeyName -Force
+
+                    # 2. Create a mock TEMP profile in the base SID location
+                    New-Item -Path $originalKeyPath -Force | Out-Null
+                    New-ItemProperty -Path $originalKeyPath -Name "ProfileImagePath" -Value "C:\Users\TEMP" -PropertyType String -Force | Out-Null
+
+                    $reversionInput = @{
+                        UserSID                = $userToMigrateFromSID
+                        TargetProfileImagePath = "C:\Users\$userToMigrateFrom"
+                    }
+
+                    # Execute Reversion
+                    $revertResult = Start-Reversion @reversionInput -ErrorAction SilentlyContinue -Force
+
+                    # Assertions
+                    $revertResult | Should -Not -BeNullOrEmpty
+                    $revertResult.Success | Should -BeTrue
+                    $revertResult.RegistryUpdated | Should -BeTrue
+
+                    # Verify the TEMP profile got appended to .old
+                    Test-Path -Path $oldKeyPath | Should -BeTrue
+
+                    # Verify the base key was successfully restored from .bak and points to correct path
+                    $restoredProfilePath = (Get-ItemProperty -Path $originalKeyPath -Name "ProfileImagePath").ProfileImagePath
+                    $restoredProfilePath | Should -Be "C:\Users\$userToMigrateFrom"
+
+                } finally {
+                    # Cleanup mock state if it failed and stranded keys
+                    if (Test-Path -Path $oldKeyPath) {
+                        Remove-Item -Path $oldKeyPath -Recurse -Force
+                    }
+                    if (Test-Path -Path $bakKeyPath) {
+                        Remove-Item -Path $bakKeyPath -Recurse -Force
+                    }
+                    if (-not (Test-Path -Path $originalKeyPath) -and (Test-Path -Path $bakKeyPath)) {
+                        Rename-Item -Path $bakKeyPath -NewName $userToMigrateFromSID -Force
+                    }
+                }
+            }
         }
         Context "Reversion Failure" {
             It "Tests that the Reversion fails with an invalid SID" {
