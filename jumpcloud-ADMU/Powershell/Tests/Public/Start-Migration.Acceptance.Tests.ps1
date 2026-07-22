@@ -337,9 +337,13 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 $testCaseInput.removeMDM = $true
                 $script:testFailureExpected = $true
 
+                # Prevent Pester from crashing on Write-ToLog -Level Error so the end{} block can run
+                $ErrorActionPreference = 'Continue'
+
                 { Start-Migration @testCaseInput } | Should -Throw
 
                 $logContent = Get-Content -Path $logPath -Raw -ErrorAction SilentlyContinue
+
                 $logContent | Should -Match "Could not validate API Key or SystemContext API"
                 $logContent | Should -Match "Restoring interactive logon"
                 $logContent | Should -Match "Migration Summary"
