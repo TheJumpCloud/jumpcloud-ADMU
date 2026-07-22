@@ -150,45 +150,67 @@ function Start-Reversion {
             #region Validate Registry and Determine Profile Path
             Write-ToLog -Message "Looking up profile information for SID: $UserSID" -Level Info -Step "Revert-Migration"
 
-            # Get profile information from registry for validation
-            $profileRegistryPath = (Get-ProfileRegistryPath -UserSID $UserSID).ResolvedPath
-
             $profileRegistryBasePath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\$UserSID"
             $profileRegistryBakPath = "$profileRegistryBasePath.bak"
+            $profileRegistryOldPath = "$profileRegistryBasePath.old"
+            $switchedToBak = $false
 
-            $registryProfileImagePath = (Get-ItemProperty -Path $profileRegistryPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
+            # Check for the rare instance where both base and .bak SID keys exist
+            if ((Test-Path -LiteralPath $profileRegistryBasePath) -and (Test-Path -LiteralPath $profileRegistryBakPath)) {
+                Write-ToLog -Message "Detected both base and .bak registry keys for SID: $UserSID" -Level Info -Step "Revert-Migration"
+                try {
+                    $bakProfileImagePath = (Get-ItemProperty -Path $profileRegistryBakPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
+
+                    # Validate if .bak matches the target path with .ADMU suffix or just has the .ADMU suffix
+                    $isMatch = $false
+                    if ($TargetProfileImagePath -and ($bakProfileImagePath -eq "$TargetProfileImagePath.ADMU")) {
+                        $isMatch = $true
+                    } elseif ($bakProfileImagePath -match $admuPathPattern) {
+                        $isMatch = $true
+                    }
+
+                    if ($isMatch) {
+                        Write-ToLog -Message ".bak registry key verified as the .ADMU profile: $bakProfileImagePath" -Level Info -Step "Revert-Migration"
+
+                        if (-not $DryRun) {
+                            # Clean up an existing .old key if it's lingering around
+                            if (Test-Path -LiteralPath $profileRegistryOldPath) {
+                                Remove-Item -Path $profileRegistryOldPath -Recurse -Force -ErrorAction SilentlyContinue
+                            }
+                            Write-ToLog -Message "Appending .old to the base registry key to clear the path for the correct profile." -Level Info -Step "Revert-Migration"
+                            Rename-Item -LiteralPath $profileRegistryBasePath -NewName "$UserSID.old" -Force -ErrorAction Stop
+                        } else {
+                            Write-ToLog -Message "WHAT IF: Would append .old to base registry key $profileRegistryBasePath." -Level Verbose -Step "Revert-Migration"
+                        }
+
+                        # Switch variables to use the .bak path
+                        $profileRegistryPath = $profileRegistryBakPath
+                        $registryProfileImagePath = $bakProfileImagePath
+                        $switchedToBak = $true
+                    } else {
+                        Write-ToLog -Message ".bak key exists but does not match expected .ADMU pattern. Checking base key." -Level Warning -Step "Revert-Migration"
+                    }
+                } catch {
+                    Write-ToLog -Message "Could not read .bak registry key: $($_.Exception.Message)" -Level Warning -Step "Revert-Migration"
+                }
+            }
+
+            # If the dual-SID logic didn't trigger, resolve via standard method
+            if (-not $switchedToBak) {
+                $profileRegistryPath = (Get-ProfileRegistryPath -UserSID $UserSID).ResolvedPath
+                $registryProfileImagePath = (Get-ItemProperty -Path $profileRegistryPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
+            }
+
             $revertResult.RegistryProfilePath = $registryProfileImagePath
+            $originalRegistryProfileImagePath = $registryProfileImagePath
 
             Write-ToLog -Message "Found registry profile path: $registryProfileImagePath" -Level Info -Step "Revert-Migration"
-
-            # Save the original registry path for validation checks
-            $originalRegistryProfileImagePath = $registryProfileImagePath
 
             # Validate this is an ADMU migrated profile by checking registry path
             if ($registryProfileImagePath -notmatch $admuPathPattern) {
                 throw "Registry profile path does not contain .ADMU suffix. This does not appear to be a migrated profile: $registryProfileImagePath"
-
             } else {
                 Write-ToLog -Message "Confirmed .ADMU migration profile detected in registry" -Level Verbose -Step "Revert-Migration"
-            }
-
-            # If the base registry key points to TEMP and .bak exists, prefer .bak for the actual profile path
-            $switchedToBak = $false
-            if ($registryProfileImagePath -match '\\TEMP$' -and (Test-Path -LiteralPath $profileRegistryBakPath)) {
-                try {
-                    $bakProfileImagePath = (Get-ItemProperty -Path $profileRegistryBakPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
-                    if ($bakProfileImagePath -match $admuPathPattern) {
-                        Write-ToLog -Message "Detected TEMP profile in base key but .bak key contains migrated profile. Using .bak path: $bakProfileImagePath" -Level Info -Step "Revert-Migration"
-                        $registryProfileImagePath = $bakProfileImagePath
-                        $profileRegistryPath = $profileRegistryBakPath
-                        $revertResult.RegistryProfilePath = $registryProfileImagePath
-                        $switchedToBak = $true
-                    } else {
-                        Write-ToLog -Message ".bak key exists but does not contain ADMU migrated profile. Continuing with TEMP profile." -Level Warning -Step "Revert-Migration"
-                    }
-                } catch {
-                    Write-ToLog -Message "Failed to read .bak registry key: $($_.Exception.Message). Continuing with TEMP profile." -Level Warning -Step "Revert-Migration"
-                }
             }
 
             # Determine which profile path to use
@@ -198,25 +220,15 @@ function Start-Reversion {
 
                 # Validate target profile path is associated with the UserSID
                 $skipValidation = $false
-                if ($originalRegistryProfileImagePath -match '\\TEMP$' -and (Test-Path -LiteralPath $profileRegistryBakPath)) {
-                    try {
-                        $bakProfileImagePath = (Get-ItemProperty -Path $profileRegistryBakPath -Name "ProfileImagePath" -ErrorAction Stop).ProfileImagePath
-                        if (($bakProfileImagePath -replace $admuPathPattern, '') -eq $TargetProfileImagePath) {
-                            Write-ToLog -Message "Target profile path matches .bak registry entry. Skipping validation since base key points to TEMP." -Level Verbose -Step "Revert-Migration"
-                            $skipValidation = $true
-                        }
-                    } catch {
-                        Write-ToLog -Message "Failed to read .bak registry key for validation: $($_.Exception.Message)" -Level Warning -Step "Revert-Migration"
-                    }
+                if ($switchedToBak -and (($bakProfileImagePath -replace $admuPathPattern, '') -eq $TargetProfileImagePath)) {
+                    Write-ToLog -Message "Target profile path strictly matches validated .bak registry entry. Skipping secondary validation." -Level Verbose -Step "Revert-Migration"
+                    $skipValidation = $true
                 }
+
                 if (-not $skipValidation) {
                     $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $TargetProfileImagePath -UserSID $UserSID
                     if (-not $sidValidation.IsValid) {
-                        if ($originalRegistryProfileImagePath -match '\\TEMP$') {
-                            Write-ToLog -Message "Target profile path validation failed ($($sidValidation.Reason)), but registry points to TEMP so continuing with TEMP profile." -Level Warning -Step "Revert-Migration"
-                        } else {
-                            throw "Target profile path validation failed: $($sidValidation.Reason)"
-                        }
+                        throw "Target profile path validation failed: $($sidValidation.Reason)"
                     } else {
                         Write-ToLog -Message "Target profile path validated for UserSID: $UserSID" -Level Verbose -Step "Revert-Migration"
                     }
@@ -227,12 +239,11 @@ function Start-Reversion {
 
                 if (-not $switchedToBak) {
                     $sidValidation = Confirm-ProfileSidAssociation -ProfilePath $profileImagePath -UserSID $UserSID
-
                     if (-not $sidValidation.IsValid) {
                         throw "Registry profile path validation failed: $($sidValidation.Reason)"
                     }
                 } else {
-                    Write-ToLog -Message "Skipping profile path validation since switched to .bak registry key" -Level Verbose -Step "Revert-Migration"
+                    Write-ToLog -Message "Skipping profile path validation since successfully switched to .bak registry key" -Level Verbose -Step "Revert-Migration"
                 }
                 Write-ToLog -Message "Using registry profile path (without .ADMU): $profileImagePath" -Level Info -Step "Revert-Migration"
             }
@@ -321,7 +332,6 @@ function Start-Reversion {
             #endregion Identify Registry Files to Revert
 
             #region Validate Files Before Revert
-            # Casing fixed to 'revertValidateRegistryFiles', removed -StatusType, added -StatusMap
             Write-ToProgress -form $form -Status "revertValidateRegistryFiles" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
             Write-ToLog -Message "Validating registry files before revert operation" -Level Info -Step "Revert-Migration"
 
@@ -366,7 +376,6 @@ function Start-Reversion {
             #endregion Confirmation Prompt
 
             #region Perform Registry File Revert
-            # Casing fixed to 'revertRegistryFiles', removed -StatusType, added -StatusMap
             Write-ToProgress -form $form -Status "revertRegistryFiles" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
             Write-ToLog -Message "Beginning registry file revert operations" -Level Info -Step "Revert-Migration"
 
@@ -406,7 +415,6 @@ function Start-Reversion {
             #endregion Perform Registry File Revert
 
             #region Update Registry ProfileImagePath
-            # Casing fixed to 'revertProfileImagePath', removed -StatusType, added -StatusMap
             Write-ToProgress -form $form -Status "revertProfileImagePath" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
             Write-ToLog -Message "Updating registry ProfileImagePath to point to reverted profile location" -Level Info -Step "Revert-Migration"
 
@@ -439,7 +447,6 @@ function Start-Reversion {
 
             #region Set Profile Permissions and Ownership
             if (-not $DryRun) {
-                # Casing fixed to 'revertProfileACLs', removed -StatusType, added -StatusMap
                 Write-ToProgress -form $form -Status "revertProfileACLs" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
                 Write-ToLog -Message "Setting profile ownership and permissions via Set-RegPermission for: $profileImagePath" -Level Info -Step "Revert-Migration"
                 try {
@@ -465,7 +472,6 @@ function Start-Reversion {
                     # Compare the profile path with the $profileImagePath
                     if ($jcUserProfilePath -eq $profileImagePath) {
                         Write-ToLog -message "Removing JumpCloud created user: $($jcUser.Name)" -Level Info -Step "Revert-Migration"
-                        # Casing fixed to 'revertRemoveJCUserArtifacts', removed -StatusType, added -StatusMap
                         Write-ToProgress -form $form -Status "revertRemoveJCUserArtifacts" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
                         Remove-LocalUser -Name $jcUser.Name -ErrorAction Stop
                         Write-ToLog -message "Successfully removed JumpCloud created user: $($jcUser.Name)" -Level Info -Step "Revert-Migration"
@@ -555,7 +561,6 @@ function Start-Reversion {
                 if ($revertedCount -eq $totalFiles -and $registryUpdated) {
                     $revertResult.Success = $true
                     Write-ToLog -Message "Migration revert completed successfully. $revertedCount of $totalFiles registry files reverted and registry ProfileImagePath updated." -Level Info -Step "Revert-Migration"
-                    # Casing fixed to 'revertComplete', removed -StatusType, added -StatusMap
                     Write-ToProgress -form $form -Status "revertComplete" -ProgressBar $ProgressBar -StatusMap $revertMessageMap
                 } elseif ($revertedCount -eq $totalFiles -and -not $registryUpdated) {
                     Write-ToLog -Message "Migration revert completed with registry update error. $revertedCount of $totalFiles registry files reverted but ProfileImagePath update failed." -Level Warning -Step "Revert-Migration"

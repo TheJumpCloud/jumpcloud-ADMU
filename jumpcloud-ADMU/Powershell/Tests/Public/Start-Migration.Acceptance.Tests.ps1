@@ -271,6 +271,90 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 }
             }
         }
+        Context "BlockAccountLogin early exit restore" {
+            # Regression for CUT-5227: Confirm-API failure after BlockAccountLogin must restore
+            # SeDenyInteractiveLogonRight via end{}.
+            #
+            # Pester Mock / global: function shadows do NOT intercept calls from Start-Migration when
+            # functions are dot-sourced into a parent scope. Re-import into THIS Context scope, then
+            # replace Confirm-API / Get-Service so Start-Migration resolves the stubs.
+            BeforeAll {
+                $currentPath = $PSScriptRoot
+                while ($null -ne $currentPath) {
+                    $candidate = Join-Path $currentPath "helperFunctions"
+                    if (Test-Path $candidate) {
+                        $script:blockLoginHelpDir = $candidate
+                        break
+                    }
+                    $currentPath = Split-Path $currentPath -Parent
+                }
+                . (Join-Path $script:blockLoginHelpDir "Import-AllFunctions.ps1")
+
+                # Return an invalid response to Confirm-API to trigger the early exit restore logic.
+                function Confirm-API {
+                    [CmdletBinding()]
+                    param (
+                        [Parameter(Mandatory = $false)]
+                        [string]$JcApiKey,
+                        [Parameter(Mandatory = $false)]
+                        [string]$JcOrgId,
+                        [Parameter(Mandatory = $false)]
+                        [bool]$SystemContextBinding,
+                        # Added missing parameter to prevent ParameterBindingException
+                        [Parameter(Mandatory = $false)]
+                        [string]$JumpCloudUserID
+                    )
+                    return [PSCustomObject]@{
+                        Type        = $null
+                        IsValid     = $false
+                        ValidatedID = $null
+                    }
+                }
+
+                # required to have CI pretend that the JumpCloud Agent is running
+                function Get-Service {
+                    [CmdletBinding()]
+                    param (
+                        [Parameter(ValueFromPipeline = $true)]
+                        [Alias('ServiceName')]
+                        [string[]]$Name
+                    )
+                    if ($Name -contains 'jumpcloud-agent') {
+                        return [PSCustomObject]@{ Name = 'jumpcloud-agent'; Status = 'Running' }
+                    }
+                    return & Microsoft.PowerShell.Management\Get-Service @PSBoundParameters
+                }
+            }
+
+            It "Restores interactive logon when SystemContext Confirm-API validation fails" {
+                $userSid = (Get-LocalUser -Name $userToMigrateFrom).SID.Value
+                $logPath = "C:\Windows\Temp\jcAdmu.log"
+
+                $testCaseInput.SystemContextBinding = $true
+                $testCaseInput.JumpCloudUserID = '6a19df5742b5f3b7c341ba10'
+                $testCaseInput.BlockAccountLogin = $true
+                $testCaseInput.LeaveDomain = $true
+                $testCaseInput.removeMDM = $true
+                $script:testFailureExpected = $true
+
+                # Prevent Pester from crashing on Write-ToLog -Level Error so the end{} block can run
+                $ErrorActionPreference = 'Continue'
+
+                { Start-Migration @testCaseInput } | Should -Throw
+
+                $logContent = Get-Content -Path $logPath -Raw -ErrorAction SilentlyContinue
+
+                $logContent | Should -Match "Could not validate API Key or SystemContext API"
+                $logContent | Should -Match "Restoring interactive logon"
+                $logContent | Should -Match "Migration Summary"
+                $logContent | Should -Match "\[Set-AccountLoginPolicy\] Restored interactive logon"
+
+                @(Get-DenyLogonSidList) | Should -Not -Contain $userSid
+
+                $null = Set-AccountLoginPolicy -SID $userSid -Action Enable
+            }
+        }
+
         Context "General Failure Conditions" {
             It "Fails when the JumpCloudUsername and Selected username are the same" {
                 # set the $testCaseInput
