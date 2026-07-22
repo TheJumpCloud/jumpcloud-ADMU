@@ -129,13 +129,8 @@ function Set-RegistryExe {
             }
             "Unload" {
 
-                if (Test-Path "Registry::HKEY_USERS\$SubKey" -ErrorAction SilentlyContinue) {
-                    Remove-Item -Path "Registry::HKEY_USERS\$SubKey" -Force -Recurse -ErrorAction SilentlyContinue
-                }
-
-                [System.GC]::Collect()
-                [System.GC]::WaitForPendingFinalizers()
-                [System.GC]::Collect()
+                # Clear any provider handles (If you are using this function here)
+                Clear-RegistryProviderHandle
 
                 Write-ToLog "API UNLOAD $key" -Level Verbose -Step "Set-RegistryExe"
                 $resultCode = [RegistryAPI]::RegUnLoadKey($RootKey, $SubKey)
