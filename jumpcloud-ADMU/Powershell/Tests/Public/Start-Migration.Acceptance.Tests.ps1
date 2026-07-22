@@ -299,7 +299,10 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                         [Parameter(Mandatory = $false)]
                         [string]$JcOrgId,
                         [Parameter(Mandatory = $false)]
-                        [bool]$SystemContextBinding
+                        [bool]$SystemContextBinding,
+                        # Added missing parameter to prevent ParameterBindingException
+                        [Parameter(Mandatory = $false)]
+                        [string]$JumpCloudUserID
                     )
                     return [PSCustomObject]@{
                         Type        = $null
@@ -320,13 +323,6 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                         return [PSCustomObject]@{ Name = 'jumpcloud-agent'; Status = 'Running' }
                     }
                     return & Microsoft.PowerShell.Management\Get-Service @PSBoundParameters
-                }
-            }
-
-            AfterAll {
-                Remove-Item -Path Function:Get-Service -ErrorAction SilentlyContinue
-                if ($script:blockLoginHelpDir) {
-                    . (Join-Path $script:blockLoginHelpDir "Import-AllFunctions.ps1")
                 }
             }
 
