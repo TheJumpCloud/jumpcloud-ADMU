@@ -6,7 +6,7 @@ Release Date: July 22, 2026
 
 ```
 - Added reversal validation for original SID with TEMP profile
-
+- This release addresses an issue with early validation failures during the migration process.
 ```
 
 #### FEATURES:
@@ -17,6 +17,7 @@ Release Date: July 22, 2026
 
 #### BUG FIXES:
 - Profile Reversion Failure: Fixed an issue that caused the migration revert process to fail when it encountered a temporary profile tied to the user's original SID.
+- This release addresses an issue with early validation failures during the migration process. This release ensures that the migration process restores the interactive logon policy even if the migration process exits early.
 
 
 ## 2.16.2
@@ -51,8 +52,6 @@ No new features were introduced in this release. The focus is on performance imp
 - Eliminated reliance on ACL backup files during profile reversion by consistently applying permissions through Set-RegPermission, improving the reliability and consistency of permission restoration.
 - This release addresses an potential issue where the tool could hold onto the registry keys. Handles are closed properly to avoid this issue.
 - Bumped the Appx install timeout to 600 seconds to avoid Appx not being fully installed which can cause device performance issues
-
-
 
 ## 2.16.1
 

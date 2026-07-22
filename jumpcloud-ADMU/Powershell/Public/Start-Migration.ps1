@@ -168,7 +168,6 @@ function Start-Migration {
             }
             if (-not $PSBoundParameters.ContainsKey('JumpCloudUserID')) {
                 throw "The 'SystemContextBinding' parameter requires the 'JumpCloudUserID' parameter to be set."
-                break
             }
         }
 
@@ -646,7 +645,9 @@ function Start-Migration {
 
         #region blockAccountLogin
         # Block the migrating account from logging in at the Windows login screen for the duration
-        # of the migration. Reverted in catch block if an error occurs, or in end block on success.
+        # of the migration. Reverted in begin catch if begin fails after the block, on the success
+        # path before reboot, and always again in end{} for failed-gate / early-return paths.
+        # Failed gates outside the migration while-loop MUST use return (not break) so end{} runs.
         if ($BlockAccountLogin) {
             $backupPath = Backup-SecPol
             Write-ToLog -Message:("Blocking interactive logon for '$SelectedUserName' (SID: $SelectedUserSID) during migration.")
@@ -723,7 +724,10 @@ function Start-Migration {
                 Write-ToLog -Message ("JumpCloud Agent Install Failed") -Level Error
                 Write-ToProgress -ProgressBar $ProgressBar -Status "JC Agent Install failed " -form $isForm -logLevel Error
                 $admuTracker.install.fail = $true
-                break
+                # Use return (not break): this gate is outside the migration while-loop.
+                # A bare break outside a loop can terminate the script without running end{},
+                # which would leave BlockAccountLogin in place and lock the user out.
+                return
             }
         } elseif ($InstallJCAgent -eq $true -and ($AgentService)) {
             Write-ToLog -Message ('JumpCloud agent is already installed on the system.')
@@ -755,7 +759,10 @@ function Start-Migration {
                 Write-ToLog -Message ("Could not validate API Key or SystemContext API, please check your parameters and try again.") -Level Error
                 Write-ToProgress -ProgressBar $ProgressBar -Status "Could not validate API Key or SystemContext API" -form $isForm -logLevel Error
                 $admuTracker.validateJCConnectivity.fail = $true
-                break
+                # Use return (not break): this gate is outside the migration while-loop.
+                # A bare break outside a loop can terminate the script without running end{},
+                # which would leave BlockAccountLogin in place and lock the user out.
+                return
             }
             $admuTracker.validateJCConnectivity.pass = $true
             if ($reportStatus) {
@@ -1942,16 +1949,18 @@ function Start-Migration {
     }
     end {
         $FixedErrors = @();
-        # Always disable Windows sleep prevention if it is still active. end{} runs on every
-        # break/throw, so this covers success, failure, and early-exit paths.
+        # Always disable Windows sleep prevention if it is still active. end{} runs after process
+        # completes via normal completion or return. Early failed-gate paths must use return (not
+        # break outside a loop) so this cleanup still runs.
         if ($caffeinateEnabled) {
             Write-ToLog -Message:('Disabling Windows sleep prevention after migration ended.')
             $null = Set-ThreadExecutionState -enable $false
             $caffeinateEnabled = $false
         }
         # Always restore the migrating account's interactive logon if it is still blocked. end{}
-        # runs on every break/throw, so this covers all failed-gate paths; Enable is idempotent and
-        # the flag prevents a double-revert when the success path above already restored it.
+        # runs after process returns from failed gates (install, Confirm-API, etc.) and after the
+        # migration while-loop exits via break. Enable is idempotent; the flag prevents a
+        # double-revert when the success path above already restored it.
         if ($accountLoginBlocked) {
             Write-ToLog -Message:("Restoring interactive logon for '$SelectedUserName' (SID: $SelectedUserSID) after migration ended.")
             $null = Set-AccountLoginPolicy -SID $SelectedUserSID -Action Enable
