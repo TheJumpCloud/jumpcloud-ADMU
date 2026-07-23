@@ -12,7 +12,7 @@ function Set-RegPermission {
     )
 
     # ---------------------------------------------------------------------------
-    # Embed NativeAcl C# Class (Compiled once per runspace)
+    # Embed NativeAcl C# Class (Compiled once per AppDomain)
     # ---------------------------------------------------------------------------
     if (-not ([System.Management.Automation.PSTypeName]'NativeAcl').Type) {
         Add-Type -Language CSharp -TypeDefinition @'
@@ -282,7 +282,7 @@ public static class NativeAcl
 
     if ($Recursive) {
         # =========================================================================
-        # RECURSIVE: Use C# P/Invoke for maximum performance
+        # RECURSIVE: Use C# P/Invoke via background Runspace for max performance
         # =========================================================================
         $attrs = [System.IO.File]::GetAttributes($FilePath)
         if ($attrs.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
@@ -291,7 +291,6 @@ public static class NativeAcl
         }
 
         try {
-            Write-ToLog "Applying recursive NTFS ownership and ACL via native APIs on '$FilePath'. This may take several minutes on large profiles." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
             [NativeAcl]::EnablePrivileges()
 
             $targetSidBytes = New-Object byte[] $TargetSIDObj.BinaryLength
@@ -305,9 +304,42 @@ public static class NativeAcl
             $adminSidBytes = New-Object byte[] $adminSidObj.BinaryLength
             $adminSidObj.GetBinaryForm($adminSidBytes, 0)
 
-            $failedItems = Invoke-NativeTreeAcl -Root $FilePath -TargetSidBytes $targetSidBytes -SystemSidBytes $systemSidBytes -AdminSidBytes $adminSidBytes
+            # Create an isolated background runspace inside the same process
+            $runspace = [runspacefactory]::CreateRunspace()
+            $runspace.Open()
+            $ps = [powershell]::Create()
+            $ps.Runspace = $runspace
 
-            if ($failedItems.Count -gt 0) {
+            # Execute the C# method in the background
+            $ps.AddScript({
+                    param($path, $target, $system, $admin)
+                    [NativeAcl]::EnablePrivileges()
+                    Write-ToLog $path -Level Info -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+                    return [NativeAcl]::ApplyOwnerAndGrantTree($path, $target, $system, $admin)
+                }).AddArgument($FilePath).AddArgument($targetSidBytes).AddArgument($systemSidBytes).AddArgument($adminSidBytes) | Out-Null
+
+            # Begin processing asynchronously
+            $asyncResult = $ps.BeginInvoke()
+
+            # Timer implementation using main PowerShell thread
+            if ($ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat) {
+                $intervalMs = $ProgressHeartbeatIntervalSeconds * 1000
+                while (-not $asyncResult.IsCompleted) {
+                    $finished = $asyncResult.AsyncWaitHandle.WaitOne($intervalMs)
+                    if (-not $finished) {
+                        & $OnProgressHeartbeat
+                    }
+                }
+            }
+
+            # Gather results and close the runspace
+            $failedItems = $ps.EndInvoke($asyncResult)
+            $ps.Dispose()
+            $runspace.Close()
+            $runspace.Dispose()
+
+            # Evaluate any items that could not be processed natively
+            if ($failedItems -and $failedItems.Count -gt 0) {
                 $symlinkCount = 0
                 $errorCount = 0
 
@@ -340,7 +372,7 @@ public static class NativeAcl
         # =========================================================================
         $useProgressHeartbeat = $ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat
 
-        $SourceAccountIcacls = if ($SourceAccountTranslated) { $SourceAccount } else { "*$SourceAccount" }
+        # $SourceAccountIcacls = if ($SourceAccountTranslated) { $SourceAccount } else { "*$SourceAccount" }
         $TargetAccountIcacls = if ($TargetAccountTranslated) { $TargetAccount } else { "*$TargetAccount" }
 
         Write-ToLog "Preparing root-level ACL for '$FilePath' (target: $TargetAccountIcacls)." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath

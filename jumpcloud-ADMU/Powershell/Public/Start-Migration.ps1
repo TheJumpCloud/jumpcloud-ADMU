@@ -195,7 +195,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.16.1"
+        $admuVersion = "2.16.2"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -1461,9 +1461,32 @@ function Start-Migration {
             if ($SetFullPermission) {
                 Write-ToLog -Message:("Setting recursive permissions on the full profile during migration. This may take several minutes on large profiles. Target path: '$newUserProfileImagePath'")
 
+                $regPermissionParams = @{
+                    SourceSID   = $SelectedUserSID
+                    TargetSID   = $NewUserSID
+                    FilePath    = $newUserProfileImagePath
+                    Recursive   = $true
+                    ErrorAction = 'Stop'
+                }
+                # TODO: make this a parameter...
+                $regPermissionParams.ProgressHeartbeatIntervalSeconds = 1
+                $regPermissionParams.OnProgressHeartbeat = {
+                    $elapsed = $regPermStopwatch.Elapsed
+                    $elapsedMin = [math]::Floor($elapsed.TotalMinutes)
+                    if ($elapsedMin -gt 0) {
+                        $heartbeatMsg = "Setting NTFS File Permissions (recursive, $elapsedMin min elapsed)"
+                    } else {
+                        $elapsedSec = [math]::Floor($elapsed.TotalSeconds)
+                        $heartbeatMsg = "Setting NTFS File Permissions (recursive, $elapsedSec sec elapsed)"
+                    }
+                    Write-ToLog -Message $heartbeatMsg -Level "Info" -Step "Set-RegPermission"
+                }
+
                 try {
-                    # Triggers the fast C# native code
-                    Set-RegPermission -SourceSID $SelectedUserSID -TargetSID $NewUserSID -FilePath $newUserProfileImagePath -Recursive
+                    Set-RegPermission @regPermissionParams
+                    $currentTime = Get-Date -Format "HH:mm:ss"
+
+                    Write-ToLog -Message "Heartbeat at $($currentTime): Still processing permissions..." -Level "Info" -Step "Set-RegPermission"
                 } catch {
                     Write-ToLog -Message "Set-RegPermission (recursive C#) failed: $_" -Level Warning
                 }
@@ -1481,7 +1504,8 @@ function Start-Migration {
                 }
                 $useNtfsHeartbeat = $isForm -or ($systemDescription -and $systemDescription.reportStatus)
                 if ($useNtfsHeartbeat) {
-                    $regPermissionParams.ProgressHeartbeatIntervalSeconds = 120
+                    # TODO: Make this a parameter
+                    $regPermissionParams.ProgressHeartbeatIntervalSeconds = 30
                     $regPermissionParams.OnProgressHeartbeat = {
                         $elapsed = $regPermStopwatch.Elapsed
                         $elapsedMin = [math]::Floor($elapsed.TotalMinutes)
@@ -1491,7 +1515,7 @@ function Start-Migration {
                             $elapsedSec = [math]::Floor($elapsed.TotalSeconds)
                             $heartbeatMsg = "Setting NTFS File Permissions ($elapsedSec sec elapsed)"
                         }
-                        Write-ToProgress -ProgressBar $ProgressBar -Status "ntfsAccess" -StatusMessage $heartbeatMsg -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
+                        Write-ToLog -Message $heartbeatMsg -Level "Info" -Step "Set-RegPermission"
                     }
                 }
 
