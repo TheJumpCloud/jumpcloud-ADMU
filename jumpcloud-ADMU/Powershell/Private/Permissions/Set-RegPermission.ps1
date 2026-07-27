@@ -8,7 +8,8 @@ function Set-RegPermission {
         [string]$FilePath,
         [switch]$Recursive,
         [int]$ProgressHeartbeatIntervalSeconds = 0,
-        [scriptblock]$OnProgressHeartbeat
+        [scriptblock]$OnProgressHeartbeat,
+        [int]$MaxThreads = 4
     )
 
     # ---------------------------------------------------------------------------
@@ -305,41 +306,75 @@ public static class NativeAcl
             $adminSidObj.GetBinaryForm($adminSidBytes, 0)
 
             # Create an isolated background runspace inside the same process
-            $runspace = [runspacefactory]::CreateRunspace()
+            $runspace = [runspacefactory]::CreateRunspacePool(1, $MaxThreads)
             $runspace.Open()
-            $ps = [powershell]::Create()
-            $ps.Runspace = $runspace
 
-            # Execute the C# method in the background
-            $ps.AddScript({
-                    param($path, $target, $system, $admin)
-                    [NativeAcl]::EnablePrivileges()
-                    Write-ToLog $path -Level Info -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
-                    return [NativeAcl]::ApplyOwnerAndGrantTree($path, $target, $system, $admin)
-                }).AddArgument($FilePath).AddArgument($targetSidBytes).AddArgument($systemSidBytes).AddArgument($adminSidBytes) | Out-Null
+            $subDirs = [System.IO.Directory]::EnumerateDirectories($FilePath)
+            $jobs = @()
+            $failedItems = @()
 
-            # Begin processing asynchronously
-            $asyncResult = $ps.BeginInvoke()
+            # Queue background threads for sub-directories in parallel
+            foreach ($dir in $subDirs) {
+                $ps = [powershell]::Create().AddScript({
+                    param($path, $tgtBytes, $sysBytes, $admBytes)
+                    # Directly invoke the Unmanaged C# memory block here so it executes recursively and safely inside the runspace scope
+                    return [NativeAcl]::ApplyOwnerAndGrantTree($path, $tgtBytes, $sysBytes, $admBytes)
+                }).AddArgument($dir).AddArgument($targetSidBytes).AddArgument($systemSidBytes).AddArgument($adminSidBytes)
 
-            # Timer implementation using main PowerShell thread
-            if ($ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat) {
-                $intervalMs = $ProgressHeartbeatIntervalSeconds * 1000
-                while (-not $asyncResult.IsCompleted) {
-                    $finished = $asyncResult.AsyncWaitHandle.WaitOne($intervalMs)
-                    if (-not $finished) {
+                $ps.RunspacePool = $runspace
+
+                $asyncResult = $ps.BeginInvoke()
+                $jobs += [PSCustomObject]@{
+                    Path   = $dir
+                    Pipe   = $ps
+                    Status = $asyncResult
+                }
+
+                # Manage active queue limit & fire UI Heartbeats
+                $activeJobs = @($jobs | Where-Object { $_.Status.IsCompleted -eq $false })
+                while ($activeJobs.Count -ge $MaxThreads) {
+                    if ($ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat) {
                         & $OnProgressHeartbeat
                     }
+                    Start-Sleep -Milliseconds 200
+                    $activeJobs = @($jobs | Where-Object { $_.Status.IsCompleted -eq $false })
                 }
             }
 
-            # Gather results and close the runspace
-            $failedItems = $ps.EndInvoke($asyncResult)
-            $ps.Dispose()
+            # Await the completion of all outstanding queues & fire UI Heartbeats
+            $activeJobs = @($jobs | Where-Object { $_.Status.IsCompleted -eq $false })
+            while ($activeJobs.Count -gt 0) {
+                if ($ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat) {
+                    & $OnProgressHeartbeat
+                }
+                Start-Sleep -Milliseconds 200
+                $activeJobs = @($jobs | Where-Object { $_.Status.IsCompleted -eq $false })
+            }
+
+            # Harvest Thread Errors & Dispose Pools
+            foreach ($job in $jobs) {
+                $res = $job.Pipe.EndInvoke($job.Status)
+                if ($null -ne $res) { $failedItems += $res }
+                $job.Pipe.Dispose()
+            }
             $runspace.Close()
             $runspace.Dispose()
 
+            # Sub-directories were applied in parallel, but root files were excluded. Process them:
+            foreach ($file in [System.IO.Directory]::EnumerateFiles($FilePath)) {
+                $res = [NativeAcl]::ApplyOwnerAndGrantTree($file, $targetSidBytes, $systemSidBytes, $adminSidBytes)
+                if ($null -ne $res) { $failedItems += $res }
+            }
+
+            # Finally, manually set the root folder ACL container (Calling NativeAcl here would pointlessly recurse again)
+            $rootAcl = Get-Acl -LiteralPath $FilePath
+            $newRule = New-Object System.Security.AccessControl.FileSystemAccessRule($TargetAccount, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+            $rootAcl.AddAccessRule($newRule)
+            $rootAcl.SetOwner($TargetSIDObj)
+            Set-Acl -LiteralPath $FilePath -AclObject $rootAcl
+
             # Evaluate any items that could not be processed natively
-            if ($failedItems -and $failedItems.Count -gt 0) {
+            if ($failedItems.Count -gt 0) {
                 $symlinkCount = 0
                 $errorCount = 0
 
@@ -372,7 +407,6 @@ public static class NativeAcl
         # =========================================================================
         $useProgressHeartbeat = $ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat
 
-        # $SourceAccountIcacls = if ($SourceAccountTranslated) { $SourceAccount } else { "*$SourceAccount" }
         $TargetAccountIcacls = if ($TargetAccountTranslated) { $TargetAccount } else { "*$TargetAccount" }
 
         Write-ToLog "Preparing root-level ACL for '$FilePath' (target: $TargetAccountIcacls)." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath

@@ -1465,28 +1465,29 @@ function Start-Migration {
                     SourceSID   = $SelectedUserSID
                     TargetSID   = $NewUserSID
                     FilePath    = $newUserProfileImagePath
-                    Recursive   = $true
                     ErrorAction = 'Stop'
                 }
-                # TODO: make this a parameter...
-                $regPermissionParams.ProgressHeartbeatIntervalSeconds = 1
-                $regPermissionParams.OnProgressHeartbeat = {
-                    $elapsed = $regPermStopwatch.Elapsed
-                    $elapsedMin = [math]::Floor($elapsed.TotalMinutes)
-                    if ($elapsedMin -gt 0) {
-                        $heartbeatMsg = "Setting NTFS File Permissions (recursive, $elapsedMin min elapsed)"
-                    } else {
-                        $elapsedSec = [math]::Floor($elapsed.TotalSeconds)
-                        $heartbeatMsg = "Setting NTFS File Permissions (recursive, $elapsedSec sec elapsed)"
-                    }
-                    Write-ToLog -Message $heartbeatMsg -Level "Info" -Step "Set-RegPermission"
-                }
-
                 try {
-                    Set-RegPermission @regPermissionParams
-                    $currentTime = Get-Date -Format "HH:mm:ss"
+                    # $LogQueue = [System.Collections.Concurrent.ConcurrentQueue[string]]::new()
+                    # $regPermissionParams.LogQueue = $LogQueue
 
-                    Write-ToLog -Message "Heartbeat at $($currentTime): Still processing permissions..." -Level "Info" -Step "Set-RegPermission"
+                    $regPermissionParams.MaxThreads = 4
+                    $regPermissionParams.Recursive = $true
+                    $regPermissionParams.ProgressHeartbeatIntervalSeconds = 30
+                    $regPermissionParams.OnProgressHeartbeat = {
+                        $elapsed = $regPermStopwatch.Elapsed
+                        $elapsedMin = [math]::Floor($elapsed.TotalMinutes)
+                        if ($elapsedMin -gt 0) {
+                            $heartbeatMsg = "Setting NTFS File Permissions (recursive, $elapsedMin min elapsed)"
+                        } else {
+                            $elapsedSec = [math]::Floor($elapsed.TotalSeconds)
+                            $heartbeatMsg = "Setting NTFS File Permissions (recursive, $elapsedSec sec elapsed)"
+                        }
+                        Write-ToLog -Message $heartbeatMsg -Level "Info" -Step "Set-RegPermission"
+                    }
+                    Set-RegPermission @regPermissionParams
+                    # $currentTime = Get-Date -Format "HH:mm:ss"
+                    # Write-ToLog -Message "Set-RegPermission at $($currentTime)" -Level "Info" -Step "Set-RegPermission"
                 } catch {
                     Write-ToLog -Message "Set-RegPermission (recursive C#) failed: $_" -Level Warning
                 }
