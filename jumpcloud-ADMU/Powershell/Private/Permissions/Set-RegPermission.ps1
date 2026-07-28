@@ -7,7 +7,7 @@ function Set-RegPermission {
         [Parameter(Mandatory)]
         [string]$FilePath,
         [switch]$Recursive,
-        [int]$ProgressHeartbeatIntervalSeconds = 0,
+        [int]$ProgressHeartbeatIntervalSeconds = 60,
         [scriptblock]$OnProgressHeartbeat,
         [int]$MaxThreads = 4
     )
@@ -313,11 +313,14 @@ public static class NativeAcl
             $jobs = @()
             $failedItems = @()
 
+            $useProgressHeartbeat = $ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat
+            $heartbeatIntervalMs = if ($useProgressHeartbeat) { [math]::Max(1, $ProgressHeartbeatIntervalSeconds) * 1000 } else { 0 }
+            $heartbeatStopwatch = if ($useProgressHeartbeat) { [System.Diagnostics.Stopwatch]::StartNew() } else { $null }
+
             # Queue background threads for sub-directories in parallel
             foreach ($dir in $subDirs) {
                 $ps = [powershell]::Create().AddScript({
                     param($path, $tgtBytes, $sysBytes, $admBytes)
-                    # Directly invoke the Unmanaged C# memory block here so it executes recursively and safely inside the runspace scope
                     return [NativeAcl]::ApplyOwnerAndGrantTree($path, $tgtBytes, $sysBytes, $admBytes)
                 }).AddArgument($dir).AddArgument($targetSidBytes).AddArgument($systemSidBytes).AddArgument($adminSidBytes)
 
@@ -330,22 +333,24 @@ public static class NativeAcl
                     Status = $asyncResult
                 }
 
-                # Manage active queue limit & fire UI Heartbeats
+                # Manage active queue limit & fire UI Heartbeats on the configured interval
                 $activeJobs = @($jobs | Where-Object { $_.Status.IsCompleted -eq $false })
                 while ($activeJobs.Count -ge $MaxThreads) {
-                    if ($ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat) {
+                    if ($useProgressHeartbeat -and $heartbeatStopwatch.ElapsedMilliseconds -ge $heartbeatIntervalMs) {
                         & $OnProgressHeartbeat
+                        $heartbeatStopwatch.Restart()
                     }
                     Start-Sleep -Milliseconds 200
                     $activeJobs = @($jobs | Where-Object { $_.Status.IsCompleted -eq $false })
                 }
             }
 
-            # Await the completion of all outstanding queues & fire UI Heartbeats
+            # Await the completion of all outstanding queues & fire UI Heartbeats on the configured interval
             $activeJobs = @($jobs | Where-Object { $_.Status.IsCompleted -eq $false })
             while ($activeJobs.Count -gt 0) {
-                if ($ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat) {
+                if ($useProgressHeartbeat -and $heartbeatStopwatch.ElapsedMilliseconds -ge $heartbeatIntervalMs) {
                     & $OnProgressHeartbeat
+                    $heartbeatStopwatch.Restart()
                 }
                 Start-Sleep -Milliseconds 200
                 $activeJobs = @($jobs | Where-Object { $_.Status.IsCompleted -eq $false })
