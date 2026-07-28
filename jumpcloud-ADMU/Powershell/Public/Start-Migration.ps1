@@ -1473,7 +1473,7 @@ function Start-Migration {
 
                     $regPermissionParams.MaxThreads = 4
                     $regPermissionParams.Recursive = $true
-                    $regPermissionParams.ProgressHeartbeatIntervalSeconds = 30
+                    $regPermissionParams.ProgressHeartbeatIntervalSeconds = 60
                     $regPermissionParams.OnProgressHeartbeat = {
                         $elapsed = $regPermStopwatch.Elapsed
                         $elapsedMin = [math]::Floor($elapsed.TotalMinutes)
@@ -1506,7 +1506,7 @@ function Start-Migration {
                 $useNtfsHeartbeat = $isForm -or ($systemDescription -and $systemDescription.reportStatus)
                 if ($useNtfsHeartbeat) {
                     # TODO: Make this a parameter
-                    $regPermissionParams.ProgressHeartbeatIntervalSeconds = 30
+                    $regPermissionParams.ProgressHeartbeatIntervalSeconds = 60
                     $regPermissionParams.OnProgressHeartbeat = {
                         $elapsed = $regPermStopwatch.Elapsed
                         $elapsedMin = [math]::Floor($elapsed.TotalMinutes)
