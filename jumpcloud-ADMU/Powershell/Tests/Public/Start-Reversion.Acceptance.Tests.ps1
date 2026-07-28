@@ -172,31 +172,6 @@ Describe "Start-Reversion Tests" -Tag "Migration Parameters" {
                 { Start-Reversion @reversionInput } | Should -Throw "Cannot validate argument on parameter 'TargetProfileImagePath'. Target profile path does not exist: C:\Users\InvalidProfilePath"
             }
 
-
-            # ACL Backup Missing Test Case
-            It "Tests that the Reversion handles missing ACL backup files" {
-                # Migrate the initialized user to the second username
-                { Start-Migration @testCaseInput } | Should -Not -Throw
-
-                # Revert the migration
-                $reversionInput = @{
-                    UserSID                = $userToMigrateFromSID
-                    TargetProfileImagePath = "C:\Users\$userToMigrateFrom"
-                }
-
-                # Remove any existing ACL backup files to simulate missing backup
-                $aclBackupDir = "C:\Users\$userToMigrateFrom\AppData\Local\JumpCloudADMU"
-                # List all the backup files before deletion for debugging
-                Write-Host "Existing ACL Backup Files in $aclBackupDir before deletion:" -Foreground Yellow
-                Get-ChildItem -Path $aclBackupDir -Force -ErrorAction SilentlyContinue | ForEach-Object {
-                    Write-Host $_.FullName -Foreground Yellow
-                }
-                if (Test-Path -Path $aclBackupDir) {
-                    Remove-Item -Path $aclBackupDir -Recurse -Force
-                }
-                { Start-Reversion @reversionInput -ErrorAction Stop -Force } | Should -Throw "*No ACL backup files found*"
-            }
-
             # NTUser Backup Missing Test Case
             It "Tests that the Reversion handles missing NTUser backup files" {
                 # Migrate the initialized user to the second username

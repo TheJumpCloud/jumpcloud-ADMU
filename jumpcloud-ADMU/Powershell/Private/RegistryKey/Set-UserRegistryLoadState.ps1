@@ -18,22 +18,19 @@ function Set-UserRegistryLoadState {
         [System.Int32]$counter = 0
     )
     begin {
-        # Write-ToLog -Message:("---- Begin Registry $op $UserSid ----") -Level Verbose -Step "Set-UserRegistryLoadState"
         switch ($hive) {
             "classes" {
                 $key = "HKU\$($UserSid)_Classes_admu"
-                $hiveFile = "$ProfilePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak"
             }
             "root" {
                 $key = "HKU\$($UserSid)_admu"
-                $hiveFile = "$ProfilePath\NTUSER.DAT.BAK"
             }
         }
         If ($counter -ge 0) {
             $counter += 1
         }
-        if ($counter -gt 3) {
-            # if we've tried to close the hive three times, throw error
+        # Allow additional retries so GC / PSDrive teardown can release self-held handles
+        if ($counter -gt 5) {
             throw "Registry $op $key failed"
         }
     }
@@ -41,78 +38,41 @@ function Set-UserRegistryLoadState {
         $username = Convert-SecurityIdentifier $UserSid
         switch ($op) {
             "Load" {
-                switch ($hive) {
-                    "root" {
-                        [gc]::collect()
-                        $results = Set-RegistryExe -op Load -hive root -UserSid $UserSid -ProfilePath $ProfilePath
-                        if ($results) {
-                            Write-ToLog "Load Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
-                        } else {
-                            $processList = Get-ProcessByOwner -username $username
-                            if ($processList) {
-                                Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
-                            }
-                            Set-UserRegistryLoadState -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
-                        }
+                Clear-RegistryProviderHandle
+                $results = Set-RegistryExe -op Load -hive $hive -UserSid $UserSid -ProfilePath $ProfilePath
+                if ($results) {
+                    Write-ToLog "Load Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
+                } else {
+                    $processList = Get-ProcessByOwner -username $username
+                    if ($processList) {
+                        Show-ProcessListResult -ProcessList $processList -domainUsername $username
+                    } else {
+                        Write-ToLog "No processes found for $username; retrying load after releasing registry provider handles (attempt $counter)" -Level Verbose -Step "Set-UserRegistryLoadState"
                     }
-                    "classes" {
-                        [gc]::collect()
-                        $results = Set-RegistryExe -op Load -hive classes -UserSid $UserSid -ProfilePath $ProfilePath
-                        if ($results) {
-                            Write-ToLog "Load Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
-                        } else {
-                            $processList = Get-ProcessByOwner -username $username
-                            if ($processList) {
-                                Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
-                            }
-                            Set-UserRegistryLoadState -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
-                        }
-                    }
+                    Start-Sleep -Seconds 2
+                    Set-UserRegistryLoadState -op Load -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive $hive
                 }
-
-
             }
             "Unload" {
-                switch ($hive) {
-                    "root" {
-                        [gc]::collect()
-
-                        $results = Set-RegistryExe -op Unload -hive root -UserSid $UserSid -ProfilePath $ProfilePath
-                        if ($results) {
-                            Write-ToLog "Unload Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
-
-                        } else {
-                            $processList = Get-ProcessByOwner -username $username
-                            if ($processList) {
-                                Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
-                            }
-                            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive root
-                        }
+                # Release PSDrive / provider handles held by this process before REG UNLOAD.
+                # User-owned processes are rarely the locker at this stage; ADMU itself is.
+                Clear-RegistryProviderHandle
+                $results = Set-RegistryExe -op Unload -hive $hive -UserSid $UserSid -ProfilePath $ProfilePath
+                if ($results) {
+                    Write-ToLog "Unload Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
+                } else {
+                    $processList = Get-ProcessByOwner -username $username
+                    if ($processList) {
+                        Show-ProcessListResult -ProcessList $processList -domainUsername $username
+                    } else {
+                        Write-ToLog "No processes found for $username. REG UNLOAD is likely blocked by open handles in the ADMU process (PID $PID). Retrying after GC/PSDrive release (attempt $counter)." -Level Verbose -Step "Set-UserRegistryLoadState"
                     }
-                    "classes" {
-                        [gc]::collect()
-
-                        $results = Set-RegistryExe -op Unload -hive classes -UserSid $UserSid -ProfilePath $ProfilePath
-                        if ($results) {
-                            Write-ToLog "Unload Successful: $results" -Level Verbose -Step "Set-UserRegistryLoadState"
-
-                        } else {
-                            $processList = Get-ProcessByOwner -username $username
-                            if ($processList) {
-                                Show-ProcessListResult -ProcessList $processList -domainUsername $username
-                                # $CloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
-                            }
-                            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive classes
-                        }
-                    }
+                    Start-Sleep -Seconds 2
+                    Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -counter $counter -hive $hive
                 }
             }
         }
     }
     end {
-        # Write-ToLog -Message:("---- End Registry $op $UserSid ----") -Level Verbose -Step "Set-UserRegistryLoadState"
     }
 }
