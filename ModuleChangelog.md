@@ -1,6 +1,6 @@
 ## 2.16.3
 
-Release Date: July 24, 2026
+Release Date: July 28, 2026
 
 #### RELEASE NOTES
 
@@ -18,6 +18,7 @@ Release Date: July 24, 2026
 #### BUG FIXES:
 - Profile Reversion Failure: Fixed an issue that caused the migration revert process to fail when it encountered a temporary profile tied to the user's original SID.
 - This release addresses an issue with early validation failures during the migration process. This release ensures that the migration process restores the interactive logon policy even if the migration process exits early.
+- Added reset to some Appx packages when running the UWP post migration
 
 
 ## 2.16.2
