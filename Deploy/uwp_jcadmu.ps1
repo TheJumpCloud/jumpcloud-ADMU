@@ -1228,8 +1228,17 @@ if ($SetPermissionsMode -eq $true) {
                         foreach ($pkgName in $resetPackages) {
                             try {
                                 "Attempting to reset appx package: $pkgName" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                                Get-AppxPackage $pkgName -ErrorAction Stop | Reset-AppxPackage -ErrorAction Stop
-                                "Successfully reset appx package: $pkgName" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+
+                                # Check if the package exists first
+                                $appPackage = Get-AppxPackage $pkgName -ErrorAction SilentlyContinue
+
+                                if ($appPackage) {
+                                    $appPackage | Reset-AppxPackage -ErrorAction Stop
+                                    "Successfully reset appx package: $pkgName" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                                } else {
+                                    # Log that it wasn't found so you don't get a false success
+                                    "Appx package not found for user, skipping reset: $pkgName" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                                }
                             } catch {
                                 "Failed to reset appx package $($pkgName): $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                             }
