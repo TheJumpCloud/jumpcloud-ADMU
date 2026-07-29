@@ -18,7 +18,10 @@ function Set-RegPermission {
         Add-Type -Language CSharp -TypeDefinition @'
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Security.AccessControl;
+using System.Security.Principal;
 
 public static class NativeAcl
 {
@@ -205,6 +208,52 @@ public static class NativeAcl
             Marshal.FreeHGlobal(userPtr); Marshal.FreeHGlobal(systemPtr); Marshal.FreeHGlobal(adminsPtr);
         }
     }
+
+    public static void ApplyRootProfilePermissions(string profilePath, string userSid)
+    {
+        EnablePrivileges();
+
+        var sid = new SecurityIdentifier(userSid);
+
+        // 1. Apply to the root profile folder
+        var dirInfo = new DirectoryInfo(profilePath);
+        var dirSecurity = dirInfo.GetAccessControl(AccessControlSections.Access | AccessControlSections.Owner);
+
+        dirSecurity.SetOwner(sid);
+
+        var accessRule = new FileSystemAccessRule(
+            sid, FileSystemRights.FullControl,
+            InheritanceFlags.ContainerInherit | InheritanceFlags.ObjectInherit,
+            PropagationFlags.None, // CRITICAL: Do not propagate to children
+            AccessControlType.Allow
+        );
+        dirSecurity.SetAccessRule(accessRule); // Use Set to replace to avoid duplicate ACEs
+
+        dirInfo.SetAccessControl(dirSecurity);
+
+        // 2. Apply to registry hives
+        string[] hiveNames = { "NTUSER.DAT", "UsrClass.dat" };
+        var fileRule = new FileSystemAccessRule(
+            sid, FileSystemRights.FullControl,
+            InheritanceFlags.None,
+            PropagationFlags.None,
+            AccessControlType.Allow
+        );
+
+        foreach (var hiveName in hiveNames)
+        {
+            var hivePath = Path.Combine(profilePath, hiveName);
+            var hiveInfo = new FileInfo(hivePath);
+
+            if (hiveInfo.Exists)
+            {
+                var fileSecurity = hiveInfo.GetAccessControl(AccessControlSections.Access | AccessControlSections.Owner);
+                fileSecurity.SetOwner(sid);
+                fileSecurity.SetAccessRule(fileRule);
+                hiveInfo.SetAccessControl(fileSecurity);
+            }
+        }
+    }
 }
 '@
     }
@@ -368,59 +417,17 @@ public static class NativeAcl
 
     } else {
         # =========================================================================
-        # NON-RECURSIVE: Fallback to existing icacls logic for Root/Scheduled Task prep
+        # NON-RECURSIVE: Use C# .NET API for O(1) performance on root objects
         # =========================================================================
-        $useProgressHeartbeat = $ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat
-
-        # $SourceAccountIcacls = if ($SourceAccountTranslated) { $SourceAccount } else { "*$SourceAccount" }
-        $TargetAccountIcacls = if ($TargetAccountTranslated) { $TargetAccount } else { "*$TargetAccount" }
-
-        Write-ToLog "Preparing root-level ACL for '$FilePath' (target: $TargetAccountIcacls)." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
-
-        $acl = Get-Acl -LiteralPath $FilePath
-        $targetMember = $acl.Access | Where-Object { $_.IdentityReference -eq $TargetAccount }
-        if (-not $targetMember) {
-            Write-ToLog "Adding FullControl ACE for $TargetAccount on root path." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
-            $newRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
-                $TargetAccount, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
-            )
-            $acl.AddAccessRule($newRule)
-            Set-Acl -LiteralPath $FilePath -AclObject $acl
-        } else {
-            Write-ToLog "Target account $TargetAccount already has an ACE on root path." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        Write-ToLog "Applying non-recursive, root-level permissions for '$FilePath' to target SID $TargetSID" -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        try {
+            # This method is specifically designed to be O(1) and only touch the root folder
+            # and the NTUSER.DAT / UsrClass.dat files, without any recursion or propagation.
+            [NativeAcl]::ApplyRootProfilePermissions($FilePath, $TargetSID)
+            Write-ToLog "Successfully applied non-recursive permissions for '$FilePath'." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        } catch {
+            Write-ToLog "Error applying non-recursive permissions for '$FilePath': $($_.Exception.Message)" -Level Error -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+            throw
         }
-
-        $grantArguments = @('/grant', "${TargetAccountIcacls}:(OI)(CI)F", '/C', '/Q')
-        $ownerArguments = @('/setowner', "$TargetAccountIcacls", '/C', '/Q')
-
-        # Step 1: Grant target user
-        Write-ToLog "Granting FullControl to $TargetAccountIcacls on '$FilePath'." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
-        if ($useProgressHeartbeat) {
-            Invoke-IcaclsWithHeartbeat -Path $FilePath -Arguments $grantArguments -HeartbeatIntervalSeconds $ProgressHeartbeatIntervalSeconds -OnHeartbeat $OnProgressHeartbeat | Out-Null
-        } else {
-            & icacls.exe $FilePath $grantArguments 2>&1 | Out-Null
-            $script:IcaclsExitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
-        }
-        if ($script:IcaclsExitCode -ne 0) {
-            Write-ToLog "icacls grant completed with exit code: $script:IcaclsExitCode" -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
-        } else {
-            Write-ToLog "Successfully granted FullControl to $TargetAccountIcacls." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
-        }
-
-        # Step 2: Change ownership
-        Write-ToLog "Setting owner to $TargetAccountIcacls on '$FilePath'." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
-        if ($useProgressHeartbeat) {
-            Invoke-IcaclsWithHeartbeat -Path $FilePath -Arguments $ownerArguments -HeartbeatIntervalSeconds $ProgressHeartbeatIntervalSeconds -OnHeartbeat $OnProgressHeartbeat | Out-Null
-        } else {
-            & icacls.exe $FilePath $ownerArguments 2>&1 | Out-Null
-            $script:IcaclsExitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
-        }
-        if ($script:IcaclsExitCode -ne 0) {
-            Write-ToLog "icacls setowner completed with exit code: $script:IcaclsExitCode" -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
-        } else {
-            Write-ToLog "Successfully set owner to $TargetAccountIcacls." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
-        }
-
-        Write-ToLog "Root-level permission update completed for '$FilePath'." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
     }
 }

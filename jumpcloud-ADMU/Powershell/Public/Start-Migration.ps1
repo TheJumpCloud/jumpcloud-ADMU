@@ -1465,7 +1465,7 @@ function Start-Migration {
                     SourceSID   = $SelectedUserSID
                     TargetSID   = $NewUserSID
                     FilePath    = $newUserProfileImagePath
-                    Recursive   = $true
+                    Recursive   = $false
                     ErrorAction = 'Stop'
                 }
                 # TODO: make this a parameter...
@@ -1489,6 +1489,17 @@ function Start-Migration {
                     Write-ToLog -Message "Heartbeat at $($currentTime): Still processing permissions..." -Level "Info" -Step "Set-RegPermission"
                 } catch {
                     Write-ToLog -Message "Set-RegPermission (recursive C#) failed: $_" -Level Warning
+                }
+
+                # Permissões explícitas nos Hives do Registro
+                $ntuserPath = Join-Path $newUserProfileImagePath "NTUSER.DAT"
+                if (Test-Path $ntuserPath) {
+                    Set-RegPermission -SourceSID $SelectedUserSID -TargetSID $newUserSID -FilePath $ntuserPath
+                }
+
+                $usrClassPath = Join-Path $newUserProfileImagePath "AppData\Local\Microsoft\Windows\UsrClass.dat"
+                if (Test-Path $usrClassPath) {
+                    Set-RegPermission -SourceSID $SelectedUserSID -TargetSID $newUserSID -FilePath $usrClassPath
                 }
 
                 $regPermStopwatch.Stop()
