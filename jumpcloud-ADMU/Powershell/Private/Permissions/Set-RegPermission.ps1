@@ -152,55 +152,84 @@ public static class NativeAcl
         public uint ErrorCode;
     }
 
-    public static List<FailedItem> FailedPaths = new List<FailedItem>();
-    private static FN_PROGRESS _progressDelegate;
-
-    private static void ProgressCallback(IntPtr pObjectName, uint status, IntPtr pInvokeSetting, IntPtr args, bool securitySet)
+    private static IntPtr BuildGrantDacl(IntPtr userPtr, IntPtr systemPtr, IntPtr adminsPtr)
     {
-        if (status != 0) {
-            string path = Marshal.PtrToStringUni(pObjectName) ?? "Unknown Path";
-            FailedPaths.Add(new FailedItem { Path = path, ErrorCode = status });
-        }
+        var entries = new EXPLICIT_ACCESS_W[3];
+
+        // ACE 0: SYSTEM
+        entries[0].grfAccessPermissions = FILE_ALL_ACCESS; entries[0].grfAccessMode = GRANT_ACCESS; entries[0].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+        entries[0].Trustee.pMultipleTrustee = IntPtr.Zero; entries[0].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+        entries[0].Trustee.TrusteeForm = TRUSTEE_IS_SID; entries[0].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN; entries[0].Trustee.ptstrName = systemPtr;
+
+        // ACE 1: Administrators
+        entries[1].grfAccessPermissions = FILE_ALL_ACCESS; entries[1].grfAccessMode = GRANT_ACCESS; entries[1].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+        entries[1].Trustee.pMultipleTrustee = IntPtr.Zero; entries[1].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+        entries[1].Trustee.TrusteeForm = TRUSTEE_IS_SID; entries[1].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN; entries[1].Trustee.ptstrName = adminsPtr;
+
+        // ACE 2: Target User
+        entries[2].grfAccessPermissions = FILE_ALL_ACCESS; entries[2].grfAccessMode = GRANT_ACCESS; entries[2].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+        entries[2].Trustee.pMultipleTrustee = IntPtr.Zero; entries[2].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+        entries[2].Trustee.TrusteeForm = TRUSTEE_IS_SID; entries[2].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN; entries[2].Trustee.ptstrName = userPtr;
+
+        IntPtr dacl;
+        uint ret = SetEntriesInAcl(3, entries, IntPtr.Zero, out dacl);
+        if (ret != 0) throw new InvalidOperationException(string.Format("SetEntriesInAcl: error {0}", ret));
+        return dacl;
     }
 
-    public static FailedItem[] ApplyOwnerAndGrantTree(string root, byte[] userSidBytes, byte[] systemSidBytes, byte[] adminsSidBytes)
+    // Stamps owner + protected DACL on a single object without walking its children. Callers
+    // that already processed the children (the recursive path fans them out across threads)
+    // use this so the container ends up with the same ACL the tree walk would have given it.
+    public static void ApplyOwnerAndGrantSelf(string root, byte[] userSidBytes, byte[] systemSidBytes, byte[] adminsSidBytes)
     {
-        FailedPaths.Clear();
         IntPtr userPtr   = SidToUnmanaged(userSidBytes);
         IntPtr systemPtr = SidToUnmanaged(systemSidBytes);
         IntPtr adminsPtr = SidToUnmanaged(adminsSidBytes);
         IntPtr dacl      = IntPtr.Zero;
         try {
-            var entries = new EXPLICIT_ACCESS_W[3];
+            dacl = BuildGrantDacl(userPtr, systemPtr, adminsPtr);
 
-            // ACE 0: SYSTEM
-            entries[0].grfAccessPermissions = FILE_ALL_ACCESS; entries[0].grfAccessMode = GRANT_ACCESS; entries[0].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
-            entries[0].Trustee.pMultipleTrustee = IntPtr.Zero; entries[0].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
-            entries[0].Trustee.TrusteeForm = TRUSTEE_IS_SID; entries[0].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN; entries[0].Trustee.ptstrName = systemPtr;
+            uint r = SetNamedSecurityInfo(root, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION, userPtr, IntPtr.Zero, dacl, IntPtr.Zero);
+            if (r != 0) throw new InvalidOperationException(string.Format("SetNamedSecurityInfo (protect root) \"{0}\": error {1}", root, r));
+        } finally {
+            if (dacl != IntPtr.Zero) LocalFree(dacl);
+            Marshal.FreeHGlobal(userPtr); Marshal.FreeHGlobal(systemPtr); Marshal.FreeHGlobal(adminsPtr);
+        }
+    }
 
-            // ACE 1: Administrators
-            entries[1].grfAccessPermissions = FILE_ALL_ACCESS; entries[1].grfAccessMode = GRANT_ACCESS; entries[1].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
-            entries[1].Trustee.pMultipleTrustee = IntPtr.Zero; entries[1].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
-            entries[1].Trustee.TrusteeForm = TRUSTEE_IS_SID; entries[1].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN; entries[1].Trustee.ptstrName = adminsPtr;
+    public static FailedItem[] ApplyOwnerAndGrantTree(string root, byte[] userSidBytes, byte[] systemSidBytes, byte[] adminsSidBytes)
+    {
+        // Failures are collected per invocation so concurrent callers (the recursive path runs this
+        // across a runspace pool) never share or clear each other's results.
+        List<FailedItem> failedPaths = new List<FailedItem>();
+        FN_PROGRESS progressDelegate = delegate(IntPtr pObjectName, uint status, IntPtr pInvokeSetting, IntPtr args, bool securitySet)
+        {
+            if (status != 0) {
+                string path = Marshal.PtrToStringUni(pObjectName) ?? "Unknown Path";
+                lock (failedPaths) {
+                    failedPaths.Add(new FailedItem { Path = path, ErrorCode = status });
+                }
+            }
+        };
 
-            // ACE 2: Target User
-            entries[2].grfAccessPermissions = FILE_ALL_ACCESS; entries[2].grfAccessMode = GRANT_ACCESS; entries[2].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
-            entries[2].Trustee.pMultipleTrustee = IntPtr.Zero; entries[2].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
-            entries[2].Trustee.TrusteeForm = TRUSTEE_IS_SID; entries[2].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN; entries[2].Trustee.ptstrName = userPtr;
+        IntPtr userPtr   = SidToUnmanaged(userSidBytes);
+        IntPtr systemPtr = SidToUnmanaged(systemSidBytes);
+        IntPtr adminsPtr = SidToUnmanaged(adminsSidBytes);
+        IntPtr dacl      = IntPtr.Zero;
+        try {
+            dacl = BuildGrantDacl(userPtr, systemPtr, adminsPtr);
 
-            uint ret = SetEntriesInAcl(3, entries, IntPtr.Zero, out dacl);
-            if (ret != 0) throw new InvalidOperationException(string.Format("SetEntriesInAcl: error {0}", ret));
+            uint r1 = TreeSetNamedSecurityInfo(root, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION, userPtr, IntPtr.Zero, dacl, IntPtr.Zero, TREE_SEC_INFO_SET, progressDelegate, PROG_INVOKE_ON_ERROR, IntPtr.Zero);
+            GC.KeepAlive(progressDelegate);
 
-            _progressDelegate = ProgressCallback;
-
-            uint r1 = TreeSetNamedSecurityInfo(root, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION, userPtr, IntPtr.Zero, dacl, IntPtr.Zero, TREE_SEC_INFO_SET, _progressDelegate, PROG_INVOKE_ON_ERROR, IntPtr.Zero);
-
-            if (r1 != 0 && FailedPaths.Count == 0) throw new InvalidOperationException(string.Format("TreeSetNamedSecurityInfo \"{0}\": error {1}", root, r1));
+            int failureCount;
+            lock (failedPaths) { failureCount = failedPaths.Count; }
+            if (r1 != 0 && failureCount == 0) throw new InvalidOperationException(string.Format("TreeSetNamedSecurityInfo \"{0}\": error {1}", root, r1));
 
             uint r2 = SetNamedSecurityInfo(root, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION, userPtr, IntPtr.Zero, dacl, IntPtr.Zero);
             if (r2 != 0) throw new InvalidOperationException(string.Format("SetNamedSecurityInfo (protect root) \"{0}\": error {1}", root, r2));
 
-            return FailedPaths.ToArray();
+            lock (failedPaths) { return failedPaths.ToArray(); }
         } finally {
             if (dacl != IntPtr.Zero) LocalFree(dacl);
             Marshal.FreeHGlobal(userPtr); Marshal.FreeHGlobal(systemPtr); Marshal.FreeHGlobal(adminsPtr);
@@ -371,13 +400,7 @@ public static class NativeAcl
                 $res = Invoke-NativeTreeAcl -Root $file -TargetSidBytes $targetSidBytes -SystemSidBytes $systemSidBytes -AdminSidBytes $adminSidBytes
                 if ($null -ne $res) { $failedItems += $res }
             }
-
-            # Finally, manually set the root folder ACL container (Calling NativeAcl here would pointlessly recurse again)
-            $rootAcl = Get-Acl -LiteralPath $FilePath
-            $newRule = New-Object System.Security.AccessControl.FileSystemAccessRule($TargetAccount, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
-            $rootAcl.AddAccessRule($newRule)
-            $rootAcl.SetOwner($TargetSIDObj)
-            Set-Acl -LiteralPath $FilePath -AclObject $rootAcl
+            [NativeAcl]::ApplyOwnerAndGrantSelf($FilePath, $targetSidBytes, $systemSidBytes, $adminSidBytes)
 
             # Evaluate any items that could not be processed natively
             if ($failedItems.Count -gt 0) {

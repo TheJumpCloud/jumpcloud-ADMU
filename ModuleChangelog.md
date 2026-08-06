@@ -11,6 +11,8 @@ Release Date: August 6, 2026
 #### IMPROVEMENTS:
 - Progress step messages "Setting NTFS File Permissions (N min/sec elapsed)"
 - User-facing log lines for recursive vs deferred permission modes are clarified.
+#### BUG FIXES:
+- Set-RegPermission now applies the same protected DACL to the profile root folder that it applies to the rest of the tree, so the root no longer misses the SYSTEM and Administrators full control entries or keeps inherited permissions from the parent folder.
 
 ## 2.16.2
 
