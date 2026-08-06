@@ -36,34 +36,50 @@ function Get-UserFileTypeAssociation {
         $UseAdmuPath = $true
     )
     begin {
-        # define a list
         $manifestList = [System.Collections.ArrayList]::new()
-        # dynamically create the path to search
-        $basePath = "HKEY_USERS:\$($UserSid)"
-        $pathSuffix = "\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\"
-
-        if ($UseAdmuPath) {
-            $fullPath = "$($basePath)_admu$($pathSuffix)"
+        $hiveRoot = if ($UseAdmuPath) {
+            "$($UserSid)_admu"
         } else {
-            $fullPath = "$($basePath)$($pathSuffix)"
+            $UserSid
         }
-        # Validate file permissions on registry item
-        Set-HKEYUserMount
+        $fileExtsPath = "$hiveRoot\Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts"
     }
     process {
+        # Use disposable .NET RegistryKey handles — PowerShell provider access leaves
+        # open handles that block REG UNLOAD of manually loaded profile hives.
+        $extsKey = $null
+        try {
+            $extsKey = [Microsoft.Win32.Registry]::Users.OpenSubKey($fileExtsPath, $false)
+            if ($null -eq $extsKey) {
+                # Do not return $manifestList here — end still runs and would emit it twice.
+                return
+            }
 
-        # Test path for file type associations
-        if (Test-Path $fullPath) {
-            $exts = Get-ChildItem $fullPath*
-            foreach ($ext in $exts) {
-                $indivExtension = $ext.PSChildName
-                $progId = (Get-ItemProperty "$($fullPath)\$indivExtension\UserChoice" -ErrorAction SilentlyContinue).ProgId
-                if ( ( -NOT [System.String]::IsNullOrEmpty($indivExtension) ) -AND ( -NOT [System.String]::IsNullOrEmpty($progId) ) ) {
-                    $manifestList.Add([PSCustomObject]@{
-                            extension = $indivExtension
-                            programId = $progId
-                        }) | Out-Null
+            foreach ($indivExtension in $extsKey.GetSubKeyNames()) {
+                $userChoiceKey = $null
+                try {
+                    $userChoiceKey = $extsKey.OpenSubKey("$indivExtension\UserChoice", $false)
+                    if ($null -eq $userChoiceKey) {
+                        continue
+                    }
+                    $progId = $userChoiceKey.GetValue("ProgId")
+                    if ( ( -NOT [System.String]::IsNullOrEmpty($indivExtension) ) -AND ( -NOT [System.String]::IsNullOrEmpty($progId) ) ) {
+                        $manifestList.Add([PSCustomObject]@{
+                                extension = $indivExtension
+                                programId = $progId
+                            }) | Out-Null
+                    }
+                } finally {
+                    if ($null -ne $userChoiceKey) {
+                        $userChoiceKey.Close()
+                        $userChoiceKey.Dispose()
+                    }
                 }
+            }
+        } finally {
+            if ($null -ne $extsKey) {
+                $extsKey.Close()
+                $extsKey.Dispose()
             }
         }
     }

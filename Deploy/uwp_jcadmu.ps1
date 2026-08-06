@@ -1234,7 +1234,7 @@ if ($SetPermissionsMode -eq $true) {
                     $UWPForm.Percent = 0
 
                     Write-ToLog -Message ("There are $($allListsCount) items to be registered")
-                    $timeoutSeconds = 120  # Set the maximum wait time in seconds for the APPX job
+                    $timeoutSeconds = 600  # Set the maximum wait time in seconds for the APPX job
                     $startTime = Get-Date
 
                     while (($j.State -ne "Completed") -and ($j.State -ne "Failed") -and (((Get-Date).Subtract($startTime).TotalSeconds) -lt $timeoutSeconds)) {
