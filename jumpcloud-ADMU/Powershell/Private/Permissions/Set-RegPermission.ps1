@@ -365,9 +365,10 @@ public static class NativeAcl
             $runspace.Close()
             $runspace.Dispose()
 
-            # Sub-directories were applied in parallel, but root files were excluded. Process them:
+            # Sub-directories were applied in parallel, but root files were excluded. Process them
+            # via Invoke-NativeTreeAcl so tests can mock failed-item results.
             foreach ($file in [System.IO.Directory]::EnumerateFiles($FilePath)) {
-                $res = [NativeAcl]::ApplyOwnerAndGrantTree($file, $targetSidBytes, $systemSidBytes, $adminSidBytes)
+                $res = Invoke-NativeTreeAcl -Root $file -TargetSidBytes $targetSidBytes -SystemSidBytes $systemSidBytes -AdminSidBytes $adminSidBytes
                 if ($null -ne $res) { $failedItems += $res }
             }
 
