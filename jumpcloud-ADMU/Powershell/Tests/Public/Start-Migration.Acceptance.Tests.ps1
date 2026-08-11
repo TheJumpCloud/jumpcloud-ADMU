@@ -959,7 +959,7 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the user already exists. To resolve the issue, remove the local user from this device before attempting migration again."
                 }
             }
-            It "Start-Migration should successfully complete even if a background process locks the registry backup file" {
+            It "Start-Migration should fail and log the locking process if a background process locks the registry backup file" {
                 # set the $testCaseInput parameters
                 $testCaseInput.JumpCloudUserName = $userToMigrateTo
                 $testCaseInput.SelectedUserName = $userToMigrateFrom
@@ -984,13 +984,18 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                 $bgProcess = Start-Process -FilePath "powershell.exe" -ArgumentList "-WindowStyle Hidden -NoProfile -EncodedCommand $encodedCommand" -PassThru
 
                 # Act: Run Start-Migration
-                # If Stop-FileLockingProcess fails, this will throw a Win32 Sharing Violation error.
-                { Start-Migration @testCaseInput } | Should -Not -Throw
+                # ADMU no longer forcefully kills file locks, so it should throw due to a Win32 Failure
+                { Start-Migration @testCaseInput } | Should -Throw
+                $script:testFailureExpected = $true
 
-                # Assert: The background process should have been forcefully killed by ADMU
-                $bgProcess.HasExited | Should -Be $true
+                # Assert: The background process should STILL be running
+                $bgProcess.HasExited | Should -Be $false
 
-                # Teardown failsafe (just in case the test failed and the process survived)
+                # Assert: Check the log for the RestartManager lock detection output
+                $logContent = Get-Content -Path $logPath -Raw -ErrorAction SilentlyContinue
+                $logContent | Should -Match "Lock detected!.*currently held by:.*powershell"
+
+                # Teardown failsafe to clean up the hanging process
                 if (-not $bgProcess.HasExited) {
                     Stop-Process -Id $bgProcess.Id -Force -ErrorAction SilentlyContinue
                 }
