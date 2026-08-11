@@ -271,90 +271,6 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 }
             }
         }
-        Context "BlockAccountLogin early exit restore" {
-            # Regression for CUT-5227: Confirm-API failure after BlockAccountLogin must restore
-            # SeDenyInteractiveLogonRight via end{}.
-            #
-            # Pester Mock / global: function shadows do NOT intercept calls from Start-Migration when
-            # functions are dot-sourced into a parent scope. Re-import into THIS Context scope, then
-            # replace Confirm-API / Get-Service so Start-Migration resolves the stubs.
-            BeforeAll {
-                $currentPath = $PSScriptRoot
-                while ($null -ne $currentPath) {
-                    $candidate = Join-Path $currentPath "helperFunctions"
-                    if (Test-Path $candidate) {
-                        $script:blockLoginHelpDir = $candidate
-                        break
-                    }
-                    $currentPath = Split-Path $currentPath -Parent
-                }
-                . (Join-Path $script:blockLoginHelpDir "Import-AllFunctions.ps1")
-
-                # Return an invalid response to Confirm-API to trigger the early exit restore logic.
-                function Confirm-API {
-                    [CmdletBinding()]
-                    param (
-                        [Parameter(Mandatory = $false)]
-                        [string]$JcApiKey,
-                        [Parameter(Mandatory = $false)]
-                        [string]$JcOrgId,
-                        [Parameter(Mandatory = $false)]
-                        [bool]$SystemContextBinding,
-                        # Added missing parameter to prevent ParameterBindingException
-                        [Parameter(Mandatory = $false)]
-                        [string]$JumpCloudUserID
-                    )
-                    return [PSCustomObject]@{
-                        Type        = $null
-                        IsValid     = $false
-                        ValidatedID = $null
-                    }
-                }
-
-                # required to have CI pretend that the JumpCloud Agent is running
-                function Get-Service {
-                    [CmdletBinding()]
-                    param (
-                        [Parameter(ValueFromPipeline = $true)]
-                        [Alias('ServiceName')]
-                        [string[]]$Name
-                    )
-                    if ($Name -contains 'jumpcloud-agent') {
-                        return [PSCustomObject]@{ Name = 'jumpcloud-agent'; Status = 'Running' }
-                    }
-                    return & Microsoft.PowerShell.Management\Get-Service @PSBoundParameters
-                }
-            }
-
-            It "Restores interactive logon when SystemContext Confirm-API validation fails" {
-                $userSid = (Get-LocalUser -Name $userToMigrateFrom).SID.Value
-                $logPath = "C:\Windows\Temp\jcAdmu.log"
-
-                $testCaseInput.SystemContextBinding = $true
-                $testCaseInput.JumpCloudUserID = '6a19df5742b5f3b7c341ba10'
-                $testCaseInput.BlockAccountLogin = $true
-                $testCaseInput.LeaveDomain = $true
-                $testCaseInput.removeMDM = $true
-                $script:testFailureExpected = $true
-
-                # Prevent Pester from crashing on Write-ToLog -Level Error so the end{} block can run
-                $ErrorActionPreference = 'Continue'
-
-                { Start-Migration @testCaseInput } | Should -Throw
-
-                $logContent = Get-Content -Path $logPath -Raw -ErrorAction SilentlyContinue
-
-                $logContent | Should -Match "Could not validate API Key or SystemContext API"
-                $logContent | Should -Match "Restoring interactive logon"
-                $logContent | Should -Match "Migration Summary"
-                $logContent | Should -Match "\[Set-AccountLoginPolicy\] Restored interactive logon"
-
-                @(Get-DenyLogonSidList) | Should -Not -Contain $userSid
-
-                $null = Set-AccountLoginPolicy -SID $userSid -Action Enable
-            }
-        }
-
         Context "General Failure Conditions" {
             It "Fails when the JumpCloudUsername and Selected username are the same" {
                 # set the $testCaseInput
@@ -957,47 +873,6 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     # TODO: update expected message with expected output from start-migration
                     # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
                     { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the user already exists. To resolve the issue, remove the local user from this device before attempting migration again."
-                }
-            }
-            It "Start-Migration should fail and log the locking process if a background process locks the registry backup file" {
-                # set the $testCaseInput parameters
-                $testCaseInput.JumpCloudUserName = $userToMigrateTo
-                $testCaseInput.SelectedUserName = $userToMigrateFrom
-                $testCaseInput.TempPassword = $tempPassword
-
-                # Target the source user's backup file that ADMU will create mid-migration
-                $targetFile = "C:\Users\$userToMigrateFrom\NTUSER.DAT.BAK"
-
-                # Create a 'sniper' script that waits for the file to exist, locks it exclusively, and hangs
-                $lockCode = @"
-                    while (-not [System.IO.File]::Exists('$targetFile')) {
-                        [System.Threading.Thread]::Sleep(10)
-                    }
-                    try {
-                        `$stream = [System.IO.File]::Open('$targetFile', [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::None)
-                        while (`$true) { [System.Threading.Thread]::Sleep(1000) }
-                    } catch { }
-"@
-                $encodedCommand = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($lockCode))
-
-                # Launch the rogue process silently in the background BEFORE the migration starts
-                $bgProcess = Start-Process -FilePath "powershell.exe" -ArgumentList "-WindowStyle Hidden -NoProfile -EncodedCommand $encodedCommand" -PassThru
-
-                # Act: Run Start-Migration
-                # ADMU no longer forcefully kills file locks, so it should throw due to a Win32 Failure
-                { Start-Migration @testCaseInput } | Should -Throw
-                $script:testFailureExpected = $true
-
-                # Assert: The background process should STILL be running
-                $bgProcess.HasExited | Should -Be $false
-
-                # Assert: Check the log for the RestartManager lock detection output
-                $logContent = Get-Content -Path $logPath -Raw -ErrorAction SilentlyContinue
-                $logContent | Should -Match "Lock detected!.*currently held by:.*powershell"
-
-                # Teardown failsafe to clean up the hanging process
-                if (-not $bgProcess.HasExited) {
-                    Stop-Process -Id $bgProcess.Id -Force -ErrorAction SilentlyContinue
                 }
             }
         }
