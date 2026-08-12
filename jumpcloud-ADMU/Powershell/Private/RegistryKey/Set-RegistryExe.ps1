@@ -115,10 +115,6 @@ function Set-RegistryExe {
         }
     }
     process {
-        # Temporarily relax Pester's strict error rules so *>&1 doesn't abort the function
-        $oldErrPref = $ErrorActionPreference
-        $ErrorActionPreference = 'Continue'
-
         switch ($op) {
             "Load" {
                 Write-ToLog "REG LOAD $key $hiveFile" -Level Verbose -Step "Set-RegistryExe"
@@ -129,9 +125,6 @@ function Set-RegistryExe {
                 $results = REG UNLOAD $key *>&1
             }
         }
-
-        # Restore the original error rules immediately
-        $ErrorActionPreference = $oldErrPref
 
         $status = Get-RegistryExeStatus $results
 

@@ -970,13 +970,13 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
 
                 # Create a 'sniper' script that waits for the file to exist, locks it exclusively, and hangs
                 $lockCode = @"
-                    while (-not [System.IO.File]::Exists('$targetFile')) {
-                        [System.Threading.Thread]::Sleep(10)
-                    }
-                    try {
-                        `$stream = [System.IO.File]::Open('$targetFile', [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::None)
-                        while (`$true) { [System.Threading.Thread]::Sleep(1000) }
-                    } catch { }
+        while (-not [System.IO.File]::Exists('$targetFile')) {
+            [System.Threading.Thread]::Sleep(10)
+        }
+        try {
+            `$stream = [System.IO.File]::Open('$targetFile', [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::None)
+            while (`$true) { [System.Threading.Thread]::Sleep(1000) }
+        } catch { }
 "@
                 $encodedCommand = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($lockCode))
 
@@ -984,6 +984,9 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                 $bgProcess = Start-Process -FilePath "powershell.exe" -ArgumentList "-WindowStyle Hidden -NoProfile -EncodedCommand $encodedCommand" -PassThru
 
                 # Act: Run Start-Migration
+                # Overwrite Pester's strict error handling so the native REG LOAD error doesn't abort the function
+                $ErrorActionPreference = 'Continue'
+
                 # ADMU no longer forcefully kills file locks, so it should throw due to a Win32 Failure
                 { Start-Migration @testCaseInput } | Should -Throw
                 $script:testFailureExpected = $true
