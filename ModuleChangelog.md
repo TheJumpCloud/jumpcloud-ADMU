@@ -3,16 +3,23 @@
 Release Date: August 12, 2026
 
 #### RELEASE NOTES
-
 ```
 - Patch to write heartbeat Set-RegPermission.ps1 on file log/gui.
 ```
 
+
 #### IMPROVEMENTS:
 - Progress step messages "Setting NTFS File Permissions (N min/sec elapsed)"
+- Write heartbeat Set-RegPermission.ps1 on file log/gui.
 - User-facing log lines for recursive vs deferred permission modes are clarified.
+- Enhanced SID Validation: Upgraded the profile validation logic to handle scenarios where a primary SID registry key points to a \TEMP profile while the valid .ADMU profile is stored in a .bak key. The process now safely isolates the conflicting TEMP key by automatically appending .old to prevent path collisions.
 #### BUG FIXES:
+```
+- Profile Reversion Failure: Fixed an issue that caused the migration revert process to fail when it encountered a temporary profile tied to the user's original SID.
 - Set-RegPermission now applies the same protected DACL to the profile root folder that it applies to the rest of the tree, so the root no longer misses the SYSTEM and Administrators full control entries or keeps inherited permissions from the parent folder.
+- Added reversal validation for original SID with TEMP profile
+- Addresses an issue with early validation failures during the migration process.
+```
 
 ## 2.16.2
 
