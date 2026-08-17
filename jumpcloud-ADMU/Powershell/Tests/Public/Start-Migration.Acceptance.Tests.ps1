@@ -959,6 +959,50 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the user already exists. To resolve the issue, remove the local user from this device before attempting migration again."
                 }
             }
+            It "Start-Migration should fail and log the locking process if a background process locks the registry backup file" {
+                # set the $testCaseInput parameters
+                $testCaseInput.JumpCloudUserName = $userToMigrateTo
+                $testCaseInput.SelectedUserName = $userToMigrateFrom
+                $testCaseInput.TempPassword = $tempPassword
+
+                # Target the source user's backup file that ADMU will create mid-migration
+                $targetFile = "C:\Users\$userToMigrateFrom\NTUSER.DAT.BAK"
+
+                # Create a 'sniper' script that waits for the file to exist, locks it exclusively, and hangs
+                $lockCode = @"
+        while (-not [System.IO.File]::Exists('$targetFile')) {
+            [System.Threading.Thread]::Sleep(10)
+        }
+        try {
+            `$stream = [System.IO.File]::Open('$targetFile', [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::None)
+            while (`$true) { [System.Threading.Thread]::Sleep(1000) }
+        } catch { }
+"@
+                $encodedCommand = [Convert]::ToBase64String([System.Text.Encoding]::Unicode.GetBytes($lockCode))
+
+                # Launch the rogue process silently in the background BEFORE the migration starts
+                $bgProcess = Start-Process -FilePath "powershell.exe" -ArgumentList "-WindowStyle Hidden -NoProfile -EncodedCommand $encodedCommand" -PassThru
+
+                # Act: Run Start-Migration
+                # Overwrite Pester's strict error handling so the native REG LOAD error doesn't abort the function
+                $ErrorActionPreference = 'Continue'
+
+                # ADMU no longer forcefully kills file locks, so it should throw due to a Win32 Failure
+                { Start-Migration @testCaseInput } | Should -Throw
+                $script:testFailureExpected = $true
+
+                # Assert: The background process should STILL be running
+                $bgProcess.HasExited | Should -Be $false
+
+                # Assert: Check the log for the RestartManager lock detection output
+                $logContent = Get-Content -Path $logPath -Raw -ErrorAction SilentlyContinue
+                $logContent | Should -Match "Lock detected!.*currently held by:.*powershell"
+
+                # Teardown failsafe to clean up the hanging process
+                if (-not $bgProcess.HasExited) {
+                    Stop-Process -Id $bgProcess.Id -Force -ErrorAction SilentlyContinue
+                }
+            }
         }
     }
 
