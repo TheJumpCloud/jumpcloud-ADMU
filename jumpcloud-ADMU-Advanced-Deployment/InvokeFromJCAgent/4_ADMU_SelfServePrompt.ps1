@@ -1,6 +1,9 @@
-# This script is designed to be run from the JumpCloud Console as a Command. It is invoked by the
-# JumpCloud Agent (SYSTEM) on the target system, on a schedule or on demand.
-
+# JumpCloud Command (runs as SYSTEM via the agent). Shows a branded self-service migration prompt to
+# the user being migrated (determined from jcdiscovery.csv / the device description, same as
+# 3_ADMU_Invoke.ps1) when they are logged in. Start -> runs the migration inline exactly like the
+# invoke script (download gui_jcadmu.exe, log off, Start-Migration, reboot; logs to jcAdmu.log).
+# Defer -> stages this script and registers an AtLogon task to re-show the prompt next logon (no
+# command trigger; works for AzureAD/AD/local). Self-contained: no module install needed.
 #region config
 
 # Branding (the ONLY place customer branding is set; functions below are brand-agnostic).
@@ -32,6 +35,7 @@ $UpdateHomePath = $false
 $AutoBindJCUser = $true
 $BindAsAdmin = $false
 $SetDefaultWindowsUser = $true
+$ValidateUserShellFolder = $true    # $false to migrate even if shell folders are redirected (network/VM shares)
 $systemContextBinding = $false      # bind via the agent (no API key); requires JumpCloudUserID in the source data
 $removeMDM = $false
 $postMigrationBehavior = 'Restart'  # 'Restart' or 'Shutdown'
@@ -72,10 +76,8 @@ function Get-JcAgentContext {
 }
 
 function Get-DeviceMigrationUser {
-    # Returns the user(s) to migrate on THIS device, using the same data sources as 3_ADMU_Invoke.ps1.
-    # CSV: match rows by LocalComputerName + SerialNumber with a valid JumpCloudUserName + SID.
-    # Description: 'Pending' entries with sid + un. This is the authoritative "who to migrate"
-    # signal — NOT the console account. Returns @() when there is nothing to migrate.
+    # User(s) to migrate on THIS device (same sources as 3_ADMU_Invoke.ps1): CSV rows matched by
+    # LocalComputerName + SerialNumber, or 'Pending' description entries. Returns @() when none.
     [CmdletBinding()]
     [OutputType([System.Object[]])]
     param(
@@ -135,9 +137,8 @@ function Convert-SidToAccount {
 }
 
 function New-PromptRunnerScript {
-    # Writes the UI-only WPF runner that the interactive task executes in the user's session.
-    # The runner takes all branding as parameters and does NO privileged work; it only shows the
-    # form and writes the chosen action ('start'|'defer'|'closed') to the result file.
+    # Writes the UI-only WPF runner run in the user's session; it shows the form and writes the
+    # chosen action ('start'|'defer'|'closed') to the result file. No privileged work.
     [CmdletBinding()]
     param(
         [Parameter(Mandatory = $true)][string]$Path
@@ -377,9 +378,8 @@ function Disconnect-UserSession {
 }
 
 function Start-SelfServeMigration {
-    # Runs the migration for a single target user, mirroring 3_ADMU_Invoke.ps1: log off sessions,
-    # download/validate gui_jcadmu.exe, run it with the standard Start-Migration parameters, then
-    # restart/shutdown. The exe logs to C:\Windows\Temp\jcAdmu.log, exactly like the invoke flow.
+    # Migrates a single target user, mirroring 3_ADMU_Invoke.ps1: log off, download gui_jcadmu.exe,
+    # run it with the standard Start-Migration params, then restart. Logs to jcAdmu.log.
     [CmdletBinding()]
     [OutputType([bool])]
     param(
@@ -403,18 +403,19 @@ function Start-SelfServeMigration {
     Disconnect-UserSession
 
     $migrationParams = @{
-        JumpCloudUserName     = $Target.JumpCloudUserName
-        SelectedUserName      = $Target.SID
-        TempPassword          = $Config.TempPassword
-        UpdateHomePath        = $Config.UpdateHomePath
-        AutoBindJCUser        = $Config.AutoBindJCUser
-        JumpCloudAPIKey       = $ApiKey
-        BindAsAdmin           = $Config.BindAsAdmin
-        SetDefaultWindowsUser = $Config.SetDefaultWindowsUser
-        LeaveDomain           = $Config.LeaveDomain
-        RemoveMDM             = $Config.removeMDM
-        adminDebug            = $true
-        BlockAccountLogin     = $Config.BlockAccountLogin
+        JumpCloudUserName       = $Target.JumpCloudUserName
+        SelectedUserName        = $Target.SID
+        TempPassword            = $Config.TempPassword
+        UpdateHomePath          = $Config.UpdateHomePath
+        AutoBindJCUser          = $Config.AutoBindJCUser
+        JumpCloudAPIKey         = $ApiKey
+        BindAsAdmin             = $Config.BindAsAdmin
+        SetDefaultWindowsUser   = $Config.SetDefaultWindowsUser
+        ValidateUserShellFolder = $Config.ValidateUserShellFolder
+        LeaveDomain             = $Config.LeaveDomain
+        RemoveMDM               = $Config.removeMDM
+        adminDebug              = $true
+        BlockAccountLogin       = $Config.BlockAccountLogin
     }
     if (-not [string]::IsNullOrWhiteSpace($OrgID)) { $migrationParams['JumpCloudOrgID'] = $OrgID }
     if ($Config.localEXEs) { $migrationParams['localEXEs'] = $true }
@@ -453,13 +454,13 @@ function Start-SelfServeMigration {
 $script:DeferTaskName = 'ADMU-SelfServe-Defer'
 
 function New-DeferLogonTask {
-    # Re-shows the prompt at next logon without a JumpCloud command trigger: stage a copy of this
-    # script and register an AtLogon task (SYSTEM, no -User filter) that re-runs it locally. Works
-    # for any account type (AzureAD/AD/local); the script self-gates on the migrating user.
+    # Re-shows the prompt at next logon without a JumpCloud command trigger: write a copy of this
+    # script's text to a SYSTEM-only path and register an AtLogon task (SYSTEM, no -User filter) that
+    # re-runs it locally. Works for any account type (AzureAD/AD/local); the script self-gates.
     [CmdletBinding()]
     [OutputType([bool])]
     param(
-        [Parameter(Mandatory = $true)][string]$ScriptPath,
+        [Parameter(Mandatory = $false)][string]$ScriptContent,
         [Parameter(Mandatory = $false)][bool]$DryRun = $false
     )
     try {
@@ -469,15 +470,12 @@ function New-DeferLogonTask {
             Write-Host "[selfserve] (DryRun) would stage '$localScript' and register AtLogon task '$script:DeferTaskName'."
             return $true
         }
-        if ([string]::IsNullOrWhiteSpace($ScriptPath) -or -not (Test-Path -LiteralPath $ScriptPath)) {
-            Write-Host "[selfserve] Cannot stage the logon reminder: script path '$ScriptPath' was not found."
+        if ([string]::IsNullOrWhiteSpace($ScriptContent)) {
+            Write-Host "[selfserve] Cannot stage the logon reminder: this script's content could not be captured."
             return $false
         }
         New-Item -ItemType Directory -Path $dir -Force | Out-Null
-        # Copy this script to the staged location (skip when already running from there).
-        $srcFull = (Resolve-Path -LiteralPath $ScriptPath).Path
-        $dstFull = if (Test-Path -LiteralPath $localScript) { (Resolve-Path -LiteralPath $localScript).Path } else { $localScript }
-        if ($srcFull -ne $dstFull) { Copy-Item -LiteralPath $ScriptPath -Destination $localScript -Force }
+        Set-Content -LiteralPath $localScript -Value $ScriptContent -Encoding utf8 -Force
 
         $argLine = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$localScript`""
         $act = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $argLine
@@ -510,9 +508,9 @@ function Remove-DeferLogonTask {
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-# Path to this running script, used to stage a local copy for the AtLogon defer reminder. When run
-# by the JumpCloud agent this is the agent's temp .ps1; when re-run by the reminder it is the staged copy.
-$scriptSelfPath = $PSCommandPath
+# This script's own text, staged for the AtLogon defer reminder. Works whether the agent runs us
+# from a file ($PSCommandPath set) or inline (no file), so the reminder can re-run it at next logon.
+$selfText = if ($PSCommandPath -and (Test-Path -LiteralPath $PSCommandPath)) { Get-Content -LiteralPath $PSCommandPath -Raw } else { $MyInvocation.MyCommand.Definition }
 
 if ([string]::IsNullOrWhiteSpace($JumpCloudAPIKey) -or $JumpCloudAPIKey -eq 'YOURAPIKEY') {
     Write-Host '[selfserve] JumpCloudAPIKey is required.'
@@ -563,21 +561,22 @@ switch ($action) {
         # Run the migration inline for this user, exactly like 3_ADMU_Invoke.ps1 (download exe,
         # log off, run Start-Migration, reboot). Logs stream here and to C:\Windows\Temp\jcAdmu.log.
         $migrationConfig = @{
-            TempPassword          = $TempPassword
-            LeaveDomain           = $LeaveDomain
-            ForceReboot           = $ForceReboot
-            UpdateHomePath        = $UpdateHomePath
-            AutoBindJCUser        = $AutoBindJCUser
-            BindAsAdmin           = $BindAsAdmin
-            SetDefaultWindowsUser = $SetDefaultWindowsUser
-            systemContextBinding  = $systemContextBinding
-            removeMDM             = $removeMDM
-            postMigrationBehavior = $postMigrationBehavior
-            localEXEs             = $localEXEs
-            SetFullPermission     = $SetFullPermission
-            BlockAccountLogin     = $BlockAccountLogin
-            bypassExeValidation   = $bypassExeValidation
-            DryRun                = $DryRun
+            TempPassword            = $TempPassword
+            LeaveDomain             = $LeaveDomain
+            ForceReboot             = $ForceReboot
+            UpdateHomePath          = $UpdateHomePath
+            AutoBindJCUser          = $AutoBindJCUser
+            BindAsAdmin             = $BindAsAdmin
+            SetDefaultWindowsUser   = $SetDefaultWindowsUser
+            ValidateUserShellFolder = $ValidateUserShellFolder
+            systemContextBinding    = $systemContextBinding
+            removeMDM               = $removeMDM
+            postMigrationBehavior   = $postMigrationBehavior
+            localEXEs               = $localEXEs
+            SetFullPermission       = $SetFullPermission
+            BlockAccountLogin       = $BlockAccountLogin
+            bypassExeValidation     = $bypassExeValidation
+            DryRun                  = $DryRun
         }
         $ok = Start-SelfServeMigration -Target $target -Config $migrationConfig -ApiKey $JumpCloudAPIKey -OrgID $JumpCloudOrgID
         if ($ok) {
@@ -587,14 +586,14 @@ switch ($action) {
         } else {
             # Migration did not complete -> keep a reminder so the user is prompted again to retry.
             Write-Host '[selfserve] Migration did not complete; will re-prompt at next logon.'
-            [void](New-DeferLogonTask -ScriptPath $scriptSelfPath -DryRun $DryRun)
+            [void](New-DeferLogonTask -ScriptContent $selfText -DryRun $DryRun)
             exit 1
         }
     }
     default {
         # 'defer', 'closed', or 'timeout' -> re-show the prompt at the next logon (any account type),
         # by re-running this script locally from an AtLogon task. No JumpCloud command trigger needed.
-        [void](New-DeferLogonTask -ScriptPath $scriptSelfPath -DryRun $DryRun)
+        [void](New-DeferLogonTask -ScriptContent $selfText -DryRun $DryRun)
         exit 0
     }
 }

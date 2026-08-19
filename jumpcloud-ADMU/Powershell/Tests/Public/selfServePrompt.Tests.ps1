@@ -108,27 +108,27 @@ Describe "ADMU Self-Service Prompt Script Tests" -Tag "Self Serve Prompt" {
         BeforeEach {
             # Real (offline) New-ScheduledTask* builders run; only mock the disk + registration calls.
             Mock New-Item { }
-            Mock Copy-Item { }
+            Mock Set-Content { }
             Mock Register-ScheduledTask { }
         }
-        It 'stages the script and registers the AtLogon reminder (fixed task name, no -User)' {
-            $result = New-DeferLogonTask -ScriptPath $PSCommandPath -DryRun $false
+        It 'writes the staged script and registers the AtLogon reminder (fixed task name, no -User)' {
+            $result = New-DeferLogonTask -ScriptContent '# self text' -DryRun $false
             $result | Should -Be $true
-            Should -Invoke Copy-Item -Times 1
+            Should -Invoke Set-Content -Times 1 -ParameterFilter { $LiteralPath -like '*JCADMU\selfserve.ps1' }
             Should -Invoke Register-ScheduledTask -Times 1 -ParameterFilter { $TaskName -eq 'ADMU-SelfServe-Defer' }
         }
         It 'does not stage or register in DryRun' {
-            $result = New-DeferLogonTask -ScriptPath $PSCommandPath -DryRun $true
+            $result = New-DeferLogonTask -ScriptContent '# self text' -DryRun $true
             $result | Should -Be $true
-            Should -Invoke Copy-Item -Times 0
+            Should -Invoke Set-Content -Times 0
             Should -Invoke Register-ScheduledTask -Times 0
         }
-        It 'returns false when the source script path is missing' {
-            New-DeferLogonTask -ScriptPath 'C:\nope\missing-selfserve.ps1' -DryRun $false | Should -Be $false
+        It 'returns false when the script content is empty (e.g. path and inline both unavailable)' {
+            New-DeferLogonTask -ScriptContent '' -DryRun $false | Should -Be $false
         }
         It 'returns false when task registration throws' {
             Mock Register-ScheduledTask { throw "denied" }
-            New-DeferLogonTask -ScriptPath $PSCommandPath -DryRun $false | Should -Be $false
+            New-DeferLogonTask -ScriptContent '# self text' -DryRun $false | Should -Be $false
         }
     }
 
