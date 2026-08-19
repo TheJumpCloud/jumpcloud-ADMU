@@ -1,25 +1,11 @@
 # This script is designed to be run from the JumpCloud Console as a Command. It is invoked by the
 # JumpCloud Agent (SYSTEM) on the target system, on a schedule or on demand.
-#
-# It shows a branded self-service migration prompt to the user being migrated and:
-#   * Start Migration -> runs the migration inline, exactly like 3_ADMU_Invoke.ps1 (download/validate
-#     gui_jcadmu.exe, log off sessions, run Start-Migration for the target user, then restart). Only
-#     the kickoff (the prompt) is new; the migration flow and logging (C:\Windows\Temp\jcAdmu.log)
-#     are identical to the admin invoke flow.
-#   * Defer           -> registers an AtLogon scheduled task that re-shows this prompt at the user's
-#     next logon (an API call that re-triggers this Command), then self-deletes.
-#
-# The user to migrate is determined from jcdiscovery.csv / the device description (same as the invoke
-# script). The prompt is shown only when that user is logged in. This script is self-contained: it
-# needs no PowerShell module installed on the device.
-####
-# Update Variables Below
-####
+
 #region config
 
 # Branding (the ONLY place customer branding is set; functions below are brand-agnostic).
-$ProductName = 'Alteryx'
-$HelpUrl = 'https://community.alteryx.com'
+$ProductName = 'JumpCloud'
+$HelpUrl = 'https://jumpcloud.com/blog/automate-active-directory-migration-tool'
 $LogoBase64 = ''                    # optional base64 PNG logo (top-right); '' for none
 $HeadingText = ''                   # optional override; default: "<ProductName> Device Migration Required"
 $BodyText = ''                      # optional override of the body paragraph(s); '' for default
@@ -29,9 +15,6 @@ $BodyText = ''                      # optional override of the body paragraph(s)
 #   'Description' -> read the JumpCloud device description (via API), use 'Pending' entries.
 $dataSource = 'CSV'
 $csvName = 'jcdiscovery.csv'
-
-# Trigger name of THIS Command, used by the defer reminder to re-show the prompt at next logon.
-$PromptTriggerName = 'admu-selfserve-prompt'
 
 # JumpCloud API auth (recommended: pass via a secured command variable rather than hardcoding).
 $JumpCloudAPIKey = 'YOURAPIKEY'
@@ -54,7 +37,7 @@ $removeMDM = $false
 $postMigrationBehavior = 'Restart'  # 'Restart' or 'Shutdown'
 $localEXEs = $false                 # use gui_jcadmu.exe staged in C:\Windows\Temp instead of downloading
 $SetFullPermission = $false
-$BlockAccountLogin = $false
+$BlockAccountLogin = $false          # deny the migrating user from logging back in mid-migration (reverted on completion/failure)
 $bypassExeValidation = $false       # TESTING ONLY with $localEXEs: use the staged exe without GitHub validation
 
 # Testing: when $true, Start logs what it WOULD run instead of migrating; Defer logs instead of scheduling.
@@ -467,60 +450,58 @@ function Start-SelfServeMigration {
     }
 }
 
+$script:DeferTaskName = 'ADMU-SelfServe-Defer'
+
 function New-DeferLogonTask {
-    # Registers an AtLogon task (SYSTEM) for the given user that re-triggers THIS prompt Command at
-    # next logon, then unregisters itself. The re-show is an API call to the prompt Command trigger.
+    # Re-shows the prompt at next logon without a JumpCloud command trigger: stage a copy of this
+    # script and register an AtLogon task (SYSTEM, no -User filter) that re-runs it locally. Works
+    # for any account type (AzureAD/AD/local); the script self-gates on the migrating user.
     [CmdletBinding()]
     [OutputType([bool])]
     param(
-        [Parameter(Mandatory = $true)][string]$TaskUser,
-        [Parameter(Mandatory = $true)][string]$Url,
-        [Parameter(Mandatory = $true)][string]$ApiKey,
-        [Parameter(Mandatory = $false)][string]$OrgID,
-        [Parameter(Mandatory = $true)][string]$PromptTriggerName,
+        [Parameter(Mandatory = $true)][string]$ScriptPath,
         [Parameter(Mandatory = $false)][bool]$DryRun = $false
     )
     try {
-        $dir = 'C:\Windows\JCADMU'   # SYSTEM-only directory (contains the API key)
-        New-Item -ItemType Directory -Path $dir -Force | Out-Null
-        $leaf = ($TaskUser -split '\\')[-1]
-        $taskName = "ADMU-SelfServe-Defer-$leaf"
-        $runnerPath = Join-Path $dir 'defer-runner.ps1'
-
-        $orgHeader = if ([string]::IsNullOrWhiteSpace($OrgID)) { '' } else { "`$h['x-org-id']='$OrgID'" }
-        $body = if ($DryRun) {
-            "Write-Output ""(DryRun) would re-trigger prompt Command '$PromptTriggerName'"""
-        } else {
-            "Invoke-RestMethod -Uri '$Url/api/command/trigger/$PromptTriggerName' -Method POST -Headers `$h -Body '{}' | Out-Null"
+        $dir = 'C:\Windows\JCADMU'   # SYSTEM-only directory (the staged copy contains the API key)
+        $localScript = Join-Path $dir 'selfserve.ps1'
+        if ($DryRun) {
+            Write-Host "[selfserve] (DryRun) would stage '$localScript' and register AtLogon task '$script:DeferTaskName'."
+            return $true
         }
-        $runner = @"
-# Auto-generated by ADMU self-service (defer). Single-use logon reminder.
-`$ErrorActionPreference='Stop'
-try {
-    [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12
-    `$h=@{'Accept'='application/json';'Content-Type'='application/json';'x-api-key'='$ApiKey'}
-    $orgHeader
-    $body
-} catch {
-    Write-Output "Defer reminder failed: `$(`$_.Exception.Message)"
-} finally {
-    try { Unregister-ScheduledTask -TaskName '$taskName' -Confirm:`$false -ErrorAction SilentlyContinue } catch {}
-    try { Remove-Item -LiteralPath '$runnerPath' -Force -ErrorAction SilentlyContinue } catch {}
-}
-"@
-        Set-Content -LiteralPath $runnerPath -Value $runner -Encoding utf8 -Force
+        if ([string]::IsNullOrWhiteSpace($ScriptPath) -or -not (Test-Path -LiteralPath $ScriptPath)) {
+            Write-Host "[selfserve] Cannot stage the logon reminder: script path '$ScriptPath' was not found."
+            return $false
+        }
+        New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        # Copy this script to the staged location (skip when already running from there).
+        $srcFull = (Resolve-Path -LiteralPath $ScriptPath).Path
+        $dstFull = if (Test-Path -LiteralPath $localScript) { (Resolve-Path -LiteralPath $localScript).Path } else { $localScript }
+        if ($srcFull -ne $dstFull) { Copy-Item -LiteralPath $ScriptPath -Destination $localScript -Force }
 
-        $argLine = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$runnerPath`""
+        $argLine = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$localScript`""
         $act = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument $argLine
-        $trg = New-ScheduledTaskTrigger -AtLogOn -User $TaskUser
+        $trg = New-ScheduledTaskTrigger -AtLogOn
         $prc = New-ScheduledTaskPrincipal -UserId 'NT AUTHORITY\SYSTEM' -RunLevel Highest
-        $set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RestartInterval (New-TimeSpan -Minutes 1) -RestartCount 3 -ExecutionTimeLimit (New-TimeSpan -Minutes 30)
-        Register-ScheduledTask -TaskName $taskName -Action $act -Trigger $trg -Principal $prc -Settings $set -Description "JumpCloud ADMU: re-show the self-service migration prompt at next logon (runs once)." -Force | Out-Null
-        Write-Host "[selfserve] Registered defer reminder task '$taskName' for '$TaskUser'."
+        $set = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2)
+        Register-ScheduledTask -TaskName $script:DeferTaskName -Action $act -Trigger $trg -Principal $prc -Settings $set -Description "JumpCloud ADMU: re-show the self-service migration prompt at next logon." -Force | Out-Null
+        Write-Host "[selfserve] Registered logon reminder '$script:DeferTaskName'; the prompt will reappear at next logon."
         return $true
     } catch {
-        Write-Host "[selfserve] Failed to create defer reminder task: $($_.Exception.Message)"
+        Write-Host "[selfserve] Failed to create logon reminder task: $($_.Exception.Message)"
         return $false
+    }
+}
+
+function Remove-DeferLogonTask {
+    # Cleans up the AtLogon reminder + staged copy (called once there is nothing left to migrate).
+    [CmdletBinding()]
+    param()
+    try {
+        Unregister-ScheduledTask -TaskName $script:DeferTaskName -Confirm:$false -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath 'C:\Windows\JCADMU\selfserve.ps1' -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Host "[selfserve] Reminder cleanup issue: $($_.Exception.Message)"
     }
 }
 #endregion functions
@@ -528,6 +509,10 @@ try {
 #region main
 $ErrorActionPreference = 'Stop'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+
+# Path to this running script, used to stage a local copy for the AtLogon defer reminder. When run
+# by the JumpCloud agent this is the agent's temp .ps1; when re-run by the reminder it is the staged copy.
+$scriptSelfPath = $PSCommandPath
 
 if ([string]::IsNullOrWhiteSpace($JumpCloudAPIKey) -or $JumpCloudAPIKey -eq 'YOURAPIKEY') {
     Write-Host '[selfserve] JumpCloudAPIKey is required.'
@@ -551,6 +536,8 @@ try {
 }
 if (-not $targets -or @($targets).Count -eq 0) {
     Write-Host "[selfserve] No user to migrate for this device (per $dataSource); nothing to prompt."
+    # Nothing left to migrate (e.g. migration already completed) -> remove any lingering reminder.
+    Remove-DeferLogonTask
     exit 0
 }
 Write-Host "[selfserve] Migration user(s) for this device: $((@($targets).JumpCloudUserName) -join ', ')"
@@ -593,11 +580,21 @@ switch ($action) {
             DryRun                = $DryRun
         }
         $ok = Start-SelfServeMigration -Target $target -Config $migrationConfig -ApiKey $JumpCloudAPIKey -OrgID $JumpCloudOrgID
-        if ($ok) { exit 0 } else { exit 1 }
+        if ($ok) {
+            # Migrated (or rebooting) -> the reminder is no longer needed.
+            Remove-DeferLogonTask
+            exit 0
+        } else {
+            # Migration did not complete -> keep a reminder so the user is prompted again to retry.
+            Write-Host '[selfserve] Migration did not complete; will re-prompt at next logon.'
+            [void](New-DeferLogonTask -ScriptPath $scriptSelfPath -DryRun $DryRun)
+            exit 1
+        }
     }
     default {
-        # 'defer', 'closed', or 'timeout' -> re-show the prompt at this user's next logon.
-        [void](New-DeferLogonTask -TaskUser $account -Url $ctx.Url -ApiKey $JumpCloudAPIKey -OrgID $JumpCloudOrgID -PromptTriggerName $PromptTriggerName -DryRun $DryRun)
+        # 'defer', 'closed', or 'timeout' -> re-show the prompt at the next logon (any account type),
+        # by re-running this script locally from an AtLogon task. No JumpCloud command trigger needed.
+        [void](New-DeferLogonTask -ScriptPath $scriptSelfPath -DryRun $DryRun)
         exit 0
     }
 }

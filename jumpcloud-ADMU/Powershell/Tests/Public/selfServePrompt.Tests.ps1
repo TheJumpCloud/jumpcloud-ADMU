@@ -106,26 +106,29 @@ Describe "ADMU Self-Service Prompt Script Tests" -Tag "Self Serve Prompt" {
 
     Context 'New-DeferLogonTask' {
         BeforeEach {
-            # Let the real (offline, in-memory) New-ScheduledTask* builders run so their CIM objects
-            # bind correctly to Register-ScheduledTask; only mock the disk write and registration.
+            # Real (offline) New-ScheduledTask* builders run; only mock the disk + registration calls.
             Mock New-Item { }
-            Mock Set-Content { }
+            Mock Copy-Item { }
             Mock Register-ScheduledTask { }
         }
-        It 'registers an AtLogon defer task named per user and returns true' {
-            $result = New-DeferLogonTask -TaskUser 'CORP\jdoe' -Url 'https://console.jumpcloud.com' -ApiKey 'k' -PromptTriggerName 'admu-selfserve-prompt' -DryRun $true
+        It 'stages the script and registers the AtLogon reminder (fixed task name, no -User)' {
+            $result = New-DeferLogonTask -ScriptPath $PSCommandPath -DryRun $false
             $result | Should -Be $true
-            Should -Invoke Register-ScheduledTask -Times 1 -ParameterFilter { $TaskName -eq 'ADMU-SelfServe-Defer-jdoe' }
+            Should -Invoke Copy-Item -Times 1
+            Should -Invoke Register-ScheduledTask -Times 1 -ParameterFilter { $TaskName -eq 'ADMU-SelfServe-Defer' }
         }
-        It 'writes a runner that re-triggers the prompt command trigger' {
-            $captured = $null
-            Mock Set-Content { $script:captured = $Value } -ParameterFilter { $LiteralPath -like '*defer-runner.ps1' }
-            New-DeferLogonTask -TaskUser 'CORP\jdoe' -Url 'https://console.jumpcloud.com' -ApiKey 'k' -PromptTriggerName 'admu-selfserve-prompt' -DryRun $false | Out-Null
-            $script:captured | Should -Match 'api/command/trigger/admu-selfserve-prompt'
+        It 'does not stage or register in DryRun' {
+            $result = New-DeferLogonTask -ScriptPath $PSCommandPath -DryRun $true
+            $result | Should -Be $true
+            Should -Invoke Copy-Item -Times 0
+            Should -Invoke Register-ScheduledTask -Times 0
+        }
+        It 'returns false when the source script path is missing' {
+            New-DeferLogonTask -ScriptPath 'C:\nope\missing-selfserve.ps1' -DryRun $false | Should -Be $false
         }
         It 'returns false when task registration throws' {
             Mock Register-ScheduledTask { throw "denied" }
-            New-DeferLogonTask -TaskUser 'CORP\jdoe' -Url 'https://x' -ApiKey 'k' -PromptTriggerName 't' | Should -Be $false
+            New-DeferLogonTask -ScriptPath $PSCommandPath -DryRun $false | Should -Be $false
         }
     }
 
