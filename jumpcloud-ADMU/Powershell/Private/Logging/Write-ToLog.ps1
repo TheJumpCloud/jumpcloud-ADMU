@@ -60,13 +60,3 @@ function Write-ToLog {
    }
    end {}
 }
-
-function Sync-LogQueue {
-   param(
-      [System.Collections.Concurrent.ConcurrentQueue[string]]$LogQueue
-   )
-    $msg = $null
-    while ($LogQueue.TryDequeue([ref]$msg)) {
-        Write-ToLog -Message $msg
-    }
-}
