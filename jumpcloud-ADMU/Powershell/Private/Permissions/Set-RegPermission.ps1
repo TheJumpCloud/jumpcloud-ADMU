@@ -7,12 +7,13 @@ function Set-RegPermission {
         [Parameter(Mandatory)]
         [string]$FilePath,
         [switch]$Recursive,
-        [int]$ProgressHeartbeatIntervalSeconds = 0,
-        [scriptblock]$OnProgressHeartbeat
+        [int]$ProgressHeartbeatIntervalSeconds = 60,
+        [scriptblock]$OnProgressHeartbeat,
+        [int]$MaxThreads = 4
     )
 
     # ---------------------------------------------------------------------------
-    # Embed NativeAcl C# Class (Compiled once per runspace)
+    # Embed NativeAcl C# Class (Compiled once per AppDomain)
     # ---------------------------------------------------------------------------
     if (-not ([System.Management.Automation.PSTypeName]'NativeAcl').Type) {
         Add-Type -Language CSharp -TypeDefinition @'
@@ -151,55 +152,84 @@ public static class NativeAcl
         public uint ErrorCode;
     }
 
-    public static List<FailedItem> FailedPaths = new List<FailedItem>();
-    private static FN_PROGRESS _progressDelegate;
-
-    private static void ProgressCallback(IntPtr pObjectName, uint status, IntPtr pInvokeSetting, IntPtr args, bool securitySet)
+    private static IntPtr BuildGrantDacl(IntPtr userPtr, IntPtr systemPtr, IntPtr adminsPtr)
     {
-        if (status != 0) {
-            string path = Marshal.PtrToStringUni(pObjectName) ?? "Unknown Path";
-            FailedPaths.Add(new FailedItem { Path = path, ErrorCode = status });
-        }
+        var entries = new EXPLICIT_ACCESS_W[3];
+
+        // ACE 0: SYSTEM
+        entries[0].grfAccessPermissions = FILE_ALL_ACCESS; entries[0].grfAccessMode = GRANT_ACCESS; entries[0].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+        entries[0].Trustee.pMultipleTrustee = IntPtr.Zero; entries[0].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+        entries[0].Trustee.TrusteeForm = TRUSTEE_IS_SID; entries[0].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN; entries[0].Trustee.ptstrName = systemPtr;
+
+        // ACE 1: Administrators
+        entries[1].grfAccessPermissions = FILE_ALL_ACCESS; entries[1].grfAccessMode = GRANT_ACCESS; entries[1].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+        entries[1].Trustee.pMultipleTrustee = IntPtr.Zero; entries[1].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+        entries[1].Trustee.TrusteeForm = TRUSTEE_IS_SID; entries[1].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN; entries[1].Trustee.ptstrName = adminsPtr;
+
+        // ACE 2: Target User
+        entries[2].grfAccessPermissions = FILE_ALL_ACCESS; entries[2].grfAccessMode = GRANT_ACCESS; entries[2].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+        entries[2].Trustee.pMultipleTrustee = IntPtr.Zero; entries[2].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
+        entries[2].Trustee.TrusteeForm = TRUSTEE_IS_SID; entries[2].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN; entries[2].Trustee.ptstrName = userPtr;
+
+        IntPtr dacl;
+        uint ret = SetEntriesInAcl(3, entries, IntPtr.Zero, out dacl);
+        if (ret != 0) throw new InvalidOperationException(string.Format("SetEntriesInAcl: error {0}", ret));
+        return dacl;
     }
 
-    public static FailedItem[] ApplyOwnerAndGrantTree(string root, byte[] userSidBytes, byte[] systemSidBytes, byte[] adminsSidBytes)
+    // Stamps owner + protected DACL on a single object without walking its children. Callers
+    // that already processed the children (the recursive path fans them out across threads)
+    // use this so the container ends up with the same ACL the tree walk would have given it.
+    public static void ApplyOwnerAndGrantSelf(string root, byte[] userSidBytes, byte[] systemSidBytes, byte[] adminsSidBytes)
     {
-        FailedPaths.Clear();
         IntPtr userPtr   = SidToUnmanaged(userSidBytes);
         IntPtr systemPtr = SidToUnmanaged(systemSidBytes);
         IntPtr adminsPtr = SidToUnmanaged(adminsSidBytes);
         IntPtr dacl      = IntPtr.Zero;
         try {
-            var entries = new EXPLICIT_ACCESS_W[3];
+            dacl = BuildGrantDacl(userPtr, systemPtr, adminsPtr);
 
-            // ACE 0: SYSTEM
-            entries[0].grfAccessPermissions = FILE_ALL_ACCESS; entries[0].grfAccessMode = GRANT_ACCESS; entries[0].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
-            entries[0].Trustee.pMultipleTrustee = IntPtr.Zero; entries[0].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
-            entries[0].Trustee.TrusteeForm = TRUSTEE_IS_SID; entries[0].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN; entries[0].Trustee.ptstrName = systemPtr;
+            uint r = SetNamedSecurityInfo(root, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION, userPtr, IntPtr.Zero, dacl, IntPtr.Zero);
+            if (r != 0) throw new InvalidOperationException(string.Format("SetNamedSecurityInfo (protect root) \"{0}\": error {1}", root, r));
+        } finally {
+            if (dacl != IntPtr.Zero) LocalFree(dacl);
+            Marshal.FreeHGlobal(userPtr); Marshal.FreeHGlobal(systemPtr); Marshal.FreeHGlobal(adminsPtr);
+        }
+    }
 
-            // ACE 1: Administrators
-            entries[1].grfAccessPermissions = FILE_ALL_ACCESS; entries[1].grfAccessMode = GRANT_ACCESS; entries[1].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
-            entries[1].Trustee.pMultipleTrustee = IntPtr.Zero; entries[1].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
-            entries[1].Trustee.TrusteeForm = TRUSTEE_IS_SID; entries[1].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN; entries[1].Trustee.ptstrName = adminsPtr;
+    public static FailedItem[] ApplyOwnerAndGrantTree(string root, byte[] userSidBytes, byte[] systemSidBytes, byte[] adminsSidBytes)
+    {
+        // Failures are collected per invocation so concurrent callers (the recursive path runs this
+        // across a runspace pool) never share or clear each other's results.
+        List<FailedItem> failedPaths = new List<FailedItem>();
+        FN_PROGRESS progressDelegate = delegate(IntPtr pObjectName, uint status, IntPtr pInvokeSetting, IntPtr args, bool securitySet)
+        {
+            if (status != 0) {
+                string path = Marshal.PtrToStringUni(pObjectName) ?? "Unknown Path";
+                lock (failedPaths) {
+                    failedPaths.Add(new FailedItem { Path = path, ErrorCode = status });
+                }
+            }
+        };
 
-            // ACE 2: Target User
-            entries[2].grfAccessPermissions = FILE_ALL_ACCESS; entries[2].grfAccessMode = GRANT_ACCESS; entries[2].grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
-            entries[2].Trustee.pMultipleTrustee = IntPtr.Zero; entries[2].Trustee.MultipleTrusteeOperation = NO_MULTIPLE_TRUSTEE;
-            entries[2].Trustee.TrusteeForm = TRUSTEE_IS_SID; entries[2].Trustee.TrusteeType = TRUSTEE_IS_UNKNOWN; entries[2].Trustee.ptstrName = userPtr;
+        IntPtr userPtr   = SidToUnmanaged(userSidBytes);
+        IntPtr systemPtr = SidToUnmanaged(systemSidBytes);
+        IntPtr adminsPtr = SidToUnmanaged(adminsSidBytes);
+        IntPtr dacl      = IntPtr.Zero;
+        try {
+            dacl = BuildGrantDacl(userPtr, systemPtr, adminsPtr);
 
-            uint ret = SetEntriesInAcl(3, entries, IntPtr.Zero, out dacl);
-            if (ret != 0) throw new InvalidOperationException(string.Format("SetEntriesInAcl: error {0}", ret));
+            uint r1 = TreeSetNamedSecurityInfo(root, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION, userPtr, IntPtr.Zero, dacl, IntPtr.Zero, TREE_SEC_INFO_SET, progressDelegate, PROG_INVOKE_ON_ERROR, IntPtr.Zero);
+            GC.KeepAlive(progressDelegate);
 
-            _progressDelegate = ProgressCallback;
-
-            uint r1 = TreeSetNamedSecurityInfo(root, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION, userPtr, IntPtr.Zero, dacl, IntPtr.Zero, TREE_SEC_INFO_SET, _progressDelegate, PROG_INVOKE_ON_ERROR, IntPtr.Zero);
-
-            if (r1 != 0 && FailedPaths.Count == 0) throw new InvalidOperationException(string.Format("TreeSetNamedSecurityInfo \"{0}\": error {1}", root, r1));
+            int failureCount;
+            lock (failedPaths) { failureCount = failedPaths.Count; }
+            if (r1 != 0 && failureCount == 0) throw new InvalidOperationException(string.Format("TreeSetNamedSecurityInfo \"{0}\": error {1}", root, r1));
 
             uint r2 = SetNamedSecurityInfo(root, SE_FILE_OBJECT, OWNER_SECURITY_INFORMATION | DACL_SECURITY_INFORMATION | PROTECTED_DACL_SECURITY_INFORMATION, userPtr, IntPtr.Zero, dacl, IntPtr.Zero);
             if (r2 != 0) throw new InvalidOperationException(string.Format("SetNamedSecurityInfo (protect root) \"{0}\": error {1}", root, r2));
 
-            return FailedPaths.ToArray();
+            lock (failedPaths) { return failedPaths.ToArray(); }
         } finally {
             if (dacl != IntPtr.Zero) LocalFree(dacl);
             Marshal.FreeHGlobal(userPtr); Marshal.FreeHGlobal(systemPtr); Marshal.FreeHGlobal(adminsPtr);
@@ -270,16 +300,23 @@ public static class NativeAcl
         $TargetAccount = $TargetSIDObj.Translate([System.Security.Principal.NTAccount]).Value
         $TargetAccountTranslated = $true
     } catch {
+        Write-ToLog "Could not translate TargetSID $TargetSID to NTAccount. Using SID string instead." -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
         $TargetAccount = $TargetSID
     }
 
+    if (-not $SourceAccountTranslated) {
+        Write-ToLog "Could not translate SourceSID $SourceSID to NTAccount. Using SID string instead." -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+    }
+
+    Write-ToLog "Starting permission update on '$FilePath' (Recursive=$Recursive) from $SourceAccount to $TargetAccount" -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+
     if ($Recursive) {
         # =========================================================================
-        # RECURSIVE: Use C# P/Invoke for maximum performance
+        # RECURSIVE: Use C# P/Invoke via background Runspace for max performance
         # =========================================================================
         $attrs = [System.IO.File]::GetAttributes($FilePath)
         if ($attrs.HasFlag([System.IO.FileAttributes]::ReparsePoint)) {
-            Write-ToLog "Skipping '$FilePath': Root path is a reparse point (symlink or junction). Refusing to follow natively." -Level Warning
+            Write-ToLog "Skipping '$FilePath': Root path is a reparse point (symlink or junction). Refusing to follow natively." -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
             return
         }
 
@@ -297,8 +334,75 @@ public static class NativeAcl
             $adminSidBytes = New-Object byte[] $adminSidObj.BinaryLength
             $adminSidObj.GetBinaryForm($adminSidBytes, 0)
 
-            $failedItems = Invoke-NativeTreeAcl -Root $FilePath -TargetSidBytes $targetSidBytes -SystemSidBytes $systemSidBytes -AdminSidBytes $adminSidBytes
+            # Create an isolated background runspace inside the same process
+            $runspace = [runspacefactory]::CreateRunspacePool(1, $MaxThreads)
+            $runspace.Open()
 
+            $subDirs = [System.IO.Directory]::EnumerateDirectories($FilePath)
+            $jobs = @()
+            $failedItems = @()
+
+            $useProgressHeartbeat = $ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat
+            $heartbeatIntervalMs = if ($useProgressHeartbeat) { [math]::Max(1, $ProgressHeartbeatIntervalSeconds) * 1000 } else { 0 }
+            $heartbeatStopwatch = if ($useProgressHeartbeat) { [System.Diagnostics.Stopwatch]::StartNew() } else { $null }
+
+            # Queue background threads for sub-directories in parallel
+            foreach ($dir in $subDirs) {
+                $ps = [powershell]::Create().AddScript({
+                    param($path, $tgtBytes, $sysBytes, $admBytes)
+                    return [NativeAcl]::ApplyOwnerAndGrantTree($path, $tgtBytes, $sysBytes, $admBytes)
+                }).AddArgument($dir).AddArgument($targetSidBytes).AddArgument($systemSidBytes).AddArgument($adminSidBytes)
+
+                $ps.RunspacePool = $runspace
+
+                $asyncResult = $ps.BeginInvoke()
+                $jobs += [PSCustomObject]@{
+                    Path   = $dir
+                    Pipe   = $ps
+                    Status = $asyncResult
+                }
+
+                # Manage active queue limit & fire UI Heartbeats on the configured interval
+                $activeJobs = @($jobs | Where-Object { $_.Status.IsCompleted -eq $false })
+                while ($activeJobs.Count -ge $MaxThreads) {
+                    if ($useProgressHeartbeat -and $heartbeatStopwatch.ElapsedMilliseconds -ge $heartbeatIntervalMs) {
+                        & $OnProgressHeartbeat
+                        $heartbeatStopwatch.Restart()
+                    }
+                    Start-Sleep -Milliseconds 200
+                    $activeJobs = @($jobs | Where-Object { $_.Status.IsCompleted -eq $false })
+                }
+            }
+
+            # Await the completion of all outstanding queues & fire UI Heartbeats on the configured interval
+            $activeJobs = @($jobs | Where-Object { $_.Status.IsCompleted -eq $false })
+            while ($activeJobs.Count -gt 0) {
+                if ($useProgressHeartbeat -and $heartbeatStopwatch.ElapsedMilliseconds -ge $heartbeatIntervalMs) {
+                    & $OnProgressHeartbeat
+                    $heartbeatStopwatch.Restart()
+                }
+                Start-Sleep -Milliseconds 200
+                $activeJobs = @($jobs | Where-Object { $_.Status.IsCompleted -eq $false })
+            }
+
+            # Harvest Thread Errors & Dispose Pools
+            foreach ($job in $jobs) {
+                $res = $job.Pipe.EndInvoke($job.Status)
+                if ($null -ne $res) { $failedItems += $res }
+                $job.Pipe.Dispose()
+            }
+            $runspace.Close()
+            $runspace.Dispose()
+
+            # Sub-directories were applied in parallel, but root files were excluded. Process them
+            # via Invoke-NativeTreeAcl so tests can mock failed-item results.
+            foreach ($file in [System.IO.Directory]::EnumerateFiles($FilePath)) {
+                $res = Invoke-NativeTreeAcl -Root $file -TargetSidBytes $targetSidBytes -SystemSidBytes $systemSidBytes -AdminSidBytes $adminSidBytes
+                if ($null -ne $res) { $failedItems += $res }
+            }
+            [NativeAcl]::ApplyOwnerAndGrantSelf($FilePath, $targetSidBytes, $systemSidBytes, $adminSidBytes)
+
+            # Evaluate any items that could not be processed natively
             if ($failedItems.Count -gt 0) {
                 $symlinkCount = 0
                 $errorCount = 0
@@ -332,36 +436,54 @@ public static class NativeAcl
         # =========================================================================
         $useProgressHeartbeat = $ProgressHeartbeatIntervalSeconds -gt 0 -and $null -ne $OnProgressHeartbeat
 
-        $SourceAccountIcacls = if ($SourceAccountTranslated) { $SourceAccount } else { "*$SourceAccount" }
         $TargetAccountIcacls = if ($TargetAccountTranslated) { $TargetAccount } else { "*$TargetAccount" }
+
+        Write-ToLog "Preparing root-level ACL for '$FilePath' (target: $TargetAccountIcacls)." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
 
         $acl = Get-Acl -LiteralPath $FilePath
         $targetMember = $acl.Access | Where-Object { $_.IdentityReference -eq $TargetAccount }
         if (-not $targetMember) {
+            Write-ToLog "Adding FullControl ACE for $TargetAccount on root path." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
             $newRule = New-Object System.Security.AccessControl.FileSystemAccessRule(
                 $TargetAccount, "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow"
             )
             $acl.AddAccessRule($newRule)
             Set-Acl -LiteralPath $FilePath -AclObject $acl
+        } else {
+            Write-ToLog "Target account $TargetAccount already has an ACE on root path." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
         }
 
         $grantArguments = @('/grant', "${TargetAccountIcacls}:(OI)(CI)F", '/C', '/Q')
         $ownerArguments = @('/setowner', "$TargetAccountIcacls", '/C', '/Q')
 
         # Step 1: Grant target user
+        Write-ToLog "Granting FullControl to $TargetAccountIcacls on '$FilePath'." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
         if ($useProgressHeartbeat) {
             Invoke-IcaclsWithHeartbeat -Path $FilePath -Arguments $grantArguments -HeartbeatIntervalSeconds $ProgressHeartbeatIntervalSeconds -OnHeartbeat $OnProgressHeartbeat | Out-Null
         } else {
             & icacls.exe $FilePath $grantArguments 2>&1 | Out-Null
             $script:IcaclsExitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
         }
+        if ($script:IcaclsExitCode -ne 0) {
+            Write-ToLog "icacls grant completed with exit code: $script:IcaclsExitCode" -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        } else {
+            Write-ToLog "Successfully granted FullControl to $TargetAccountIcacls." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        }
 
         # Step 2: Change ownership
+        Write-ToLog "Setting owner to $TargetAccountIcacls on '$FilePath'." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
         if ($useProgressHeartbeat) {
             Invoke-IcaclsWithHeartbeat -Path $FilePath -Arguments $ownerArguments -HeartbeatIntervalSeconds $ProgressHeartbeatIntervalSeconds -OnHeartbeat $OnProgressHeartbeat | Out-Null
         } else {
             & icacls.exe $FilePath $ownerArguments 2>&1 | Out-Null
             $script:IcaclsExitCode = if ($null -ne $LASTEXITCODE) { [int]$LASTEXITCODE } else { 0 }
         }
+        if ($script:IcaclsExitCode -ne 0) {
+            Write-ToLog "icacls setowner completed with exit code: $script:IcaclsExitCode" -Level Warning -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        } else {
+            Write-ToLog "Successfully set owner to $TargetAccountIcacls." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
+        }
+
+        Write-ToLog "Root-level permission update completed for '$FilePath'." -Step "Set-RegPermission" -Path $ntfsPermissionLogPath
     }
 }

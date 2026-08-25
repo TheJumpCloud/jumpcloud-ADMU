@@ -1204,27 +1204,44 @@ if ($SetPermissionsMode -eq $true) {
                             $appxSuccessCounter = 0
                             foreach ($item in $appxList) {
                                 try {
-                                    Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml" -ErrorAction SilentlyContinue
+                                    Add-AppxPackage -DisableDevelopmentMode -Register "$($item.InstallLocation)\AppxManifest.xml" -ErrorAction Stop
                                     "Successfully registered $($item.InstallLocation)\AppxManifest.xml" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                                    $appxSuccessCounter++
                                 } catch {
                                     <#Do this if a terminating exception happens#>
                                     "Error registering $($item.InstallLocation)\AppxManifest.xml: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                                 }
-                                $appxSuccessCounter++
                             }
                             "Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                             Write-ToLog -Message ("Appx Package Registration Complete. $appxSuccessCounter/$appxCount apps registered successfully")
                         } catch {
                             "A critical error occurred: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
                         }
-                        # lastly re-register the cloudExperience host appx package
-                        try {
-                            # TODO: review if this is necessary
-                            "Attempting to re-register the cloudExperience host appx package" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                            Get-AppxPackage *windows.cloudexperience* | Reset-AppxPackage
-                            "Successfully re-registered the cloudExperience host appx package" | Out-File -FilePath $logFile -Encoding UTF8 -Append
-                        } catch {
-                            "Failed to re-register the cloudExperience host appx package: $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                        # lastly re-register core Windows experience appx packages
+                        $resetPackages = @(
+                            'MicrosoftWindows.Client.CBS',
+                            'MicrosoftWindows.Client.Core',
+                            'Microsoft.Windows.ShellExperienceHost',
+                            'Microsoft.Windows.StartMenuExperienceHost',
+                            '*windows.cloudexperience*'
+                        )
+                        foreach ($pkgName in $resetPackages) {
+                            try {
+                                "Attempting to reset appx package: $pkgName" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+
+                                # Check if the package exists first
+                                $appPackage = Get-AppxPackage $pkgName -ErrorAction SilentlyContinue
+
+                                if ($appPackage) {
+                                    $appPackage | Reset-AppxPackage -ErrorAction Stop
+                                    "Successfully reset appx package: $pkgName" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                                } else {
+                                    # Log that it wasn't found so you don't get a false success
+                                    "Appx package not found for user, skipping reset: $pkgName" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                                }
+                            } catch {
+                                "Failed to reset appx package $($pkgName): $($_.Exception.Message)" | Out-File -FilePath $logFile -Encoding UTF8 -Append
+                            }
                         }
                     } -ArgumentList $homepath
 
