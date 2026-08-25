@@ -93,6 +93,18 @@ Describe "Set-RegPermission Acceptance Tests" -Tag "Acceptance" {
 
             $rootAcl.Owner | Should -Be $targetAccount
 
+            $rootAcl.AreAccessRulesProtected | Should -BeTrue
+
+            $systemAccount = ([System.Security.Principal.SecurityIdentifier]'S-1-5-18').Translate([System.Security.Principal.NTAccount]).Value
+            $adminAccount = ([System.Security.Principal.SecurityIdentifier]'S-1-5-32-544').Translate([System.Security.Principal.NTAccount]).Value
+
+            foreach ($identity in @($systemAccount, $adminAccount, $targetAccount)) {
+                $rootRule = $rootAcl.Access | Where-Object {
+                    $_.IdentityReference -eq $identity -and $_.FileSystemRights -match "FullControl"
+                }
+                $rootRule | Should -Not -BeNullOrEmpty -Because "$identity should have FullControl on the root"
+            }
+
             # Assert - Child Items
             $childItems = Get-ChildItem -Path $script:testDir -Recurse
             $childItems.Count | Should -BeGreaterThan 0

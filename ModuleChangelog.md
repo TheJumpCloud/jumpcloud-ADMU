@@ -1,9 +1,8 @@
 ## 2.16.3
 
-Release Date: August 12, 2026
+Release Date: August 24, 2026
 
 #### RELEASE NOTES
-
 ```
 - Faster profile migrations
 - Simplified reversion process
@@ -25,7 +24,6 @@ No new features were introduced in this release. The focus is on performance imp
 - **Proactive Username Validation:** Added a pre-check to verify username length before creation, generating a specific log error when a username is 20 characters or longer.
 - **Enhanced Error Logging:** Updated the user creation step with robust error handling to ensure all failures (such as character limits or password complexity requirements) are successfully captured in the migration logs.
 - Enhanced SID Validation: Upgraded the profile validation logic to handle scenarios where a primary SID registry key points to a \TEMP profile while the valid .ADMU profile is stored in a .bak key. The process now safely isolates the conflicting TEMP key by automatically appending .old to prevent path collisions.
-
 #### BUG FIXES:
 
 - Eliminated reliance on ACL backup files during profile reversion by consistently applying permissions through Set-RegPermission, improving the reliability and consistency of permission restoration.
