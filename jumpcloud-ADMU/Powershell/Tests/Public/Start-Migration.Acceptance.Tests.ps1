@@ -232,6 +232,21 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 $logonUI.SelectedUserSID | Should -Not -Be $UserSID
             }
         }
+        Context "Registry step logging" {
+            It "Start-Migration should log the start and the exit code of each registry copy" {
+                # run Start-Migration
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                $logContent = Get-Content -Path "C:\Windows\Temp\jcadmu.log" -Raw
+                # the root and classes hives are each logged before and after the copy
+                $logContent | Should -Match "reg copy HKU\\\S+_admu to HKU\\\S+_admu starting"
+                $logContent | Should -Match "reg copy HKU\\\S+_admu to HKU\\\S+_admu finished with exit code 0"
+                $logContent | Should -Match "reg copy HKU\\\S+_Classes_admu to HKU\\\S+_Classes_admu starting"
+                $logContent | Should -Match "reg copy HKU\\\S+_Classes_admu to HKU\\\S+_Classes_admu finished with exit code 0"
+                $logContent | Should -Match "takeown finished with exit code \d+"
+                $logContent | Should -Match "Copied registry hive backups to"
+            }
+        }
         Context "Update Home Path" {
             It "Start-Migration should not update a user's home path by default" {
                 # set the $testCaseInput
