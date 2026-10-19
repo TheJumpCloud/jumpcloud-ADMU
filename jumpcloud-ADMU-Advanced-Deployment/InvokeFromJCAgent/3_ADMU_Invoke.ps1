@@ -615,14 +615,29 @@ function Get-DomainStatus {
         $AzureADStatus = "Unknown"
         $LocalDomainStatus = "Unknown"
         foreach ($line in $ADStatus) {
-            if ($line -match "AzureADJoined : ") { $AzureADStatus = ($line.TrimStart('AzureADJoined : ')) }
-            if ($line -match "DomainJoined : ") { $LocalDomainStatus = ($line.TrimStart('DomainJoined : ')) }
+            if ($line -match '^\s*AzureADJoined\s*:\s*(\S+)') { $AzureADStatus = $Matches[1] }
+            if ($line -match '^\s*DomainJoined\s*:\s*(\S+)') { $LocalDomainStatus = $Matches[1] }
         }
         return [PSCustomObject]@{ AzureAD = $AzureADStatus; LocalDomain = $LocalDomainStatus }
     } catch {
         Write-Host "[status] Error getting domain status: $($_.Exception.Message)"
         return [PSCustomObject]@{ AzureAD = "Error"; LocalDomain = "Error" }
     }
+}
+function Get-LoggedInUserSession {
+    [CmdletBinding()]
+    param()
+    # quser writes "No User exists for *" to stderr when no one is signed in
+    $quserOutput = quser 2>$null
+    if (-not $quserOutput) {
+        return @()
+    }
+    $loggedInUsers = $quserOutput -replace '^>', ' ' | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
+    $processedUsers = @()
+    foreach ($obj in $loggedInUsers) {
+        $processedUsers += if ($obj.Split(',').Count -ne 6) { $obj -replace '(^[^,]+)', '$1,' } else { $obj }
+    }
+    return @($processedUsers | ConvertFrom-Csv)
 }
 function Get-SystemDescription {
     param(
@@ -718,18 +733,17 @@ $guiJcadmuPath = Get-LatestADMUGUIExe -useLocalEXEs $localEXEs -BypassValidation
 #endregion exeValidation
 
 #region logoffUsers
-$loggedInUsers = (quser) -replace '^>', ' ' | ForEach-Object -Process { $_ -replace '\s{2,}', ',' }
-$processedUsers = @()
-foreach ($obj in $loggedInUsers) {
-    $processedUsers += if ($obj.Split(',').Count -ne 6) { $obj -replace '(^[^,]+)', '$1,' } else { $obj }
-}
-$UsersList = $processedUsers | ConvertFrom-Csv
-Write-Host "[status] Logging off users..."
-foreach ($user in $UsersList) {
-    if ($user.username) {
-        Write-Host "[status] Logging off: $($user.username) (ID: $($user.ID))"
-        logoff.exe $($user.ID)
+$UsersList = Get-LoggedInUserSession
+if ($UsersList) {
+    Write-Host "[status] Logging off users..."
+    foreach ($user in $UsersList) {
+        if ($user.username) {
+            Write-Host "[status] Logging off: $($user.username) (ID: $($user.ID))"
+            logoff.exe $($user.ID)
+        }
     }
+} else {
+    Write-Host "[status] No signed-in users to log off."
 }
 if ($LeaveDomain) {
     $LeaveDomain = $false
