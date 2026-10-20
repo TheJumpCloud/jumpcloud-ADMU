@@ -56,21 +56,7 @@ Function Test-UserRegistryLoadState {
         } finally {
             if (-not $validationsPassed) {
                 # Best effort. Errors are logged and not thrown so the original failure reaches the caller.
-                try {
-                    $loadedHives = REG QUERY HKU *>&1
-                    $hivesToUnload = @(
-                        @{ Name = "$($UserSid)_admu"; Hive = "root" },
-                        @{ Name = "$($UserSid)_Classes_admu"; Hive = "classes" }
-                    )
-                    foreach ($hiveToUnload in $hivesToUnload) {
-                        if ($loadedHives -match "\\$([regex]::Escape($hiveToUnload.Name))\s*$") {
-                            Write-ToLog "Validation did not pass, unloading HKU\$($hiveToUnload.Name)" -Level Verbose -Step "Test-UserRegistryLoadState"
-                            Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive $hiveToUnload.Hive
-                        }
-                    }
-                } catch {
-                    Write-ToLog "Could not unload HKU\$($UserSid) hives after a failed validation: $($_.Exception.Message)" -Level Warning -Step "Test-UserRegistryLoadState"
-                }
+                Clear-LoadedUserRegistryHive -UserSid $UserSid -ProfilePath $ProfilePath
             }
         }
         try {

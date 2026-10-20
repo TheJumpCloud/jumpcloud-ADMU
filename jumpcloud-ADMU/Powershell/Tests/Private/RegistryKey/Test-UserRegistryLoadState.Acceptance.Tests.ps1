@@ -55,7 +55,7 @@ Describe "Test-UserRegistryLoadState Acceptance Tests" -Tag "Acceptance" {
             Should -Invoke Set-UserRegistryLoadState -Exactly 2 -Scope It -ParameterFilter { $op -eq 'Unload' }
             $script:loadedHives.root | Should -BeFalse
             $script:loadedHives.classes | Should -BeFalse
-            Should -Invoke Write-ToLog -Exactly 2 -Scope It -ParameterFilter { $Message -like 'Validation did not pass, unloading HKU\*' }
+            Should -Invoke Write-ToLog -Exactly 2 -Scope It -ParameterFilter { $Message -like 'Unloading HKU\*' }
         }
 
         It "Unloads the hive that did load when the classes hive fails to load" {

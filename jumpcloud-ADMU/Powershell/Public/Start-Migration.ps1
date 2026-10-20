@@ -2055,6 +2055,23 @@ function Start-Migration {
         }
         # if we caught any errors and need to revert based on admuTracker status, do so here:
         if ($admuTracker | ForEach-Object { $_.values.fail -eq $true }) {
+            # Return the source profile to its state before this run. Before the ProfileList swap the source
+            # user still owns the original folder, so nothing may be left loaded, merged or renamed in it.
+            if ($trackAccountMerge -eq $false) {
+                if ($NewUserSID -and $newUserProfileImagePath -and (Test-Path -LiteralPath $newUserProfileImagePath)) {
+                    Clear-LoadedUserRegistryHive -UserSid $NewUserSID -ProfilePath $newUserProfileImagePath
+                }
+                if ($SelectedUserSID -and $oldUserProfileImagePath -and (Test-Path -LiteralPath $oldUserProfileImagePath)) {
+                    Clear-LoadedUserRegistryHive -UserSid $SelectedUserSID -ProfilePath $oldUserProfileImagePath
+                }
+                if ($renameDate -and ($admuTracker.renameOriginalFiles.pass -or $admuTracker.renameOriginalFiles.fail -or $admuTracker.renameBackupFiles.fail)) {
+                    Write-ToLog -Message:("Restoring the original registry files in $oldUserProfileImagePath")
+                    $restoredHives = Restore-SourceUserRegistryFile -ProfilePath $oldUserProfileImagePath -Timestamp $renameDate
+                    if ($restoredHives) {
+                        $FixedErrors += "restoreSourceRegistryFiles"
+                    }
+                }
+            }
             foreach ($trackedStep in $admuTracker.Keys) {
                 if (($admuTracker[$trackedStep].fail -eq $true) -or ($admuTracker[$trackedStep].pass -eq $true)) {
                     switch ($trackedStep) {
