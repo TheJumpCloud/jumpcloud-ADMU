@@ -1000,4 +1000,65 @@ Describe "ADMU Bulk Migration Script CI Tests" -Tag "InstallJC" {
             $result.Success | Should -Be $false
         }
     }
+
+    Context "Get-DomainStatus Function" {
+        It "Should return the YES and NO values reported by dsregcmd" {
+            Mock dsregcmd.exe -MockWith {
+                return @(
+                    '             AzureAdJoined : YES',
+                    '          EnterpriseJoined : NO',
+                    '              DomainJoined : NO'
+                )
+            }
+            $status = Get-DomainStatus
+            $status.AzureAD | Should -Be 'YES'
+            $status.LocalDomain | Should -Be 'NO'
+        }
+        It "Should read a value that starts with a character from the label text" {
+            # TrimStart('DomainJoined : ') treats its argument as a set of characters, so it would strip the
+            # leading 'n', 'd' and 'j' from this value and return 'x'
+            Mock dsregcmd.exe -MockWith {
+                return @(
+                    '             AzureAdJoined : ndjx',
+                    '              DomainJoined : ndjx'
+                )
+            }
+            $status = Get-DomainStatus
+            $status.AzureAD | Should -Be 'ndjx'
+            $status.LocalDomain | Should -Be 'ndjx'
+        }
+        It "Should return Unknown when dsregcmd does not report the lines" {
+            Mock dsregcmd.exe -MockWith { return @('no domain details') }
+            $status = Get-DomainStatus
+            $status.AzureAD | Should -Be 'Unknown'
+            $status.LocalDomain | Should -Be 'Unknown'
+        }
+    }
+
+    Context "Get-LoggedInUserSession Function" {
+        It "Should return one object for each signed-in session" {
+            Mock quser -MockWith {
+                return @(
+                    ' USERNAME              SESSIONNAME        ID  STATE   IDLE TIME  LOGON TIME',
+                    '>testuser1            console             1  Active      none   1/1/2026 8:00 AM',
+                    ' testuser2                                 2  Disc        1:05   1/1/2026 7:00 AM'
+                )
+            }
+            $sessions = @(Get-LoggedInUserSession)
+            $sessions.Count | Should -Be 2
+            $sessions[0].USERNAME | Should -Be 'testuser1'
+            $sessions[1].USERNAME | Should -Be 'testuser2'
+            $sessions[1].ID | Should -Be '2'
+        }
+        It "Should return nothing and not throw when no one is signed in" {
+            # quser prints nothing to stdout when no one is signed in
+            Mock quser -MockWith { return $null }
+            { Get-LoggedInUserSession } | Should -Not -Throw
+            @(Get-LoggedInUserSession).Count | Should -Be 0
+        }
+        It "Should discard quser stderr so 'No User exists for *' is not added to the command output" {
+            # A Pester mock cannot write to a real stderr stream, so check that the redirect is in the function
+            $scriptContent | Should -Match 'quser 2>\$null'
+        }
+    }
 }
