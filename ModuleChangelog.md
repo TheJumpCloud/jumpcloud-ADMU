@@ -1,3 +1,22 @@
+## 2.16.4
+
+Release Date: October 20, 2026
+
+#### RELEASE NOTES
+```
+- This release introduces a critical pre-migration check for Windows Automatic Restart Sign-On (ARSO) to prevent registry hive lock failures during the migration process. No new features were introduced; the focus remains on performance improvements, workflow simplification, and increased reliability.
+```
+
+#### FEATURES:
+
+No new features were introduced in this release. The focus is on performance improvements, workflow simplification, and increased reliability of profile permission handling.
+
+#### IMPROVEMENTS:
+- ARSO Policy Validation & Remediation: The ADMU now proactively checks if ARSO is enabled for the migrating user. If detected, the tool attempts to automatically disable the policy to ensure the user's registry hive can be safely unloaded during migration.
+
+#### BUG FIXES:
+
+
 ## 2.16.3
 
 Release Date: August 25, 2026
