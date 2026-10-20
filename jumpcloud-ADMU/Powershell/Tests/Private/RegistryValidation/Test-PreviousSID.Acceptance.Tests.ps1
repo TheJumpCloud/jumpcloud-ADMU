@@ -63,4 +63,31 @@ Describe "Test-PreviousSID Acceptance Tests" -Tag "Acceptance" {
 
     }
 
+    Context "Stale previousSid left by an interrupted migration" {
+        BeforeEach {
+            Set-HKEYUserMount
+            $newUser = "ADMU_User" + -join ((65..90) + (97..122) | Get-Random -Count 5 | ForEach-Object { [char]$_ })
+            $password = '$T#st1234adsasddasasd'
+            Initialize-TestUser -UserName $newUser -Password $Password
+            $userSid = Test-UsernameOrSID -usernameOrSid $newUser
+            REG LOAD HKU\$($userSid)_admu "C:\Users\$newUser\NTUSER.DAT" *>&1
+            $folderPath = "HKEY_USERS:\$($userSid)_admu\Software\JCADMU"
+            New-Item -Path $folderPath -Force | Out-Null
+            Set-ItemProperty -Path $folderPath -Name "previousSid" -Value $userSid -Force
+            Set-ItemProperty -Path $folderPath -Name "previousProfilePath" -Value "C:\Users\$newUser" -Force
+        }
+
+        It 'Returns $false and removes the marker when previousSid is the account''s own SID and ProfileList maps the original folder' {
+            Test-PreviousSID -UserSid $userSid | Should -Be $false
+            # the JCADMU key held only the stale values, so it is removed to let Start-Migration write the real marker
+            Test-Path $folderPath | Should -Be $false
+        }
+
+        It 'Returns $true and keeps the marker when ProfileList maps the SID to a folder with the .ADMU suffix' {
+            Mock Get-ProfileImagePath { return "C:\Users\$newUser.ADMU" }
+            Test-PreviousSID -UserSid $userSid | Should -Be $true
+            (Get-ItemProperty -Path $folderPath).previousSid | Should -Be $userSid
+        }
+    }
+
 }
