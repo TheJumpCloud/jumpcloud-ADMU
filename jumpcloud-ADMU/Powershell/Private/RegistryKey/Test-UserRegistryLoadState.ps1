@@ -26,29 +26,39 @@ Function Test-UserRegistryLoadState {
         }
     }
     process {
+        # end{} does not run when process{} throws, so a failure here must unload the hives itself
+        $validationsPassed = $false
         try {
-            Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
-            Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
-        } catch {
-            Write-AdmuErrorMessage -Error:("load_unload_error")
-            Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
-        }
-        # Validations during the load process
-        if ($ValidateDirectory) {
-            # return boolean for redirected user directories
-            $isFolderRedirect = Test-UserFolderRedirect -UserSid $UserSid
-        } else {
-            Write-ToLog "Skipping User Shell Folder Validation..." -Level Verbose -Step "Test-UserRegistryLoadState"
-        }
+            try {
+                Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
+                Set-UserRegistryLoadState -op "Load" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes
+            } catch {
+                Write-AdmuErrorMessage -Error:("load_unload_error")
+                Throw "Could Not Load User Registry During Test-UserRegistryLoadState Load Process"
+            }
+            # Validations during the load process
+            if ($ValidateDirectory) {
+                # return boolean for redirected user directories
+                $isFolderRedirect = Test-UserFolderRedirect -UserSid $UserSid
+            } else {
+                Write-ToLog "Skipping User Shell Folder Validation..." -Level Verbose -Step "Test-UserRegistryLoadState"
+            }
 
-        # Check for previousSid from \Software\JCADMU
-        if (Test-PreviousSID -UserSid $UserSid) {
-            Write-AdmuErrorMessage -Error:("user_profile_previous_sid_error")
-            Throw "User $($UserSid) has already been migrated. Exiting..."
+            # Check for previousSid from \Software\JCADMU
+            if (Test-PreviousSID -UserSid $UserSid) {
+                Write-AdmuErrorMessage -Error:("user_profile_previous_sid_error")
+                Throw "User $($UserSid) has already been migrated. Exiting..."
+            }
+            # Validate the wallpaper policy
+            Set-WallpaperPolicy -UserSid $UserSid
+            ##### End of Validations #####
+            $validationsPassed = $true
+        } finally {
+            if (-not $validationsPassed) {
+                # Best effort. Errors are logged and not thrown so the original failure reaches the caller.
+                Clear-LoadedUserRegistryHive -UserSid $UserSid -ProfilePath $ProfilePath
+            }
         }
-        # Validate the wallpaper policy
-        Set-WallpaperPolicy -UserSid $UserSid
-        ##### End of Validations #####
         try {
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive root
             Set-UserRegistryLoadState -op "Unload" -ProfilePath $ProfilePath -UserSid $UserSid -hive classes

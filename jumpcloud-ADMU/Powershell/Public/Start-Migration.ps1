@@ -487,6 +487,15 @@ function Start-Migration {
             }
         }
 
+        #region previousRunState
+        # A marker left by an earlier run means that run was killed or stopped without reaching end{}
+        $previousRunState = Get-MigrationRunState
+        if ($previousRunState) {
+            $previousRunProcessRunning = ($previousRunState.ProcessId -gt 0) -and [bool](Get-Process -Id $previousRunState.ProcessId -ErrorAction SilentlyContinue)
+            Write-ToLog -Message (Get-MigrationRunRecoveryMessage -RunState $previousRunState -ProcessRunning $previousRunProcessRunning) -Level Warning
+        }
+        #endregion previousRunState
+
         #region validation
         # Check if profile is loaded
         if (Test-UserProfileLoaded -UserSID $SelectedUserSID) {
@@ -600,7 +609,9 @@ function Start-Migration {
                 $msg = "The user will not be able to be created because the device is currently associated to a JumpCloud user matching the same username. " +
                 "To resolve the issue, unbind (remove the association between the JumpCloud user and this device) and remove the local user from this device before attempting migration again."
                 if ($localUserState.jumpCloudCreated) { $msg += " User was created by JumpCloud." }
-                if ($localUserState.admuCreated) { $msg += " User was created by JumpCloudADMU." }
+                if ($localUserState.admuCreated) {
+                    $msg = Get-LeftoverAdmuUserMessage -JumpCloudUserName $JumpCloudUserName -SourceSID $SelectedUserSID -SourceProfileImagePath $oldUserProfileImagePath -JumpCloudManaged $true
+                }
                 Write-ToLog -Message:("Validation failed: $msg")
                 throw [System.Management.Automation.ValidationMetadataException] $msg
             }
@@ -611,7 +622,9 @@ function Start-Migration {
                 $msg = "The user will not be able to be created because the device was associated to a JumpCloud user matching the same username. " +
                 "To resolve the issue, remove the local user from this device before attempting migration again."
                 if ($localUserState.jumpCloudCreated) { $msg += " User was created by JumpCloud." }
-                if ($localUserState.admuCreated) { $msg += " User was created by JumpCloudADMU." }
+                if ($localUserState.admuCreated) {
+                    $msg = Get-LeftoverAdmuUserMessage -JumpCloudUserName $JumpCloudUserName -SourceSID $SelectedUserSID -SourceProfileImagePath $oldUserProfileImagePath
+                }
                 Write-ToLog -Message:("Validation failed: $msg")
                 throw [System.Management.Automation.ValidationMetadataException] $msg
             }
@@ -636,6 +649,9 @@ function Start-Migration {
             throw [System.Management.Automation.ValidationMetadataException] $msg
         }
         #endregion validation
+
+        # Written after validation so a validation failure does not leave a marker. Cleared in end{}.
+        $null = Set-MigrationRunState -Phase 'started' -SourceSID $SelectedUserSID -SourceProfilePath $oldUserProfileImagePath -TargetUserName $JumpCloudUserName
 
         #region caffeinate
         $caffeinateState = Set-ThreadExecutionState -enable $true
@@ -926,8 +942,10 @@ function Start-Migration {
             # Give us admin rights to modify
             Write-ToLog -Message ("Take Ownership of $($newUserProfileImagePath)")
             $path = takeown /F "$($newUserProfileImagePath)" /r /d Y 2>&1
+            $takeownExitCode = $LASTEXITCODE
+            Write-ToLog -Message ("takeown finished with exit code $takeownExitCode")
             # Check if any error occurred
-            if ($LASTEXITCODE -ne 0) {
+            if ($takeownExitCode -ne 0) {
                 # Store the error output in the variable
                 $pattern = 'INFO: (.+?\( "[^"]+" \))'
                 $errmatches = [regex]::Matches($path, $pattern)
@@ -986,8 +1004,12 @@ function Start-Migration {
             #region copyRegistry
             Write-ToLog -Message $admuTracker.copyRegistry.step -MigrationStep
             ### Merge source user Profile to target user Profile
+            Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_admu to HKU\$($NewUserSID)_admu starting")
             reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
-            if ($?) {
+            $regCopySucceeded = $?
+            $regCopyExitCode = $LASTEXITCODE
+            Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_admu to HKU\$($NewUserSID)_admu finished with exit code $regCopyExitCode")
+            if ($regCopySucceeded) {
                 Write-ToLog -Message ('Copy Profile: ' + "$newUserProfileImagePath/NTUSER.DAT.BAK" + ' To: ' + "$oldUserProfileImagePath/NTUSER.DAT.BAK")
             } else {
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
@@ -1003,8 +1025,12 @@ function Start-Migration {
                     # Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                     Start-Sleep 1
                 }
+                Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_admu to HKU\$($NewUserSID)_admu retry starting")
                 reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
-                switch ($?) {
+                $regCopySucceeded = $?
+                $regCopyExitCode = $LASTEXITCODE
+                Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_admu to HKU\$($NewUserSID)_admu retry finished with exit code $regCopyExitCode")
+                switch ($regCopySucceeded) {
                     $true {
                         Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/NTUSER.DAT.BAK" + ' To: ' + "$oldUserProfileImagePath/NTUSER.DAT.BAK")
                     }
@@ -1036,8 +1062,12 @@ function Start-Migration {
 
             Write-ToProgress -ProgressBar $ProgressBar -Status "copyRegistry" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
             #TODO: Out NULL?
+            Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_Classes_admu to HKU\$($NewUserSID)_Classes_admu starting")
             reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
-            if ($?) {
+            $regCopySucceeded = $?
+            $regCopyExitCode = $LASTEXITCODE
+            Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_Classes_admu to HKU\$($NewUserSID)_Classes_admu finished with exit code $regCopyExitCode")
+            if ($regCopySucceeded) {
                 Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
             } else {
                 Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
@@ -1055,8 +1085,12 @@ function Start-Migration {
                     # $SelectedUserCloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                 }
                 # attempt copy again:
+                Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_Classes_admu to HKU\$($NewUserSID)_Classes_admu retry starting")
                 reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
-                switch ($?) {
+                $regCopySucceeded = $?
+                $regCopyExitCode = $LASTEXITCODE
+                Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_Classes_admu to HKU\$($NewUserSID)_Classes_admu retry finished with exit code $regCopyExitCode")
+                switch ($regCopySucceeded) {
                     $true {
                         Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
                     } $false {
@@ -1189,8 +1223,10 @@ function Start-Migration {
             Write-ToLog -Message $admuTracker.copyRegistryFiles.step -MigrationStep
             Write-ToProgress -ProgressBar $ProgressBar -Status "copyRegistryFiles" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
             try {
+                Write-ToLog -Message ("Copying registry hive backups from $newUserProfileImagePath to $oldUserProfileImagePath")
                 Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
                 Copy-Item -Path "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Destination "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force -ErrorAction Stop
+                Write-ToLog -Message ("Copied registry hive backups to $oldUserProfileImagePath")
             } catch {
                 Write-ToLog -Message($_.Exception.Message)
                 # attempt to recover:
@@ -1483,6 +1519,7 @@ function Start-Migration {
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath + '.' + "ADMU")
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
             $trackAccountMerge = $true
+            $null = Set-MigrationRunState -Phase 'swapped' -SourceSID $SelectedUserSID -SourceProfilePath $newUserProfileImagePath -TargetUserName $JumpCloudUserName -TargetSID $NewUserSID
             # logging
             Write-ToLog -Message:('Target User Profile Path: ' + $newUserProfileImagePath)
             Write-ToLog -Message:('Target User SID: ' + $NewUserSID)
@@ -1986,6 +2023,9 @@ function Start-Migration {
                 $accountLoginBlocked = $false
             }
 
+            # Clear the marker first. The reboot can end this process before end{} runs, and a marker left
+            # after a successful run would be reported as an interrupted run.
+            Clear-MigrationRunState
             if ($ForceReboot -eq $true) {
                 Write-ToLog -Message:('Forcing reboot of the PC now')
                 Restart-Computer -ComputerName $env:COMPUTERNAME -Force
@@ -2015,6 +2055,23 @@ function Start-Migration {
         }
         # if we caught any errors and need to revert based on admuTracker status, do so here:
         if ($admuTracker | ForEach-Object { $_.values.fail -eq $true }) {
+            # Return the source profile to its state before this run. Before the ProfileList swap the source
+            # user still owns the original folder, so nothing may be left loaded, merged or renamed in it.
+            if ($trackAccountMerge -eq $false) {
+                if ($NewUserSID -and $newUserProfileImagePath -and (Test-Path -LiteralPath $newUserProfileImagePath)) {
+                    Clear-LoadedUserRegistryHive -UserSid $NewUserSID -ProfilePath $newUserProfileImagePath
+                }
+                if ($SelectedUserSID -and $oldUserProfileImagePath -and (Test-Path -LiteralPath $oldUserProfileImagePath)) {
+                    Clear-LoadedUserRegistryHive -UserSid $SelectedUserSID -ProfilePath $oldUserProfileImagePath
+                }
+                if ($renameDate -and ($admuTracker.renameOriginalFiles.pass -or $admuTracker.renameOriginalFiles.fail -or $admuTracker.renameBackupFiles.fail)) {
+                    Write-ToLog -Message:("Restoring the original registry files in $oldUserProfileImagePath")
+                    $restoredHives = Restore-SourceUserRegistryFile -ProfilePath $oldUserProfileImagePath -Timestamp $renameDate
+                    if ($restoredHives) {
+                        $FixedErrors += "restoreSourceRegistryFiles"
+                    }
+                }
+            }
             foreach ($trackedStep in $admuTracker.Keys) {
                 if (($admuTracker[$trackedStep].fail -eq $true) -or ($admuTracker[$trackedStep].pass -eq $true)) {
                     switch ($trackedStep) {
@@ -2047,6 +2104,8 @@ function Start-Migration {
                 }
             }
         }
+        # end{} ran, so this was not an interrupted run. The summary below reports any failure.
+        Clear-MigrationRunState
         # Final log and progress bar update
         Write-ToLog -Message "Migration Summary" -MigrationStep
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) {

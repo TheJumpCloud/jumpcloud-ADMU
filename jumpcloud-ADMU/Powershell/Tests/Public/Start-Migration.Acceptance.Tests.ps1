@@ -232,6 +232,40 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 $logonUI.SelectedUserSID | Should -Not -Be $UserSID
             }
         }
+        Context "Registry step logging" {
+            It "Start-Migration should log the start and the exit code of each registry copy" {
+                # run Start-Migration
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                $logContent = Get-Content -Path "C:\Windows\Temp\jcadmu.log" -Raw
+                # the root and classes hives are each logged before and after the copy
+                $logContent | Should -Match "reg copy HKU\\\S+_admu to HKU\\\S+_admu starting"
+                $logContent | Should -Match "reg copy HKU\\\S+_admu to HKU\\\S+_admu finished with exit code 0"
+                $logContent | Should -Match "reg copy HKU\\\S+_Classes_admu to HKU\\\S+_Classes_admu starting"
+                $logContent | Should -Match "reg copy HKU\\\S+_Classes_admu to HKU\\\S+_Classes_admu finished with exit code 0"
+                $logContent | Should -Match "takeown finished with exit code \d+"
+                $logContent | Should -Match "Copied registry hive backups to"
+            }
+        }
+        Context "Run state marker" {
+            It "Start-Migration should clear the run state marker when the run ends" {
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                Get-MigrationRunState | Should -BeNullOrEmpty
+            }
+            It "Start-Migration should log the recovery for a marker left by an earlier run" {
+                # a process id that is not running stands in for a killed run
+                $null = Set-MigrationRunState -Phase 'started' -SourceSID $userToMigrateFromSID.Value -SourceProfilePath "C:\Users\$userToMigrateFrom" -TargetUserName $userToMigrateTo
+                Set-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\JCADMU\RunState' -Name 'ProcessId' -Value '999999'
+
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                $logContent = Get-Content -Path "C:\Windows\Temp\jcadmu.log" -Raw
+                $logContent | Should -Match "A previous ADMU run did not finish"
+                $logContent | Should -Match "stopped before the profile swap"
+                Get-MigrationRunState | Should -BeNullOrEmpty
+            }
+        }
         Context "Update Home Path" {
             It "Start-Migration should not update a user's home path by default" {
                 # set the $testCaseInput
@@ -934,9 +968,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.SelectedUserName = $userToMigrateFrom
                     $testCaseInput.TempPassword = $tempPassword
 
-                    # TODO: update expected message with expected output from start-migration
-                    # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
-                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device was associated to a JumpCloud user matching the same username. To resolve the issue, remove the local user from this device before attempting migration again. User was created by JumpCloudADMU."
+                    # should throw a message that names the leftover local account created by a previous ADMU run
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The local account '$userToMigrateTo' already exists on this device with the description 'Created By JumpCloud ADMU'. An earlier ADMU run created it and did not finish.*"
                 }
 
                 It "Should throw when some local user exists and does not match any known JumpCloud created user descriptions" {
