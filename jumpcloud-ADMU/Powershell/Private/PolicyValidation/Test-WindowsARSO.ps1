@@ -8,6 +8,7 @@ function Test-WindowsARSO {
     is enabled for a specific user SID. Returns $true if enabled, $false if disabled.
     #>
     [CmdletBinding()]
+    [OutputType([bool])]
     param (
         [Parameter(Mandatory = $true)]
         [string]$UserSID
