@@ -487,6 +487,15 @@ function Start-Migration {
             }
         }
 
+        #region previousRunState
+        # A marker left by an earlier run means that run was killed or stopped without reaching end{}
+        $previousRunState = Get-MigrationRunState
+        if ($previousRunState) {
+            $previousRunProcessRunning = ($previousRunState.ProcessId -gt 0) -and [bool](Get-Process -Id $previousRunState.ProcessId -ErrorAction SilentlyContinue)
+            Write-ToLog -Message (Get-MigrationRunRecoveryMessage -RunState $previousRunState -ProcessRunning $previousRunProcessRunning) -Level Warning
+        }
+        #endregion previousRunState
+
         #region validation
         # Check if profile is loaded
         if (Test-UserProfileLoaded -UserSID $SelectedUserSID) {
@@ -640,6 +649,9 @@ function Start-Migration {
             throw [System.Management.Automation.ValidationMetadataException] $msg
         }
         #endregion validation
+
+        # Written after validation so a validation failure does not leave a marker. Cleared in end{}.
+        $null = Set-MigrationRunState -Phase 'started' -SourceSID $SelectedUserSID -SourceProfilePath $oldUserProfileImagePath -TargetUserName $JumpCloudUserName
 
         #region caffeinate
         $caffeinateState = Set-ThreadExecutionState -enable $true
@@ -1507,6 +1519,7 @@ function Start-Migration {
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $SelectedUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath + '.' + "ADMU")
             Set-ItemProperty -Path ('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + $NewUserSID) -Name 'ProfileImagePath' -Value ($newUserProfileImagePath)
             $trackAccountMerge = $true
+            $null = Set-MigrationRunState -Phase 'swapped' -SourceSID $SelectedUserSID -SourceProfilePath $newUserProfileImagePath -TargetUserName $JumpCloudUserName -TargetSID $NewUserSID
             # logging
             Write-ToLog -Message:('Target User Profile Path: ' + $newUserProfileImagePath)
             Write-ToLog -Message:('Target User SID: ' + $NewUserSID)
@@ -2010,6 +2023,9 @@ function Start-Migration {
                 $accountLoginBlocked = $false
             }
 
+            # Clear the marker first. The reboot can end this process before end{} runs, and a marker left
+            # after a successful run would be reported as an interrupted run.
+            Clear-MigrationRunState
             if ($ForceReboot -eq $true) {
                 Write-ToLog -Message:('Forcing reboot of the PC now')
                 Restart-Computer -ComputerName $env:COMPUTERNAME -Force
@@ -2071,6 +2087,8 @@ function Start-Migration {
                 }
             }
         }
+        # end{} ran, so this was not an interrupted run. The summary below reports any failure.
+        Clear-MigrationRunState
         # Final log and progress bar update
         Write-ToLog -Message "Migration Summary" -MigrationStep
         if ([System.String]::IsNullOrEmpty($($admuTracker.Keys | Where-Object { $admuTracker[$_].fail -eq $true }))) {

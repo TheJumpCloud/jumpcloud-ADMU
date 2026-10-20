@@ -247,6 +247,25 @@ Describe "Start-Migration Tests" -Tag "Migration Parameters" {
                 $logContent | Should -Match "Copied registry hive backups to"
             }
         }
+        Context "Run state marker" {
+            It "Start-Migration should clear the run state marker when the run ends" {
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                Get-MigrationRunState | Should -BeNullOrEmpty
+            }
+            It "Start-Migration should log the recovery for a marker left by an earlier run" {
+                # a process id that is not running stands in for a killed run
+                $null = Set-MigrationRunState -Phase 'started' -SourceSID $userToMigrateFromSID.Value -SourceProfilePath "C:\Users\$userToMigrateFrom" -TargetUserName $userToMigrateTo
+                Set-ItemProperty -LiteralPath 'HKLM:\SOFTWARE\JCADMU\RunState' -Name 'ProcessId' -Value '999999'
+
+                { Start-Migration @testCaseInput } | Should -Not -Throw
+
+                $logContent = Get-Content -Path "C:\Windows\Temp\jcadmu.log" -Raw
+                $logContent | Should -Match "A previous ADMU run did not finish"
+                $logContent | Should -Match "stopped before the profile swap"
+                Get-MigrationRunState | Should -BeNullOrEmpty
+            }
+        }
         Context "Update Home Path" {
             It "Start-Migration should not update a user's home path by default" {
                 # set the $testCaseInput
