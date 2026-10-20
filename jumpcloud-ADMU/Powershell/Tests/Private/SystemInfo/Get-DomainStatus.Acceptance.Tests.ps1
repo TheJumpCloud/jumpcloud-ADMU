@@ -26,4 +26,32 @@ Describe "Get-DomainStatus Acceptance Tests" -Tag "Acceptance" {
         $localAdStatus | Should -Not -BeNullOrEmpty
         $localAdStatus | Should -Be "NO"
     }
+
+    Context "Parsing dsregcmd output" {
+        It "Should return the YES and NO values reported by dsregcmd" {
+            Mock dsregcmd.exe -MockWith {
+                return @(
+                    '             AzureAdJoined : YES',
+                    '          EnterpriseJoined : NO',
+                    '              DomainJoined : NO'
+                )
+            }
+            $azureAdStatus, $localAdStatus = Get-DomainStatus
+            $azureAdStatus | Should -Be 'YES'
+            $localAdStatus | Should -Be 'NO'
+        }
+        It "Should read a value that starts with a character from the label text" {
+            # TrimStart('DomainJoined : ') treats its argument as a set of characters, so it would strip the
+            # leading 'n', 'd' and 'j' from this value and return 'x'
+            Mock dsregcmd.exe -MockWith {
+                return @(
+                    '             AzureAdJoined : ndjx',
+                    '              DomainJoined : ndjx'
+                )
+            }
+            $azureAdStatus, $localAdStatus = Get-DomainStatus
+            $azureAdStatus | Should -Be 'ndjx'
+            $localAdStatus | Should -Be 'ndjx'
+        }
+    }
 }
