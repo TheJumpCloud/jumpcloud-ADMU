@@ -930,8 +930,10 @@ function Start-Migration {
             # Give us admin rights to modify
             Write-ToLog -Message ("Take Ownership of $($newUserProfileImagePath)")
             $path = takeown /F "$($newUserProfileImagePath)" /r /d Y 2>&1
+            $takeownExitCode = $LASTEXITCODE
+            Write-ToLog -Message ("takeown finished with exit code $takeownExitCode")
             # Check if any error occurred
-            if ($LASTEXITCODE -ne 0) {
+            if ($takeownExitCode -ne 0) {
                 # Store the error output in the variable
                 $pattern = 'INFO: (.+?\( "[^"]+" \))'
                 $errmatches = [regex]::Matches($path, $pattern)
@@ -990,8 +992,12 @@ function Start-Migration {
             #region copyRegistry
             Write-ToLog -Message $admuTracker.copyRegistry.step -MigrationStep
             ### Merge source user Profile to target user Profile
+            Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_admu to HKU\$($NewUserSID)_admu starting")
             reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
-            if ($?) {
+            $regCopySucceeded = $?
+            $regCopyExitCode = $LASTEXITCODE
+            Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_admu to HKU\$($NewUserSID)_admu finished with exit code $regCopyExitCode")
+            if ($regCopySucceeded) {
                 Write-ToLog -Message ('Copy Profile: ' + "$newUserProfileImagePath/NTUSER.DAT.BAK" + ' To: ' + "$oldUserProfileImagePath/NTUSER.DAT.BAK")
             } else {
                 $processList = Get-ProcessByOwner -username $JumpCloudUserName
@@ -1007,8 +1013,12 @@ function Start-Migration {
                     # Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                     Start-Sleep 1
                 }
+                Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_admu to HKU\$($NewUserSID)_admu retry starting")
                 reg copy HKU\$($SelectedUserSID)_admu HKU\$($NewUserSID)_admu /s /f
-                switch ($?) {
+                $regCopySucceeded = $?
+                $regCopyExitCode = $LASTEXITCODE
+                Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_admu to HKU\$($NewUserSID)_admu retry finished with exit code $regCopyExitCode")
+                switch ($regCopySucceeded) {
                     $true {
                         Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath/NTUSER.DAT.BAK" + ' To: ' + "$oldUserProfileImagePath/NTUSER.DAT.BAK")
                     }
@@ -1040,8 +1050,12 @@ function Start-Migration {
 
             Write-ToProgress -ProgressBar $ProgressBar -Status "copyRegistry" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
             #TODO: Out NULL?
+            Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_Classes_admu to HKU\$($NewUserSID)_Classes_admu starting")
             reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
-            if ($?) {
+            $regCopySucceeded = $?
+            $regCopyExitCode = $LASTEXITCODE
+            Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_Classes_admu to HKU\$($NewUserSID)_Classes_admu finished with exit code $regCopyExitCode")
+            if ($regCopySucceeded) {
                 Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
             } else {
                 Write-ToLog -Message:('Could not copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
@@ -1059,8 +1073,12 @@ function Start-Migration {
                     # $SelectedUserCloseResults = Close-ProcessByOwner -ProcessList $processList -force $ADMU_closeProcess
                 }
                 # attempt copy again:
+                Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_Classes_admu to HKU\$($NewUserSID)_Classes_admu retry starting")
                 reg copy HKU\$($SelectedUserSID)_Classes_admu HKU\$($NewUserSID)_Classes_admu /s /f
-                switch ($?) {
+                $regCopySucceeded = $?
+                $regCopyExitCode = $LASTEXITCODE
+                Write-ToLog -Message ("reg copy HKU\$($SelectedUserSID)_Classes_admu to HKU\$($NewUserSID)_Classes_admu retry finished with exit code $regCopyExitCode")
+                switch ($regCopySucceeded) {
                     $true {
                         Write-ToLog -Message:('Copy Profile: ' + "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat" + ' To: ' + "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat")
                     } $false {
@@ -1193,8 +1211,10 @@ function Start-Migration {
             Write-ToLog -Message $admuTracker.copyRegistryFiles.step -MigrationStep
             Write-ToProgress -ProgressBar $ProgressBar -Status "copyRegistryFiles" -form $isForm -SystemDescription $systemDescription -StatusMap $admuTracker
             try {
+                Write-ToLog -Message ("Copying registry hive backups from $newUserProfileImagePath to $oldUserProfileImagePath")
                 Copy-Item -Path "$newUserProfileImagePath/NTUSER.DAT.BAK" -Destination "$oldUserProfileImagePath/NTUSER.DAT.BAK" -Force -ErrorAction Stop
                 Copy-Item -Path "$newUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Destination "$oldUserProfileImagePath\AppData\Local\Microsoft\Windows\UsrClass.dat.bak" -Force -ErrorAction Stop
+                Write-ToLog -Message ("Copied registry hive backups to $oldUserProfileImagePath")
             } catch {
                 Write-ToLog -Message($_.Exception.Message)
                 # attempt to recover:
