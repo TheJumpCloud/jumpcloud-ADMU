@@ -32,7 +32,7 @@ Describe "Test-WindowsARSO Acceptance Tests" -Tag "Acceptance" {
     Context "Test-WindowsARSO" {
         It "Should return `$true when ARSO is explicitly enabled (OptOut = 0)" {
             # Ensure state is enabled
-            Set-WindowsARSO -UserSID $testSID -Enable$true
+            Set-WindowsARSO -UserSID $testSID -Enable $true
 
             $result = Test-WindowsARSO -UserSID$testSID
             $result | Should -Be $true
@@ -52,7 +52,7 @@ Describe "Test-WindowsARSO Acceptance Tests" -Tag "Acceptance" {
                 Remove-Item -Path $testRegPath -Force -Recurse
             }
 
-            $result = Test-WindowsARSO -UserSID$testSID
+            $result = Test-WindowsARSO -UserSID $testSID
             $result | Should -Be $false
         }
     }
