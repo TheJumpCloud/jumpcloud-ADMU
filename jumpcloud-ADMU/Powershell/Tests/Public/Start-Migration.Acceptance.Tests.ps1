@@ -934,9 +934,8 @@ Describe "Start-Migration Tests" -Tag "InstallJC" {
                     $testCaseInput.SelectedUserName = $userToMigrateFrom
                     $testCaseInput.TempPassword = $tempPassword
 
-                    # TODO: update expected message with expected output from start-migration
-                    # should throw a message stating that the local user exists and was created by JumpCloud but is no longer managed
-                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The user will not be able to be created because the device was associated to a JumpCloud user matching the same username. To resolve the issue, remove the local user from this device before attempting migration again. User was created by JumpCloudADMU."
+                    # should throw a message that names the leftover local account created by a previous ADMU run
+                    { Start-Migration @testCaseInput } | Should -Throw -ExpectedMessage "The local account '$userToMigrateTo' already exists on this device with the description 'Created By JumpCloud ADMU'. An earlier ADMU run created it and did not finish.*"
                 }
 
                 It "Should throw when some local user exists and does not match any known JumpCloud created user descriptions" {

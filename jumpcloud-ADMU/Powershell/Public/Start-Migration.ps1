@@ -600,7 +600,9 @@ function Start-Migration {
                 $msg = "The user will not be able to be created because the device is currently associated to a JumpCloud user matching the same username. " +
                 "To resolve the issue, unbind (remove the association between the JumpCloud user and this device) and remove the local user from this device before attempting migration again."
                 if ($localUserState.jumpCloudCreated) { $msg += " User was created by JumpCloud." }
-                if ($localUserState.admuCreated) { $msg += " User was created by JumpCloudADMU." }
+                if ($localUserState.admuCreated) {
+                    $msg = Get-LeftoverAdmuUserMessage -JumpCloudUserName $JumpCloudUserName -SourceSID $SelectedUserSID -SourceProfileImagePath $oldUserProfileImagePath -JumpCloudManaged $true
+                }
                 Write-ToLog -Message:("Validation failed: $msg")
                 throw [System.Management.Automation.ValidationMetadataException] $msg
             }
@@ -611,7 +613,9 @@ function Start-Migration {
                 $msg = "The user will not be able to be created because the device was associated to a JumpCloud user matching the same username. " +
                 "To resolve the issue, remove the local user from this device before attempting migration again."
                 if ($localUserState.jumpCloudCreated) { $msg += " User was created by JumpCloud." }
-                if ($localUserState.admuCreated) { $msg += " User was created by JumpCloudADMU." }
+                if ($localUserState.admuCreated) {
+                    $msg = Get-LeftoverAdmuUserMessage -JumpCloudUserName $JumpCloudUserName -SourceSID $SelectedUserSID -SourceProfileImagePath $oldUserProfileImagePath
+                }
                 Write-ToLog -Message:("Validation failed: $msg")
                 throw [System.Management.Automation.ValidationMetadataException] $msg
             }
