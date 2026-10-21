@@ -14,11 +14,14 @@ function Test-WindowsARSO {
         [string]$UserSID
     )
 
+    Write-ToLog -Message "Testing ARSO status for UserSID: $UserSID"
+
     # 1. Check if ARSO is globally disabled via policy
     $globalPolicyPath = 'HKLM:\Software\Microsoft\Windows\CurrentVersion\Policies\System'
     $globalPolicy = Get-ItemProperty -Path $globalPolicyPath -Name 'DisableAutomaticRestartSignOn' -ErrorAction SilentlyContinue
 
     if ($null -ne $globalPolicy -and $globalPolicy.DisableAutomaticRestartSignOn -eq 1) {
+        Write-ToLog -Message "ARSO is globally disabled via Machine Policy (DisableAutomaticRestartSignOn=1)."
         return $false
     }
 
@@ -27,15 +30,19 @@ function Test-WindowsARSO {
 
     if (Test-Path -Path $userARSOPath) {
         $optOutValue = Get-ItemPropertyValue -Path $userARSOPath -Name 'OptOut' -ErrorAction SilentlyContinue
+        Write-ToLog -Message "User ARSO key found. OptOut value: $optOutValue"
 
         # If OptOut is 1, ARSO is explicitly disabled for the user. If 0, it is enabled.
         if ($optOutValue -eq 1) {
+            Write-ToLog -Message "ARSO is explicitly disabled for this user."
             return $false
         } else {
+            Write-ToLog -Message "ARSO is enabled for this user."
             return $true
         }
     }
 
     # If the user ARSO key doesn't exist, it defaults to false (not explicitly configured)
+    Write-ToLog -Message "User ARSO key does not exist. Defaulting to ARSO disabled."
     return $false
 }
