@@ -5,7 +5,7 @@ Describe "Test-WindowsARSO Acceptance Tests" -Tag "Acceptance" {
         $TargetDirectory = "helperFunctions"
         $FileName = "Import-AllFunctions.ps1"
         while ($currentPath -ne $null) {
-            $filePath = Join-Path -Path $currentPath$TargetDirectory
+            $filePath = Join-Path -Path $currentPath $TargetDirectory
             if (Test-Path $filePath) {
                 # File found! Return the full path.
                 $helpFunctionDir = $filePath
@@ -43,7 +43,7 @@ Describe "Test-WindowsARSO Acceptance Tests" -Tag "Acceptance" {
             Mock Get-ItemPropertyValue { return 1 } -ParameterFilter { $Name -eq 'OptOut' }
 
             $result = Test-WindowsARSO -UserSID $testSID
-            $result | Should -Be$false
+            $result | Should -Be $false
         }
 
         It "Should return `$false when the user ARSO registry key does not exist" {
