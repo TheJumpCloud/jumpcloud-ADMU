@@ -34,7 +34,7 @@ Describe "Test-WindowsARSO Acceptance Tests" -Tag "Acceptance" {
             # Ensure state is enabled
             Set-WindowsARSO -UserSID $testSID -Enable $true
 
-            $result = Test-WindowsARSO -UserSID$testSID
+            $result = Test-WindowsARSO -UserSID $testSID
             $result | Should -Be $true
         }
 
