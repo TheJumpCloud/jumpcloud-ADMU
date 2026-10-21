@@ -12,7 +12,7 @@ Describe "Test-WindowsARSO Acceptance Tests" -Tag "Acceptance" {
                 break
             }
             # Move one directory up.
-            $currentPath = Split-Path$currentPath -Parent
+            $currentPath = Split-Path $currentPath -Parent
         }
         . "$helpFunctionDir\$fileName"
 
