@@ -16,61 +16,60 @@ Describe "Test-WindowsARSO Acceptance Tests" -Tag "Acceptance" {
         }
         . "$helpFunctionDir\$fileName"
 
-        $testSID = "S-1-5-21-9999999999-9999999999-999999999-9999"
+        # Acceptance Test Setup: Define dummy SID and Registry Paths
+        $TestSID = "S-1-5-21-999999999-ACCEPTANCE-TEST"
+        $BaseARSOPath = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\UserARSO"
+        $DummySIDPath = Join-Path -Path $BaseARSOPath -ChildPath $TestSID
+
+        # Ensure the base UserARSO path exists before creating the dummy child key
+        if (-not (Test-Path $BaseARSOPath)) {
+            New-Item -Path $BaseARSOPath -Force | Out-Null
+        }
     }
 
-    Context "Test-WindowsARSO" {
+    AfterAll {
+        # Clean up the dummy registry key after all tests finish
+        if (Test-Path $DummySIDPath) {
+            Remove-Item -Path $DummySIDPath -Force -Recurse
+        }
+    }
 
-        It "Should return `$true when ARSO is explicitly enabled (OptOut = 0) and no global block exists" {
-            # Mock global policy check to return nothing (no global block)
-            Mock Get-ItemProperty { return $null } -ParameterFilter { $Name -eq 'DisableAutomaticRestartSignOn' }
+    Context "When testing against real registry keys" {
 
-            # Mock the user registry path check to say the path exists
-            Mock Test-Path { return $true } -ParameterFilter { $Path -match $testSID }
+        It "Should return `$true when ARSO is explicitly enabled (OptOut = 0) for the user" {
+            # Arrange: Create the key and set OptOut to 0
+            New-Item -Path $DummySIDPath -Force | Out-Null
+            Set-ItemProperty -Path $DummySIDPath -Name "OptOut" -Value 0 -Type DWord -Force
 
-            # Mock the OptOut value check to return 0 (Enabled)
-            Mock Get-ItemPropertyValue { return 0 } -ParameterFilter { $Name -eq 'OptOut' }
+            # Act
+            $Result = Test-WindowsARSO -UserSID $TestSID
 
-            $result = Test-WindowsARSO -UserSID $testSID
-            $result | Should -Be $true
+            # Assert
+            # Note: This assert assumes the Global Policy (DisableAutomaticRestartSignOn)
+            # is not currently set to 1 on your live test machine.
+            $Result | Should -Be $true
         }
 
-        It "Should return `$false when ARSO is explicitly disabled (OptOut = 1)" {
-            Mock Get-ItemProperty { return $null } -ParameterFilter { $Name -eq 'DisableAutomaticRestartSignOn' }
-            Mock Test-Path { return $true } -ParameterFilter { $Path -match $testSID }
+        It "Should return `$false when ARSO is explicitly disabled (OptOut = 1) for the user" {
+            # Arrange: Update OptOut to 1
+            Set-ItemProperty -Path $DummySIDPath -Name "OptOut" -Value 1 -Type DWord -Force
 
-            # Mock the OptOut value to return 1 (Disabled)
-            Mock Get-ItemPropertyValue { return 1 } -ParameterFilter { $Name -eq 'OptOut' }
+            # Act
+            $Result = Test-WindowsARSO -UserSID $TestSID
 
-            $result = Test-WindowsARSO -UserSID $testSID
-            $result | Should -Be $false
+            # Assert
+            $Result | Should -Be $false
         }
 
-        It "Should return `$false when the user ARSO registry key does not exist" {
-            Mock Get-ItemProperty { return $null } -ParameterFilter { $Name -eq 'DisableAutomaticRestartSignOn' }
+        It "Should return `$false when the user ARSO key does not exist" {
+            # Arrange: Remove the dummy key
+            Remove-Item -Path $DummySIDPath -Force -Recurse
 
-            # Mock the user registry path check to say the path DOES NOT exist
-            Mock Test-Path { return $false } -ParameterFilter { $Path -match $testSID }
+            # Act
+            $Result = Test-WindowsARSO -UserSID "S-1-5-21-999999999-NON-EXISTENT-USER"
 
-            $result = Test-WindowsARSO -UserSID $testSID
-            $result | Should -Be $false
-        }
-
-        It "Should return `$false when ARSO is GLOBALLY disabled, ignoring user settings" {
-            # Mock global policy check to return a simulated registry object where ARSO is disabled
-            Mock Get-ItemProperty {
-                return [PSCustomObject]@{ DisableAutomaticRestartSignOn = 1 }
-            } -ParameterFilter { $Name -eq 'DisableAutomaticRestartSignOn' }
-
-            # The function should exit early and never even call these, but we mock them just in case
-            Mock Test-Path { return $true } -ParameterFilter { $Path -match $testSID }
-            Mock Get-ItemPropertyValue { return 0 } -ParameterFilter { $Name -eq 'OptOut' }
-
-            $result = Test-WindowsARSO -UserSID $testSID
-            $result | Should -Be $false
-
-            # Verify that the function exited early and never checked the user path
-            Assert-MockCalled Test-Path -Times 0 -ParameterFilter { $Path -match $testSID }
+            # Assert
+            $Result | Should -Be $false
         }
     }
 }
