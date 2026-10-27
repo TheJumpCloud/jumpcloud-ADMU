@@ -194,7 +194,7 @@ function Start-Migration {
         $AGENT_INSTALLER_URL = "https://cdn02.jumpcloud.com/production/jcagent-msi-signed.msi"
         $AGENT_INSTALLER_PATH = "$windowsDrive\windows\Temp\JCADMU\jcagent-msi-signed.msi"
         $AGENT_CONF_PATH = "$($AGENT_PATH)\Plugins\Contrib\jcagent.conf"
-        $admuVersion = "2.16.4"
+        $admuVersion = "2.16.3"
         $script:JumpCloudUserID = $JumpCloudUserID
         $script:AdminDebug = $AdminDebug
         $isForm = $PSCmdlet.ParameterSetName -eq "form"
@@ -491,19 +491,6 @@ function Start-Migration {
         # Check if profile is loaded
         if (Test-UserProfileLoaded -UserSID $SelectedUserSID) {
             throw [System.Management.Automation.ValidationMetadataException] "Cannot migrate user profile for '$SelectedUserName' (SID: $SelectedUserSID). The user's profile is currently loaded in memory. Please ensure the user is logged out before attempting migration."
-        }
-        # Check for ARSO (Automatic Restart Sign-On)
-        $isARSOEnabled = Test-WindowsARSO -UserSID $SelectedUserSID
-        if ($isARSOEnabled) {
-            Write-ToLog -Message "User '$SelectedUserName' (SID: $SelectedUserSID) is enabled for ARSO. Attempting to disable to prevent hive locks during migration." -Level Info
-            try {
-                Set-WindowsARSO -UserSID $SelectedUserSID -Enable $false
-                Write-ToLog -Message "Successfully disabled ARSO for user." -Level Info
-            } catch {
-                $msg = "Failed to disable ARSO for '$SelectedUserName'. Migration cannot safely proceed. Please manually disable ARSO for this user or ask the user to sign out completely."
-                Write-ToLog -Message "Validation failed: $msg" -Level Error
-                throw [System.Management.Automation.ValidationMetadataException] $msg
-            }
         }
         # validate SelectedUserName is not null or empty
         if ([string]::IsNullOrEmpty($SelectedUserName)) {

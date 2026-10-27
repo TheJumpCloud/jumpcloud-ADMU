@@ -11,7 +11,7 @@
 RootModule = 'JumpCloud.ADMU.psm1'
 
 # Version number of this module.
-ModuleVersion = '2.16.4'
+ModuleVersion = '2.16.3'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
